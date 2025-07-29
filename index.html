@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Afraponix Go">
+    <title>Afraponix Go - Aquaponics Monitor</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23334e9d'/><text x='16' y='20' font-family='Arial' font-size='12' text-anchor='middle' fill='%2380fb7d' font-weight='bold'>Afra</text></svg>">
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <div class="mobile-header">
+            <div class="logo-container">
+                <svg class="afraponix-logo" viewBox="0 0 400 80" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Afraponix Logo White Version -->
+                    <!-- Stylized mountain/wave symbol -->
+                    <path d="M20 60 L35 30 L50 45 L65 20 L80 50 L95 35 L110 60" 
+                          fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+                    <path d="M25 55 L40 35 L55 40 L70 25 L85 45 L100 40 L115 55" 
+                          fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+                    
+                    <!-- "Afraponix" text all in white -->
+                    <text x="135" y="45" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="white">Afra</text>
+                    
+                    <!-- "ponix" text in white with lighter weight -->
+                    <text x="210" y="45" font-family="Arial, sans-serif" font-size="28" font-weight="300" fill="white" opacity="0.9">ponix</text>
+                </svg>
+            </div>
+            <div class="header-controls">
+                <div class="system-selector" id="system-selector" style="display: none;">
+                    <select id="active-system">
+                        <option value="">Select System</option>
+                    </select>
+                    <button id="add-system-btn" class="add-system-btn">+</button>
+                </div>
+                <div class="auth-controls" id="auth-controls">
+                    <button id="login-btn" class="auth-btn">Login</button>
+                    <button id="register-btn" class="auth-btn">Register</button>
+                </div>
+                <div class="user-controls" id="user-controls" style="display: none;">
+                    <span id="username-display"></span>
+                    <button id="logout-btn" class="auth-btn">Logout</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="mobile-content">
+        <section id="dashboard" class="view active">
+            <div class="current-system-display" id="current-system-dashboard">
+                <!-- Current system name will be displayed here -->
+            </div>
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>Water Temperature</h3>
+                    <div class="stat-value" id="water-temp">24.5°C</div>
+                    <canvas id="temp-chart" width="200" height="100"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>pH Level</h3>
+                    <div class="stat-value" id="ph-level">6.8</div>
+                    <canvas id="ph-chart" width="200" height="100"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Dissolved Oxygen</h3>
+                    <div class="stat-value" id="dissolved-oxygen">7.2 mg/L</div>
+                    <canvas id="oxygen-chart" width="200" height="100"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Ammonia</h3>
+                    <div class="stat-value" id="ammonia">0.1 ppm</div>
+                    <canvas id="ammonia-chart" width="200" height="100"></canvas>
+                </div>
+            </div>
+            
+            <div class="latest-data-overview">
+                <h2>Latest Data Entries</h2>
+                <p style="text-align: center; color: #666; font-style: italic; margin-bottom: 1rem;">
+                    Most recent data entries across all categories. Use Data Entry tab to add new measurements.
+                </p>
+                <div id="latest-entries-container">
+                    <!-- Latest data entries will be populated here -->
+                </div>
+            </div>
+        </section>
+
+        <section id="calculators" class="view">
+            <h2>Aquaponics Calculators</h2>
+            <div class="current-system-display" id="current-system-calculators">
+                <!-- Current system name will be displayed here -->
+            </div>
+            <div class="calculator-tabs">
+                <button id="fish-calc-tab" class="calc-tab active">Fish Stocking Calculator</button>
+                <button id="nutrient-calc-tab" class="calc-tab">Nutrient Dosing Calculator</button>
+            </div>
+            
+            <div id="fish-calc" class="calculator-content active">
+                <!-- Fish calculator content will be inserted here -->
+            </div>
+            
+            <div id="nutrient-calc" class="calculator-content">
+                <div class="calculator-section">
+                    <h3>Hydroponic Nutrient Dosing Calculator</h3>
+                    <p style="color: #666; margin-bottom: 1rem;">Calculate precise nutrient dosing for optimal plant growth in your aquaponics system.</p>
+                    
+                    <div class="dosing-tabs">
+                        <button id="quick-calc-tab" class="dosing-tab active">Quick Calculator</button>
+                        <button id="custom-nutrients-tab" class="dosing-tab">Custom Nutrients</button>
+                        <button id="mixing-schedule-tab" class="dosing-tab">Mixing Schedule</button>
+                    </div>
+                    
+                    <!-- Quick Calculator Tab -->
+                    <div id="quick-calc-content" class="dosing-content active">
+                        <div class="form-grid">
+                            <div class="form-field">
+                                <label for="crop-type">Crop Type:</label>
+                                <select id="crop-type">
+                                    <option value="">Select Crop</option>
+                                    <option value="lettuce">Lettuce</option>
+                                    <option value="tomato">Tomato</option>
+                                    <option value="cucumber">Cucumber</option>
+                                    <option value="pepper">Pepper</option>
+                                    <option value="spinach">Spinach</option>
+                                    <option value="basil">Basil</option>
+                                    <option value="kale">Kale</option>
+                                    <option value="strawberry">Strawberry</option>
+                                </select>
+                            </div>
+                            <div class="form-field">
+                                <label for="reservoir-volume">Reservoir Volume (L):</label>
+                                <input type="number" id="reservoir-volume" min="10" step="10" placeholder="100">
+                            </div>
+                            <div class="form-field">
+                                <label for="target-ec">Target EC (mS/cm):</label>
+                                <input type="number" id="target-ec" min="0.5" max="3.0" step="0.1" placeholder="1.8" readonly>
+                            </div>
+                        </div>
+                        
+                        <div class="target-values-display" id="target-values-display">
+                            <!-- Target nutrient values will be displayed here -->
+                        </div>
+                        
+                        <div class="current-values-section">
+                            <h4>🧪 Current Nutrient Levels (Optional - if known)</h4>
+                            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                                Enter your current nutrient levels if you have recent test results. Leave blank if unknown.
+                            </p>
+                            <div class="current-values-grid">
+                                <div class="current-value-item">
+                                    <div class="current-value-label">N</div>
+                                    <input type="number" id="current-n" min="0" step="0.1" placeholder="0" class="current-value-input">
+                                    <div class="current-value-unit">ppm</div>
+                                </div>
+                                <div class="current-value-item">
+                                    <div class="current-value-label">P</div>
+                                    <input type="number" id="current-p" min="0" step="0.1" placeholder="0" class="current-value-input">
+                                    <div class="current-value-unit">ppm</div>
+                                </div>
+                                <div class="current-value-item">
+                                    <div class="current-value-label">K</div>
+                                    <input type="number" id="current-k" min="0" step="0.1" placeholder="0" class="current-value-input">
+                                    <div class="current-value-unit">ppm</div>
+                                </div>
+                                <div class="current-value-item">
+                                    <div class="current-value-label">Ca</div>
+                                    <input type="number" id="current-ca" min="0" step="0.1" placeholder="0" class="current-value-input">
+                                    <div class="current-value-unit">ppm</div>
+                                </div>
+                                <div class="current-value-item">
+                                    <div class="current-value-label">Mg</div>
+                                    <input type="number" id="current-mg" min="0" step="0.1" placeholder="0" class="current-value-input">
+                                    <div class="current-value-unit">ppm</div>
+                                </div>
+                                <div class="current-value-item">
+                                    <div class="current-value-label">Fe</div>
+                                    <input type="number" id="current-fe" min="0" step="0.1" placeholder="0" class="current-value-input">
+                                    <div class="current-value-unit">ppm</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 1rem;">
+                                <button class="form-btn secondary" onclick="app.loadCurrentNutrientLevels()">🔄 Refresh from Data</button>
+                                <button class="form-btn secondary" onclick="app.saveCurrentNutrientLevels()">💾 Save Current Levels</button>
+                                <button class="form-btn secondary" onclick="app.clearCurrentNutrientLevels()">🗑️ Clear All</button>
+                            </div>
+                        </div>
+                        
+                        <button class="form-btn" onclick="app.calculateHydroponicDosing()">Calculate Dosing</button>
+                        
+                        <div id="dosing-results" class="dosing-results">
+                            <!-- Dosing calculation results will be displayed here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Custom Nutrients Tab -->
+                    <div id="custom-nutrients-content" class="dosing-content">
+                        <div class="custom-nutrients-section">
+                            <h4>Available Nutrients</h4>
+                            <div id="available-nutrients-list" class="nutrients-list">
+                                <!-- Available nutrients will be displayed here -->
+                            </div>
+                            
+                            <h4>Add Custom Nutrient</h4>
+                            <div class="form-grid">
+                                <div class="form-field">
+                                    <label for="nutrient-name">Nutrient Name:</label>
+                                    <input type="text" id="nutrient-name" placeholder="e.g., Custom NPK Mix">
+                                </div>
+                                <div class="form-field">
+                                    <label for="nutrient-n">Nitrogen (N) %:</label>
+                                    <input type="number" id="nutrient-n" min="0" max="50" step="0.1" placeholder="0">
+                                </div>
+                                <div class="form-field">
+                                    <label for="nutrient-p">Phosphorus (P) %:</label>
+                                    <input type="number" id="nutrient-p" min="0" max="50" step="0.1" placeholder="0">
+                                </div>
+                                <div class="form-field">
+                                    <label for="nutrient-k">Potassium (K) %:</label>
+                                    <input type="number" id="nutrient-k" min="0" max="50" step="0.1" placeholder="0">
+                                </div>
+                                <div class="form-field">
+                                    <label for="nutrient-ca">Calcium (Ca) %:</label>
+                                    <input type="number" id="nutrient-ca" min="0" max="30" step="0.1" placeholder="0">
+                                </div>
+                                <div class="form-field">
+                                    <label for="nutrient-mg">Magnesium (Mg) %:</label>
+                                    <input type="number" id="nutrient-mg" min="0" max="20" step="0.1" placeholder="0">
+                                </div>
+                                <div class="form-field">
+                                    <label for="nutrient-fe">Iron (Fe) %:</label>
+                                    <input type="number" id="nutrient-fe" min="0" max="15" step="0.1" placeholder="0">
+                                </div>
+                                <div class="form-field">
+                                    <label for="nutrient-price">Price per kg ($):</label>
+                                    <input type="number" id="nutrient-price" min="0" step="0.01" placeholder="25.00">
+                                </div>
+                            </div>
+                            <button class="form-btn secondary" onclick="app.addCustomNutrient()">Add Nutrient</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Mixing Schedule Tab -->
+                    <div id="mixing-schedule-content" class="dosing-content">
+                        <div class="mixing-schedule-section">
+                            <h4>Mixing Schedule & Maintenance</h4>
+                            <p style="color: #666; margin-bottom: 1rem;">Follow this schedule for optimal nutrient mixing and system maintenance.</p>
+                            
+                            <div id="mixing-schedule-display" class="mixing-schedule">
+                                <!-- Mixing schedule will be displayed here -->
+                            </div>
+                            
+                            <div class="maintenance-schedule">
+                                <h4>Maintenance Schedule</h4>
+                                <div id="maintenance-schedule-display">
+                                    <!-- Maintenance schedule will be displayed here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="data-entry" class="view">
+            <h2>System Data Entry</h2>
+            <div class="current-system-display" id="current-system-data-entry">
+                <!-- Current system name will be displayed here -->
+            </div>
+            <div class="data-entry-tabs">
+                <button id="water-quality-tab" class="data-tab active">Water Quality</button>
+                <button id="fish-health-tab" class="data-tab">Fish Health</button>
+                <button id="plant-growth-tab" class="data-tab">Plant Growth</button>
+                <button id="operations-tab" class="data-tab">Operations</button>
+            </div>
+            
+            <div id="water-quality-form" class="data-form active">
+                <div class="data-entry-section">
+                    <!-- Water quality form will be inserted here -->
+                </div>
+                <div class="data-history-section">
+                    <h3>Recent Water Quality Data</h3>
+                    <div id="water-quality-history" class="data-history-list">
+                        <!-- Water quality history will be displayed here -->
+                    </div>
+                </div>
+            </div>
+            
+            <div id="fish-health-form" class="data-form">
+                <div class="data-entry-section">
+                    <!-- Fish health form will be inserted here -->
+                </div>
+                <div class="data-history-section">
+                    <h3>Recent Fish Health Data</h3>
+                    <div id="fish-health-history" class="data-history-list">
+                        <!-- Fish health history will be displayed here -->
+                    </div>
+                </div>
+            </div>
+            
+            <div id="plant-growth-form" class="data-form">
+                <div class="data-entry-section">
+                    <!-- Plant growth form will be inserted here -->
+                </div>
+                <div class="data-history-section">
+                    <h3>Recent Plant Growth Data</h3>
+                    <div id="plant-growth-history" class="data-history-list">
+                        <!-- Plant growth history will be displayed here -->
+                    </div>
+                </div>
+            </div>
+            
+            <div id="operations-form" class="data-form">
+                <div class="data-entry-section">
+                    <!-- Operations form will be inserted here -->
+                </div>
+                <div class="data-history-section">
+                    <h3>Recent Operations Data</h3>
+                    <div id="operations-history" class="data-history-list">
+                        <!-- Operations history will be displayed here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="fish-tank" class="view">
+            <h2>Fish Tank Management</h2>
+            <div class="current-system-display" id="current-system-fish-tank">
+                <!-- Current system name will be displayed here -->
+            </div>
+            <div id="tank-summary-container">
+                <!-- Dynamic tank summary will be populated here -->
+            </div>
+            <button class="action-btn" id="feed-fish">Feed Fish</button>
+        </section>
+
+        <section id="plants" class="view">
+            <h2>Plant Management</h2>
+            <div class="current-system-display" id="current-system-plants">
+                <!-- Current system name will be displayed here -->
+            </div>
+            
+            <div id="plant-overview-container">
+                <!-- Plant overview will be populated here -->
+            </div>
+            
+            <div class="nutrient-overview">
+                <h2>Nutrient Levels for Plant Growth</h2>
+                <p style="text-align: center; color: #666; font-style: italic; margin-bottom: 1rem;">
+                    Monitor key nutrients that directly impact plant health and growth.
+                </p>
+                <div class="nutrient-charts-grid">
+                    <div class="chart-card">
+                        <h3>Iron (Fe)</h3>
+                        <div class="stat-value" id="plant-iron">0.0 mg/L</div>
+                        <canvas id="iron-chart" width="200" height="100"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Potassium (K)</h3>
+                        <div class="stat-value" id="plant-potassium">0.0 mg/L</div>
+                        <canvas id="potassium-chart" width="200" height="100"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Calcium (Ca)</h3>
+                        <div class="stat-value" id="plant-calcium">0.0 mg/L</div>
+                        <canvas id="calcium-chart" width="200" height="100"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>pH Level</h3>
+                        <div class="stat-value" id="plant-ph">0.0</div>
+                        <canvas id="plant-ph-chart" width="200" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="nutrient-recommendations-section">
+                <h2>Smart Nutrient Recommendations</h2>
+                <p style="text-align: center; color: #666; font-style: italic; margin-bottom: 1rem;">
+                    AI-powered recommendations based on your current nutrient levels and planted crops.
+                </p>
+                <div id="nutrient-recommendations-container">
+                    <!-- Nutrient recommendations will be populated here -->
+                </div>
+            </div>
+            
+            <div class="plant-sections">
+                <div class="plant-section">
+                    <h3>Plant Growth History</h3>
+                    <div id="plant-growth-history">
+                        <!-- Recent plant growth data will be displayed here -->
+                    </div>
+                </div>
+                
+                <div class="plant-section">
+                    <h3>Growing Recommendations</h3>
+                    <div id="plant-recommendations">
+                        <!-- Plant growing tips and recommendations will be displayed here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="settings" class="view">
+            <h2>Afraponix Go - System Settings</h2>
+            <div class="current-system-display" id="current-system-settings">
+                <!-- Current system name will be displayed here -->
+            </div>
+            
+            <div class="form-section">
+                <h3>System Configuration</h3>
+                <p style="color: #666; margin-bottom: 1rem;">Configure your aquaponics system details for accurate calculator results.</p>
+                
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label for="system-name">System Name:</label>
+                        <input type="text" id="system-name" placeholder="My Aquaponics System">
+                    </div>
+                    <div class="form-field">
+                        <label for="system-type-config">System Type:</label>
+                        <select id="system-type-config">
+                            <option value="media-bed">Media Bed</option>
+                            <option value="nft">NFT (Nutrient Film Technique)</option>
+                            <option value="dwc">DWC (Deep Water Culture)</option>
+                            <option value="hybrid">Hybrid System</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label for="fish-type-config">Fish Type:</label>
+                        <select id="fish-type-config">
+                            <option value="tilapia">🐟 Tilapia</option>
+                            <option value="trout">🎣 Trout</option>
+                            <option value="catfish">🐡 Catfish</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label for="fish-tank-count">Number of Fish Tanks:</label>
+                        <input type="number" id="fish-tank-count" min="1" max="10" value="1">
+                    </div>
+                    <div class="form-field">
+                        <label for="total-fish-volume">Total Fish Tank Volume (L):</label>
+                        <input type="number" id="total-fish-volume" min="50" step="50" placeholder="1000">
+                    </div>
+                    <div class="form-field">
+                        <label for="grow-bed-count">Number of Grow Beds:</label>
+                        <input type="number" id="grow-bed-count" min="1" max="20" value="4">
+                    </div>
+                    <div class="form-field">
+                        <label for="total-grow-volume">Total Grow Bed Volume (L):</label>
+                        <input type="number" id="total-grow-volume" min="50" step="50" placeholder="800">
+                    </div>
+                    <div class="form-field">
+                        <label for="total-grow-area">Total Equivalent Grow Area (m²):</label>
+                        <input type="number" id="total-grow-area" min="0.1" step="0.1" placeholder="2.0" readonly>
+                        <small style="color: #666;">Calculated from individual grow bed configurations below</small>
+                    </div>
+                </div>
+                
+                <div class="grow-beds-config" id="grow-beds-config">
+                    <h4>Individual Grow Bed Configuration</h4>
+                    <p style="color: #666; margin-bottom: 1rem;">Configure each grow bed individually. The total equivalent area will be calculated automatically.</p>
+                    <div id="grow-beds-container">
+                        <!-- Individual grow beds will be populated here -->
+                    </div>
+                    <button type="button" class="form-btn secondary" onclick="app.updateGrowBedCount()">Update Grow Bed Configuration</button>
+                </div>
+                
+                <button class="form-btn" onclick="app.saveSystemConfig()">Save System Configuration</button>
+            </div>
+            
+            <div class="form-section">
+                <h3>Grow Bed Status & Management</h3>
+                <p style="color: #666; margin-bottom: 1rem;">View and manage the status of your individual grow beds.</p>
+                <div id="grow-bed-status-container">
+                    <!-- Grow bed status will be populated here -->
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>SMTP Email Configuration</h3>
+                <p style="color: #666; margin-bottom: 1rem;">Configure email settings for password reset and notification emails.</p>
+                
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label for="smtp-host">SMTP Host:</label>
+                        <input type="text" id="smtp-host" placeholder="smtp-relay.brevo.com">
+                    </div>
+                    <div class="form-field">
+                        <label for="smtp-port">SMTP Port:</label>
+                        <input type="number" id="smtp-port" placeholder="587">
+                    </div>
+                    <div class="form-field">
+                        <label for="smtp-user">SMTP Username:</label>
+                        <input type="email" id="smtp-user" placeholder="your-email@domain.com">
+                    </div>
+                    <div class="form-field">
+                        <label for="smtp-pass">SMTP Password:</label>
+                        <input type="password" id="smtp-pass" placeholder="Your SMTP password">
+                    </div>
+                    <div class="form-field">
+                        <label for="smtp-from-name">From Name:</label>
+                        <input type="text" id="smtp-from-name" placeholder="Afraponix Go">
+                    </div>
+                    <div class="form-field">
+                        <label for="smtp-from-email">From Email:</label>
+                        <input type="email" id="smtp-from-email" placeholder="noreply@yourdomain.com">
+                    </div>
+                    <div class="form-field">
+                        <label for="smtp-reset-url">Reset URL:</label>
+                        <input type="url" id="smtp-reset-url" placeholder="http://yourserver.com:8000/reset-password">
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button class="form-btn" onclick="app.loadSmtpConfig()">Load Current Config</button>
+                    <button class="form-btn" onclick="app.saveSmtpConfig()">Save Configuration</button>
+                    <button class="form-btn secondary" onclick="app.testSmtpConfig()">Send Test Email</button>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h3>Edit Data Entries</h3>
+                <p style="color: #666; margin-bottom: 1rem;">View and edit previously entered data for your system.</p>
+                
+                <div class="data-edit-tabs">
+                    <button id="edit-water-quality-tab" class="edit-tab active" data-category="water-quality">Water Quality</button>
+                    <button id="edit-fish-health-tab" class="edit-tab" data-category="fish-health">Fish Health</button>
+                    <button id="edit-plant-growth-tab" class="edit-tab" data-category="plant-growth">Plant Growth</button>
+                    <button id="edit-operations-tab" class="edit-tab" data-category="operations">Operations</button>
+                </div>
+                
+                <div id="data-edit-container">
+                    <!-- Data editing interface will be populated here -->
+                </div>
+            </div>
+        </section>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <button id="dashboard-btn" class="nav-btn active" data-view="dashboard">
+            <span class="nav-icon">📊</span>
+            <span class="nav-label">Dashboard</span>
+        </button>
+        <button id="calculators-btn" class="nav-btn" data-view="calculators">
+            <span class="nav-icon">🧮</span>
+            <span class="nav-label">Calc</span>
+        </button>
+        <button id="data-entry-btn" class="nav-btn" data-view="data-entry">
+            <span class="nav-icon">📝</span>
+            <span class="nav-label">Data</span>
+        </button>
+        <button id="fish-btn" class="nav-btn" data-view="fish-tank">
+            <span class="nav-icon">🐟</span>
+            <span class="nav-label">Fish</span>
+        </button>
+        <button id="plants-btn" class="nav-btn" data-view="plants">
+            <span class="nav-icon">🌱</span>
+            <span class="nav-label">Plants</span>
+        </button>
+        <button id="settings-btn" class="nav-btn" data-view="settings">
+            <span class="nav-icon">⚙️</span>
+            <span class="nav-label">Settings</span>
+        </button>
+    </nav>
+
+    <!-- Authentication Modal -->
+    <div id="auth-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" id="close-modal">&times;</span>
+            
+            <!-- Login Form -->
+            <div id="login-form" class="auth-form">
+                <h2>Login to Afraponix Go</h2>
+                <form id="login-form-element">
+                    <div class="form-field">
+                        <label for="login-username">Username or Email:</label>
+                        <input type="text" id="login-username" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="login-password">Password:</label>
+                        <input type="password" id="login-password" required>
+                    </div>
+                    <button type="submit" class="form-btn">Login</button>
+                    <p class="auth-switch">
+                        Don't have an account? 
+                        <a href="#" id="show-register">Register here</a>
+                    </p>
+                    <p class="auth-switch">
+                        <a href="#" id="show-forgot-password">Forgot your password?</a>
+                    </p>
+                </form>
+            </div>
+
+            <!-- Register Form -->
+            <div id="register-form" class="auth-form" style="display: none;">
+                <h2>Create Afraponix Go Account</h2>
+                <form id="register-form-element">
+                    <div class="form-field">
+                        <label for="register-username">Username:</label>
+                        <input type="text" id="register-username" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="register-email">Email:</label>
+                        <input type="email" id="register-email" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="register-password">Password:</label>
+                        <input type="password" id="register-password" required minlength="6">
+                    </div>
+                    <div class="form-field">
+                        <label for="register-confirm-password">Confirm Password:</label>
+                        <input type="password" id="register-confirm-password" required>
+                    </div>
+                    <button type="submit" class="form-btn">Create Account</button>
+                    <p class="auth-switch">
+                        Already have an account? 
+                        <a href="#" id="show-login">Login here</a>
+                    </p>
+                </form>
+            </div>
+
+            <!-- Forgot Password Form -->
+            <div id="forgot-password-form" class="auth-form" style="display: none;">
+                <h2>Reset Your Password</h2>
+                <p style="color: #666; margin-bottom: 1rem;">Enter your email address and we'll send you a link to reset your password.</p>
+                <form id="forgot-password-form-element">
+                    <div class="form-field">
+                        <label for="forgot-email">Email Address:</label>
+                        <input type="email" id="forgot-email" required>
+                    </div>
+                    <button type="submit" class="form-btn">Send Reset Link</button>
+                    <p class="auth-switch">
+                        Remember your password? 
+                        <a href="#" id="show-login-from-forgot">Back to Login</a>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

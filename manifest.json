@@ -1,0 +1,22 @@
+{
+  "name": "Afraponix Go - Aquaponics Monitor",
+  "short_name": "Afraponix Go",
+  "description": "Complete aquaponics system monitoring and management",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#334e9d",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%23334e9d'/><path d='M60 140 L80 100 L100 115 L120 90 L140 120 L160 105 L180 140' fill='none' stroke='%2380fb7d' stroke-width='4'/><text x='96' y='165' font-family='Arial' font-size='20' text-anchor='middle' fill='%2380fb7d' font-weight='bold'>Afraponix</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%23334e9d'/><path d='M150 370 L200 270 L250 300 L300 240 L350 320 L400 280 L450 370' fill='none' stroke='%2380fb7d' stroke-width='8'/><text x='256' y='420' font-family='Arial' font-size='48' text-anchor='middle' fill='%2380fb7d' font-weight='bold'>Afraponix</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

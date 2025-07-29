@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Icon Generator</title>
+</head>
+<body>
+    <canvas id="iconCanvas" width="512" height="512"></canvas>
+    <div id="output"></div>
+
+    <script>
+        function createIcon(size) {
+            const canvas = document.getElementById('iconCanvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            const center = size / 2;
+            const radius = size * 0.47;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, size, size);
+            
+            // Background circle
+            ctx.beginPath();
+            ctx.arc(center, center, radius, 0, 2 * Math.PI);
+            ctx.fillStyle = '#007AFF';
+            ctx.fill();
+            ctx.strokeStyle = '#f8f9fa';
+            ctx.lineWidth = size * 0.015;
+            ctx.stroke();
+            
+            // Water drop shape
+            const dropScale = size / 512;
+            ctx.beginPath();
+            ctx.moveTo(center, center - 136 * dropScale);
+            ctx.bezierCurveTo(
+                center + 64 * dropScale, center - 76 * dropScale,
+                center + 64 * dropScale, center - 16 * dropScale,
+                center + 64 * dropScale, center - 16 * dropScale
+            );
+            ctx.bezierCurveTo(
+                center + 64 * dropScale, center + 19 * dropScale,
+                center + 34 * dropScale, center + 44 * dropScale,
+                center, center + 44 * dropScale
+            );
+            ctx.bezierCurveTo(
+                center - 34 * dropScale, center + 44 * dropScale,
+                center - 64 * dropScale, center + 19 * dropScale,
+                center - 64 * dropScale, center - 16 * dropScale
+            );
+            ctx.bezierCurveTo(
+                center - 64 * dropScale, center - 16 * dropScale,
+                center - 64 * dropScale, center - 76 * dropScale,
+                center, center - 136 * dropScale
+            );
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fill();
+            
+            // Fish inside water drop
+            ctx.beginPath();
+            ctx.ellipse(center - 16 * dropScale, center - 26 * dropScale, 35 * dropScale, 20 * dropScale, 0, 0, 2 * Math.PI);
+            ctx.fillStyle = '#007AFF';
+            ctx.fill();
+            
+            // Fish tail
+            ctx.beginPath();
+            ctx.moveTo(center - 56 * dropScale, center - 26 * dropScale);
+            ctx.lineTo(center - 71 * dropScale, center - 36 * dropScale);
+            ctx.lineTo(center - 71 * dropScale, center - 16 * dropScale);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Fish eye
+            ctx.beginPath();
+            ctx.arc(center - 6 * dropScale, center - 31 * dropScale, 3 * dropScale, 0, 2 * Math.PI);
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fill();
+            
+            // Plant leaf
+            ctx.beginPath();
+            ctx.moveTo(center + 24 * dropScale, center + 64 * dropScale);
+            ctx.quadraticCurveTo(center + 44 * dropScale, center + 44 * dropScale, center + 64 * dropScale, center + 64 * dropScale);
+            ctx.quadraticCurveTo(center + 84 * dropScale, center + 84 * dropScale, center + 64 * dropScale, center + 104 * dropScale);
+            ctx.quadraticCurveTo(center + 44 * dropScale, center + 124 * dropScale, center + 24 * dropScale, center + 104 * dropScale);
+            ctx.quadraticCurveTo(center + 4 * dropScale, center + 84 * dropScale, center + 24 * dropScale, center + 64 * dropScale);
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fill();
+            
+            // Leaf vein
+            ctx.beginPath();
+            ctx.moveTo(center + 24 * dropScale, center + 64 * dropScale);
+            ctx.quadraticCurveTo(center + 34 * dropScale, center + 74 * dropScale, center + 44 * dropScale, center + 84 * dropScale);
+            ctx.quadraticCurveTo(center + 54 * dropScale, center + 94 * dropScale, center + 64 * dropScale, center + 104 * dropScale);
+            ctx.strokeStyle = '#007AFF';
+            ctx.lineWidth = 2 * dropScale;
+            ctx.stroke();
+            
+            // Water ripples
+            ctx.beginPath();
+            ctx.moveTo(center - 106 * dropScale, center + 124 * dropScale);
+            ctx.quadraticCurveTo(center - 56 * dropScale, center + 114 * dropScale, center - 6 * dropScale, center + 124 * dropScale);
+            ctx.quadraticCurveTo(center + 44 * dropScale, center + 114 * dropScale, center + 94 * dropScale, center + 124 * dropScale);
+            ctx.strokeStyle = '#f8f9fa';
+            ctx.lineWidth = 4 * dropScale;
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(center - 86 * dropScale, center + 144 * dropScale);
+            ctx.quadraticCurveTo(center - 36 * dropScale, center + 134 * dropScale, center + 14 * dropScale, center + 144 * dropScale);
+            ctx.quadraticCurveTo(center + 64 * dropScale, center + 134 * dropScale, center + 114 * dropScale, center + 144 * dropScale);
+            ctx.strokeStyle = '#f8f9fa';
+            ctx.lineWidth = 3 * dropScale;
+            ctx.stroke();
+            
+            return canvas.toDataURL('image/png');
+        }
+        
+        // Generate icons and display data URLs
+        const sizes = [16, 32, 192, 512];
+        const output = document.getElementById('output');
+        
+        sizes.forEach(size => {
+            const dataUrl = createIcon(size);
+            const div = document.createElement('div');
+            div.innerHTML = `<h3>${size}x${size}</h3><textarea style="width:100%;height:100px;">${dataUrl}</textarea>`;
+            output.appendChild(div);
+        });
+    </script>
+</body>
+</html>

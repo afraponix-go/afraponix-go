@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="#007AFF" stroke="#f8f9fa" stroke-width="8"/>
+  
+  <!-- Water drop shape -->
+  <path d="M256 120 C256 120, 320 180, 320 240 C320 275, 290 300, 256 300 C222 300, 192 275, 192 240 C192 180, 256 120, 256 120 Z" fill="#f8f9fa"/>
+  
+  <!-- Fish silhouette inside water drop -->
+  <ellipse cx="240" cy="230" rx="35" ry="20" fill="#007AFF"/>
+  <path d="M200 230 L185 220 L185 240 Z" fill="#007AFF"/>
+  <circle cx="250" cy="225" r="3" fill="#f8f9fa"/>
+  
+  <!-- Plant/leaf element -->
+  <path d="M280 320 Q300 300, 320 320 Q340 340, 320 360 Q300 380, 280 360 Q260 340, 280 320 Z" fill="#f8f9fa"/>
+  <path d="M280 320 Q290 330, 300 340 Q310 350, 320 360" stroke="#007AFF" stroke-width="2" fill="none"/>
+  
+  <!-- Water ripples at bottom -->
+  <path d="M150 380 Q200 370, 250 380 Q300 370, 350 380" stroke="#f8f9fa" stroke-width="4" fill="none"/>
+  <path d="M170 400 Q220 390, 270 400 Q320 390, 370 400" stroke="#f8f9fa" stroke-width="3" fill="none"/>
+</svg>
