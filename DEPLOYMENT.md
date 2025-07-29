@@ -21,7 +21,7 @@ source /path/to/database-setup.sql
 ### 2. Clone and Setup Application
 ```bash
 # Clone to web directory
-sudo git clone https://github.com/justdabug/afraponix-go.git /var/www/aquaponics-app
+sudo git clone https://github.com/afraponix-go/afraponix-go.git /var/www/aquaponics-app
 cd /var/www/aquaponics-app
 
 # Install dependencies

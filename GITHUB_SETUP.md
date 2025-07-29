@@ -11,7 +11,7 @@ Your GitHub repository URL is ready:
 
 ```bash
 # Add GitHub as remote origin
-git remote add origin https://github.com/justdabug/afraponix-go.git
+git remote add origin https://github.com/afraponix-go/afraponix-go.git
 
 # Push to GitHub
 git branch -M main
@@ -20,7 +20,7 @@ git push -u origin main
 
 ## 3. Alternative SSH Setup (if you have SSH keys configured)
 ```bash
-git remote add origin git@github.com:justdabug/afraponix-go.git
+git remote add origin git@github.com:afraponix-go/afraponix-go.git
 git push -u origin main
 ```
 

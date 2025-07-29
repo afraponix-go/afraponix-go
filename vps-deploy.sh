@@ -8,7 +8,7 @@ set -e
 # Configuration
 APP_NAME="afraponix-go"
 APP_DIR="/var/www/aquaponics-app"
-REPO_URL="https://github.com/justdabug/afraponix-go.git"
+REPO_URL="https://github.com/afraponix-go/afraponix-go.git"
 DOMAIN="your-domain.com"  # Update this
 DB_NAME="aquaponics"
 DB_USER="aquaponics"
