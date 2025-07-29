@@ -1,9 +1,24 @@
 #!/bin/bash
 
-# Afraponix Go VPS Deployment Script
-# Run this script on your VPS as root or with sudo privileges
+# Afraponix Go Production Deployment Script
+# Domain: go.aquaponics.online
+# Run this script on your VPS as root
 
 set -e
+
+echo "🌿 Deploying Afraponix Go to go.aquaponics.online..."
+echo "📋 This script will:"
+echo "   • Install Node.js, MariaDB, Nginx"
+echo "   • Configure SSL with Let's Encrypt"
+echo "   • Set up the application and database"
+echo "   • Configure systemd service"
+echo ""
+read -p "Continue? (y/N): " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Deployment cancelled."
+    exit 1
+fi
 
 # Configuration
 APP_NAME="afraponix-go"
@@ -12,10 +27,13 @@ REPO_URL="https://github.com/afraponix-go/afraponix-go.git"
 DOMAIN="go.aquaponics.online"
 DB_NAME="aquaponics"
 DB_USER="aquaponics"
-DB_PASS="$(openssl rand -base64 32)"  # Generate secure password
-JWT_SECRET="$(openssl rand -base64 32)"  # Generate secure JWT secret
+DB_PASS="$(openssl rand -base64 32)"
+JWT_SECRET="$(openssl rand -base64 32)"
 
-echo "🚀 Starting Afraponix Go deployment on VPS..."
+echo "🔐 Generated secure credentials:"
+echo "   Database Password: $DB_PASS"
+echo "   JWT Secret: $JWT_SECRET"
+echo ""
 
 # Update system
 echo "📦 Updating system packages..."
@@ -23,20 +41,16 @@ apt update && apt upgrade -y
 
 # Install required packages
 echo "📦 Installing required packages..."
-apt install -y curl wget gnupg2 software-properties-common apt-transport-https ca-certificates
+apt install -y curl wget gnupg2 software-properties-common apt-transport-https ca-certificates git
 
 # Install Node.js 18.x
-echo "📦 Installing Node.js..."
+echo "📦 Installing Node.js 18..."
 curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
 apt install -y nodejs
 
 # Install MariaDB
 echo "📦 Installing MariaDB..."
 apt install -y mariadb-server mariadb-client
-
-# Secure MariaDB installation
-echo "🔒 Securing MariaDB..."
-mysql_secure_installation
 
 # Install Nginx
 echo "📦 Installing Nginx..."
@@ -52,6 +66,10 @@ ufw allow OpenSSH
 ufw allow 'Nginx Full'
 ufw --force enable
 
+# Secure MariaDB
+echo "🔒 Please secure MariaDB when prompted..."
+mysql_secure_installation
+
 # Create database and user
 echo "🗄️ Setting up database..."
 mysql -u root -p <<EOF
@@ -59,11 +77,13 @@ CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_u
 CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';
 GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';
 FLUSH PRIVILEGES;
+SHOW DATABASES LIKE '${DB_NAME}';
+SELECT User, Host FROM mysql.user WHERE User = '${DB_USER}';
 EXIT;
 EOF
 
 # Clone application
-echo "📥 Cloning application..."
+echo "📥 Cloning Afraponix Go application..."
 rm -rf ${APP_DIR}
 git clone ${REPO_URL} ${APP_DIR}
 cd ${APP_DIR}
@@ -73,7 +93,7 @@ echo "📦 Installing application dependencies..."
 npm install --production
 
 # Create environment file
-echo "⚙️ Creating environment configuration..."
+echo "⚙️ Creating production environment configuration..."
 cat > .env <<EOF
 NODE_ENV=production
 PORT=3000
@@ -98,35 +118,54 @@ systemctl enable ${APP_NAME}
 
 # Configure Nginx
 echo "🌐 Configuring Nginx..."
-sed "s/your-domain.com/${DOMAIN}/g" ${APP_DIR}/nginx-site.conf > /etc/nginx/sites-available/${APP_NAME}
+cp ${APP_DIR}/nginx-site.conf /etc/nginx/sites-available/${APP_NAME}
 ln -sf /etc/nginx/sites-available/${APP_NAME} /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
+
+# Test Nginx configuration
 nginx -t
 
-# Start services
-echo "🚀 Starting services..."
+if [ $? -ne 0 ]; then
+    echo "❌ Nginx configuration test failed. Please check the configuration."
+    exit 1
+fi
+
+# Start application
+echo "🚀 Starting Afraponix Go application..."
 systemctl start ${APP_NAME}
+
+# Check if application started successfully
+sleep 5
+if systemctl is-active --quiet ${APP_NAME}; then
+    echo "✅ Application started successfully"
+else
+    echo "❌ Application failed to start. Checking logs..."
+    journalctl -u ${APP_NAME} -n 20
+    exit 1
+fi
+
+# Reload nginx
 systemctl reload nginx
 
 # Configure SSL with Let's Encrypt
-echo "🔒 Setting up SSL certificate..."
-certbot --nginx -d ${DOMAIN} --non-interactive --agree-tos --email admin@${DOMAIN}
+echo "🔒 Setting up SSL certificate for go.aquaponics.online..."
+certbot --nginx -d ${DOMAIN} --non-interactive --agree-tos --email admin@aquaponics.online
 
 # Create SMTP configuration template
 echo "📧 Creating SMTP configuration template..."
 mkdir -p ${APP_DIR}/config
 cat > ${APP_DIR}/config/smtp.json.template <<EOF
 {
-  "host": "your-smtp-host.com",
+  "host": "smtp-relay.brevo.com",
   "port": 587,
   "secure": false,
   "auth": {
     "user": "your-email@domain.com",
-    "pass": "your-app-password"
+    "pass": "your-smtp-password"
   },
   "from": {
     "name": "Afraponix Go",
-    "address": "your-email@domain.com"
+    "address": "noreply@aquaponics.online"
   },
   "resetUrl": "https://${DOMAIN}/reset-password"
 }
@@ -134,11 +173,15 @@ EOF
 
 chown www-data:www-data ${APP_DIR}/config/smtp.json.template
 
-echo "✅ Deployment completed!"
+# Final checks
+echo "🔍 Running final checks..."
+systemctl status ${APP_NAME} --no-pager
+nginx -t
+
 echo ""
-echo "🎉 Afraponix Go is now running on your VPS!"
+echo "🎉 Deployment completed successfully!"
 echo ""
-echo "📋 Deployment Summary:"
+echo "📊 Deployment Summary:"
 echo "   • Application URL: https://${DOMAIN}"
 echo "   • Database: ${DB_NAME}"
 echo "   • Database User: ${DB_USER}"
@@ -146,13 +189,18 @@ echo "   • Database Password: ${DB_PASS}"
 echo "   • JWT Secret: ${JWT_SECRET}"
 echo ""
 echo "🔧 Next Steps:"
-echo "   1. Copy ${APP_DIR}/config/smtp.json.template to smtp.json and configure your email settings"
+echo "   1. Configure SMTP: Copy config/smtp.json.template to config/smtp.json and add your email settings"
 echo "   2. Visit https://${DOMAIN} to access your application"
 echo "   3. Create your first admin user account"
 echo ""
-echo "📊 Service Management:"
+echo "📊 Service Management Commands:"
 echo "   • Check status: systemctl status ${APP_NAME}"
 echo "   • View logs: journalctl -u ${APP_NAME} -f"
 echo "   • Restart app: systemctl restart ${APP_NAME}"
+echo "   • Update app: cd ${APP_DIR} && git pull && npm install --production && systemctl restart ${APP_NAME}"
 echo ""
-echo "⚠️  IMPORTANT: Save the database password and JWT secret shown above!"
+echo "⚠️  IMPORTANT: Save these credentials securely!"
+echo "   Database Password: ${DB_PASS}"
+echo "   JWT Secret: ${JWT_SECRET}"
+echo ""
+echo "🌿 Afraponix Go is now live at https://go.aquaponics.online!"
