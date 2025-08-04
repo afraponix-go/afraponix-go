@@ -53,7 +53,7 @@ ufw allow 'Nginx Full'
 ufw --force enable
 
 # Create database and user
-echo "🗄️ Setting up database..."
+echo "🗄️ Setting up MariaDB database..."
 mysql -u root -p <<EOF
 CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASS}';
@@ -72,8 +72,55 @@ cd ${APP_DIR}
 echo "📦 Installing application dependencies..."
 npm install --production
 
-# Create environment file
-echo "⚙️ Creating environment configuration..."
+# Check for existing SQLite database to migrate
+SQLITE_DB_PATH="${APP_DIR}/aquaponics.db"
+if [ -f "$SQLITE_DB_PATH" ]; then
+    echo "📊 Found existing SQLite database, migrating to MariaDB..."
+    
+    # Install sqlite3 command line tool if not present
+    apt install -y sqlite3
+    
+    # Backup the SQLite database
+    cp "$SQLITE_DB_PATH" "${APP_DIR}/aquaponics_backup_$(date +%Y%m%d_%H%M%S).db"
+    
+    # Export SQLite data
+    echo "📤 Exporting SQLite data..."
+    sqlite3 "$SQLITE_DB_PATH" .dump > /tmp/sqlite_export.sql
+    
+    # Convert SQLite dump to MariaDB format
+    echo "🔧 Converting to MariaDB format..."
+    sed -i 's/AUTOINCREMENT/AUTO_INCREMENT/g' /tmp/sqlite_export.sql
+    sed -i '/^PRAGMA/d' /tmp/sqlite_export.sql
+    sed -i '/^BEGIN TRANSACTION/d' /tmp/sqlite_export.sql
+    sed -i '/^COMMIT/d' /tmp/sqlite_export.sql
+    sed -i 's/INTEGER PRIMARY KEY/INT PRIMARY KEY AUTO_INCREMENT/g' /tmp/sqlite_export.sql
+    sed -i 's/DATETIME DEFAULT CURRENT_TIMESTAMP/TIMESTAMP DEFAULT CURRENT_TIMESTAMP/g' /tmp/sqlite_export.sql
+    
+    # Import to MariaDB
+    echo "📥 Importing data to MariaDB..."
+    mysql -u ${DB_USER} -p${DB_PASS} ${DB_NAME} < /tmp/sqlite_export.sql
+    
+    # Verify migration
+    echo "✅ Verifying migration..."
+    USER_COUNT=$(mysql -u ${DB_USER} -p${DB_PASS} -N -s -e "USE ${DB_NAME}; SELECT COUNT(*) FROM users;")
+    SYSTEM_COUNT=$(mysql -u ${DB_USER} -p${DB_PASS} -N -s -e "USE ${DB_NAME}; SELECT COUNT(*) FROM systems;")
+    
+    echo "📊 Migration completed:"
+    echo "   • Users migrated: ${USER_COUNT}"
+    echo "   • Systems migrated: ${SYSTEM_COUNT}"
+    
+    # Clean up
+    rm /tmp/sqlite_export.sql
+    
+    # Move SQLite database to backup location
+    mv "$SQLITE_DB_PATH" "${APP_DIR}/aquaponics_sqlite_backup.db"
+    
+else
+    echo "📊 No existing SQLite database found, starting fresh with MariaDB"
+fi
+
+# Create environment file for MariaDB
+echo "⚙️ Creating MariaDB environment configuration..."
 cat > .env <<EOF
 NODE_ENV=production
 PORT=3000
@@ -82,6 +129,7 @@ DB_USER=${DB_USER}
 DB_PASSWORD=${DB_PASS}
 DB_NAME=${DB_NAME}
 JWT_SECRET=${JWT_SECRET}
+CORS_ORIGINS=https://${DOMAIN}
 EOF
 
 # Set permissions
