@@ -290,13 +290,20 @@ async function createTables(connection) {
 
 function getDatabase() {
     if (useMariaDB) {
-        return mysql.createConnection({
+        const connection = mysql.createConnection({
             host: process.env.DB_HOST,
             user: process.env.DB_USER,
             password: process.env.DB_PASSWORD,
             database: process.env.DB_NAME,
             charset: 'utf8mb4'
         });
+        
+        // Add a close() method for backward compatibility with existing route code
+        connection.close = function() {
+            return this.end();
+        };
+        
+        return connection;
     } else {
         throw new Error('MariaDB environment variables not configured');
     }
