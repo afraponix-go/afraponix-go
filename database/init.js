@@ -152,10 +152,16 @@ async function createTables(connection) {
             pest_control TEXT,
             health VARCHAR(100),
             growth_stage VARCHAR(100),
+            batch_id VARCHAR(50),
+            seed_variety VARCHAR(100),
+            batch_created_date VARCHAR(20),
+            days_to_harvest INT,
             notes TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE,
-            FOREIGN KEY (grow_bed_id) REFERENCES grow_beds (id) ON DELETE SET NULL
+            FOREIGN KEY (grow_bed_id) REFERENCES grow_beds (id) ON DELETE SET NULL,
+            INDEX idx_batch_id (batch_id),
+            INDEX idx_batch_date (batch_created_date)
         ) ENGINE=InnoDB`,
 
         // Operations table
