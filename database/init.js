@@ -1,4 +1,4 @@
-const mysql = require('mysql2/promise');
+const mysql = require('mysql2');
 
 // Check if we should use MariaDB/MySQL based on environment variables
 const useMariaDB = process.env.DB_HOST && process.env.DB_USER && process.env.DB_PASSWORD;
@@ -276,10 +276,15 @@ async function createTables(connection) {
         ) ENGINE=InnoDB`
     ];
 
-    // Create tables sequentially
+    // Create tables sequentially using promises
     for (let i = 0; i < tables.length; i++) {
         try {
-            await connection.execute(tables[i]);
+            await new Promise((resolve, reject) => {
+                connection.execute(tables[i], (err, results) => {
+                    if (err) reject(err);
+                    else resolve(results);
+                });
+            });
             console.log(`✅ Table ${i + 1}/${tables.length} created successfully`);
         } catch (error) {
             console.error(`❌ Error creating table ${i + 1}:`, error.message);
@@ -290,9 +295,7 @@ async function createTables(connection) {
 
 function getDatabase() {
     if (useMariaDB) {
-        // Use the non-promise version for compatibility with callback-style queries
-        const mysql2 = require('mysql2');
-        const connection = mysql2.createConnection({
+        const connection = mysql.createConnection({
             host: process.env.DB_HOST,
             user: process.env.DB_USER,
             password: process.env.DB_PASSWORD,
@@ -301,9 +304,6 @@ function getDatabase() {
         });
         
         // Add compatibility methods for SQLite-style queries
-        const originalGet = connection.query.bind(connection);
-        const originalRun = connection.query.bind(connection);
-        
         // Emulate SQLite's db.get() method (returns single row)
         connection.get = function(sql, params, callback) {
             if (typeof params === 'function') {
