@@ -7,6 +7,11 @@ const { sendPasswordResetEmail, sendVerificationEmail } = require('../utils/emai
 
 const router = express.Router();
 
+// Helper function to format JavaScript dates for MySQL
+const formatDateForMySQL = (date) => {
+    return date.toISOString().slice(0, 19).replace('T', ' ');
+};
+
 // Register new user
 router.post('/register', async (req, res) => {
     const { username, email, password, firstName, lastName } = req.body;
@@ -46,7 +51,7 @@ router.post('/register', async (req, res) => {
         // Create user with unverified email
         const result = await new Promise((resolve, reject) => {
             db.run('INSERT INTO users (username, email, first_name, last_name, password_hash, email_verified, verification_token, verification_token_expiry) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', 
-                [username, email, firstName, lastName, passwordHash, 0, verificationToken, verificationTokenExpiry.toISOString()], 
+                [username, email, firstName, lastName, passwordHash, 0, verificationToken, formatDateForMySQL(verificationTokenExpiry)], 
                 function(err) {
                     if (err) reject(err);
                     else resolve({ id: this.lastID });
@@ -230,7 +235,7 @@ router.post('/forgot-password', async (req, res) => {
         // Store reset token in database
         await new Promise((resolve, reject) => {
             db.run('UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE id = ?', 
-                [resetToken, resetTokenExpiry.toISOString(), user.id], 
+                [resetToken, formatDateForMySQL(resetTokenExpiry), user.id], 
                 function(err) {
                     if (err) reject(err);
                     else resolve();
@@ -271,9 +276,10 @@ router.post('/verify-email', async (req, res) => {
 
     try {
         // Find user with valid verification token
+        
         const user = await new Promise((resolve, reject) => {
             db.get('SELECT * FROM users WHERE verification_token = ? AND verification_token_expiry > ?', 
-                [token, new Date().toISOString()], (err, row) => {
+                [token, formatDateForMySQL(new Date())], (err, row) => {
                 if (err) reject(err);
                 else resolve(row);
             });
@@ -372,7 +378,7 @@ router.post('/resend-verification', async (req, res) => {
         // Update verification token in database
         await new Promise((resolve, reject) => {
             db.run('UPDATE users SET verification_token = ?, verification_token_expiry = ? WHERE id = ?', 
-                [verificationToken, verificationTokenExpiry.toISOString(), user.id], 
+                [verificationToken, formatDateForMySQL(verificationTokenExpiry), user.id], 
                 function(err) {
                     if (err) reject(err);
                     else resolve();
@@ -420,9 +426,10 @@ router.post('/reset-password', async (req, res) => {
 
     try {
         // Find user with valid reset token
+        
         const user = await new Promise((resolve, reject) => {
             db.get('SELECT * FROM users WHERE reset_token = ? AND reset_token_expiry > ?', 
-                [token, new Date().toISOString()], (err, row) => {
+                [token, formatDateForMySQL(new Date())], (err, row) => {
                 if (err) reject(err);
                 else resolve(row);
             });
