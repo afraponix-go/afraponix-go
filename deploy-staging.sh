@@ -44,7 +44,7 @@ GRANT ALL PRIVILEGES ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';
 FLUSH PRIVILEGES;
 SHOW DATABASES LIKE '${DB_NAME}';
 SELECT User, Host FROM mysql.user WHERE User = '${DB_USER}';
-EXIT;
+exit
 EOF
 
 # Clone application to staging directory
