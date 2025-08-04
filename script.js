@@ -9524,6 +9524,7 @@ class AquaponicsApp {
                         
                         // Trigger calculation to update the displayed values
                         window.growBedManager.calculateBed(bed.bed_number);
+                        } // Close the if (bedItem) block
                     });
                 }, 100);
             }
