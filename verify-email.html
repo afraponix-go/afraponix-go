@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification - Afraponix Go</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #334e9d 0%, #7baaee 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .verification-container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+        
+        .logo {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        .app-name {
+            font-size: 28px;
+            font-weight: 700;
+            color: #334e9d;
+            margin-bottom: 30px;
+        }
+        
+        .verification-status {
+            margin-bottom: 30px;
+        }
+        
+        .loading {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #334e9d;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .success {
+            color: #34C759;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .success-icon {
+            font-size: 64px;
+            color: #34C759;
+            margin-bottom: 20px;
+        }
+        
+        .error {
+            color: #FF3B30;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        
+        .error-icon {
+            font-size: 64px;
+            color: #FF3B30;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #334e9d 0%, #7baaee 100%);
+            color: white;
+            padding: 14px 28px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(51, 78, 157, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #999;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 480px) {
+            .verification-container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+            
+            .app-name {
+                font-size: 24px;
+            }
+            
+            .logo {
+                font-size: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="verification-container">
+        <div class="logo">🌿</div>
+        <h1 class="app-name">Afraponix Go</h1>
+        
+        <div id="verificationStatus" class="verification-status">
+            <div class="loading">Verifying your email...</div>
+            <div class="spinner"></div>
+        </div>
+        
+        <div class="footer">
+            <p>© 2024 Afraponix Go. All rights reserved.</p>
+        </div>
+    </div>
+
+    <script>
+        // Get token from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        
+        // Verify email on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!token) {
+                showError('Invalid verification link. Please check your email for the correct link.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/verify-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showSuccess(data.message, data.token);
+                } else {
+                    showError(data.error || 'Verification failed. Please try again.');
+                }
+                
+            } catch (error) {
+                console.error('Verification error:', error);
+                showError('Network error. Please check your connection and try again.');
+            }
+        });
+        
+        function showSuccess(message, authToken) {
+            const statusDiv = document.getElementById('verificationStatus');
+            statusDiv.innerHTML = `
+                <div class="success-icon">✅</div>
+                <div class="success">Email Verified Successfully!</div>
+                <p class="subtitle">${message}</p>
+                <button class="btn" onclick="continueToApp('${authToken}')">
+                    Continue to Afraponix Go
+                </button>
+            `;
+        }
+        
+        function showError(message) {
+            const statusDiv = document.getElementById('verificationStatus');
+            statusDiv.innerHTML = `
+                <div class="error-icon">❌</div>
+                <div class="error">Verification Failed</div>
+                <p class="subtitle">${message}</p>
+                <a href="/" class="btn">Back to Login</a>
+            `;
+        }
+        
+        function continueToApp(authToken) {
+            // Store the auth token and redirect to the main app
+            if (authToken) {
+                localStorage.setItem('authToken', authToken);
+            }
+            
+            // Redirect to main app
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>
