@@ -4741,7 +4741,7 @@ class AquaponicsApp {
                         <div class="bed-summary-stats">
                             <div class="bed-stat">
                                 <span class="stat-label">Area:</span>
-                                <span class="stat-value">${bed.area_m2 || bed.equivalent_m2 || 0}m²</span>
+                                <span class="stat-value">${(parseFloat(bed.area_m2) || parseFloat(bed.equivalent_m2) || 0).toFixed(1)}m²</span>
                             </div>
                             <div class="bed-stat">
                                 <span class="stat-label">Allocated:</span>
@@ -10116,7 +10116,7 @@ class AquaponicsApp {
                         <div class="bed-stats">
                             <div class="stat-item">
                                 <span class="stat-label">Area:</span>
-                                <span class="stat-value">${bed.equivalent_m2}m²</span>
+                                <span class="stat-value">${(parseFloat(bed.equivalent_m2) || 0).toFixed(1)}m²</span>
                             </div>
                             <div class="stat-item">
                                 <span class="stat-label">Used:</span>
