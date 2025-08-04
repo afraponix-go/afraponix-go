@@ -9517,10 +9517,10 @@ class AquaponicsApp {
                                 const reservoirVolumeField = bedItem.querySelector('.reservoir-volume');
                                 if (reservoirVolumeField) reservoirVolumeField.value = bed.reservoir_volume_liters;
                             }
+                        }
                         
                         // Trigger calculation to update the displayed values
                         window.growBedManager.calculateBed(bed.bed_number);
-                        }
                     });
                 }, 100);
             }
