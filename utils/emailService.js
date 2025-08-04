@@ -2,15 +2,39 @@ const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
 
-// Load SMTP configuration
+// Load SMTP configuration from environment variables or config file
 const loadSmtpConfig = () => {
+    // Try environment variables first (production)
+    if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+        const baseUrl = process.env.BASE_URL || 'https://go.aquaponics.online';
+        console.log('📧 Using SMTP configuration from environment variables');
+        return {
+            host: process.env.SMTP_HOST,
+            port: parseInt(process.env.SMTP_PORT) || 587,
+            secure: process.env.SMTP_SECURE === 'true',
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
+            },
+            from: {
+                name: process.env.SMTP_FROM_NAME || 'Afraponix Go',
+                address: process.env.SMTP_FROM_ADDRESS || process.env.SMTP_USER
+            },
+            resetUrl: `${baseUrl}/reset-password`,
+            verifyUrl: `${baseUrl}/verify-email`
+        };
+    }
+    
+    // Fallback to config file (development)
     try {
+        console.log('📧 Attempting to load SMTP configuration from config file');
         const configPath = path.join(__dirname, '..', 'config', 'smtp.json');
         const configData = fs.readFileSync(configPath, 'utf8');
+        console.log('📧 Using SMTP configuration from config file');
         return JSON.parse(configData);
     } catch (error) {
         console.error('Failed to load SMTP configuration:', error);
-        throw new Error('SMTP configuration not found or invalid');
+        throw new Error('SMTP configuration not found. Please set environment variables: SMTP_HOST, SMTP_USER, SMTP_PASS');
     }
 };
 
