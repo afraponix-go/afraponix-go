@@ -7914,19 +7914,8 @@ class AquaponicsApp {
                 }
             }
             
-            // Create default spray programmes for the new system
-            try {
-                const sprayDefaults = await this.makeApiCall('/spray-programmes/create-defaults', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        system_id: systemId
-                    })
-                });
-                console.log('Default spray programmes created:', sprayDefaults);
-            } catch (error) {
-                console.error('Failed to create default spray programmes:', error);
-                // Don't fail system creation if spray programmes fail
-            }
+            // Skip creating default spray programmes - let users add their own as needed
+            console.log('System created without default spray programmes - users can add their own');
             
             // Redirect to settings to review/modify configuration
             this.goToSettings();
@@ -11095,43 +11084,8 @@ class AquaponicsApp {
             const programmes = response.programmes || [];
             console.log('Found programmes:', programmes.length);
             
-            // If no programmes exist, create defaults
-            if (programmes.length === 0) {
-                console.log('No spray programmes found, creating defaults...');
-                const defaultsResponse = await this.makeApiCall('/spray-programmes/create-defaults', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        system_id: this.activeSystemId
-                    })
-                });
-                console.log('Default spray programmes created:', defaultsResponse);
-                
-                if (defaultsResponse.created > 0) {
-                    this.showNotification(`${defaultsResponse.created} default spray programmes added to your system!`, 'success');
-                }
-            } else {
-                console.log('Existing programmes found, not creating defaults');
-                console.log('Programme details:', programmes.map(p => ({id: p.id, name: p.product_name, category: p.category})));
-                
-                // Check if we have proper default programmes (not just mock data)
-                const hasRealDefaults = programmes.some(p => p.product_name && p.product_name.includes('Bioneem'));
-                if (!hasRealDefaults) {
-                    console.log('Found programmes but they appear to be mock data, forcing recreation of defaults...');
-                    try {
-                        // Delete existing and recreate defaults
-                        const defaultsResponse = await this.makeApiCall('/spray-programmes/create-defaults', {
-                            method: 'POST',
-                            body: JSON.stringify({
-                                system_id: this.activeSystemId,
-                                force: true // Add a force flag to recreate
-                            })
-                        });
-                        console.log('Forced default spray programmes creation:', defaultsResponse);
-                    } catch (error) {
-                        console.log('Failed to force recreate defaults:', error);
-                    }
-                }
-            }
+            // No auto-creation of default programmes - let users add their own
+            console.log(`Found ${programmes.length} existing spray programmes - no defaults created automatically`);
         } catch (error) {
             console.error('Error ensuring default spray programmes:', error);
             // Don't show error to user - this is a background operation
