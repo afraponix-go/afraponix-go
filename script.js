@@ -9,7 +9,10 @@ class AquaponicsApp {
         this.user = null;
         this.token = localStorage.getItem('auth_token');
         this.charts = {};
-        this.API_BASE = 'http://127.0.0.1:8000/api';
+        // Dynamic API base URL - use current origin for production, localhost for development
+        this.API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://127.0.0.1:8000/api' 
+            : '/api';
         this.isLoading = true; // Track loading state to suppress notifications
         
         // Shared crop nutrient targets from dosing calculator
