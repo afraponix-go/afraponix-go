@@ -9649,7 +9649,7 @@ class AquaponicsApp {
                             </div>
                             <div class="status-row">
                                 <span class="status-label">Equivalent Area:</span>
-                                <span class="status-value">${bed.equivalent_m2.toFixed(1)} m²</span>
+                                <span class="status-value">${(parseFloat(bed.equivalent_m2) || 0).toFixed(1)} m²</span>
                             </div>
                         </div>
                     </div>
@@ -9662,7 +9662,7 @@ class AquaponicsApp {
                 </div>
                 <div class="grow-bed-status-summary">
                     <p><strong>Total Beds:</strong> ${growBeds.length}</p>
-                    <p><strong>Total Equivalent Area:</strong> ${growBeds.reduce((sum, bed) => sum + bed.equivalent_m2, 0).toFixed(1)} m²</p>
+                    <p><strong>Total Equivalent Area:</strong> ${growBeds.reduce((sum, bed) => sum + (parseFloat(bed.equivalent_m2) || 0), 0).toFixed(1)} m²</p>
                 </div>
             `;
 
