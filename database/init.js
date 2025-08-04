@@ -290,7 +290,9 @@ async function createTables(connection) {
 
 function getDatabase() {
     if (useMariaDB) {
-        const connection = mysql.createConnection({
+        // Use the non-promise version for compatibility with callback-style queries
+        const mysql2 = require('mysql2');
+        const connection = mysql2.createConnection({
             host: process.env.DB_HOST,
             user: process.env.DB_USER,
             password: process.env.DB_PASSWORD,
@@ -298,9 +300,42 @@ function getDatabase() {
             charset: 'utf8mb4'
         });
         
-        // Add a close() method for backward compatibility with existing route code
+        // Add compatibility methods for SQLite-style queries
+        const originalGet = connection.query.bind(connection);
+        const originalRun = connection.query.bind(connection);
+        
+        // Emulate SQLite's db.get() method (returns single row)
+        connection.get = function(sql, params, callback) {
+            if (typeof params === 'function') {
+                callback = params;
+                params = [];
+            }
+            this.query(sql, params, (err, results) => {
+                if (err) return callback(err);
+                callback(null, results[0] || null);
+            });
+        };
+        
+        // Emulate SQLite's db.run() method (returns lastID and changes)
+        connection.run = function(sql, params, callback) {
+            if (typeof params === 'function') {
+                callback = params;
+                params = [];
+            }
+            this.query(sql, params, function(err, results) {
+                if (err) return callback(err);
+                // Emulate SQLite's this.lastID and this.changes
+                const context = {
+                    lastID: results.insertId || null,
+                    changes: results.affectedRows || 0
+                };
+                callback.call(context, null);
+            });
+        };
+        
+        // Add a close() method for backward compatibility
         connection.close = function() {
-            return this.end();
+            this.end();
         };
         
         return connection;
