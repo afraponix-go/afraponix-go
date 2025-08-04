@@ -7845,14 +7845,21 @@ class AquaponicsApp {
                         return {
                             bed_number: index + 1,
                             bed_type: bed.type,
+                            bed_name: bed.name || `Bed ${index + 1}`,
                             volume_liters: Math.round(volume),
                             area_m2: bed.area || 0,
                             length_meters: bed.length || null,
                             width_meters: bed.width || null,
                             height_meters: bed.height || null,
+                            plant_capacity: bed.plantCapacity || null,
                             vertical_count: bed.verticals || null,
                             plants_per_vertical: bed.plantsPerVertical || null,
-                            channel_count: bed.channels || null
+                            equivalent_m2: bed.area || 0, // Use area as equivalent_m2
+                            reservoir_volume: bed.reservoirVolume || null,
+                            trough_length: bed.troughLength || null,
+                            trough_count: bed.channels || null, // Fix field name
+                            plant_spacing: bed.plantSpacing || null,
+                            reservoir_volume_liters: bed.reservoirVolume || null
                         };
                     });
                     
