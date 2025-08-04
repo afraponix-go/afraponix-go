@@ -171,7 +171,7 @@ const sendVerificationEmail = async (email, verificationToken, username) => {
         const config = loadSmtpConfig();
         const transporter = createTransporter();
         
-        const verificationLink = `${config.resetUrl.replace('reset-password', 'verify-email')}?token=${verificationToken}`;
+        const verificationLink = `${config.verifyUrl || config.resetUrl.replace('reset-password', 'verify-email')}?token=${verificationToken}`;
         
         const htmlContent = `
             <!DOCTYPE html>

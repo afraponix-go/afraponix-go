@@ -139,7 +139,7 @@ router.get('/fish-health/:systemId', async (req, res) => {
     const db = getDatabase();
     try {
         const data = await new Promise((resolve, reject) => {
-            db.all('SELECT * FROM fish_health WHERE system_id = ? ORDER BY date DESC', 
+            db.all('SELECT * FROM fish_health WHERE system_id = ? ORDER BY date DESC, created_at DESC', 
                 [systemId], (err, rows) => {
                 if (err) reject(err);
                 else resolve(rows);
@@ -212,7 +212,7 @@ router.get('/plant-growth/:systemId', async (req, res) => {
 
 router.post('/plant-growth/:systemId', async (req, res) => {
     const { systemId } = req.params;
-    const { date, crop_type, count, harvest_weight, plants_harvested, new_seedlings, pest_control, health, growth_stage, notes } = req.body;
+    const { date, grow_bed_id, crop_type, count, harvest_weight, plants_harvested, new_seedlings, pest_control, health, growth_stage, notes } = req.body;
 
     if (!await verifySystemOwnership(systemId, req.user.userId)) {
         return res.status(403).json({ error: 'Access denied to this system' });
@@ -222,9 +222,9 @@ router.post('/plant-growth/:systemId', async (req, res) => {
     try {
         const result = await new Promise((resolve, reject) => {
             db.run(`INSERT INTO plant_growth 
-                (system_id, date, crop_type, count, harvest_weight, plants_harvested, new_seedlings, pest_control, health, growth_stage, notes) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
-                [systemId, date, crop_type, count, harvest_weight, plants_harvested, new_seedlings, pest_control, health, growth_stage, notes], 
+                (system_id, grow_bed_id, date, crop_type, count, harvest_weight, plants_harvested, new_seedlings, pest_control, health, growth_stage, notes) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+                [systemId, grow_bed_id, date, crop_type, count, harvest_weight, plants_harvested, new_seedlings, pest_control, health, growth_stage, notes], 
                 function(err) {
                     if (err) reject(err);
                     else resolve({ id: this.lastID });
@@ -292,6 +292,151 @@ router.post('/operations/:systemId', async (req, res) => {
     } catch (error) {
         db.close();
         console.error('Error saving operations data:', error);
+        res.status(500).json({ error: 'Failed to save data' });
+    }
+});
+
+// New data-entries endpoints for frontend compatibility
+// These wrap the existing data endpoints but accept different parameter formats
+
+// Fish Health - GET with query parameter
+router.get('/entries/fish-health', async (req, res) => {
+    const { system_id, limit } = req.query;
+    
+    if (!system_id) {
+        return res.status(400).json({ error: 'system_id query parameter is required' });
+    }
+
+    if (!await verifySystemOwnership(system_id, req.user.userId)) {
+        return res.status(403).json({ error: 'Access denied to this system' });
+    }
+
+    const db = getDatabase();
+    try {
+        let query = 'SELECT * FROM fish_health WHERE system_id = ? ORDER BY date DESC, created_at DESC';
+        const params = [system_id];
+        
+        if (limit) {
+            query += ' LIMIT ?';
+            params.push(parseInt(limit, 10));
+        }
+        
+        const data = await new Promise((resolve, reject) => {
+            db.all(query, params, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+        db.close();
+        res.json(data);
+    } catch (error) {
+        db.close();
+        console.error('Error fetching fish health data:', error);
+        res.status(500).json({ error: 'Failed to fetch data' });
+    }
+});
+
+// Fish Health - POST with system_id in body
+router.post('/entries/fish-health', async (req, res) => {
+    const { system_id, date, fish_tank_id, count, mortality, average_weight, feed_consumption, behavior, notes } = req.body;
+    
+    if (!system_id) {
+        return res.status(400).json({ error: 'system_id is required in request body' });
+    }
+
+    if (!await verifySystemOwnership(system_id, req.user.userId)) {
+        return res.status(403).json({ error: 'Access denied to this system' });
+    }
+
+    const db = getDatabase();
+    try {
+        const result = await new Promise((resolve, reject) => {
+            db.run(`INSERT INTO fish_health 
+                (system_id, fish_tank_id, date, count, mortality, average_weight, feed_consumption, behavior, notes) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+                [system_id, fish_tank_id || 1, date, count, mortality, average_weight, feed_consumption, behavior, notes], 
+                function(err) {
+                    if (err) reject(err);
+                    else resolve({ id: this.lastID });
+                }
+            );
+        });
+        db.close();
+        res.status(201).json({ id: result.id, message: 'Fish health data saved' });
+    } catch (error) {
+        db.close();
+        console.error('Error saving fish health data:', error);
+        res.status(500).json({ error: 'Failed to save data' });
+    }
+});
+
+// Water Quality - GET with query parameter
+router.get('/entries/water-quality', async (req, res) => {
+    const { system_id, limit } = req.query;
+    
+    if (!system_id) {
+        return res.status(400).json({ error: 'system_id query parameter is required' });
+    }
+
+    if (!await verifySystemOwnership(system_id, req.user.userId)) {
+        return res.status(403).json({ error: 'Access denied to this system' });
+    }
+
+    const db = getDatabase();
+    try {
+        let query = 'SELECT * FROM water_quality WHERE system_id = ? ORDER BY date DESC';
+        const params = [system_id];
+        
+        if (limit) {
+            query += ' LIMIT ?';
+            params.push(parseInt(limit, 10));
+        }
+        
+        const data = await new Promise((resolve, reject) => {
+            db.all(query, params, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+        db.close();
+        res.json(data);
+    } catch (error) {
+        db.close();
+        console.error('Error fetching water quality data:', error);
+        res.status(500).json({ error: 'Failed to fetch data' });
+    }
+});
+
+// Water Quality - POST with system_id in body
+router.post('/entries/water-quality', async (req, res) => {
+    const { system_id, date, ph, ec, dissolved_oxygen, temperature, ammonia, nitrite, nitrate, iron, potassium, calcium, notes } = req.body;
+    
+    if (!system_id) {
+        return res.status(400).json({ error: 'system_id is required in request body' });
+    }
+
+    if (!await verifySystemOwnership(system_id, req.user.userId)) {
+        return res.status(403).json({ error: 'Access denied to this system' });
+    }
+
+    const db = getDatabase();
+    try {
+        const result = await new Promise((resolve, reject) => {
+            db.run(`INSERT INTO water_quality 
+                (system_id, date, ph, ec, dissolved_oxygen, temperature, ammonia, nitrite, nitrate, iron, potassium, calcium, notes) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+                [system_id, date, ph, ec, dissolved_oxygen, temperature, ammonia, nitrite, nitrate, iron, potassium, calcium, notes], 
+                function(err) {
+                    if (err) reject(err);
+                    else resolve({ id: this.lastID });
+                }
+            );
+        });
+        db.close();
+        res.status(201).json({ id: result.id, message: 'Water quality data saved' });
+    } catch (error) {
+        db.close();
+        console.error('Error saving water quality data:', error);
         res.status(500).json({ error: 'Failed to save data' });
     }
 });

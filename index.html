@@ -7,29 +7,99 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Afraponix Go">
     <title>Afraponix Go - Aquaponics Monitor</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23334e9d'/><text x='16' y='20' font-family='Arial' font-size='12' text-anchor='middle' fill='%2380fb7d' font-weight='bold'>Afra</text></svg>">
+    <link rel="icon" href="logo.svg" type="image/svg+xml">
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="chart.min.js"></script>
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-content">
+            <svg class="loading-logo" viewBox="0 0 566.93 566.93" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="loading-gradient1" x1="220.67" y1="384.91" x2="410.41" y2="384.91" gradientUnits="userSpaceOnUse">
+                        <stop offset="0" stop-color="#49f911"/>
+                        <stop offset="1" stop-color="#45e7dd"/>
+                    </linearGradient>
+                    <linearGradient id="loading-gradient2" x1="156.52" y1="400.22" x2="277.15" y2="400.22" gradientUnits="userSpaceOnUse">
+                        <stop offset="0" stop-color="#58dcfd"/>
+                        <stop offset="1" stop-color="#2e3195"/>
+                    </linearGradient>
+                </defs>
+                <g>
+                    <path style="fill: url(#loading-gradient1);" d="M283.9,415.31l-63.23-63.22c37.66-33.03,94.96-31.64,130.87,4.26l58.87,58.87v.05c-34.95,34.94-91.59,34.96-126.51.04h0Z"/>
+                    <path style="fill: url(#loading-gradient2);" d="M156.52,415.92c33.05,33.05,85.49,34.84,120.63,5.4l-63.02-63.01-57.61,57.61Z"/>
+                    <path style="fill: url(#loading-gradient1);" d="M283.46,168.28l63.23,63.22c-37.66,33.03-94.96,31.64-130.87-4.26l-58.87-58.87v-.05c34.95-34.94,91.59-34.96,126.51-.04h0Z"/>
+                    <path style="fill: url(#loading-gradient2);" d="M410.84,167.66c-33.05-33.05-85.49-34.84-120.63-5.4l63.02,63.01,57.61-57.61Z"/>
+                </g>
+            </svg>
+            <h2 class="loading-title">Afraponix Go</h2>
+            <div class="loading-spinner">
+                <div class="spinner-dot"></div>
+                <div class="spinner-dot"></div>
+                <div class="spinner-dot"></div>
+            </div>
+            <p class="loading-message">Initializing aquaponics system...</p>
+        </div>
+    </div>
+    
     <header>
         <div class="mobile-header">
             <div class="logo-container">
-                <svg class="afraponix-logo" viewBox="0 0 400 80" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Afraponix Logo White Version -->
-                    <!-- Stylized mountain/wave symbol -->
-                    <path d="M20 60 L35 30 L50 45 L65 20 L80 50 L95 35 L110 60" 
-                          fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
-                    <path d="M25 55 L40 35 L55 40 L70 25 L85 45 L100 40 L115 55" 
-                          fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
-                    
-                    <!-- "Afraponix" text all in white -->
-                    <text x="135" y="45" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="white">Afra</text>
-                    
-                    <!-- "ponix" text in white with lighter weight -->
-                    <text x="210" y="45" font-family="Arial, sans-serif" font-size="28" font-weight="300" fill="white" opacity="0.9">ponix</text>
-                </svg>
+                <div class="logo-with-text">
+                    <svg class="logo-icon" viewBox="0 0 566.93 566.93" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                        <defs>
+                            <style>
+                                .st0 { fill: url(#linear-gradient2); }
+                                .st1 { fill: url(#linear-gradient1); }
+                                .st2 { fill: url(#linear-gradient3); }
+                                .st3 { fill: url(#linear-gradient6); }
+                                .st4 { fill: url(#linear-gradient7); }
+                                .st5 { fill: url(#linear-gradient5); }
+                                .st6 { fill: url(#linear-gradient4); }
+                                .st7 { fill: url(#linear-gradient); }
+                            </style>
+                            <linearGradient id="linear-gradient" x1="220.67" y1="384.91" x2="410.41" y2="384.91" gradientUnits="userSpaceOnUse">
+                                <stop offset="0" stop-color="#49f911"/>
+                                <stop offset="1" stop-color="#45e7dd"/>
+                            </linearGradient>
+                            <linearGradient id="linear-gradient1" x1="156.52" y1="400.22" x2="277.15" y2="400.22" gradientUnits="userSpaceOnUse">
+                                <stop offset="0" stop-color="#58dcfd"/>
+                                <stop offset="1" stop-color="#2e3195"/>
+                            </linearGradient>
+                            <linearGradient id="linear-gradient2" x1="235.29" y1="252.83" x2="425.03" y2="252.83" gradientTransform="translate(581.55 434.85) rotate(-180)" xlink:href="#linear-gradient"/>
+                            <linearGradient id="linear-gradient3" x1="171.14" y1="268.14" x2="291.77" y2="268.14" gradientTransform="translate(581.55 434.85) rotate(-180)" xlink:href="#linear-gradient1"/>
+                            <linearGradient id="linear-gradient4" x1="185.47" y1="335.09" x2="375.21" y2="335.09" gradientTransform="translate(49.82 531.72) rotate(-90)" xlink:href="#linear-gradient"/>
+                            <linearGradient id="linear-gradient5" x1="121.31" y1="350.4" x2="241.94" y2="350.4" gradientTransform="translate(49.82 531.72) rotate(-90)" xlink:href="#linear-gradient1"/>
+                            <linearGradient id="linear-gradient6" x1="270.5" y1="302.65" x2="460.24" y2="302.65" gradientTransform="translate(484.67 -49.82) rotate(90)" xlink:href="#linear-gradient"/>
+                            <linearGradient id="linear-gradient7" x1="206.34" y1="317.96" x2="326.97" y2="317.96" gradientTransform="translate(484.67 -49.82) rotate(90)" xlink:href="#linear-gradient1"/>
+                        </defs>
+                        <g>
+                            <g>
+                                <path class="st7" d="M283.9,415.31l-63.23-63.22c37.66-33.03,94.96-31.64,130.87,4.26l58.87,58.87v.05c-34.95,34.94-91.59,34.96-126.51.04h0Z"/>
+                                <path class="st1" d="M156.52,415.92c33.05,33.05,85.49,34.84,120.63,5.4l-63.02-63.01-57.61,57.61Z"/>
+                            </g>
+                            <g>
+                                <path class="st0" d="M283.03,151.62l63.23,63.22c-37.66,33.03-94.96,31.64-130.87-4.26l-58.87-58.87v-.05c34.95-34.94,91.59-34.96,126.51-.04h0Z"/>
+                                <path class="st2" d="M410.41,151.01c-33.05-33.05-85.49-34.84-120.63-5.4l63.02,63.01,57.61-57.61Z"/>
+                            </g>
+                        </g>
+                        <g>
+                            <g>
+                                <path class="st6" d="M415.31,283.03l-63.22,63.23c-33.03-37.66-31.64-94.96,4.26-130.87l58.87-58.87h.05c34.94,34.95,34.96,91.59.04,126.51h0Z"/>
+                                <path class="st5" d="M415.92,410.41c33.05-33.05,34.84-85.49,5.4-120.63l-63.01,63.02,57.61,57.61Z"/>
+                            </g>
+                            <g>
+                                <path class="st3" d="M151.62,283.9l63.22-63.23c33.03,37.66,31.64,94.96-4.26,130.87l-58.87,58.87h-.05c-34.94-34.95-34.96-91.59-.04-126.51h0Z"/>
+                                <path class="st4" d="M151.01,156.52c-33.05,33.05-34.84,85.49-5.4,120.63l63.01-63.02-57.61-57.61Z"/>
+                            </g>
+                        </g>
+                    </svg>
+                    <div class="logo-text">
+                        <span class="brand-name">Afraponix Go</span>
+                    </div>
+                </div>
             </div>
             <div class="header-controls">
                 <div class="system-selector" id="system-selector" style="display: none;">
@@ -49,6 +119,9 @@
             </div>
         </div>
     </header>
+    
+    <!-- Notification Container -->
+    <div id="notification-container"></div>
 
     <main>
         <div class="mobile-content">
@@ -87,6 +160,14 @@
                 <div id="latest-entries-container">
                     <!-- Latest data entries will be populated here -->
                 </div>
+                
+                <!-- Recent Water Quality Entry with Edit/Delete -->
+                <div class="recent-water-quality-section" style="margin-top: 2rem;">
+                    <h3>Recent Water Quality Entry</h3>
+                    <div id="recent-water-quality-entry" class="data-entry-card">
+                        <!-- Recent water quality entry with edit/delete buttons will be displayed here -->
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -122,19 +203,35 @@
                                 <label for="crop-type">Crop Type:</label>
                                 <select id="crop-type">
                                     <option value="">Select Crop</option>
-                                    <option value="lettuce">Lettuce</option>
-                                    <option value="tomato">Tomato</option>
-                                    <option value="cucumber">Cucumber</option>
-                                    <option value="pepper">Pepper</option>
-                                    <option value="spinach">Spinach</option>
-                                    <option value="basil">Basil</option>
-                                    <option value="kale">Kale</option>
-                                    <option value="strawberry">Strawberry</option>
+                                    <optgroup label="Leafy Greens">
+                                        <option value="lettuce">Lettuce</option>
+                                        <option value="spinach">Spinach</option>
+                                        <option value="kale">Kale</option>
+                                        <option value="swiss_chard">Swiss Chard</option>
+                                        <option value="arugula">Arugula</option>
+                                        <option value="pac_choi">Pac Choi</option>
+                                    </optgroup>
+                                    <optgroup label="Herbs">
+                                        <option value="basil">Basil</option>
+                                        <option value="mint">Mint</option>
+                                        <option value="parsley">Parsley</option>
+                                        <option value="cilantro">Cilantro</option>
+                                        <option value="chives">Chives</option>
+                                        <option value="oregano">Oregano</option>
+                                        <option value="thyme">Thyme</option>
+                                    </optgroup>
+                                    <optgroup label="Fruiting Vegetables">
+                                        <option value="tomatoes">Tomatoes</option>
+                                        <option value="peppers">Peppers</option>
+                                        <option value="cucumbers">Cucumbers</option>
+                                        <option value="eggplant">Eggplant</option>
+                                    </optgroup>
                                 </select>
                             </div>
                             <div class="form-field">
                                 <label for="reservoir-volume">Reservoir Volume (L):</label>
-                                <input type="number" id="reservoir-volume" min="10" step="10" placeholder="100">
+                                <input type="number" id="reservoir-volume" min="10" step="10" placeholder="100" readonly>
+                                <small style="color: #666;">Automatically calculated from system configuration</small>
                             </div>
                             <div class="form-field">
                                 <label for="target-ec">Target EC (mS/cm):</label>
@@ -185,8 +282,13 @@
                             </div>
                             <div style="margin-top: 1rem;">
                                 <button class="form-btn secondary" onclick="app.loadCurrentNutrientLevels()">🔄 Refresh from Data</button>
-                                <button class="form-btn secondary" onclick="app.saveCurrentNutrientLevels()">💾 Save Current Levels</button>
-                                <button class="form-btn secondary" onclick="app.clearCurrentNutrientLevels()">🗑️ Clear All</button>
+                                <button class="form-btn secondary" onclick="app.saveCurrentNutrientLevels()">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 14px; height: 14px; vertical-align: text-bottom; margin-right: 3px;">
+                                        <path d="M17,22c-0.3,0-0.5,0-0.8,0H7.8c-0.3,0-0.5,0-0.8,0c0,0,0,0-0.1,0c-1.3,0-2-0.1-2.7-0.4c-0.8-0.4-1.4-1-1.7-1.7   C2,19,2,18,2,16.2V7.8C2,6,2,5,2.4,4.2c0.4-0.8,1-1.4,1.7-1.7C4.9,2.1,5.6,2,6.9,2C7,2,7,2,7.1,2c0.2,0,0.5,0,0.7,0h6.9   c0.5,0,0.9,0,1.2,0.1c0.3,0.1,0.6,0.2,0.9,0.4c0.3,0.2,0.5,0.4,0.9,0.8l3.1,3.1c0.4,0.4,0.6,0.6,0.8,0.9c0.2,0.3,0.3,0.6,0.4,0.9   C22,8.5,22,8.8,22,9.3v6.9c0,1.8,0,2.8-0.4,3.6c-0.4,0.8-1,1.4-1.7,1.7C19.1,21.9,18.4,22,17,22C17,22,17,22,17,22z M8,20h8v-5.4   c0-0.3,0-0.6,0-0.6c0,0-0.3,0-0.6,0H8.6C8.3,14,8,14,8,14c0,0,0,0.3,0,0.6V20z M8.6,12h6.8c0.7,0,1.1,0,1.5,0.2   c0.4,0.2,0.7,0.5,0.9,0.9c0.2,0.4,0.2,0.9,0.2,1.5V20c0.4,0,0.7-0.1,0.9-0.2c0.4-0.2,0.7-0.5,0.9-0.9c0.2-0.4,0.2-1.2,0.2-2.7V9.3   c0-0.4,0-0.6,0-0.7c0-0.1-0.1-0.2-0.1-0.3c-0.1-0.1-0.2-0.3-0.5-0.5L18,6.4c0,0.6,0,1.1-0.2,1.5c-0.2,0.4-0.5,0.7-0.9,0.9   C16.5,9,16.1,9,15.4,9H8.6C7.9,9,7.5,9,7.1,8.8C6.7,8.6,6.4,8.3,6.2,7.9C6,7.5,6,7.1,6,6.4V4c-0.4,0-0.7,0.1-0.9,0.2   C4.7,4.4,4.4,4.7,4.2,5.1C4,5.5,4,6.3,4,7.8v8.4c0,1.5,0,2.3,0.2,2.7c0.2,0.4,0.5,0.7,0.9,0.9C5.3,19.9,5.6,19.9,6,20v-5.4   c0-0.7,0-1.1,0.2-1.5c0.2-0.4,0.5-0.7,0.9-0.9C7.5,12,7.9,12,8.6,12z M8,4v2.4C8,6.7,8,7,8,7c0,0,0.3,0,0.6,0h6.8C15.7,7,16,7,16,7   c0,0,0-0.3,0-0.6v-2c-0.1-0.1-0.2-0.2-0.3-0.3c-0.1-0.1-0.2-0.1-0.3-0.1c-0.1,0-0.3,0-0.7,0H8z" fill="#0051b1"/>
+                                    </svg>
+                                    Save Current Levels
+                                </button>
+                                <button class="form-btn secondary" onclick="app.clearCurrentNutrientLevels()"><span class="icon-placeholder" data-icon="delete"></span>Clear All</button>
                             </div>
                         </div>
                         
@@ -194,6 +296,11 @@
                         
                         <div id="dosing-results" class="dosing-results">
                             <!-- Dosing calculation results will be displayed here -->
+                        </div>
+                        
+                        <div id="dosing-actions" class="dosing-actions" style="display: none; margin-top: 1rem;">
+                            <button class="form-btn secondary" onclick="app.downloadDosingSchedulePDF()">📄 Download as PDF</button>
+                            <button class="form-btn secondary" onclick="app.emailDosingSchedule()">📧 Email Schedule</button>
                         </div>
                     </div>
                     
@@ -273,8 +380,6 @@
             </div>
             <div class="data-entry-tabs">
                 <button id="water-quality-tab" class="data-tab active">Water Quality</button>
-                <button id="fish-health-tab" class="data-tab">Fish Health</button>
-                <button id="plant-growth-tab" class="data-tab">Plant Growth</button>
                 <button id="operations-tab" class="data-tab">Operations</button>
             </div>
             
@@ -290,29 +395,7 @@
                 </div>
             </div>
             
-            <div id="fish-health-form" class="data-form">
-                <div class="data-entry-section">
-                    <!-- Fish health form will be inserted here -->
-                </div>
-                <div class="data-history-section">
-                    <h3>Recent Fish Health Data</h3>
-                    <div id="fish-health-history" class="data-history-list">
-                        <!-- Fish health history will be displayed here -->
-                    </div>
-                </div>
-            </div>
             
-            <div id="plant-growth-form" class="data-form">
-                <div class="data-entry-section">
-                    <!-- Plant growth form will be inserted here -->
-                </div>
-                <div class="data-history-section">
-                    <h3>Recent Plant Growth Data</h3>
-                    <div id="plant-growth-history" class="data-history-list">
-                        <!-- Plant growth history will be displayed here -->
-                    </div>
-                </div>
-            </div>
             
             <div id="operations-form" class="data-form">
                 <div class="data-entry-section">
@@ -332,10 +415,43 @@
             <div class="current-system-display" id="current-system-fish-tank">
                 <!-- Current system name will be displayed here -->
             </div>
-            <div id="tank-summary-container">
-                <!-- Dynamic tank summary will be populated here -->
+            
+            <div class="fish-management-tabs">
+                <button id="fish-overview-tab" class="fish-mgmt-tab active">Overview</button>
+                <button id="tank-information-tab" class="fish-mgmt-tab">Tank Information</button>
+                <button id="fish-health-monitoring-tab" class="fish-mgmt-tab">Fish Health</button>
+                <button id="fish-health-entry-tab" class="fish-mgmt-tab">Data Capture</button>
             </div>
-            <button class="action-btn" id="feed-fish">Feed Fish</button>
+            
+            <div id="fish-overview-content" class="fish-mgmt-content active">
+                <div id="tank-summary-container">
+                    <!-- Dynamic tank summary will be populated here -->
+                </div>
+            </div>
+            
+            <div id="fish-health-entry-content" class="fish-mgmt-content">
+                <div class="data-entry-section">
+                    <!-- Fish health form will be inserted here -->
+                </div>
+                <div class="data-history-section">
+                    <h3>Recent Fish Health Data</h3>
+                    <div id="fish-health-history" class="data-history-list">
+                        <!-- Fish health history will be displayed here -->
+                    </div>
+                </div>
+            </div>
+            
+            <div id="tank-information-content" class="fish-mgmt-content">
+                <div class="tank-info-grid">
+                    <!-- Tank-specific information will be populated here -->
+                </div>
+            </div>
+            
+            <div id="fish-health-monitoring-content" class="fish-mgmt-content">
+                <div class="fish-health-dashboard">
+                    <!-- Fish health monitoring dashboard will be populated here -->
+                </div>
+            </div>
         </section>
 
         <section id="plants" class="view">
@@ -344,46 +460,410 @@
                 <!-- Current system name will be displayed here -->
             </div>
             
-            <div id="plant-overview-container">
-                <!-- Plant overview will be populated here -->
+            <div class="plant-management-tabs">
+                <button id="plant-overview-tab" class="plant-mgmt-tab active">Overview</button>
+                <button id="allocation-management-tab" class="plant-mgmt-tab">Crop Allocation</button>
+                <button id="planting-harvesting-tab" class="plant-mgmt-tab">Plant & Harvest</button>
+                <button id="spray-programmes-tab" class="plant-mgmt-tab">Spray Programmes</button>
+                <button id="custom-crops-tab" class="plant-mgmt-tab">Custom Crops</button>
             </div>
             
-            <div class="nutrient-overview">
-                <h2>Nutrient Levels for Plant Growth</h2>
-                <p style="text-align: center; color: #666; font-style: italic; margin-bottom: 1rem;">
-                    Monitor key nutrients that directly impact plant health and growth.
-                </p>
-                <div class="nutrient-charts-grid">
-                    <div class="chart-card">
-                        <h3>Iron (Fe)</h3>
-                        <div class="stat-value" id="plant-iron">0.0 mg/L</div>
-                        <canvas id="iron-chart" width="200" height="100"></canvas>
+            <div id="plant-overview-content" class="plant-mgmt-content active">
+                <div id="plant-overview-container">
+                    <!-- Plant overview will be populated here -->
+                </div>
+                
+                <div class="nutrient-overview">
+                    <h2>Nutrient Levels for Plant Growth</h2>
+                    <p style="text-align: center; color: #666; font-style: italic; margin-bottom: 1rem;">
+                        Monitor key nutrients that directly impact plant health and growth.
+                    </p>
+                    <div class="nutrient-charts-grid">
+                        <div class="chart-card">
+                            <h3>Nitrate (NO₃)</h3>
+                            <div class="nutrient-status" id="nitrate-status">
+                                <span class="status-indicator" id="nitrate-indicator">●</span>
+                                <span class="status-text" id="nitrate-status-text">No data</span>
+                            </div>
+                            <div class="stat-value" id="plant-nitrate">0.0 mg/L</div>
+                            <canvas id="nitrate-chart" width="200" height="100"></canvas>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Phosphorus (P)</h3>
+                            <div class="nutrient-status" id="phosphorus-status">
+                                <span class="status-indicator" id="phosphorus-indicator">●</span>
+                                <span class="status-text" id="phosphorus-status-text">No data</span>
+                            </div>
+                            <div class="stat-value" id="plant-phosphorus">0.0 mg/L</div>
+                            <canvas id="phosphorus-chart" width="200" height="100"></canvas>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Potassium (K)</h3>
+                            <div class="nutrient-status" id="potassium-status">
+                                <span class="status-indicator" id="potassium-indicator">●</span>
+                                <span class="status-text" id="potassium-status-text">No data</span>
+                            </div>
+                            <div class="stat-value" id="plant-potassium">0.0 mg/L</div>
+                            <canvas id="potassium-chart" width="200" height="100"></canvas>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Iron (Fe)</h3>
+                            <div class="nutrient-status" id="iron-status">
+                                <span class="status-indicator" id="iron-indicator">●</span>
+                                <span class="status-text" id="iron-status-text">No data</span>
+                            </div>
+                            <div class="stat-value" id="plant-iron">0.0 mg/L</div>
+                            <canvas id="iron-chart" width="200" height="100"></canvas>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Calcium (Ca)</h3>
+                            <div class="nutrient-status" id="calcium-status">
+                                <span class="status-indicator" id="calcium-indicator">●</span>
+                                <span class="status-text" id="calcium-status-text">No data</span>
+                            </div>
+                            <div class="stat-value" id="plant-calcium">0.0 mg/L</div>
+                            <canvas id="calcium-chart" width="200" height="100"></canvas>
+                        </div>
+                        <div class="chart-card">
+                            <h3>pH Level</h3>
+                            <div class="nutrient-status" id="ph-status">
+                                <span class="status-indicator" id="ph-indicator">●</span>
+                                <span class="status-text" id="ph-status-text">No data</span>
+                            </div>
+                            <div class="stat-value" id="plant-ph">0.0</div>
+                            <canvas id="plant-ph-chart" width="200" height="100"></canvas>
+                        </div>
                     </div>
-                    <div class="chart-card">
-                        <h3>Potassium (K)</h3>
-                        <div class="stat-value" id="plant-potassium">0.0 mg/L</div>
-                        <canvas id="potassium-chart" width="200" height="100"></canvas>
-                    </div>
-                    <div class="chart-card">
-                        <h3>Calcium (Ca)</h3>
-                        <div class="stat-value" id="plant-calcium">0.0 mg/L</div>
-                        <canvas id="calcium-chart" width="200" height="100"></canvas>
-                    </div>
-                    <div class="chart-card">
-                        <h3>pH Level</h3>
-                        <div class="stat-value" id="plant-ph">0.0</div>
-                        <canvas id="plant-ph-chart" width="200" height="100"></canvas>
+                </div>
+                
+                <div class="nutrient-recommendations">
+                    <h3>Nutrient Recommendations</h3>
+                    <div id="nutrient-recommendations-container">
+                        <!-- Recommendations will be populated here -->
                     </div>
                 </div>
             </div>
             
-            <div class="nutrient-recommendations-section">
-                <h2>Smart Nutrient Recommendations</h2>
-                <p style="text-align: center; color: #666; font-style: italic; margin-bottom: 1rem;">
-                    AI-powered recommendations based on your current nutrient levels and planted crops.
-                </p>
-                <div id="nutrient-recommendations-container">
-                    <!-- Nutrient recommendations will be populated here -->
+            <div id="allocation-management-content" class="plant-mgmt-content">
+                <div class="plant-allocation-section">
+                        <h3>Grow Bed Crop Allocation</h3>
+                        <p style="color: #666; margin-bottom: 1rem;">Manage what crops are allocated to each grow bed and track allocation percentages.</p>
+                        
+                        <div id="grow-bed-allocation-container">
+                            <!-- Grow bed allocation interface will be populated here -->
+                        </div>
+                        
+                        <div class="allocation-summary">
+                            <h4>System Plant Summary</h4>
+                            <div id="plant-count-summary">
+                                <!-- Plant count summary will be displayed here -->
+                            </div>
+                        </div>
+                    </div>
+            </div>
+            
+            <div id="planting-harvesting-content" class="plant-mgmt-content">
+                        <h3>Plant & Harvest Management</h3>
+                        <p style="color: #666; margin-bottom: 1rem;">Record new plantings, transplants, and harvests for your grow beds.</p>
+                        
+                        <div class="plant-action-tabs">
+                            <button id="planting-tab" class="plant-action-tab active">
+                                <div class="tab-icon">🌱</div>
+                                <div class="tab-content">
+                                    <div class="tab-title">Plant & Transplant</div>
+                                    <div class="tab-subtitle">Add new seedlings</div>
+                                </div>
+                            </button>
+                            <button id="harvesting-tab" class="plant-action-tab">
+                                <div class="tab-icon">🌾</div>
+                                <div class="tab-content">
+                                    <div class="tab-title">Harvest</div>
+                                    <div class="tab-subtitle">Record crop yields</div>
+                                </div>
+                            </button>
+                        </div>
+                        
+                        <div id="planting-form-content" class="plant-action-content active">
+                            <div class="modern-form-card">
+                                <div class="form-header">
+                                    <div class="form-header-icon">🌱</div>
+                                    <div class="form-header-text">
+                                        <h3>Record New Planting</h3>
+                                        <p>Add seedlings, transplants, or direct plantings to your grow beds</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="modern-form-grid">
+                                    <div class="form-field-group">
+                                        <label for="plant-date" class="modern-label">
+                                            <span class="label-icon">📅</span>
+                                            <span class="label-text">Date & Time</span>
+                                        </label>
+                                        <input type="datetime-local" id="plant-date" class="modern-input" value="">
+                                    </div>
+                                    
+                                    <div class="form-field-group">
+                                        <label for="plant-grow-bed" class="modern-label">
+                                            <span class="label-icon">🏗️</span>
+                                            <span class="label-text">Grow Bed</span>
+                                        </label>
+                                        <select id="plant-grow-bed" class="modern-select" required>
+                                            <option value="">Choose your grow bed...</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-field-group">
+                                        <label for="plant-crop-type" class="modern-label">
+                                            <span class="label-icon">🥬</span>
+                                            <span class="label-text">Crop Type</span>
+                                        </label>
+                                        <select id="plant-crop-type" class="modern-select" required>
+                                            <option value="">Choose your crop...</option>
+                                            <optgroup label="Leafy Greens">
+                                                <option value="lettuce">Lettuce</option>
+                                                <option value="spinach">Spinach</option>
+                                                <option value="kale">Kale</option>
+                                                <option value="swiss_chard">Swiss Chard</option>
+                                                <option value="arugula">Arugula</option>
+                                                <option value="pac_choi">Pac Choi</option>
+                                            </optgroup>
+                                            <optgroup label="Herbs">
+                                                <option value="basil">Basil</option>
+                                                <option value="mint">Mint</option>
+                                                <option value="parsley">Parsley</option>
+                                                <option value="cilantro">Cilantro</option>
+                                                <option value="chives">Chives</option>
+                                                <option value="oregano">Oregano</option>
+                                                <option value="thyme">Thyme</option>
+                                            </optgroup>
+                                            <optgroup label="Fruiting Vegetables">
+                                                <option value="tomatoes">Tomatoes</option>
+                                                <option value="peppers">Peppers</option>
+                                                <option value="cucumbers">Cucumbers</option>
+                                                <option value="eggplant">Eggplant</option>
+                                            </optgroup>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-field-group">
+                                        <label for="plant-count" class="modern-label">
+                                            <span class="label-icon">🔢</span>
+                                            <span class="label-text">Number of Plants</span>
+                                        </label>
+                                        <input type="number" id="plant-count" class="modern-input" min="1" step="1" placeholder="How many plants?" required>
+                                    </div>
+                                    
+                                    <div class="form-field-group">
+                                        <label for="plant-stage" class="modern-label">
+                                            <span class="label-icon">🌿</span>
+                                            <span class="label-text">Growth Stage</span>
+                                        </label>
+                                        <select id="plant-stage" class="modern-select">
+                                            <option value="seedling">Seedling</option>
+                                            <option value="transplant">Transplant</option>
+                                            <option value="vegetative">Vegetative growth</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-field-group full-width">
+                                        <label for="plant-notes" class="modern-label">
+                                            <span class="label-icon">📝</span>
+                                            <span class="label-text">Notes (Optional)</span>
+                                        </label>
+                                        <textarea id="plant-notes" class="modern-textarea" rows="3" placeholder="Additional notes about this planting..."></textarea>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-actions">
+                                    <button type="button" class="modern-btn primary" onclick="app.recordPlanting()">
+                                        <span class="btn-icon">🌱</span>
+                                        <span class="btn-text">Record Planting</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="harvesting-form-content" class="plant-action-content">
+                            <div class="modern-form-card">
+                                <div class="form-header">
+                                    <div class="form-header-icon">🌾</div>
+                                    <div class="form-header-text">
+                                        <h3>Record Harvest</h3>
+                                        <p>Track your crop yields and harvest quality</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="modern-form-grid">
+                                    <div class="form-field-group">
+                                        <label for="harvest-date" class="modern-label">
+                                            <span class="label-icon">📅</span>
+                                            <span class="label-text">Date & Time</span>
+                                        </label>
+                                        <input type="datetime-local" id="harvest-date" class="modern-input" value="">
+                                    </div>
+                                    
+                                    <div class="form-field-group">
+                                        <label for="harvest-grow-bed" class="modern-label">
+                                            <span class="label-icon">🏗️</span>
+                                            <span class="label-text">Grow Bed</span>
+                                        </label>
+                                        <select id="harvest-grow-bed" class="modern-select" required>
+                                            <option value="">Choose your grow bed...</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-field-group">
+                                        <label for="harvest-crop-type" class="modern-label">
+                                            <span class="label-icon">🥬</span>
+                                            <span class="label-text">Crop Type</span>
+                                        </label>
+                                        <select id="harvest-crop-type" class="modern-select" required>
+                                            <option value="">Choose crop to harvest...</option>
+                                            <optgroup label="Leafy Greens">
+                                                <option value="lettuce">Lettuce</option>
+                                                <option value="spinach">Spinach</option>
+                                                <option value="kale">Kale</option>
+                                                <option value="swiss_chard">Swiss Chard</option>
+                                                <option value="arugula">Arugula</option>
+                                                <option value="pac_choi">Pac Choi</option>
+                                            </optgroup>
+                                            <optgroup label="Herbs">
+                                                <option value="basil">Basil</option>
+                                                <option value="mint">Mint</option>
+                                                <option value="parsley">Parsley</option>
+                                                <option value="cilantro">Cilantro</option>
+                                                <option value="chives">Chives</option>
+                                                <option value="oregano">Oregano</option>
+                                                <option value="thyme">Thyme</option>
+                                            </optgroup>
+                                            <optgroup label="Fruiting Vegetables">
+                                                <option value="tomatoes">Tomatoes</option>
+                                                <option value="peppers">Peppers</option>
+                                                <option value="cucumbers">Cucumbers</option>
+                                                <option value="eggplant">Eggplant</option>
+                                            </optgroup>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-field-group">
+                                        <label for="harvest-plant-count" class="modern-label">
+                                            <span class="label-icon">🔢</span>
+                                            <span class="label-text">Plants Harvested</span>
+                                        </label>
+                                        <input type="number" id="harvest-plant-count" class="modern-input" min="1" step="1" placeholder="How many plants?" required>
+                                    </div>
+                                    
+                                    <div class="form-field-group">
+                                        <label for="harvest-weight" class="modern-label">
+                                            <span class="label-icon">⚖️</span>
+                                            <span class="label-text">Total Weight (kg)</span>
+                                        </label>
+                                        <input type="number" id="harvest-weight" class="modern-input" min="0" step="0.1" placeholder="0.0 kg" required>
+                                    </div>
+                                    
+                                    <div class="form-field-group">
+                                        <label for="harvest-quality" class="modern-label">
+                                            <span class="label-icon">⭐</span>
+                                            <span class="label-text">Harvest Quality</span>
+                                        </label>
+                                        <select id="harvest-quality" class="modern-select">
+                                            <option value="excellent">Excellent</option>
+                                            <option value="good">Good</option>
+                                            <option value="fair">Fair</option>
+                                            <option value="poor">Poor</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-field-group full-width">
+                                        <label for="harvest-notes" class="modern-label">
+                                            <span class="label-icon">📝</span>
+                                            <span class="label-text">Notes (Optional)</span>
+                                        </label>
+                                        <textarea id="harvest-notes" class="modern-textarea" rows="3" placeholder="Notes about this harvest..."></textarea>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-actions">
+                                    <button type="button" class="modern-btn primary" onclick="app.recordHarvest()">
+                                        <span class="btn-icon">🌾</span>
+                                        <span class="btn-text">Record Harvest</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="plant-history-section">
+                            <h4>Recent Plant Activities</h4>
+                            <div id="plant-activity-history">
+                                <!-- Plant activity history will be displayed here -->
+                            </div>
+                            
+                            <!-- Recent Plant Entries with Edit/Delete -->
+                            <div class="recent-plant-entries" style="margin-top: 2rem;">
+                                <h4>Recent Plant Entries</h4>
+                                <div id="recent-plant-entry" class="data-entry-card">
+                                    <!-- Recent plant entry with edit/delete buttons will be displayed here -->
+                                </div>
+                                <div id="recent-harvest-entry" class="data-entry-card" style="margin-top: 1rem;">
+                                    <!-- Recent harvest entry with edit/delete buttons will be displayed here -->
+                                </div>
+                            </div>
+                        </div>
+            </div>
+            
+            <div id="custom-crops-content" class="plant-mgmt-content">
+                <div id="custom-crops-container">
+                    <!-- Custom crops will be displayed here -->
+                </div>
+            </div>
+            
+            <div id="spray-programmes-content" class="plant-mgmt-content">
+                <h3>Spray Programmes</h3>
+                <p style="color: #666; margin-bottom: 1.5rem;">Manage your pest control, disease prevention, and foliar feeding schedules.</p>
+                
+                <div class="spray-programmes-tabs">
+                    <button id="insecticides-tab" class="spray-tab active">🐛 Insecticides</button>
+                    <button id="fungicides-tab" class="spray-tab">🍄 Fungicides</button>
+                    <button id="foliar-feeds-tab" class="spray-tab">🌿 Foliar Feeds</button>
+                </div>
+                
+                <div id="insecticides-content" class="spray-content active">
+                    <div class="spray-category-header">
+                        <h4>Insecticide Applications</h4>
+                        <button class="add-spray-btn" onclick="app.showAddSprayModal('insecticide')"><span class="icon-placeholder" data-icon="add"></span>Add New Insecticide</button>
+                    </div>
+                    <div id="insecticides-list" class="spray-applications-list">
+                        <!-- Insecticide applications will be displayed here -->
+                    </div>
+                </div>
+                
+                <div id="fungicides-content" class="spray-content">
+                    <div class="spray-category-header">
+                        <h4>Fungicide Applications</h4>
+                        <button class="add-spray-btn" onclick="app.showAddSprayModal('fungicide')"><span class="icon-placeholder" data-icon="add"></span>Add New Fungicide</button>
+                    </div>
+                    <div id="fungicides-list" class="spray-applications-list">
+                        <!-- Fungicide applications will be displayed here -->
+                    </div>
+                </div>
+                
+                <div id="foliar-feeds-content" class="spray-content">
+                    <div class="spray-category-header">
+                        <h4>Foliar Feed Applications</h4>
+                        <button class="add-spray-btn" onclick="app.showAddSprayModal('foliar')"><span class="icon-placeholder" data-icon="add"></span>Add New Foliar Feed</button>
+                    </div>
+                    <div id="foliar-feeds-list" class="spray-applications-list">
+                        <!-- Foliar feed applications will be displayed here -->
+                    </div>
+                </div>
+                
+                <div class="spray-calendar">
+                    <h4>Upcoming Applications</h4>
+                    <div id="spray-calendar-container">
+                        <!-- Calendar view will be displayed here -->
+                    </div>
                 </div>
             </div>
             
@@ -410,130 +890,504 @@
                 <!-- Current system name will be displayed here -->
             </div>
             
-            <div class="form-section">
+            <!-- Settings Tabs -->
+            <div class="settings-tabs">
+                <button id="system-config-tab" class="settings-tab active" data-target="system-config-content">
+                    <span class="tab-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 7.13953C9.31564 7.13953 7.13953 9.31564 7.13953 12C7.13953 14.6844 9.31564 16.8605 12 16.8605C14.6844 16.8605 16.8605 14.6844 16.8605 12C16.8605 9.31564 14.6844 7.13953 12 7.13953ZM12 8.67442C10.1633 8.67442 8.67442 10.1633 8.67442 12C8.67442 13.8367 10.1633 15.3256 12 15.3256C13.8367 15.3256 15.3256 13.8367 15.3256 12C15.3256 10.1633 13.8367 8.67442 12 8.67442Z" fill="#0051b1"/>
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M9.43293 2.02118C9.59192 1.43823 10.124 1 10.7609 1H13.1592C13.7961 1 14.3281 1.43823 14.4871 2.02118L14.4902 2.03241L14.9331 3.87469C14.9517 3.95218 15.02 4.04614 15.1526 4.09914C15.2123 4.12296 15.2716 4.14746 15.3308 4.17266C15.4593 4.22742 15.5717 4.21024 15.6391 4.16979L17.1891 3.23982C17.7234 2.91925 18.411 2.99215 18.8581 3.43917L20.5608 5.14193C21.0079 5.58895 21.0807 6.27664 20.7602 6.81091L19.8302 8.36086C19.7898 8.42829 19.7726 8.54074 19.8273 8.66924C19.853 8.72943 19.8779 8.78989 19.9022 8.85061C19.9548 8.98258 20.048 9.05077 20.1251 9.06968L21.9547 9.51869C22.5671 9.66165 23 10.2127 23 10.8408V13.2391C23 13.8673 22.567 14.4183 21.9547 14.5613L20.1251 15.0103C20.048 15.0292 19.9548 15.0974 19.9022 15.2293C19.8779 15.29 19.853 15.3505 19.8273 15.4107C19.7726 15.5392 19.7898 15.6517 19.8302 15.7191L20.7602 17.269C21.0807 17.8033 21.0079 18.491 20.5608 18.938L18.8581 20.6408C18.411 21.0878 17.7234 21.1607 17.1891 20.8401L15.6391 19.9102C15.5717 19.8697 15.4593 19.8525 15.3308 19.9073C15.2698 19.9332 15.2087 19.9585 15.1473 19.983C15.0157 20.0354 14.9476 20.1281 14.9285 20.2049L14.4894 21.9705L14.4871 21.9788C14.3281 22.5618 13.7961 23 13.1592 23H10.7609C10.124 23 9.59192 22.5618 9.43293 21.9788L9.43066 21.9705L8.99155 20.2049C8.97245 20.1281 8.90432 20.0354 8.77281 19.983C8.7114 19.9585 8.65021 19.9332 8.58928 19.9073C8.46079 19.8525 8.34834 19.8697 8.28092 19.9102L6.73097 20.8401C6.19669 21.1607 5.50901 21.0878 5.06199 20.6408L3.35923 18.938C2.9122 18.491 2.83931 17.8033 3.15987 17.269L4.08985 15.7191C4.1303 15.6517 4.14748 15.5392 4.09272 15.4107C4.06629 15.3487 4.04062 15.2864 4.01571 15.2238C3.96361 15.093 3.87164 15.025 3.79534 15.0056L2.0417 14.5604C1.43127 14.4162 1 13.866 1 13.2391V10.8408C1 10.2139 1.43125 9.6638 2.04168 9.51954L3.79534 9.07431C3.87164 9.05493 3.96361 8.98691 4.01571 8.8561C4.04062 8.79354 4.06629 8.73126 4.09272 8.66924C4.14748 8.54074 4.1303 8.42829 4.08985 8.36086L3.15987 6.81091C2.83931 6.27664 2.9122 5.58895 3.35923 5.14193L5.06199 3.43917C5.50901 2.99215 6.19669 2.91925 6.73096 3.23982L8.28092 4.16979C8.34835 4.21024 8.4608 4.22742 8.5893 4.17266C8.64843 4.14746 8.7078 4.12296 8.76741 4.09914C8.90006 4.04614 8.96835 3.95218 8.98698 3.87469L9.42987 2.03241L9.43293 2.02118ZM10.4793 4.23345L10.8877 2.53488H13.0324L13.4407 4.23345C13.5901 4.8549 14.0483 5.31076 14.5832 5.52447C14.632 5.54397 14.6806 5.56404 14.729 5.58468C15.2523 5.80766 15.8888 5.80999 16.4288 5.48594L17.8697 4.62143L19.3786 6.13032L18.5141 7.57117C18.19 8.11124 18.1923 8.74768 18.4153 9.27094C18.4363 9.32029 18.4568 9.3698 18.4766 9.41949C18.6891 9.95198 19.1415 10.4087 19.7593 10.5603L21.4651 10.979V13.101L19.7593 13.5196C19.1415 13.6712 18.6891 14.128 18.4766 14.6605C18.4568 14.7101 18.4363 14.7597 18.4153 14.809C18.1923 15.3322 18.19 15.9687 18.5141 16.5088L19.3786 17.9496L17.8697 19.4585L16.4288 18.594C15.8888 18.27 15.2523 18.2723 14.729 18.4953C14.6791 18.5165 14.6291 18.5372 14.5787 18.5572C14.0479 18.7689 13.592 19.2191 13.439 19.8344L13.0335 21.4651H10.8866L10.4811 19.8344C10.328 19.2192 9.8722 18.7689 9.34131 18.5572C9.29101 18.5372 9.2409 18.5165 9.19102 18.4953C8.66776 18.2723 8.0313 18.27 7.49123 18.594L6.05038 19.4585L4.54149 17.9496L5.406 16.5088C5.73005 15.9687 5.72772 15.3322 5.50474 14.809C5.48309 14.7582 5.46206 14.7072 5.44167 14.656C5.23123 14.1275 4.7845 13.6732 4.17304 13.518L2.53488 13.102V10.9779L4.17304 10.562C4.7845 10.4068 5.23123 9.9524 5.44168 9.42398C5.46206 9.37278 5.48309 9.32177 5.50474 9.27096C5.72772 8.7477 5.73005 8.11125 5.406 7.57117L4.54149 6.13032L6.05038 4.62143L7.49123 5.48594C8.0313 5.80999 8.66776 5.80766 9.19101 5.58468C9.23946 5.56404 9.28808 5.54397 9.33688 5.52447C9.87178 5.31076 10.33 4.8549 10.4793 4.23345Z" fill="#0051b1"/>
+                        </svg>
+                    </span>
+                    <span class="tab-label">System Config</span>
+                </button>
+                <button id="system-sharing-tab" class="settings-tab" data-target="system-sharing-content">
+                    <span class="tab-icon">
+                        <svg id="Layer_1" viewBox="0 0 2048 2048" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+                            <path d="m739.27 704.236v-.011c-3.123-11.625-5.538-23.483-7.226-35.509-68.498 43.095-127.49 101.612-171.08 169.825-44.266 69.268-72.57 148.589-82.254 230.21 11.309-1.477 22.766-2.3 34.328-2.447 19.326-146.986 102.371-279.793 226.232-362.068z" fill="#0051b1"/>
+                            <path d="m1312.707 1560.809c-85.334 57.895-184.742 88.404-288.707 88.404-103.954 0-203.362-30.498-288.696-88.394-3.144 3.46-6.372 6.857-9.695 10.191-4.811 4.832-9.769 9.473-14.843 13.915 92.192 64.194 200.186 98.047 313.234 98.047 113.058 0 221.053-33.853 313.234-98.068-3.523-3.08-6.984-6.256-10.37-9.516-4.863-4.663-9.6-9.537-14.157-14.579z" fill="#0051b1"/>
+                            <path d="m1534.963 1066.303c6.836.095 13.672.422 20.36.981 4.673.39 9.336.875 13.967 1.487-9.684-81.632-37.989-160.963-82.254-230.231-43.59-68.213-102.583-126.731-171.08-169.836-1.688 12.037-4.104 23.895-7.226 35.531 123.861 82.286 206.906 215.083 226.233 362.068z" fill="#0051b1"/>
+                            <path d="m888.967 697.062c20.023-11.636 41.459-20.592 63.698-26.69-17.839-13.609-31.712-32.197-39.518-53.686-.021-.032-.032-.063-.042-.095-.011-.032-.021-.063-.032-.095-.221-.517-.401-1.044-.559-1.582 0-.011 0-.011-.011-.021-4.188-12.111-6.467-25.118-6.467-38.632 0-65.217 52.916-118.259 117.964-118.259s117.964 53.043 117.964 118.259c0 13.514-2.279 26.521-6.467 38.632-.01.01-.01.01-.01.021-.158.538-.338 1.065-.559 1.582-.01.032-.021.063-.032.095s-.021.063-.042.095c-7.807 21.489-21.679 40.077-39.518 53.686 22.238 6.098 43.675 15.054 63.698 26.69 32.355 18.81 60.543 44.276 82.581 74.458 27.471-41.459 43.485-91.168 43.485-144.57 0-144.422-117.131-261.922-261.099-261.922s-261.099 117.5-261.099 261.922c0 53.401 16.014 103.11 43.485 144.57 22.037-30.182 50.225-55.648 82.58-74.458z" fill="#0051b1"/>
+                            <path d="m827.886 799.666c47.873 54.646 118.048 89.196 196.114 89.196s148.241-34.549 196.114-89.196c-43.537-65.143-117.605-105.146-196.114-105.146s-152.577 40.003-196.114 105.146z" fill="#0051b1"/>
+                            <path d="m1103.437 604.311c3.091-8.777 4.768-18.219 4.768-28.051 0-46.597-37.778-84.501-84.206-84.501s-84.206 37.904-84.206 84.501c0 46.586 37.778 84.501 84.206 84.501 36.629 0 67.876-23.599 79.438-56.45z" fill="#0051b1"/>
+                            <path d="m517.099 1429.521c-78.509 0-152.577 40.004-196.114 105.157 47.884 54.646 118.059 89.185 196.114 89.185s148.23-34.539 196.114-89.185c-43.537-65.153-117.605-105.157-196.114-105.157z" fill="#0051b1"/>
+                            <path d="m382.077 1432.063c20.023-11.636 41.449-20.593 63.687-26.69-28.325-21.616-46.629-55.754-46.629-94.112 0-65.206 52.916-118.259 117.964-118.259s117.964 53.053 117.964 118.259c0 38.358-18.303 72.496-46.629 94.112 22.238 6.098 43.675 15.054 63.698 26.69 32.355 18.82 60.543 44.286 82.581 74.468 27.471-41.459 43.485-91.179 43.485-144.58 0-144.422-117.131-261.922-261.099-261.922-7.174 0-14.284.295-21.31.875-.105 0-.211.011-.327.021-.063 0-.127.01-.19.021-133.788 11.153-239.272 123.958-239.272 261.006 0 53.401 16.014 103.121 43.485 144.58 22.038-30.182 50.226-55.649 82.592-74.469z" fill="#0051b1"/>
+                            <ellipse cx="517.099" cy="1311.262" rx="84.206" ry="84.501" fill="#0051b1"/>
+                            <path d="m1530.901 1429.521c-78.551 0-152.661 40.046-196.188 105.262 4.884 5.581 10.001 10.94 15.297 16.025.011.01.032.031.042.042.011.01.032.032.053.053.01.011.032.021.042.042l.095.095c.074.063.137.137.211.2 48.812 46.839 112.879 72.622 180.448 72.622 75.682 0 146.532-32.323 196.188-89.08-43.537-65.215-117.637-105.261-196.188-105.261z" fill="#0051b1"/>
+                            <path d="m1552.812 1100.948c-.084-.011-.169-.011-.253-.021-.011 0-.011 0-.021 0-.127-.011-.264-.021-.39-.032-6.973-.57-14.126-.865-21.247-.865-143.979 0-261.109 117.5-261.109 261.922 0 52.294 14.938 101.855 43.401 144.696 22.059-30.235 50.279-55.743 82.676-74.584 19.991-11.615 41.396-20.572 63.592-26.659-29.095-22.143-46.523-56.693-46.523-94.143 0-65.206 52.916-118.259 117.964-118.259 7.754 0 15.486.76 22.966 2.247 55.036 10.877 94.998 59.668 94.998 116.012 0 38.358-18.314 72.496-46.629 94.112 22.238 6.098 43.664 15.054 63.687 26.69 32.408 18.841 60.617 44.35 82.676 74.584 28.463-42.841 43.401-92.403 43.401-144.696-.001-135.234-105.042-249.832-239.189-261.004z" fill="#0051b1"/>
+                            <path d="m1530.901 1395.763c46.428 0 84.206-37.904 84.206-84.501 0-40.267-28.515-75.133-67.812-82.898-5.338-1.066-10.845-1.604-16.394-1.604-46.439 0-84.206 37.904-84.206 84.501 0 31.648 17.396 60.396 45.405 75.006v.011c12.048 6.288 25.108 9.485 38.801 9.485z" fill="#0051b1"/>
+                        </svg>
+                    </span>
+                    <span class="tab-label">System Sharing</span>
+                </button>
+                <button id="danger-zone-tab" class="settings-tab" data-target="danger-zone-content">
+                    <span class="tab-icon">
+                        <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+                            <g id="Layer_2">
+                                <g id="Layer_1_copy_6">
+                                    <g id="_3">
+                                        <path d="m141.82 0h228.35a141.83 141.83 0 0 1 141.83 141.83v228.35a141.82 141.82 0 0 1 -141.82 141.82h-228.36a141.82 141.82 0 0 1 -141.82-141.82v-228.36a141.82 141.82 0 0 1 141.82-141.82z" fill="#0051b1"/>
+                                        <g id="background">
+                                            <rect fill="#ffffff" height="432" rx="101.82" width="432" x="40" y="40"/>
+                                        </g>
+                                        <g fill="#ff4b05">
+                                            <path d="m393.82 153.68h-71.36v-42.68a21 21 0 0 0 -20.95-21h-91a21 21 0 0 0 -21 21v42.73h-71.33a20.95 20.95 0 1 0 0 41.89h11.14v179.03a47.4 47.4 0 0 0 47.35 47.35h158.66a47.4 47.4 0 0 0 47.35-47.35v-179.08h11.14a20.95 20.95 0 1 0 0-41.89zm-162.39-21.79h49.14v21.79h-49.14zm109.36 242.76a5.47 5.47 0 0 1 -5.46 5.46h-158.66a5.47 5.47 0 0 1 -5.46-5.46v-179.08h169.58z" fill="#ff4b05"/>
+                                            <path d="m220.59 358.24a20.94 20.94 0 0 0 20.94-20.95v-102.18a20.95 20.95 0 1 0 -41.89 0v102.18a21 21 0 0 0 20.95 20.95z" fill="#ff4b05"/>
+                                            <path d="m291.41 358.24a21 21 0 0 0 20.95-20.95v-102.18a20.95 20.95 0 1 0 -41.89 0v102.18a20.94 20.94 0 0 0 20.94 20.95z" fill="#ff4b05"/>
+                                        </g>
+                                    </g>
+                                </g>
+                            </g>
+                        </svg>
+                    </span>
+                    <span class="tab-label">Danger Zone</span>
+                </button>
+                <button id="admin-settings-tab" class="settings-tab" data-target="admin-settings-content" style="display: none;">
+                    <span class="tab-icon">
+                        <svg id="Layer_1" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+                            <path d="m94.0654297 75.902832c-.2158203-.484375-.6152344-.8637695-1.1103516-1.0537109l-3.28125-1.2597656 3.2099609-1.4291992c1.0087891-.4492188 1.4628906-1.6313477 1.0136719-2.640625l-2.6431885-5.9368286c1.7651978-4.8695679 2.7457276-10.1109009 2.7457276-15.5827027 0-11.1640625-4.0493164-21.9301758-11.4018555-30.3154297-.7285156-.8310547-1.9926758-.9140625-2.8222656-.1855469-.8305664.7285156-.9135742 1.9921875-.1855469 2.8222656 6.7128907 7.6557618 10.409668 17.4853516 10.409668 27.678711 0 4.6452026-.7808228 9.1049805-2.1866455 13.2816772l-3.0203857 1.3447876 1.2587891-3.2807617c.3955078-1.03125-.1191406-2.1879883-1.1503906-2.5839844l-7.46875-2.8666992c-.4960938-.190918-1.0449219-.1762695-1.5302734.0400391-.484375.2158203-.8632813.6152344-1.0537109 1.1103516l-1.2587891 3.2807617-1.4296875-3.2104492c-.4501953-1.0087891-1.6298828-1.4633789-2.640625-1.0136719l-4.3305664 1.9280396c-2.211853-.6133423-4.5099487-1.1209106-6.8984985-1.4874268 6.3834227-3.6067505 10.7095335-10.4458618 10.7095335-18.2861328 0-11.5795898-9.4204102-21-21-21s-21 9.4204102-21 21c0 7.8405151 4.326416 14.6797485 10.710083 18.286438-11.3953247 1.74823-21.046936 6.3448486-27.0621948 12.6242065-2.9633179-5.7511597-4.6478882-12.2642212-4.6478882-19.1671753 0-23.1586914 18.8413086-42 42-42 9.7084961 0 19.1767578 3.3896484 26.6601563 9.5444336.8535156.7021484 2.1142578.5791016 2.8149414-.2739258.7016602-.8530273.5791016-2.1132813-.2739258-2.8149414-8.1972656-6.7426758-18.5678711-10.4555664-29.2011719-10.4555664-25.3642578 0-46 20.6357422-46 46s20.6357422 46 46 46c5.3840332 0 10.5408325-.9549561 15.3410645-2.6687012l7.2263184 2.7736816c.2314453.0888672.4736328.1328125.7167969.1328125.2773438 0 .5546875-.0576172.8134766-.1728516.484375-.2158203.8632813-.6152344 1.0537109-1.1103516l1.2587891-3.2807617 1.4296875 3.2104492c.4501953 1.0083008 1.6289063 1.4633789 2.640625 1.0136719l7.3085938-3.2539063c.484375-.2158203.8632813-.6152344 1.0537109-1.1103516s.1757813-1.0458984-.0400391-1.5302734l-1.4296875-3.2109375 3.28125 1.2597656c1.0273438.3935547 2.1875-.1196289 2.5839844-1.1503906l2.8671875-7.46875c.1904295-.495117.1757811-1.0458983-.0400392-1.5302733zm-63.0654297-39.6463012c0-9.3740234 7.6259766-17 17-17s17 7.6259766 17 17-7.6259766 17-17 17-17-7.6259766-17-17zm31.4240723 51.1575927c-4.4987183 1.6622315-9.3515015 2.5858765-14.4240723 2.5858765-14.8234863 0-27.8681641-7.7263794-35.3450928-19.3563232 6.7062378-7.7986451 20.0123902-12.887146 35.3450928-12.887146 4.5681763 0 8.9508057.4594116 13.0375366 1.3029175-.0198364.3187256.0274048.6401978.159729.9371338l1.4296875 3.2109375-3.28125-1.2597656c-1.0302734-.3964844-2.1875.1186523-2.5839844 1.1503906l-2.8671875 7.46875c-.1904297.4951172-.1757813 1.0458984.0400391 1.5302734s.6152344.8637695 1.1103516 1.0537109l3.28125 1.2597656-3.2099609 1.4291992c-1.0087891.4492188-1.4628906 1.6313477-1.0136719 2.640625l3.2539063 7.3085938c.2158203.484375.6152344.8637695 1.1103516 1.0537109.4951172.1894531 1.0439453.175293 1.5302734-.0400391l3.2099609-1.4291992zm25.7966308-5.8130493-3.3925781-1.3022461c-.8115234-.3120117-1.7294922-.0634766-2.2734375.6118164-.3515625.4350586-.7578125.8608398-1.2080078 1.2651367-.6464844.5795898-.8447266 1.5092773-.4921875 2.3022461l1.4804688 3.3251953-3.6542969 1.6269531-1.4804688-3.3251953c-.3535156-.7929688-1.1855469-1.2617188-2.0400391-1.175293-.6015625.0644531-1.1796875.0820313-1.7490234.0517578-.8789063-.0424805-1.6650391.4707031-1.9755859 1.2802734l-1.3017578 3.3920898-3.734375-1.4331055 1.3017578-3.3925781c.3105469-.8100586.0644531-1.7280273-.6113281-2.2729492-.4384766-.3540039-.8632813-.7602539-1.2636719-1.2075195-.5771484-.6464844-1.5087891-.847168-2.3037109-.4931641l-3.3251953 1.4804688-1.6269531-3.6542969 3.3251953-1.4804688c.7929688-.3530273 1.2675781-1.1772461 1.1748047-2.0405273-.0644531-.6005859-.0820313-1.1894531-.0517578-1.7504883.0458984-.8657227-.4707031-1.6630859-1.2802734-1.9736328l-3.3925781-1.3022461 1.4335938-3.734375 3.3925781 1.3022461c.8115234.3129883 1.7294922.0634766 2.2734375-.6118164.3515625-.4350586.7578125-.8608398 1.2080078-1.2651367.6464844-.5795898.8447266-1.5092773.4921875-2.3022461l-1.4804688-3.3251953 3.6542969-1.6269531 1.4804688 3.3251953c.3535156.793457 1.1865234 1.2651367 2.0400391 1.175293.6015625-.0644531 1.1777344-.0834961 1.7490234-.0517578.8925781.0527344 1.6650391-.4702148 1.9755859-1.2802734l1.3017578-3.3920898 3.734375 1.4331055-1.3017578 3.3925781c-.3105469.8100586-.0644531 1.7280273.6113281 2.2729492.4384766.3540039.8632813.7602539 1.2636719 1.2075195.578125.6464844 1.5087891.8481445 2.3037109.4931641l3.3251953-1.4804688 1.6269531 3.6542969-3.3251953 1.4804688c-.7939453.3535156-1.2685547 1.1791992-1.1748047 2.0429688.0644531.59375.0820313 1.1816406.0517578 1.7480469-.0458984.8657227.4707031 1.6630859 1.2802734 1.9736328l3.3925781 1.3022461zm-10.9951172-16.0034179c-1.0371094-.3979492-2.1210938-.5996094-3.2236328-.5996094-3.7001953 0-7.0771484 2.3212891-8.4042969 5.7763672-1.7783203 4.6328125.5439453 9.8491211 5.1767578 11.6279297 1.0371094.3979492 2.1210938.5996094 3.2236328.5996094 3.7001953 0 7.0771484-2.3212891 8.4042969-5.7763672 1.7783204-4.6328126-.5439453-9.8491212-5.1767578-11.6279297zm1.4423829 10.1943359c-.7373047 1.9199219-2.6142578 3.2099609-4.6699219 3.2099609-.6103516 0-1.2128906-.1123047-1.7900391-.3339844-2.5742188-.9882813-3.8642578-3.8862305-2.8759766-6.4599609.7373047-1.9199219 2.6142578-3.2099609 4.6699219-3.2099609.6103516 0 1.2128906.1123047 1.7900391.3339844 2.5742187.9882812 3.8642578 3.8862304 2.8759766 6.4599609z" fill="#0051b1"/>
+                        </svg>
+                    </span>
+                    <span class="tab-label">Admin</span>
+                </button>
+            </div>
+            
+            <!-- System Configuration Content -->
+            <div id="system-config-content" class="settings-content active">
+                <div class="form-section">
                 <h3>System Configuration</h3>
-                <p style="color: #666; margin-bottom: 1rem;">Configure your aquaponics system details for accurate calculator results.</p>
+                <p style="color: #666; margin-bottom: 1.5rem;">Configure your aquaponics system components and specifications.</p>
                 
-                <div class="form-grid">
-                    <div class="form-field">
-                        <label for="system-name">System Name:</label>
-                        <input type="text" id="system-name" placeholder="My Aquaponics System">
+                <!-- System Config Sub-Tabs -->
+                <div class="system-config-tabs">
+                    <button class="system-config-tab active" data-target="overall-system-content">
+                        <span class="tab-icon">
+                            <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
+                                <path d="m25 13c-2.4587402 0-4.4973755 1.7878418-4.9119873 4.1295166-.9055786-1.2860107-2.3988648-2.1295166-4.0880127-2.1295166h-1c-.5527344 0-1 .4472656-1 1 0 2.7568359 2.2431641 5 5 5h1v1c0 1.3909302.7149048 2.6154175 1.7948608 3.3323364.6411743-.3995972 1.2388306-.8602905 1.7831421-1.3791504-.9002685-.1946411-1.5780029-.9956665-1.5780029-1.953186v-3c2.4993896 0 4.5578613-1.8493652 4.9240112-4.2481079-.0584717-.5148315-.1599121-1.0157471-.2872314-1.5067139-.1740112-.1467285-.3910523-.2451782-.6367798-.2451782zm-8.8271484 4.0048828c1.2265625.0703125 2.2587891.8808594 2.6542969 1.9902344-1.2265626-.0703125-2.2587891-.8808594-2.6542969-1.9902344zm6-.0097656c.3955078-1.109375 1.4277344-1.9199219 2.6542969-1.9902344-.3955079 1.109375-1.4277344 1.9199219-2.6542969 1.9902344z" fill="#0051b1"/>
+                                <path d="m16 30c-7.7197266 0-14-6.2802734-14-14s6.2802734-14 14-14 14 6.2802734 14 14-6.2802734 14-14 14zm0-26c-6.6171875 0-12 5.3828125-12 12s5.3828125 12 12 12 12-5.3828125 12-12-5.3828125-12-12-12z" fill="#0051b1"/>
+                                <path d="m12 18v-1c.5527344 0 1-.4472656 1-1s-.4472656-1-1-1h-.0505371c-.0793457-.3894653-.2574463-.7393188-.4951782-1.0402222l.2527466-.2527466c.390625-.390625.390625-1.0234375 0-1.4140625s-1.0234375-.390625-1.4140625 0l-.7149048.7149048c-.0265503-.0008545-.0513306-.0078735-.078064-.0078735s-.0515137.007019-.078064.0078735l-.7149048-.7149048c-.390625-.390625-1.0234375-.390625-1.4140625 0s-.390625 1.0234375 0 1.4140625l.2527466.2527466c-.2377319.3009034-.4158325.6507569-.4951782 1.0402222h-.0505371c-.5527344 0-1 .4472656-1 1s.4472656 1 1 1v1c-.5527344 0-1 .4472656-1 1s.4472656 1 1 1h.211731c.1343384.3063354.3292847.5783081.5682373.8059692l-.4869995.4869995c-.390625.390625-.390625 1.0234375 0 1.4140625.1953125.1953126.4511718.2929688.7070312.2929688s.5117188-.0976563.7070313-.2929688l.7929687-.7929687.7929688.7929688c.1953125.1953125.4511718.2929687.7070312.2929687s.5117188-.0976563.7070313-.2929688c.390625-.390625.390625-1.0234375 0-1.4140625l-.4869995-.4869995c.2389526-.2276611.4338989-.4996338.5682372-.8059692h.211731c.5527344 0 1-.4472656 1-1s-.4472656-1-1-1zm-2 1c0 .2753906-.2246094.5-.5.5s-.5-.2246094-.5-.5v-3.5c0-.2753906.2246094-.5.5-.5s.5.2246094.5.5z" fill="#0051b1"/>
+                                <path d="m22.3398438 9 .2695313-.2070313c.4072266-.3134766.5107422-.8828125.2412109-1.3193359-.2705079-.4355469-.8242188-.5996094-1.288086-.3730469l-1.6181641.7871094-1.2558594-.6103516c-1.2597656-.8359374-2.680664-1.2773437-4.1123046-1.2773437-1.9501953 0-3.828125.8164063-5.2880859 2.2978516-.3837891.3896484-.3837891 1.0146484 0 1.4042969 1.4599609 1.4814453 3.3378906 2.2978515 5.2880859 2.2978515 1.4326172 0 2.8525391-.4414063 4.1123047-1.2773438l1.2558594-.6103516 1.618164.7871095c.4638672.2265625 1.0185547.0625 1.2880859-.3730469.2695313-.4365234.1660156-1.0058594-.2412109-1.3193359zm-9.5095826-.6644897c.1107178.2106323.1697388.4355468.1697388.6644897s-.059021.4538574-.1697388.6644897c-.4506836-.1611328-.8880005-.3760986-1.2951049-.6644897.4071044-.2883911.8444213-.5033569 1.2951049-.6644897zm4.7986451.6898803c-.8626709.5834961-1.8221436.8837891-2.782959.9326172.0913086-.3099975.1540527-.6279297.1540527-.9580078s-.0628052-.6480103-.1541138-.9580078c.9608154.0488281 1.9203491.3491211 2.78302.9326172.0136719.008789.0263672.0175781.0390626.0253906-.0126954.0078125-.0253907.0166016-.0390625.0253906z" fill="#0051b1"/>
+                            </svg>
+                        </span>
+                        <span class="tab-label">Overall System</span>
+                    </button>
+                    <button class="system-config-tab" data-target="fish-tanks-config-content">
+                        <span class="tab-icon">
+                            <svg id="line_gradient" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
+                                <path d="m60 15.31641c-.06995-7.53772-55.81635-7.57947-55.99365-.00043.00006.07397-.00012 28.03247 0 28.09576.00299.0293.00537 5.24005-.00629 5.26489.07758 7.54852 55.75513 7.57166 55.99536.02429.02502-.01483-.00842-33.36505.00458-33.38452zm-27.99658-3.62598c16.10791 0 25.23291 2.29785 25.97998 3.62598-.74707 1.32812-9.87207 3.62598-25.97998 3.62598s-25.2334-2.29785-25.97998-3.62598c.74658-1.32812 9.87158-3.62598 25.97998-3.62598zm25.99658 36.94531c-.57245 1.32385-9.71436 3.67383-26.00049 3.67383-16.22369 0-25.3576-2.33209-25.99316-3.65863v-2.89703c.90399.45752 2.10883.8714 3.6626 1.24805 10.00854 2.61346 34.65234 2.61346 44.66113-.00018 1.55829-.3775 2.76526-.79266 3.66992-1.25177v2.88574zm-15.96191-4.37598c.06256-2.40955 3.52368-2.40906 3.58594.00006-.06281 2.40808-3.52344 2.40759-3.58594-.00006zm15.96191-.92627c-.83704 1.32953-7.84106 2.57544-10.91663 2.86346 1.5282-2.41089-.38037-5.84546-3.25232-5.76434-3.18195-.07007-4.98657 3.94934-2.87567 6.29303-7.47845.47888-17.1037.29956-23.99585-.52332-.0249-.90234-.13324-1.83319-.32574-2.78046-.75879-3.66602-.13477-5.09863-.09961-5.1748.25684-.47363.0918-1.06934-.37793-1.3418-1.70135-.77686-2.41718 2.00098-1.48157 6.91888.14685.72272.21753 1.42542.25311 2.11566-1.31244-.18549-2.52734-.39258-3.62006-.62073.36011-1.20801.88037-3.76617.19421-7.0896-.75732-3.6709-.13574-5.09961-.10059-5.1748.25732-.47363.09277-1.06934-.37598-1.3418-1.70844-.77917-2.41382 2.0014-1.48254 6.92084.62537 3.0282.09412 5.32129-.18549 6.22223-2.74652-.74951-3.27386-1.38898-3.35101-1.51147v-25.68591c10.23053 4.42682 41.70642 4.44403 51.99365.00049 0-.00049 0 25.67444 0 25.67444zm-32.33789-19.32861c-.18945.21289-.2793.49707-.24609.78027.02924.25256.26721 2.15759.76953 3.61804-.85608.61835-1.66144 1.29407-2.39209 1.99426-1.9209-2.14648-3.1084-4.10742-3.13428-4.15137-.19385-.32324-.55371-.51465-.9292-.48438-.37598.02637-.70557.26172-.85156.61035l-1.22412 2.91406c-.68311 1.62598-.68311 3.49219 0 5.11719l1.22412 2.91504c.28558.74249 1.39325.82172 1.78076.12592.02588-.04388 1.21338-2.00482 3.13428-4.15131.72894.69861 1.53229 1.37286 2.38617 1.99005-.50421 1.4621-.74261 3.37408-.77191 3.62714-.08063.57501.41284 1.12878.99316 1.11523 2.14215 0 6.76843-1.77405 7.66107-2.12415 7.74487-.42566 8.99487-5.62439 8.89227-6.27032-.05127-.23315-1.32715-5.52551-8.89734-5.84192-.92755-.36371-5.51727-2.11908-7.64771-2.11908-.28516 0-.55713.12207-.74707.33496zm-5.66211 10.81934-.50195-1.19531c-.72607-1.55768-.21979-3.30371.50208-4.7627 2.92157 4.04932 2.91479 1.91351-.00012 5.95801zm7.58887 3.04688c.08728-.47797.20129-.99866.33453-1.47357.61621.34052 1.25665.62799 1.91498.86749-.78943.24585-1.57886.4671-2.24951.60608zm9.02246-9.68744c3.10712.89661 4.08301 2.96942 4.32324 3.66205-.24023.69183-1.21613 2.76447-4.32324 3.66107zm-2-.36438v8.05188c-3.54901.50073-6.89624-1.55579-9.4248-4.02551 2.22949-2.14545 5.09717-4.08685 8.17383-4.08685.44464 0 .85559.02484 1.25098.06049zm-4.77643-1.39264c-1.58032.41724-1.97363 1.71674-2.23724-.60242.66718.13824 1.4519.35809 2.23724.60242zm22.49615 17.25598c5.01154-.16046 5.0094-7.4939-.00006-7.65332-5.01184.15991-5.01166 7.4939.00006 7.65332zm0-5.65332c2.36224.06226 2.36273 3.59119-.00006 3.65332-2.36432-.06287-2.36285-3.59113.00006-3.65332z" fill="#0051b1"/>
+                            </svg>
+                        </span>
+                        <span class="tab-label">Fish Tanks</span>
+                    </button>
+                    <button class="system-config-tab" data-target="grow-beds-config-content">
+                        <span class="tab-icon">
+                            <svg id="icons" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
+                                <path d="m63 31.999h-13.983v-9.986c0-.001-.001-.002-.001-.003.002-1.368.928-2.512 2.183-2.869.491 1.652 2.007 2.869 3.817 2.869 2.061 0 6.002-1.558 6.002-4s-3.941-4-6.002-4c-1.893 0-3.474 1.324-3.887 3.093-2.334.421-4.113 2.457-4.113 4.91 0 .002.001.003.001.005v.024c-.613-.464-1.327-.794-2.113-.936-.413-1.769-1.994-3.093-3.887-3.093-2.061 0-6.002 1.558-6.002 4s3.941 4 6.002 4c1.811 0 3.326-1.217 3.817-2.869 1.256.358 2.183 1.503 2.183 2.872v5.982h-13.994v-15.991c0-1.369.928-2.514 2.183-2.872.491 1.652 2.007 2.869 3.817 2.869 2.061 0 6.002-1.558 6.002-4s-3.941-4-6.002-4c-1.893 0-3.474 1.324-3.887 3.093-.786.142-1.5.472-2.113.936v-.024c0-.002.001-.003.001-.005 0-2.453-1.779-4.489-4.113-4.91-.413-1.77-1.994-3.094-3.887-3.094-2.061 0-6.002 1.558-6.002 4s3.941 4 6.002 4c1.811 0 3.326-1.217 3.817-2.869 1.254.357 2.181 1.501 2.183 2.869 0 .001-.001.002-.001.003v19.996h-14.04v-5.982c0-1.369.927-2.514 2.183-2.872.491 1.652 2.007 2.869 3.817 2.869 2.061 0 6.002-1.558 6.002-4s-3.941-4-6.002-4c-1.893 0-3.474 1.324-3.887 3.093-.786.142-1.5.472-2.113.936v-.024c0-.002.001-.003.001-.005 0-2.453-1.779-4.489-4.113-4.91-.413-1.769-1.994-3.093-3.887-3.093-2.061 0-6.002 1.558-6.002 4s3.941 4 6.002 4c1.811 0 3.326-1.217 3.817-2.869 1.255.357 2.181 1.501 2.183 2.869 0 .001-.001.002-.001.003v9.986h-13.983c-.553 0-1 .447-1 1v22c0 .553.447 1 1 1h2.001v3c0 .553.447 1 1 1h11c.553 0 1-.447 1-1v-3h31.999v3c0 .553.447 1 1 1h11c.553 0 1-.447 1-1v-3h2c.553 0 1-.447 1-1v-22.001c0-.553-.447-1-1-1zm-7.984-15.989c1.496 0 4.002 1.252 4.002 2s-2.506 2-4.002 2c-1.103 0-2-.897-2-2s.897-2 2-2zm-13.999 8.004c-1.496 0-4.002-1.252-4.002-2s2.506-2 4.002-2c1.103 0 2 .897 2 2s-.898 2-2 2zm-1.994-14.01c1.496 0 4.002 1.252 4.002 2s-2.506 2-4.002 2c-1.103 0-2-.897-2-2s.898-2 2-2zm-13.999-.004c-1.496 0-4.002-1.252-4.002-2s2.506-2 4.002-2c1.103 0 2 .897 2 2s-.897 2-2 2zm-2.041 10.014c1.496 0 4.002 1.252 4.002 2s-2.506 2-4.002 2c-1.103 0-2-.897-2-2s.898-2 2-2zm-13.999-.004c-1.496 0-4.002-1.252-4.002-2s2.506-2 4.002-2c1.103 0 2 .897 2 2s-.897 2-2 2zm6.917 13.989c.028.003.053.017.082.017s.054-.014.082-.017h15.876c.028.003.053.017.082.017s.054-.014.082-.017h15.829c.028.003.053.017.082.017s.054-.014.082-.017h13.902v9h-60v-9zm-1.9 24.001h-9v-2h9zm44.999 0h-9v-2h9zm1-4h-11-33.999-11-2.001v-9.001h60v9.001z" fill="#0051b1"/>
+                            </svg>
+                        </span>
+                        <span class="tab-label">Grow Beds</span>
+                    </button>
+                </div>
+                
+                <!-- Overall System Content -->
+                <div id="overall-system-content" class="system-config-content active">
+                    <!-- Basic System Information -->
+                    <h4 style="margin-bottom: 1rem; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 500 500">
+                            <g>
+                                <g>
+                                    <path d="m250 403.1c-84.4 0-153.1-68.7-153.1-153.1s68.7-153.1 153.1-153.1 153.1 68.7 153.1 153.1-68.7 153.1-153.1 153.1zm0-291.6c-76.4 0-138.5 62.1-138.5 138.5s62.1 138.5 138.5 138.5 138.5-62.1 138.5-138.5-62.1-138.5-138.5-138.5z" fill="#0051b1"/>
+                                </g>
+                                <g>
+                                    <path d="m286.5 337.5h-67.5c-4 0-7.3-3.3-7.3-7.3v-23.7c0-4 3.3-7.3 7.3-7.3h9.1v-41.9h-1.8c-4 0-7.3-3.3-7.3-7.3v-20.1c0-4 3.3-7.3 7.3-7.3h43.7c4 0 7.3 3.3 7.3 7.3v67.4h9.1c4 0 7.3 3.3 7.3 7.3v25.5c0 4.1-3.2 7.4-7.2 7.4zm-60.2-14.6h52.9v-10.9h-9.1c-4 0-7.3-3.3-7.3-7.3v-67.4h-29.2v5.5h1.8c4 0 7.3 3.3 7.3 7.3v56.5c0 4-3.3 7.3-7.3 7.3h-9.1z" fill="#0051b1"/>
+                                </g>
+                                <g>
+                                    <path d="m252.7 211.6c-14 0-25.4-11.4-25.4-25.4s11.4-25.4 25.4-25.4 25.4 11.4 25.4 25.4-11.4 25.4-25.4 25.4zm0-38.8c-7.4 0-13.4 6-13.4 13.4s6 13.4 13.4 13.4 13.4-6 13.4-13.4-6-13.4-13.4-13.4z" fill="#0051b1"/>
+                                </g>
+                            </g>
+                        </svg>
+                        Basic Information
+                    </h4>
+                    <div class="settings-row">
+                        <div class="form-field">
+                            <label for="system-name">System Name:</label>
+                            <input type="text" id="system-name" placeholder="My Aquaponics System">
+                        </div>
+                        <div class="form-field">
+                            <label for="system-type-config">System Type:</label>
+                            <select id="system-type-config">
+                                <option value="media-bed">Media Bed</option>
+                                <option value="nft">NFT (Nutrient Film Technique)</option>
+                                <option value="dwc">DWC (Deep Water Culture)</option>
+                                <option value="hybrid">Hybrid System</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="form-field">
-                        <label for="system-type-config">System Type:</label>
-                        <select id="system-type-config">
-                            <option value="media-bed">Media Bed</option>
-                            <option value="nft">NFT (Nutrient Film Technique)</option>
-                            <option value="dwc">DWC (Deep Water Culture)</option>
-                            <option value="hybrid">Hybrid System</option>
-                        </select>
+                    
+                    <!-- System Summary -->
+                    <h4 style="margin: 2rem 0 1rem 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
+                            <g>
+                                <path d="m19.593 1.96h-3.075v-.445c0-.788-.642-1.429-1.43-1.429h-6.175c-.788 0-1.43.641-1.43 1.429v.445h-3.076c-.889 0-1.612.723-1.612 1.612v18.73c0 .889.724 1.612 1.612 1.612h15.186c.889 0 1.612-.723 1.612-1.612v-18.73c0-.889-.724-1.612-1.612-1.612zm-11.309-.445c0-.353.276-.629.629-.629h6.175c.353 0 .629.276.629.629v1.646c0 .353-.276.629-.629.629h-6.175c-.353 0-.629-.276-.629-.629zm12.12 20.787c0 .44-.371.813-.812.813h-15.185c-.44 0-.812-.372-.812-.813v-18.73c0-.44.371-.812.812-.812h3.076v.402c0 .788.642 1.429 1.43 1.429h6.175c.788 0 1.43-.641 1.43-1.429v-.402h3.075c.44 0 .812.372.812.812v18.73z" fill="#0051b1"/>
+                                <path d="m8.021 11.598h7.958c.221 0 .4-.179.4-.4s-.18-.4-.4-.4h-7.958c-.221 0-.4.179-.4.4s.18.4.4.4z" fill="#0051b1"/>
+                                <path d="m8.021 13.552h7.958c.221 0 .4-.179.4-.4s-.18-.4-.4-.4h-7.958c-.221 0-.4.179-.4.4s.18.4.4.4z" fill="#0051b1"/>
+                                <path d="m16.38 15.108c0-.221-.18-.4-.4-.4h-7.959c-.221 0-.4.179-.4.4s.18.4.4.4h7.958c.221 0 .401-.18.401-.4z" fill="#0051b1"/>
+                                <path d="m15.073 16.663h-6.145c-.221 0-.4.179-.4.4s.18.4.4.4h6.146c.221 0 .4-.179.4-.4s-.18-.4-.401-.4z" fill="#0051b1"/>
+                                <path d="m17.688 6.557h-11.375c-.622 0-1.129.569-1.129 1.269v12.414c0 .7.507 1.27 1.129 1.27h10.001c.057 0 .111-.013.16-.034.007-.003.011-.009.018-.012.043-.021.081-.048.113-.083.002-.002.006-.003.008-.006l2.104-2.378c.006-.006.005-.016.01-.022.035-.045.059-.097.072-.155.004-.017.008-.032.01-.05.001-.013.008-.025.008-.038v-10.906c0-.7-.506-1.269-1.129-1.269zm-11.704 13.683v-12.414c0-.254.15-.469.328-.469h11.376c.178 0 .328.215.328.469v10.506h-1.704c-.221 0-.4.179-.4.4v1.978h-9.6c-.177 0-.328-.216-.328-.47zm10.729-.186v-.922h.816z" fill="#0051b1"/>
+                            </g>
+                        </svg>
+                        System Summary
+                    </h4>
+                    <div class="settings-row">
+                        <div class="form-field">
+                            <label for="fish-tank-count">Number of Fish Tanks:</label>
+                            <input type="number" id="fish-tank-count" min="1" max="10" value="1" onchange="app.updateFishTankCount()">
+                            <small style="color: #666;">Configure individual tanks in the Fish Tanks sub-tab</small>
+                        </div>
+                        <div class="form-field">
+                            <label for="total-fish-volume">Total Fish Tank Volume (L):</label>
+                            <input type="number" id="total-fish-volume" min="50" step="50" placeholder="1000" readonly>
+                            <small style="color: #666;">Automatically calculated from individual tank configurations</small>
+                        </div>
                     </div>
-                    <div class="form-field">
-                        <label for="fish-type-config">Fish Type:</label>
-                        <select id="fish-type-config">
-                            <option value="tilapia">🐟 Tilapia</option>
-                            <option value="trout">🎣 Trout</option>
-                            <option value="catfish">🐡 Catfish</option>
-                        </select>
+                    
+                    <div class="settings-row">
+                        <div class="form-field">
+                            <label for="grow-bed-count">Number of Grow Beds:</label>
+                            <input type="number" id="grow-bed-count" min="1" max="20" value="4" onchange="app.updateGrowBedCount()">
+                            <small style="color: #666;">Configure individual beds in the Grow Beds sub-tab</small>
+                        </div>
+                        <div class="form-field">
+                            <label for="total-grow-area">Total Equivalent Grow Area (m²):</label>
+                            <input type="number" id="total-grow-area" min="0.1" step="0.1" placeholder="2.0" readonly>
+                            <small style="color: #666;">Calculated from individual grow bed configurations</small>
+                        </div>
                     </div>
-                    <div class="form-field">
-                        <label for="fish-tank-count">Number of Fish Tanks:</label>
-                        <input type="number" id="fish-tank-count" min="1" max="10" value="1">
+                    
+                    <div class="settings-row">
+                        <div class="form-field">
+                            <label>Total Grow Bed Volume (L):</label>
+                            <div id="total-grow-volume-display" style="padding: 0.75rem; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 4px; color: #495057; font-weight: 600;">
+                                Auto-calculated: 0 L
+                            </div>
+                            <small style="color: #666;">Auto-calculated from individual grow bed configurations</small>
+                        </div>
                     </div>
-                    <div class="form-field">
-                        <label for="total-fish-volume">Total Fish Tank Volume (L):</label>
-                        <input type="number" id="total-fish-volume" min="50" step="50" placeholder="1000">
-                    </div>
-                    <div class="form-field">
-                        <label for="grow-bed-count">Number of Grow Beds:</label>
-                        <input type="number" id="grow-bed-count" min="1" max="20" value="4">
-                    </div>
-                    <div class="form-field">
-                        <label for="total-grow-volume">Total Grow Bed Volume (L):</label>
-                        <input type="number" id="total-grow-volume" min="50" step="50" placeholder="800">
-                    </div>
-                    <div class="form-field">
-                        <label for="total-grow-area">Total Equivalent Grow Area (m²):</label>
-                        <input type="number" id="total-grow-area" min="0.1" step="0.1" placeholder="2.0" readonly>
-                        <small style="color: #666;">Calculated from individual grow bed configurations below</small>
+                    
+                    <button class="form-btn" onclick="app.saveSystemConfig()">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; vertical-align: text-bottom; margin-right: 4px;">
+                            <path d="M17,22c-0.3,0-0.5,0-0.8,0H7.8c-0.3,0-0.5,0-0.8,0c0,0,0,0-0.1,0c-1.3,0-2-0.1-2.7-0.4c-0.8-0.4-1.4-1-1.7-1.7   C2,19,2,18,2,16.2V7.8C2,6,2,5,2.4,4.2c0.4-0.8,1-1.4,1.7-1.7C4.9,2.1,5.6,2,6.9,2C7,2,7,2,7.1,2c0.2,0,0.5,0,0.7,0h6.9   c0.5,0,0.9,0,1.2,0.1c0.3,0.1,0.6,0.2,0.9,0.4c0.3,0.2,0.5,0.4,0.9,0.8l3.1,3.1c0.4,0.4,0.6,0.6,0.8,0.9c0.2,0.3,0.3,0.6,0.4,0.9   C22,8.5,22,8.8,22,9.3v6.9c0,1.8,0,2.8-0.4,3.6c-0.4,0.8-1,1.4-1.7,1.7C19.1,21.9,18.4,22,17,22C17,22,17,22,17,22z M8,20h8v-5.4   c0-0.3,0-0.6,0-0.6c0,0-0.3,0-0.6,0H8.6C8.3,14,8,14,8,14c0,0,0,0.3,0,0.6V20z M8.6,12h6.8c0.7,0,1.1,0,1.5,0.2   c0.4,0.2,0.7,0.5,0.9,0.9c0.2,0.4,0.2,0.9,0.2,1.5V20c0.4,0,0.7-0.1,0.9-0.2c0.4-0.2,0.7-0.5,0.9-0.9c0.2-0.4,0.2-1.2,0.2-2.7V9.3   c0-0.4,0-0.6,0-0.7c0-0.1-0.1-0.2-0.1-0.3c-0.1-0.1-0.2-0.3-0.5-0.5L18,6.4c0,0.6,0,1.1-0.2,1.5c-0.2,0.4-0.5,0.7-0.9,0.9   C16.5,9,16.1,9,15.4,9H8.6C7.9,9,7.5,9,7.1,8.8C6.7,8.6,6.4,8.3,6.2,7.9C6,7.5,6,7.1,6,6.4V4c-0.4,0-0.7,0.1-0.9,0.2   C4.7,4.4,4.4,4.7,4.2,5.1C4,5.5,4,6.3,4,7.8v8.4c0,1.5,0,2.3,0.2,2.7c0.2,0.4,0.5,0.7,0.9,0.9C5.3,19.9,5.6,19.9,6,20v-5.4   c0-0.7,0-1.1,0.2-1.5c0.2-0.4,0.5-0.7,0.9-0.9C7.5,12,7.9,12,8.6,12z M8,4v2.4C8,6.7,8,7,8,7c0,0,0.3,0,0.6,0h6.8C15.7,7,16,7,16,7   c0,0,0-0.3,0-0.6v-2c-0.1-0.1-0.2-0.2-0.3-0.3c-0.1-0.1-0.2-0.1-0.3-0.1c-0.1,0-0.3,0-0.7,0H8z" fill="#0051b1"/>
+                        </svg>
+                        Save System Configuration
+                    </button>
+                </div>
+                
+                <!-- Fish Tanks Configuration Content -->
+                <div id="fish-tanks-config-content" class="system-config-content">
+                    <h4 style="margin-bottom: 1rem; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
+                            <g>
+                                <path d="M22,7V20a2,2,0,0,1-2,2H4a2,2,0,0,1-2-2V7A2,2,0,0,1,4,5H20A2,2,0,0,1,22,7ZM20,7H4V20H20Z" fill="#0051b1"/>
+                                <path d="M12,4a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V3A1,1,0,0,0,12,4Z" fill="#0051b1"/>
+                                <path d="M16.5,11.5a2,2,0,1,0,2,2A2,2,0,0,0,16.5,11.5Zm0,2.5a.5.5,0,1,1,.5-.5A.5.5,0,0,1,16.5,14Z" fill="#0051b1"/>
+                                <path d="M8.5,8a1,1,0,0,0-1,1,3.48,3.48,0,0,1-.94,2.36,5.48,5.48,0,0,0,0,7.28A3.48,3.48,0,0,1,7.5,21a1,1,0,0,0,2,0,5.48,5.48,0,0,0-1.44-3.64,3.48,3.48,0,0,1,0-4.72A5.48,5.48,0,0,0,9.5,9,1,1,0,0,0,8.5,8Z" fill="#0051b1"/>
+                                <path d="M14.5,8a1,1,0,0,0-1,1,5.48,5.48,0,0,0,1.44,3.64,3.48,3.48,0,0,1,0,4.72A5.48,5.48,0,0,0,13.5,21a1,1,0,0,0,2,0,3.48,3.48,0,0,1,.94-2.36,5.48,5.48,0,0,0,0-7.28A3.48,3.48,0,0,1,15.5,9,1,1,0,0,0,14.5,8Z" fill="#0051b1"/>
+                            </g>
+                        </svg>
+                        Fish Tank Configuration
+                    </h4>
+                    <p style="color: #666; margin-bottom: 1rem;">Configure each fish tank individually with size and fish type specifications.</p>
+                    
+                    <!-- Fish Tank Configuration -->
+                    <div class="fish-tanks-config" id="fish-tanks-config-detail">
+                        <div class="settings-row" style="margin-bottom: 1rem;">
+                            <div class="form-field">
+                                <label>Number of Fish Tanks:</label>
+                                <span class="readonly-field" id="fish-tank-count-display">1</span>
+                                <small style="color: #666;">Change this in the Overall System sub-tab</small>
+                            </div>
+                            <div class="form-field">
+                                <label>Total Fish Tank Volume (L):</label>
+                                <span class="readonly-field" id="total-fish-volume-display">0 L</span>
+                                <small style="color: #666;">Automatically calculated from individual tank configurations</small>
+                            </div>
+                        </div>
+                        <p style="color: #666; margin-bottom: 1rem;">Configure each fish tank individually. Specify the size in cubic meters (m³) and fish type for each tank.</p>
+                        <div id="fish-tanks-container">
+                            <!-- Individual fish tanks will be populated here -->
+                        </div>
                     </div>
                 </div>
                 
-                <div class="grow-beds-config" id="grow-beds-config">
-                    <h4>Individual Grow Bed Configuration</h4>
-                    <p style="color: #666; margin-bottom: 1rem;">Configure each grow bed individually. The total equivalent area will be calculated automatically.</p>
-                    <div id="grow-beds-container">
-                        <!-- Individual grow beds will be populated here -->
+                <!-- Grow Beds Configuration Content -->
+                <div id="grow-beds-config-content" class="system-config-content">
+                    <h4 style="margin-bottom: 1rem; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">🌱 Grow Bed Configuration</h4>
+                    <p style="color: #666; margin-bottom: 1rem;">Configure each grow bed individually with type-specific dimensions and auto-calculations.</p>
+                    
+                    <!-- Summary Information -->
+                    <div class="settings-row" style="margin-bottom: 1.5rem;">
+                        <div class="form-field">
+                            <label>Number of Grow Beds:</label>
+                            <span class="readonly-field" id="grow-bed-count-display">4</span>
+                            <small style="color: #666;">Change this in the Overall System sub-tab</small>
+                        </div>
+                        <div class="form-field">
+                            <label>Total Equivalent Grow Area (m²):</label>
+                            <span class="readonly-field" id="total-grow-area-display">0 m²</span>
+                            <small style="color: #666;">Calculated from individual grow bed configurations</small>
+                        </div>
                     </div>
-                    <button type="button" class="form-btn secondary" onclick="app.updateGrowBedCount()">Update Grow Bed Configuration</button>
+                    
+                    <!-- Individual Grow Bed Configuration -->
+                    <div class="grow-beds-config" id="grow-beds-config">
+                        <p style="color: #666; margin-bottom: 1rem;">Configure each grow bed individually. The total equivalent area will be calculated automatically.</p>
+                        <div id="grow-beds-container">
+                            <!-- Individual grow beds will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Grow Bed Status Section -->
+                    <h4 style="margin: 2rem 0 1rem 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">📊 Grow Bed Status & Management</h4>
+                    <p style="color: #666; margin-bottom: 1rem;">View and manage the status of your configured grow beds.</p>
+                    <div id="grow-bed-status-container">
+                        <!-- Grow bed status will be populated here -->
+                    </div>
                 </div>
-                
-                <button class="form-btn" onclick="app.saveSystemConfig()">Save System Configuration</button>
+                </div>
             </div>
             
-            <div class="form-section">
-                <h3>Grow Bed Status & Management</h3>
-                <p style="color: #666; margin-bottom: 1rem;">View and manage the status of your individual grow beds.</p>
-                <div id="grow-bed-status-container">
-                    <!-- Grow bed status will be populated here -->
+            <!-- System Sharing Content -->
+            <div id="system-sharing-content" class="settings-content">
+                <div class="form-section">
+                    <h3>👥 System Sharing & Collaboration</h3>
+                    <p style="color: #666; margin-bottom: 1.5rem;">
+                        Share your aquaponics system with other users and manage access permissions.
+                    </p>
+                    
+                    <!-- Invite Users Section -->
+                    <div class="sharing-section">
+                        <h4>📧 Invite Users</h4>
+                        <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                            Send invitations to other users to collaborate on this system.
+                        </p>
+                        
+                        <form id="invite-user-form" class="invite-form">
+                            <div class="form-row">
+                                <div class="form-field" style="flex: 2;">
+                                    <label for="invite-email">Email Address:</label>
+                                    <input type="email" id="invite-email" placeholder="user@example.com" required>
+                                </div>
+                                <div class="form-field" style="flex: 1;">
+                                    <label for="invite-permission">Permission Level:</label>
+                                    <select id="invite-permission" required>
+                                        <option value="view">👁️ Viewer (Read-only)</option>
+                                        <option value="collaborator">Collaborator (Can edit data)</option>
+                                        <option value="admin">⚙️ Admin (Full access)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-field">
+                                <label for="invite-message">Personal Message (Optional):</label>
+                                <textarea id="invite-message" rows="2" placeholder="Hi! I'd like to share my aquaponics system with you..."></textarea>
+                            </div>
+                            <button type="submit" class="form-btn">Send Invitation</button>
+                        </form>
+                    </div>
+                    
+                    <!-- Current Shared Users Section -->
+                    <div class="sharing-section">
+                        <h4>👥 Current Shared Users</h4>
+                        <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                            Manage users who currently have access to this system.
+                        </p>
+                        
+                        <div id="shared-users-list" class="shared-users-container">
+                            <!-- Shared users will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Pending Invitations Section -->
+                    <div class="sharing-section">
+                        <h4>⏳ Pending Invitations</h4>
+                        <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                            Invitations that have been sent but not yet accepted.
+                        </p>
+                        
+                        <div id="pending-invitations-list" class="pending-invitations-container">
+                            <!-- Pending invitations will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- System Access Settings -->
+                    <div class="sharing-section">
+                        <h4>🔒 Access Settings</h4>
+                        <div class="access-settings">
+                            <div class="setting-item">
+                                <label class="setting-label">
+                                    <input type="checkbox" id="allow-public-view" class="setting-checkbox">
+                                    <span class="setting-text">
+                                        <strong>Allow Public Viewing</strong><br>
+                                        <small>Anyone with the link can view this system (read-only)</small>
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="setting-item" id="public-link-section" style="display: none;">
+                                <div class="public-link-display">
+                                    <label>Public Link:</label>
+                                    <div class="link-copy-container">
+                                        <input type="text" id="public-link" readonly>
+                                        <button type="button" id="copy-public-link" class="copy-btn">📋 Copy</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             
-            <div class="form-section">
-                <h3>SMTP Email Configuration</h3>
-                <p style="color: #666; margin-bottom: 1rem;">Configure email settings for password reset and notification emails.</p>
-                
-                <div class="form-grid">
-                    <div class="form-field">
-                        <label for="smtp-host">SMTP Host:</label>
-                        <input type="text" id="smtp-host" placeholder="smtp-relay.brevo.com">
+            <!-- Danger Zone Content -->
+            <div id="danger-zone-content" class="settings-content">
+                <div class="form-section danger-zone">
+                    <h3>🚨 Danger Zone</h3>
+                    <p style="color: #dc3545; margin-bottom: 1rem;">
+                        <strong>Warning:</strong> The actions in this section are irreversible and will permanently delete your system and all associated data.
+                    </p>
+                    
+                    <div class="danger-actions">
+                        <div class="danger-action">
+                            <div class="danger-info">
+                                <h4>Delete System</h4>
+                                <p>Permanently delete the current system and all its data including grow beds, allocations, water quality records, and plant data.</p>
+                            </div>
+                            <button onclick="app.confirmDeleteSystem()" class="danger-btn">
+                                <span class="icon-placeholder" data-icon="delete"></span>Delete System
+                            </button>
+                        </div>
                     </div>
-                    <div class="form-field">
-                        <label for="smtp-port">SMTP Port:</label>
-                        <input type="number" id="smtp-port" placeholder="587">
-                    </div>
-                    <div class="form-field">
-                        <label for="smtp-user">SMTP Username:</label>
-                        <input type="email" id="smtp-user" placeholder="your-email@domain.com">
-                    </div>
-                    <div class="form-field">
-                        <label for="smtp-pass">SMTP Password:</label>
-                        <input type="password" id="smtp-pass" placeholder="Your SMTP password">
-                    </div>
-                    <div class="form-field">
-                        <label for="smtp-from-name">From Name:</label>
-                        <input type="text" id="smtp-from-name" placeholder="Afraponix Go">
-                    </div>
-                    <div class="form-field">
-                        <label for="smtp-from-email">From Email:</label>
-                        <input type="email" id="smtp-from-email" placeholder="noreply@yourdomain.com">
-                    </div>
-                    <div class="form-field">
-                        <label for="smtp-reset-url">Reset URL:</label>
-                        <input type="url" id="smtp-reset-url" placeholder="http://yourserver.com:8000/reset-password">
-                    </div>
-                </div>
-                
-                <div style="margin-top: 20px; display: flex; gap: 10px;">
-                    <button class="form-btn" onclick="app.loadSmtpConfig()">Load Current Config</button>
-                    <button class="form-btn" onclick="app.saveSmtpConfig()">Save Configuration</button>
-                    <button class="form-btn secondary" onclick="app.testSmtpConfig()">Send Test Email</button>
                 </div>
             </div>
             
-            <div class="form-section">
-                <h3>Edit Data Entries</h3>
-                <p style="color: #666; margin-bottom: 1rem;">View and edit previously entered data for your system.</p>
-                
-                <div class="data-edit-tabs">
-                    <button id="edit-water-quality-tab" class="edit-tab active" data-category="water-quality">Water Quality</button>
-                    <button id="edit-fish-health-tab" class="edit-tab" data-category="fish-health">Fish Health</button>
-                    <button id="edit-plant-growth-tab" class="edit-tab" data-category="plant-growth">Plant Growth</button>
-                    <button id="edit-operations-tab" class="edit-tab" data-category="operations">Operations</button>
+            <!-- Admin Settings Content -->
+            <div id="admin-settings-content" class="settings-content">
+                <!-- Admin Sub-tabs -->
+                <div class="admin-sub-tabs">
+                    <button id="admin-users-subtab" class="admin-subtab active" data-target="admin-users-subcontent">
+                        <span class="tab-icon">👥</span>
+                        <span class="tab-label">User Management</span>
+                    </button>
+                    <button id="admin-smtp-subtab" class="admin-subtab" data-target="admin-smtp-subcontent">
+                        <span class="tab-icon">📧</span>
+                        <span class="tab-label">SMTP Settings</span>
+                    </button>
+                    <button id="admin-data-subtab" class="admin-subtab" data-target="admin-data-subcontent">
+                        <span class="tab-icon"><span class="icon-placeholder" data-icon="edit"></span></span>
+                        <span class="tab-label">Edit Data</span>
+                    </button>
+                    <button id="admin-stats-subtab" class="admin-subtab" data-target="admin-stats-subcontent">
+                        <span class="tab-icon">📊</span>
+                        <span class="tab-label">System Stats</span>
+                    </button>
                 </div>
                 
-                <div id="data-edit-container">
-                    <!-- Data editing interface will be populated here -->
+                <!-- User Management -->
+                <div id="admin-users-subcontent" class="admin-subcontent active">
+                    <div class="form-section">
+                        <h3>User Management</h3>
+                        <p style="color: #666; margin-bottom: 1rem;">Manage user accounts, roles, and permissions.</p>
+                        
+                        <div id="users-list-container">
+                            <!-- Users list will be populated here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- SMTP Settings -->
+                <div id="admin-smtp-subcontent" class="admin-subcontent">
+                    <div class="form-section">
+                        <h3>SMTP Email Configuration</h3>
+                        <p style="color: #666; margin-bottom: 1rem;">Configure email settings for password reset and notification emails.</p>
+                        
+                        <!-- SMTP Server Settings -->
+                        <h4 style="margin-bottom: 1rem; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">📧 Server Settings</h4>
+                        <div class="settings-row">
+                            <div class="form-field">
+                                <label for="smtp-host">SMTP Host:</label>
+                                <input type="text" id="smtp-host" placeholder="smtp-relay.brevo.com">
+                            </div>
+                            <div class="form-field">
+                                <label for="smtp-port">SMTP Port:</label>
+                                <input type="number" id="smtp-port" placeholder="587">
+                            </div>
+                        </div>
+                        
+                        <!-- Authentication -->
+                        <h4 style="margin: 2rem 0 1rem 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">🔐 Authentication</h4>
+                        <div class="settings-row">
+                            <div class="form-field">
+                                <label for="smtp-user">SMTP Username:</label>
+                                <input type="email" id="smtp-user" placeholder="your-email@domain.com">
+                            </div>
+                            <div class="form-field">
+                                <label for="smtp-pass">SMTP Password:</label>
+                                <input type="password" id="smtp-pass" placeholder="Your SMTP password">
+                            </div>
+                        </div>
+                        
+                        <!-- From Address & Reset URL -->
+                        <h4 style="margin: 2rem 0 1rem 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">📬 Email Settings</h4>
+                        <div class="settings-row">
+                            <div class="form-field">
+                                <label for="smtp-from-name">From Name:</label>
+                                <input type="text" id="smtp-from-name" placeholder="Afraponix Go">
+                            </div>
+                            <div class="form-field">
+                                <label for="smtp-from-email">From Email:</label>
+                                <input type="email" id="smtp-from-email" placeholder="noreply@yourdomain.com">
+                            </div>
+                        </div>
+                        <div class="settings-row">
+                            <div class="form-field">
+                                <label for="smtp-reset-url">Reset URL:</label>
+                                <input type="url" id="smtp-reset-url" placeholder="http://yourserver.com:8000/reset-password">
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px; display: flex; gap: 10px;">
+                            <button class="form-btn" onclick="app.loadSmtpConfig()">Load Current Config</button>
+                            <button class="form-btn" onclick="app.saveSmtpConfig()">Save Configuration</button>
+                            <button class="form-btn secondary" onclick="app.testSmtpConfig()">Send Test Email</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Edit Data -->
+                <div id="admin-data-subcontent" class="admin-subcontent">
+                    <div class="form-section">
+                        <h3>Edit Data Entries</h3>
+                        <p style="color: #666; margin-bottom: 1rem;">View and edit previously entered data for your system.</p>
+                        
+                        <div class="data-edit-tabs">
+                            <button id="edit-water-quality-tab" class="edit-tab active" data-category="water-quality">Water Quality</button>
+                            <button id="edit-fish-health-tab" class="edit-tab" data-category="fish-health">Fish Health</button>
+                            <button id="edit-operations-tab" class="edit-tab" data-category="operations">Operations</button>
+                        </div>
+                        
+                        <div id="data-edit-container">
+                            <!-- Data editing interface will be populated here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- System Stats -->
+                <div id="admin-stats-subcontent" class="admin-subcontent">
+                    <div class="form-section">
+                        <h3>System Statistics</h3>
+                        <p style="color: #666; margin-bottom: 1rem;">Overview of system usage and user activity.</p>
+                        
+                        <div id="admin-stats-container">
+                            <!-- Admin stats will be populated here -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -543,28 +1397,104 @@
     <!-- Bottom Navigation -->
     <nav class="bottom-nav">
         <button id="dashboard-btn" class="nav-btn active" data-view="dashboard">
-            <span class="nav-icon">📊</span>
-            <span class="nav-label">Dashboard</span>
+            <span class="nav-icon">
+                <svg viewBox="0 0 566.92913 566.92913" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                    <defs>
+                        <style>
+                            .cls-1 { fill: url(#linear-gradient-8); }
+                            .cls-2 { fill: url(#linear-gradient-7); }
+                            .cls-3 { fill: url(#linear-gradient-5); }
+                            .cls-4 { fill: url(#linear-gradient-6); }
+                            .cls-5 { fill: url(#linear-gradient-4); }
+                            .cls-6 { fill: url(#linear-gradient-3); }
+                            .cls-7 { fill: url(#linear-gradient-2); }
+                            .cls-8 { fill: url(#linear-gradient); }
+                        </style>
+                        <linearGradient id="linear-gradient" x1="182.34016" y1="446.83708" x2="487.90864" y2="446.83708" gradientUnits="userSpaceOnUse">
+                            <stop offset="0" stop-color="#49f911"/>
+                            <stop offset="1" stop-color="#45e7dd"/>
+                        </linearGradient>
+                        <linearGradient id="linear-gradient-2" x1="79.02049" y1="471.49672" x2="273.29051" y2="471.49672" gradientUnits="userSpaceOnUse">
+                            <stop offset="0" stop-color="#58dcfd"/>
+                            <stop offset="1" stop-color="#2e3195"/>
+                        </linearGradient>
+                        <linearGradient id="linear-gradient-3" x1="196.95907" y1="314.75412" x2="502.52755" y2="314.75412" gradientTransform="translate(581.54804 434.84618) rotate(-180)" xlink:href="#linear-gradient"/>
+                        <linearGradient id="linear-gradient-4" x1="93.6394" y1="339.41377" x2="287.90942" y2="339.41377" gradientTransform="translate(581.54804 434.84618) rotate(-180)" xlink:href="#linear-gradient-2"/>
+                        <linearGradient id="linear-gradient-5" x1="147.13592" y1="397.01393" x2="452.7044" y2="397.01393" gradientTransform="translate(49.82315 531.7249) rotate(-90)" xlink:href="#linear-gradient"/>
+                        <linearGradient id="linear-gradient-6" x1="43.81625" y1="421.67357" x2="238.08627" y2="421.67357" gradientTransform="translate(49.82315 531.7249) rotate(-90)" xlink:href="#linear-gradient-2"/>
+                        <linearGradient id="linear-gradient-7" x1="232.1633" y1="364.57727" x2="537.73179" y2="364.57727" gradientTransform="translate(484.66933 -49.82315) rotate(90)" xlink:href="#linear-gradient"/>
+                        <linearGradient id="linear-gradient-8" x1="128.84364" y1="389.23691" x2="323.11366" y2="389.23691" gradientTransform="translate(484.66933 -49.82315) rotate(90)" xlink:href="#linear-gradient-2"/>
+                    </defs>
+                    <g>
+                        <g>
+                            <path class="cls-8" d="M284.16598,495.80147l-101.82582-101.81804c60.65082-53.1876,152.93616-50.95978,210.76146,6.86102l94.80703,94.80017v.08607c-56.2806,56.27615-147.49745,56.30674-203.74267.07077h0Z"/>
+                            <path class="cls-7" d="M79.02049,496.78346c53.22655,53.22249,137.68199,56.10616,194.27002,8.69335l-101.48473-101.47661-92.78529,92.78325Z"/>
+                        </g>
+                        <g>
+                            <path class="cls-6" d="M282.76316,71.12766l101.82582,101.81804c-60.65082,53.1876-152.93616,50.95978-210.76146-6.86102l-94.80703-94.80017v-.08607c56.2806-56.27615,147.49745-56.30674,203.74267-.07077h0Z"/>
+                            <path class="cls-5" d="M487.90864,70.14567c-53.22655-53.22249-137.68199-56.10616-194.27002-8.69335l101.48473,101.47661,92.78529-92.78325Z"/>
+                        </g>
+                    </g>
+                    <g>
+                        <g>
+                            <path class="cls-3" d="M495.80147,282.76316l-101.81804,101.82582c-53.1876-60.65082-50.95978-152.93616,6.86102-210.76146l94.80017-94.80703h.08607c56.27615,56.2806,56.30674,147.49745.07077,203.74267h0Z"/>
+                            <path class="cls-4" d="M496.78346,487.90864c53.22249-53.22655,56.10616-137.68199,8.69335-194.27002l-101.47661,101.48473,92.78325,92.78529Z"/>
+                        </g>
+                        <g>
+                            <path class="cls-2" d="M71.12766,284.16598l101.81804-101.82582c53.1876,60.65082,50.95978,152.93616-6.86102,210.76146l-94.80017,94.80703h-.08607c-56.27615-56.2806-56.30674-147.49745-.07077-203.74267h0Z"/>
+                            <path class="cls-1" d="M70.14567,79.02049c-53.22249,53.22655-56.10616,137.68199-8.69335,194.27002l101.47661-101.48473-92.78325-92.78529Z"/>
+                        </g>
+                    </g>
+                </svg>
+            </span>
         </button>
         <button id="calculators-btn" class="nav-btn" data-view="calculators">
-            <span class="nav-icon">🧮</span>
-            <span class="nav-label">Calc</span>
+            <span class="nav-icon">
+                <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+                    <g>
+                        <path d="M345.38,126H166.62a20.37,20.37,0,0,0-20.31,20.31V365.69A20.37,20.37,0,0,0,166.62,386H345.38a20.37,20.37,0,0,0,20.31-20.31V146.31A20.37,20.37,0,0,0,345.38,126ZM212.32,347.48a6.28,6.28,0,0,1-6.28,6.28H185.32a6.28,6.28,0,0,1-6.28-6.28v-12.4a6.28,6.28,0,0,1,6.28-6.28H206a6.28,6.28,0,0,1,6.28,6.28Zm0-37.44a6.28,6.28,0,0,1-6.28,6.28H185.32A6.28,6.28,0,0,1,179,310v-12.4a6.28,6.28,0,0,1,6.28-6.28H206a6.28,6.28,0,0,1,6.28,6.28Zm0-37.44a6.28,6.28,0,0,1-6.28,6.28H185.32A6.28,6.28,0,0,1,179,272.6V260.2a6.28,6.28,0,0,1,6.28-6.28H206a6.28,6.28,0,0,1,6.28,6.28Zm0-37.44a6.28,6.28,0,0,1-6.28,6.28H185.32a6.28,6.28,0,0,1-6.28-6.28v-12.4a6.28,6.28,0,0,1,6.28-6.28H206a6.28,6.28,0,0,1,6.28,6.28Zm60.32,112.32a6.28,6.28,0,0,1-6.28,6.28H245.64a6.28,6.28,0,0,1-6.28-6.28v-12.4a6.28,6.28,0,0,1,6.28-6.28h20.72a6.28,6.28,0,0,1,6.28,6.28Zm0-37.44a6.28,6.28,0,0,1-6.28,6.28H245.64a6.28,6.28,0,0,1-6.28-6.28v-12.4a6.28,6.28,0,0,1,6.28-6.28h20.72a6.28,6.28,0,0,1,6.28,6.28Zm0-37.44a6.28,6.28,0,0,1-6.28,6.28H245.64a6.28,6.28,0,0,1-6.28-6.28V260.2a6.28,6.28,0,0,1,6.28-6.28h20.72a6.28,6.28,0,0,1,6.28,6.28Zm0-37.44a6.28,6.28,0,0,1-6.28,6.28H245.64a6.28,6.28,0,0,1-6.28-6.28v-12.4a6.28,6.28,0,0,1,6.28-6.28h20.72a6.28,6.28,0,0,1,6.28,6.28ZM333,347.48a6.28,6.28,0,0,1-6.28,6.28H306a6.28,6.28,0,0,1-6.28-6.28v-12.4A6.28,6.28,0,0,1,306,328.8h20.72a6.28,6.28,0,0,1,6.28,6.28ZM333,310a6.28,6.28,0,0,1-6.28,6.28H306a6.28,6.28,0,0,1-6.28-6.28v-12.4a6.28,6.28,0,0,1,6.28-6.28h20.72a6.28,6.28,0,0,1,6.28,6.28Zm0-37.44a6.28,6.28,0,0,1-6.28,6.28H306a6.28,6.28,0,0,1-6.28-6.28V260.2a6.28,6.28,0,0,1,6.28-6.28h20.72A6.28,6.28,0,0,1,333,260.2Zm0-37.44a6.28,6.28,0,0,1-6.28,6.28H306a6.28,6.28,0,0,1-6.28-6.28v-12.4a6.28,6.28,0,0,1,6.28-6.28h20.72a6.28,6.28,0,0,1,6.28,6.28Zm8.35-47.72H170.69V150.38H341.31Z" fill="#0051b1"/>
+                        <path d="M256,28a228.06,228.06,0,0,1,88.74,438.09A228.06,228.06,0,0,1,167.26,45.91,226.41,226.41,0,0,1,256,28m0-28C114.62,0,0,114.62,0,256S114.62,512,256,512,512,397.38,512,256,397.38,0,256,0Z" fill="#0051b1"/>
+                    </g>
+                </svg>
+            </span>
         </button>
         <button id="data-entry-btn" class="nav-btn" data-view="data-entry">
-            <span class="nav-icon">📝</span>
-            <span class="nav-label">Data</span>
+            <span class="nav-icon">
+                <svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+                    <g fill="#0051b1">
+                        <g>
+                            <path d="m22.65 31.12h18.08c.55 0 1-.45 1-1s-.45-1-1-1h-18.08c-.55 0-1 .45-1 1s.45 1 1 1z"/>
+                            <path d="m31.69 47.79h-9.04c-.55 0-1 .45-1 1s.45 1 1 1h9.04c.55 0 1-.45 1-1s-.45-1-1-1z"/>
+                            <path d="m49.35 34c-.19 0-.38.02-.57.03v-13.66c0-1.95-1.59-3.53-3.53-3.53h-4.77c-.65-1.09-1.82-1.82-3.17-1.82h-.21c-.67-2.06-2.6-3.52-4.81-3.52h-1.21c-2.21 0-4.15 1.46-4.81 3.52h-.19c-1.35 0-2.53.74-3.17 1.82h-4.77c-1.95 0-3.53 1.59-3.53 3.53v34.59c0 1.95 1.59 3.53 3.53 3.53h27.11c.35 0 .64-.19.82-.46 1.05.29 2.15.46 3.29.46 6.75 0 12.25-5.5 12.25-12.25s-5.51-12.24-12.26-12.24zm-31.22 22.5c-.85 0-1.53-.69-1.53-1.53v-34.6c0-.85.69-1.53 1.53-1.53h4.24v2.54c0 .55.45 1 1 1h16.63c.55 0 1-.45 1-1v-2.54h4.24c.85 0 1.53.69 1.53 1.53v13.9c-1.92.41-3.66 1.27-5.13 2.46.05-.12.09-.26.09-.4 0-.55-.45-1-1-1h-18.08c-.55 0-1 .45-1 1s.45 1 1 1h18.08c.11 0 .21-.03.31-.06-1.28 1.19-2.32 2.65-3 4.29h-15.39c-.55 0-1 .45-1 1s.45 1 1 1h14.76c-.19.86-.31 1.76-.31 2.68 0 4.29 2.22 8.06 5.56 10.25h-24.53zm37.43-9.25h-5.21v5.21c0 .55-.45 1-1 1s-1-.45-1-1v-5.21h-5.21c-.55 0-1-.45-1-1s.45-1 1-1h5.21v-5.21c0-.55.45-1 1-1s1 .45 1 1v5.21h5.21c.55 0 1 .45 1 1s-.45 1-1 1z"/>
+                        </g>
+                        <path d="m36 .5c-19.57 0-35.5 15.93-35.5 35.5s15.93 35.5 35.5 35.5 35.5-15.93 35.5-35.5-15.93-35.5-35.5-35.5zm0 68.85c-18.39 0-33.35-14.96-33.35-33.35s14.96-33.35 33.35-33.35 33.35 14.96 33.35 33.35-14.96 33.35-33.35 33.35z"/>
+                    </g>
+                </svg>
+            </span>
         </button>
         <button id="fish-btn" class="nav-btn" data-view="fish-tank">
-            <span class="nav-icon">🐟</span>
-            <span class="nav-label">Fish</span>
+            <span class="nav-icon">
+                <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+                    <path d="m256 35a221.07 221.07 0 0 1 86 424.65 221.07 221.07 0 0 1 -172-407.3 219.64 219.64 0 0 1 86-17.35m0-35c-141.38 0-256 114.62-256 256s114.62 256 256 256 256-114.62 256-256-114.62-256-256-256z" fill="#0051b1"/>
+                    <path d="m329.67 277.83c-4.23 4.77-8.27 9.76-12.76 14.29-18.19 18.38-39.94 30.6-65.5 34.78-43.87 7.18-80.8-6.65-111.14-38.74a129.82 129.82 0 0 1 -18.45-25.84 11.72 11.72 0 0 1 -.09-12.4c19.65-34.95 48.63-57.73 88.33-64.7 38.34-6.74 72.39 3.95 101.45 29.83 6.55 5.84 12.24 12.65 17.86 18.52 3-5.23 5.87-11.32 9.76-16.63 10.48-14.31 24.73-22.83 42.24-25.78a8.82 8.82 0 0 1 10.52 8.34v1.61c0 36.65-.07 73.31.08 110 0 5.55-4.39 11.57-11.77 9.69-2.67-.68-5.41-1.17-8-2-19.76-6.59-33.68-19.46-41.52-38.82-.23-.58-.48-1.15-.74-1.71a1.48 1.48 0 0 0 -.27-.44zm-147.62-26.41a13.69 13.69 0 0 0 .25-27.42c-7.42-.13-13.81 5.85-13.94 13-.13 8.2 5.73 14.35 13.69 14.42z" fill="#0051b1"/>
+                </svg>
+            </span>
         </button>
         <button id="plants-btn" class="nav-btn" data-view="plants">
-            <span class="nav-icon">🌱</span>
-            <span class="nav-label">Plants</span>
+            <span class="nav-icon">
+                <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+                    <path d="m359.087 269.101h-91.087v-35.063c26.524-.525 51.808-11.186 70.829-30.208 22.052-22.052 32.872-52.513 29.686-83.575-.581-5.659-5.054-10.132-10.713-10.713-31.056-3.185-61.522 7.633-83.575 29.685-7.366 7.366-13.471 15.674-18.227 24.625-4.756-8.951-10.861-17.259-18.227-24.625-22.052-22.052-52.512-32.873-83.575-29.685-5.659.581-10.132 5.054-10.713 10.713-3.186 31.062 7.634 61.523 29.686 83.575 19.023 19.023 44.304 29.683 70.83 30.208v35.063h-91.086c-3.625 0-7.056 1.639-9.334 4.458-2.278 2.82-3.16 6.519-2.397 10.063l24.273 112.937c3.344 15.568 16.803 26.441 32.727 26.441h115.633c15.924 0 29.382-10.873 32.729-26.442l24.273-112.936c.762-3.544-.119-7.243-2.397-10.063-2.279-2.819-5.71-4.458-9.335-4.458zm-67.889-112.903c14.473-14.473 33.664-22.641 53.835-23.174-.534 20.169-8.702 39.363-23.174 53.835-14.473 14.473-33.664 22.642-53.834 23.174.533-20.169 8.701-39.363 23.173-53.835zm-101.057 30.661c-14.472-14.472-22.64-33.666-23.174-53.835 20.169.534 39.363 8.702 53.835 23.174s22.64 33.666 23.174 53.835c-20.169-.533-39.363-8.701-53.835-23.174zm132.941 204.656c-.962 4.477-4.686 7.485-9.265 7.485h-115.633c-4.579 0-8.303-3.008-9.265-7.485l-21.152-98.415h176.467zm-67.082-391.515c-141.159 0-256 114.841-256 256s114.841 256 256 256 256-114.841 256-256-114.841-256-256-256zm0 488c-127.925 0-232-104.075-232-232s104.075-232 232-232 232 104.075 232 232-104.074 232-232 232z" fill="#0051b1"/>
+                </svg>
+            </span>
         </button>
         <button id="settings-btn" class="nav-btn" data-view="settings">
-            <span class="nav-icon">⚙️</span>
-            <span class="nav-label">Settings</span>
+            <span class="nav-icon">
+                <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M256,17a239.07,239.07,0,0,1,93,459.23A239.07,239.07,0,0,1,163,35.77,237.6,237.6,0,0,1,256,17m0-17C114.62,0,0,114.62,0,256S114.62,512,256,512,512,397.38,512,256,397.38,0,256,0Z" fill="#0051b1"/>
+                    <path d="M405.33,227.07l-24.11-8.62L371.09,194l11-23.15a8.48,8.48,0,0,0-1.67-9.62l-29.61-29.62a8.48,8.48,0,0,0-9.62-1.67l-23.14,11-24.46-10.13-8.62-24.13a8.48,8.48,0,0,0-8-5.62H235.06a8.48,8.48,0,0,0-8,5.62l-8.62,24.13L194,140.88l-23.15-11a8.48,8.48,0,0,0-9.62,1.67l-29.61,29.62a8.48,8.48,0,0,0-1.67,9.62L140.91,194l-10.13,24.47-24.11,8.62a8.49,8.49,0,0,0-5.62,8v41.88a8.47,8.47,0,0,0,5.62,8l24.11,8.63L140.91,318,130,341.17a8.48,8.48,0,0,0,1.67,9.62l29.61,29.62a8.48,8.48,0,0,0,9.62,1.67l23.15-11,24.45,10.13,8.62,24.13a8.48,8.48,0,0,0,8,5.62h41.88a8.48,8.48,0,0,0,8-5.62l8.62-24.13L318,371.12l23.14,11a8.48,8.48,0,0,0,9.62-1.67l29.61-29.62a8.48,8.48,0,0,0,1.67-9.62l-11-23.15,10.13-24.47,24.11-8.63a8.47,8.47,0,0,0,5.62-8V235.06A8.49,8.49,0,0,0,405.33,227.07ZM394,271l-22,7.88a8.45,8.45,0,0,0-5,4.73L354,315a8.44,8.44,0,0,0,.17,6.87l10,21.16L343,364.2l-21.15-10A8.52,8.52,0,0,0,315,354l-31.4,13a8.48,8.48,0,0,0-4.73,5l-7.88,22H241l-7.88-22a8.48,8.48,0,0,0-4.73-5L197,354a8.52,8.52,0,0,0-6.87.17L169,364.2,147.84,343l10-21.16A8.44,8.44,0,0,0,158,315l-13-31.41a8.45,8.45,0,0,0-5-4.73L118,271V241l22-7.88a8.45,8.45,0,0,0,5-4.73L158,197a8.44,8.44,0,0,0-.17-6.87l-10-21.16L169,147.8l21.15,10A8.52,8.52,0,0,0,197,158l31.4-13a8.48,8.48,0,0,0,4.73-5L241,118H271l7.88,22a8.48,8.48,0,0,0,4.73,5L315,158a8.52,8.52,0,0,0,6.87-.17l21.15-10L364.16,169l-10,21.16A8.44,8.44,0,0,0,354,197l13,31.41a8.45,8.45,0,0,0,5,4.73L394,241Z" fill="#0051b1"/>
+                    <path d="M256,197.76A58.24,58.24,0,1,0,314.22,256,58.29,58.29,0,0,0,256,197.76Zm0,99.53A41.29,41.29,0,1,1,297.27,256,41.32,41.32,0,0,1,256,297.29Z" fill="#0051b1"/>
+                </svg>
+            </span>
         </button>
     </nav>
 
@@ -600,6 +1530,14 @@
             <div id="register-form" class="auth-form" style="display: none;">
                 <h2>Create Afraponix Go Account</h2>
                 <form id="register-form-element">
+                    <div class="form-field">
+                        <label for="register-first-name">First Name:</label>
+                        <input type="text" id="register-first-name" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="register-last-name">Last Name:</label>
+                        <input type="text" id="register-last-name" required>
+                    </div>
                     <div class="form-field">
                         <label for="register-username">Username:</label>
                         <input type="text" id="register-username" required>
@@ -639,6 +1577,408 @@
                         <a href="#" id="show-login-from-forgot">Back to Login</a>
                     </p>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete System Confirmation Modal -->
+    <div id="delete-system-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content delete-modal">
+            <div class="modal-header">
+                <h3>🚨 Delete System</h3>
+            </div>
+            <div class="modal-body">
+                <div class="warning-message">
+                    <p><strong>Are you absolutely sure you want to delete "<span id="system-name-to-delete"></span>"?</strong></p>
+                    <p>This action will <strong>permanently delete</strong>:</p>
+                    <ul class="deletion-list">
+                        <li>All grow beds and configurations</li>
+                        <li>All plant allocations and data</li>
+                        <li>All water quality records</li>
+                        <li>All fish health data</li>
+                        <li>All operational records</li>
+                    </ul>
+                    <div class="warning-box">
+                        <p><strong>⚠️ This action cannot be undone!</strong></p>
+                    </div>
+                </div>
+                
+                <div class="confirmation-input">
+                    <label for="delete-confirmation">Type <strong>DELETE</strong> to confirm:</label>
+                    <input type="text" id="delete-confirmation" placeholder="Type DELETE here" autocomplete="off">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button onclick="app.cancelDeleteSystem()" class="cancel-btn">
+                    ❌ Cancel
+                </button>
+                <button onclick="app.executeDeleteSystem()" class="delete-confirm-btn" id="delete-confirm-btn" disabled>
+                    <span class="icon-placeholder" data-icon="delete"></span>Delete System
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Record Spray Application Modal -->
+    <div id="record-spray-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📝 Record Spray Application</h3>
+                <button class="modal-close" onclick="app.closeRecordSprayModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="record-spray-form">
+                    <div class="form-field">
+                        <label for="record-date">Application Date:</label>
+                        <input type="date" id="record-date" required>
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="record-product">Product Used:</label>
+                        <input type="text" id="record-product" required>
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="record-rate">Amount Used:</label>
+                        <div class="rate-input-group">
+                            <input type="number" id="record-rate" step="0.1" required>
+                            <select id="record-rate-unit" required>
+                                <option value="ml per 10L">ml per 10L</option>
+                                <option value="g per 10L">g per 10L</option>
+                                <option value="ml/L">ml/L</option>
+                                <option value="g/L">g/L</option>
+                                <option value="ratio">ratio</option>
+                                <option value="L">L</option>
+                                <option value="ml">ml</option>
+                                <option value="g">g</option>
+                                <option value="kg">kg</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="record-area">Area Treated:</label>
+                        <div class="area-input-group">
+                            <input type="number" id="record-area" step="0.1">
+                            <select id="record-area-unit">
+                                <option value="m²">m²</option>
+                                <option value="beds">beds</option>
+                                <option value="plants">plants</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="record-conditions">Weather/Conditions:</label>
+                        <select id="record-conditions">
+                            <option value="">Select condition</option>
+                            <option value="sunny">Sunny</option>
+                            <option value="cloudy">Cloudy</option>
+                            <option value="overcast">Overcast</option>
+                            <option value="windy">Windy</option>
+                            <option value="calm">Calm</option>
+                            <option value="morning">Early Morning</option>
+                            <option value="evening">Evening</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="record-notes">Notes:</label>
+                        <textarea id="record-notes" rows="3" placeholder="Any observations, issues, or additional notes..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-actions">
+                <button onclick="app.closeRecordSprayModal()" class="cancel-btn">Cancel</button>
+                <button onclick="app.saveSprayRecord()" class="save-btn">Record Application</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Spray Programme Modal -->
+    <div id="add-spray-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="add-spray-title">🌿 Add New Spray Programme</h3>
+                <button class="modal-close" onclick="app.closeAddSprayModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="add-spray-form" novalidate>
+                    <div class="form-field">
+                        <label for="add-spray-category">Category:</label>
+                        <select id="add-spray-category" required onchange="app.updateAddSprayForm()">
+                            <option value="">Select category</option>
+                            <option value="insecticides">🐛 Insecticides</option>
+                            <option value="fungicides">🍄 Fungicides</option>
+                            <option value="foliar-feeds">🌱 Foliar Feeds</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="add-spray-product">Product Name:</label>
+                        <input type="text" id="add-spray-product" required placeholder="e.g., Bioneem, Copper Soap, Nitrosol">
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="add-spray-ingredient">Active Ingredient:</label>
+                        <input type="text" id="add-spray-ingredient" placeholder="e.g., Azadirachtin, Copper Octanoate">
+                    </div>
+                    
+                    <!-- Dynamic target field based on category -->
+                    <div class="form-field" id="target-field" style="display: none;">
+                        <label for="add-spray-target" id="target-label">Target:</label>
+                        <input type="text" id="add-spray-target" placeholder="">
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="add-spray-rate">Application Rate:</label>
+                        <div class="rate-input-group">
+                            <input type="text" id="add-spray-rate" required placeholder="e.g., 100">
+                            <select id="add-spray-rate-unit" required>
+                                <option value="ml per 10L">ml per 10L</option>
+                                <option value="g per 10L">g per 10L</option>
+                                <option value="ml/L">ml/L</option>
+                                <option value="g/L">g/L</option>
+                                <option value="ratio">ratio (e.g., 1:2)</option>
+                                <option value="L">L</option>
+                                <option value="ml">ml</option>
+                                <option value="g">g</option>
+                                <option value="kg">kg</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="add-spray-frequency">Application Frequency:</label>
+                        <div class="frequency-input-group">
+                            <span>Every</span>
+                            <input type="number" id="add-spray-frequency" min="1" max="365" required placeholder="7">
+                            <span>days</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="add-spray-start">Start Date (optional):</label>
+                        <input type="date" id="add-spray-start">
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="add-spray-end">End Date (optional):</label>
+                        <input type="date" id="add-spray-end">
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="add-spray-notes">Notes:</label>
+                        <textarea id="add-spray-notes" rows="3" placeholder="Application instructions, precautions, or other notes..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-actions">
+                <button onclick="app.closeAddSprayModal()" class="cancel-btn">Cancel</button>
+                <button onclick="app.saveNewSprayProgramme()" class="save-btn">Add Programme</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nutrient Chart Detail Modal -->
+    <div id="nutrient-detail-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content chart-modal">
+            <div class="modal-header">
+                <h3 id="nutrient-modal-title">Nutrient Details</h3>
+                <button id="close-nutrient-modal" class="close-btn">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="chart-detail-info">
+                    <div class="current-reading">
+                        <h4>Current Reading</h4>
+                        <div class="reading-display">
+                            <span id="nutrient-modal-current" class="current-value">--</span>
+                            <span id="nutrient-modal-status" class="current-status">--</span>
+                        </div>
+                        <div class="trend-info">
+                            <span>Trend: </span>
+                            <span id="nutrient-modal-trend" class="trend">--</span>
+                        </div>
+                    </div>
+                    <div class="optimal-range">
+                        <h4>Optimal Range</h4>
+                        <div id="nutrient-modal-optimal" class="range-display">--</div>
+                    </div>
+                </div>
+                <div class="chart-container-modal">
+                    <canvas id="nutrient-modal-chart"></canvas>
+                </div>
+                <div class="chart-history">
+                    <h4>Recent History</h4>
+                    <table id="nutrient-modal-history">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Value</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- History data will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="export-chart-data" class="form-btn secondary">📊 Export Data</button>
+                <button id="close-nutrient-modal-btn" class="form-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New System Modal -->
+    <div id="new-system-modal" class="modal" style="display: none;">
+        <div class="modal-content system-modal">
+            <div class="modal-header">
+                <h2>Create New Aquaponics System</h2>
+                <span class="close" id="close-new-system-modal">&times;</span>
+            </div>
+            
+            <!-- Progress Indicator -->
+            <div class="wizard-progress">
+                <div class="progress-step active" data-step="1">
+                    <div class="step-number">1</div>
+                    <div class="step-label">Basic Info</div>
+                </div>
+                <div class="progress-line"></div>
+                <div class="progress-step" data-step="2">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Fish Tanks</div>
+                </div>
+                <div class="progress-line"></div>
+                <div class="progress-step" data-step="3">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Grow Beds</div>
+                </div>
+                <div class="progress-line"></div>
+                <div class="progress-step" data-step="4">
+                    <div class="step-number">4</div>
+                    <div class="step-label">Plant Allocation</div>
+                </div>
+            </div>
+            
+            <form id="new-system-form">
+                <!-- Step 1: Basic Information -->
+                <div class="wizard-step active" data-step="1">
+                    <h3 class="step-title">Basic System Information</h3>
+                    <p class="step-description">Let's start with the basics of your aquaponics system</p>
+                    
+                    <div class="form-field">
+                        <label for="new-system-name" class="modern-label">
+                            <span class="label-icon">🏷️</span>
+                            <span class="label-text">System Name</span>
+                        </label>
+                        <input type="text" id="new-system-name" class="modern-input" placeholder="e.g., Backyard Aquaponics" required>
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="new-system-type" class="modern-label">
+                            <span class="label-icon">🔧</span>
+                            <span class="label-text">System Type</span>
+                        </label>
+                        <select id="new-system-type" class="modern-select" required>
+                            <option value="">Select system type...</option>
+                            <option value="media-bed">Media Bed</option>
+                            <option value="nft">NFT (Nutrient Film Technique)</option>
+                            <option value="dwc">DWC (Deep Water Culture)</option>
+                            <option value="hybrid">Hybrid System</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="new-fish-tank-count" class="modern-label">
+                            <span class="label-icon">🐟</span>
+                            <span class="label-text">Number of Fish Tanks</span>
+                        </label>
+                        <input type="number" id="new-fish-tank-count" class="modern-input" value="1" min="1" max="10">
+                    </div>
+                    
+                    <div class="form-field">
+                        <label for="new-grow-bed-count" class="modern-label">
+                            <span class="label-icon">🌱</span>
+                            <span class="label-text">Number of Grow Beds</span>
+                        </label>
+                        <input type="number" id="new-grow-bed-count" class="modern-input" value="2" min="1" max="20">
+                    </div>
+                </div>
+                
+                <!-- Step 2: Fish Tank Configuration -->
+                <div class="wizard-step" data-step="2">
+                    <h3 class="step-title">Fish Tank Configuration</h3>
+                    <p class="step-description">Configure your fish tanks for optimal aquaculture</p>
+                    
+                    <div id="fish-tank-details" class="tank-details-container">
+                        <!-- Dynamic fish tank fields will be inserted here -->
+                    </div>
+                </div>
+                
+                <!-- Step 3: Grow Bed Configuration -->
+                <div class="wizard-step" data-step="3">
+                    <h3 class="step-title">Grow Bed Configuration</h3>
+                    <p class="step-description">Set up your grow beds for plant cultivation</p>
+                    
+                    <div id="grow-bed-details" class="bed-details-container">
+                        <!-- Dynamic grow bed fields will be inserted here -->
+                    </div>
+                </div>
+                
+                <!-- Step 4: Plant Allocation -->
+                <div class="wizard-step" data-step="4">
+                    <h3 class="step-title">Plant Allocation (Optional)</h3>
+                    <p class="step-description">Allocate crops to your grow beds now or configure later</p>
+                    
+                    <div id="plant-allocation-container">
+                        <!-- Dynamic plant allocation fields will be inserted here -->
+                    </div>
+                    
+                    <div class="skip-notice">
+                        <span class="info-icon">ℹ️</span>
+                        You can skip this step and configure plant allocation later in the Settings tab
+                    </div>
+                </div>
+                
+                <!-- Navigation Buttons -->
+                <div class="wizard-navigation">
+                    <button type="button" class="nav-btn prev-btn" onclick="app.prevSystemStep()" style="display: none;">
+                        <span class="btn-icon">←</span>
+                        Previous
+                    </button>
+                    <button type="button" class="nav-btn next-btn" onclick="app.nextSystemStep()">
+                        Next
+                        <span class="btn-icon">→</span>
+                    </button>
+                    <button type="submit" class="nav-btn submit-btn" style="display: none;">
+                        <span class="btn-icon">✓</span>
+                        Create System
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirm-modal" class="modal" style="display: none;">
+        <div class="modal-content confirm-modal-content">
+            <div class="modal-header confirm-header">
+                <div class="confirm-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#f39c12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <h3 id="confirm-title">Confirm Action</h3>
+            </div>
+            <div class="modal-body">
+                <div id="confirm-message">Are you sure?</div>
+                <div id="confirm-details" class="confirm-details"></div>
+            </div>
+            <div class="modal-footer confirm-footer">
+                <button id="confirm-cancel" class="btn btn-secondary">Cancel</button>
+                <button id="confirm-ok" class="btn btn-danger">Remove from Programme</button>
             </div>
         </div>
     </div>

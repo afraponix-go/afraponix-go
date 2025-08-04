@@ -21,9 +21,16 @@ function initializeDatabase() {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     username TEXT UNIQUE NOT NULL,
                     email TEXT UNIQUE NOT NULL,
+                    first_name TEXT,
+                    last_name TEXT,
                     password_hash TEXT NOT NULL,
+                    user_role TEXT DEFAULT 'basic',
+                    subscription_status TEXT DEFAULT 'basic',
                     reset_token TEXT,
                     reset_token_expiry DATETIME,
+                    email_verified BOOLEAN DEFAULT 0,
+                    verification_token TEXT,
+                    verification_token_expiry DATETIME,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             `);
@@ -117,13 +124,17 @@ function initializeDatabase() {
                     system_id TEXT NOT NULL,
                     bed_number INTEGER NOT NULL,
                     bed_type TEXT NOT NULL,
+                    bed_name TEXT,
                     volume_liters REAL NOT NULL,
                     area_m2 REAL,
                     length_meters REAL,
+                    width_meters REAL,
+                    height_meters REAL,
                     plant_capacity INTEGER,
                     vertical_count INTEGER,
                     plants_per_vertical INTEGER,
                     equivalent_m2 REAL NOT NULL,
+                    reservoir_volume REAL,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
                 )
@@ -143,6 +154,122 @@ function initializeDatabase() {
                     notes TEXT,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
+                )
+            `);
+
+            // Custom crops table
+            db.run(`
+                CREATE TABLE IF NOT EXISTS custom_crops (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    crop_name TEXT NOT NULL,
+                    target_n REAL,
+                    target_p REAL,
+                    target_k REAL,
+                    target_ca REAL,
+                    target_mg REAL,
+                    target_fe REAL,
+                    target_ec REAL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                )
+            `);
+
+            // Plant allocations table for tracking crops in grow beds
+            db.run(`
+                CREATE TABLE IF NOT EXISTS plant_allocations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    system_id TEXT NOT NULL,
+                    grow_bed_id INTEGER NOT NULL,
+                    crop_type TEXT NOT NULL,
+                    percentage_allocated REAL NOT NULL,
+                    plants_planted INTEGER DEFAULT 0,
+                    date_planted TEXT,
+                    status TEXT DEFAULT 'active',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE,
+                    FOREIGN KEY (grow_bed_id) REFERENCES grow_beds (id) ON DELETE CASCADE
+                )
+            `);
+
+            // System sharing/invitations table
+            db.run(`
+                CREATE TABLE IF NOT EXISTS system_shares (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    system_id TEXT NOT NULL,
+                    owner_id INTEGER NOT NULL,
+                    shared_with_id INTEGER NOT NULL,
+                    permission_level TEXT DEFAULT 'view',
+                    status TEXT DEFAULT 'pending',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE,
+                    FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE CASCADE,
+                    FOREIGN KEY (shared_with_id) REFERENCES users (id) ON DELETE CASCADE
+                )
+            `);
+
+            // Fish tanks table
+            db.run(`
+                CREATE TABLE IF NOT EXISTS fish_tanks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    system_id TEXT NOT NULL,
+                    tank_number INTEGER NOT NULL,
+                    size_m3 REAL NOT NULL,
+                    volume_liters REAL NOT NULL,
+                    fish_type TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE,
+                    UNIQUE(system_id, tank_number)
+                )
+            `);
+
+            // Fish feeding schedule table
+            db.run(`
+                CREATE TABLE IF NOT EXISTS fish_feeding (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    system_id TEXT NOT NULL,
+                    fish_type TEXT NOT NULL,
+                    feedings_per_day INTEGER DEFAULT 2,
+                    amount_per_feeding REAL,
+                    feeding_times TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
+                )
+            `);
+
+            // Spray programmes table
+            db.run(`
+                CREATE TABLE IF NOT EXISTS spray_programmes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    system_id TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    product_name TEXT NOT NULL,
+                    active_ingredient TEXT,
+                    target_pest TEXT,
+                    application_rate TEXT,
+                    frequency TEXT,
+                    start_date TEXT,
+                    end_date TEXT,
+                    status TEXT DEFAULT 'active',
+                    notes TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
+                )
+            `);
+
+            // Spray applications table
+            db.run(`
+                CREATE TABLE IF NOT EXISTS spray_applications (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    programme_id INTEGER NOT NULL,
+                    application_date TEXT NOT NULL,
+                    dilution_rate TEXT,
+                    volume_applied REAL,
+                    weather_conditions TEXT,
+                    effectiveness_rating INTEGER,
+                    notes TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (programme_id) REFERENCES spray_programmes (id) ON DELETE CASCADE
                 )
             `, (err) => {
                 if (err) {
@@ -241,9 +368,103 @@ function initializeDatabase() {
                                                                                         console.error('Error adding grow_bed_id column:', alterErr16);
                                                                                     }
                                                                                     
-                                                                                    tempDb.close();
-                                                                                    console.log('✅ Database tables initialized');
-                                                                                    resolve(db);
+                                                                                    // Add new columns to users table
+                                                                                    tempDb.run(`ALTER TABLE users ADD COLUMN first_name TEXT`, (alterErr17) => {
+                                                                                        if (alterErr17 && !alterErr17.message.includes('duplicate column name')) {
+                                                                                            console.error('Error adding first_name column:', alterErr17);
+                                                                                        }
+                                                                                        
+                                                                                        tempDb.run(`ALTER TABLE users ADD COLUMN last_name TEXT`, (alterErr18) => {
+                                                                                            if (alterErr18 && !alterErr18.message.includes('duplicate column name')) {
+                                                                                                console.error('Error adding last_name column:', alterErr18);
+                                                                                            }
+                                                                                            
+                                                                                            tempDb.run(`ALTER TABLE users ADD COLUMN user_role TEXT DEFAULT 'basic'`, (alterErr19) => {
+                                                                                                if (alterErr19 && !alterErr19.message.includes('duplicate column name')) {
+                                                                                                    console.error('Error adding user_role column:', alterErr19);
+                                                                                                }
+                                                                                                
+                                                                                                tempDb.run(`ALTER TABLE users ADD COLUMN subscription_status TEXT DEFAULT 'basic'`, (alterErr20) => {
+                                                                                                    if (alterErr20 && !alterErr20.message.includes('duplicate column name')) {
+                                                                                                        console.error('Error adding subscription_status column:', alterErr20);
+                                                                                                    }
+                                                                                                    
+                                                                                                    // Add email verification columns
+                                                                                                    tempDb.run(`ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT 0`, (alterErr) => {
+                                                                                                        if (alterErr && !alterErr.message.includes('duplicate column name')) {
+                                                                                                            console.error('Error adding email_verified column:', alterErr);
+                                                                                                        }
+                                                                                                    });
+                                                                                                    
+                                                                                                    tempDb.run(`ALTER TABLE users ADD COLUMN verification_token TEXT`, (alterErr) => {
+                                                                                                        if (alterErr && !alterErr.message.includes('duplicate column name')) {
+                                                                                                            console.error('Error adding verification_token column:', alterErr);
+                                                                                                        }
+                                                                                                    });
+                                                                                                    
+                                                                                                    tempDb.run(`ALTER TABLE users ADD COLUMN verification_token_expiry DATETIME`, (alterErr) => {
+                                                                                                        if (alterErr && !alterErr.message.includes('duplicate column name')) {
+                                                                                                            console.error('Error adding verification_token_expiry column:', alterErr);
+                                                                                                        }
+                                                                                                    });
+                                                                                                    
+                                                                                                    // Add new columns to grow_beds table
+                                                                                                    tempDb.run(`ALTER TABLE grow_beds ADD COLUMN bed_name TEXT`, (alterErr21) => {
+                                                                                                        if (alterErr21 && !alterErr21.message.includes('duplicate column name')) {
+                                                                                                            console.error('Error adding bed_name column:', alterErr21);
+                                                                                                        }
+                                                                                                        
+                                                                                                        tempDb.run(`ALTER TABLE grow_beds ADD COLUMN width_meters REAL`, (alterErr22) => {
+                                                                                                            if (alterErr22 && !alterErr22.message.includes('duplicate column name')) {
+                                                                                                                console.error('Error adding width_meters column:', alterErr22);
+                                                                                                            }
+                                                                                                            
+                                                                                                            tempDb.run(`ALTER TABLE grow_beds ADD COLUMN height_meters REAL`, (alterErr23) => {
+                                                                                                                if (alterErr23 && !alterErr23.message.includes('duplicate column name')) {
+                                                                                                                    console.error('Error adding height_meters column:', alterErr23);
+                                                                                                                }
+                                                                                                                
+                                                                                                                tempDb.run(`ALTER TABLE grow_beds ADD COLUMN reservoir_volume REAL`, (alterErr24) => {
+                                                                                                                    if (alterErr24 && !alterErr24.message.includes('duplicate column name')) {
+                                                                                                                        console.error('Error adding reservoir_volume column:', alterErr24);
+                                                                                                                    }
+                                                                                                                    
+                                                                                                                    // Add NFT-specific columns to grow_beds table
+                                                                                                                    tempDb.run(`ALTER TABLE grow_beds ADD COLUMN trough_length REAL`, (alterErr25) => {
+                                                                                                                        if (alterErr25 && !alterErr25.message.includes('duplicate column name')) {
+                                                                                                                            console.error('Error adding trough_length column:', alterErr25);
+                                                                                                                        }
+                                                                                                                        
+                                                                                                                        tempDb.run(`ALTER TABLE grow_beds ADD COLUMN trough_count INTEGER`, (alterErr26) => {
+                                                                                                                            if (alterErr26 && !alterErr26.message.includes('duplicate column name')) {
+                                                                                                                                console.error('Error adding trough_count column:', alterErr26);
+                                                                                                                            }
+                                                                                                                            
+                                                                                                                            tempDb.run(`ALTER TABLE grow_beds ADD COLUMN plant_spacing REAL`, (alterErr27) => {
+                                                                                                                                if (alterErr27 && !alterErr27.message.includes('duplicate column name')) {
+                                                                                                                                    console.error('Error adding plant_spacing column:', alterErr27);
+                                                                                                                                }
+                                                                                                                                
+                                                                                                                                tempDb.run(`ALTER TABLE grow_beds ADD COLUMN reservoir_volume_liters REAL`, (alterErr28) => {
+                                                                                                                                    if (alterErr28 && !alterErr28.message.includes('duplicate column name')) {
+                                                                                                                                        console.error('Error adding reservoir_volume_liters column:', alterErr28);
+                                                                                                                                    }
+                                                                                                                                    
+                                                                                                                                    tempDb.close();
+                                                                                                                                    console.log('✅ Database tables initialized');
+                                                                                                                                    resolve(db);
+                                                                                                                                });
+                                                                                                                            });
+                                                                                                                        });
+                                                                                                                    });
+                                                                                                                });
+                                                                                                            });
+                                                                                                        });
+                                                                                                    });
+                                                                                                });
+                                                                                            });
+                                                                                        });
+                                                                                    });
                                                                                 });
                                                                             });
                                                                         });

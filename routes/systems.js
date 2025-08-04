@@ -173,7 +173,64 @@ router.delete('/:id', async (req, res) => {
     const db = getDatabase();
 
     try {
-        const result = await new Promise((resolve, reject) => {
+        // First verify the system exists and belongs to the user
+        const system = await new Promise((resolve, reject) => {
+            db.get('SELECT * FROM systems WHERE id = ? AND user_id = ?', 
+                [req.params.id, req.user.userId], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+
+        if (!system) {
+            db.close();
+            return res.status(404).json({ error: 'System not found' });
+        }
+
+        // Delete all related data in the correct order (to handle foreign key constraints)
+        
+        // Delete plant allocations
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM plant_allocations WHERE system_id = ?', [req.params.id], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+
+        // Delete water quality records
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM water_quality WHERE system_id = ?', [req.params.id], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+
+        // Delete plant growth records
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM plant_growth WHERE system_id = ?', [req.params.id], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+
+        // Delete fish health records
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM fish_health WHERE system_id = ?', [req.params.id], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+
+        // Delete grow beds
+        await new Promise((resolve, reject) => {
+            db.run('DELETE FROM grow_beds WHERE system_id = ?', [req.params.id], (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+
+        // Finally delete the system itself
+        await new Promise((resolve, reject) => {
             db.run('DELETE FROM systems WHERE id = ? AND user_id = ?', 
                 [req.params.id, req.user.userId], 
                 function(err) {
@@ -184,12 +241,7 @@ router.delete('/:id', async (req, res) => {
         });
 
         db.close();
-
-        if (result.changes === 0) {
-            return res.status(404).json({ error: 'System not found' });
-        }
-
-        res.json({ message: 'System deleted successfully' });
+        res.json({ message: 'System and all related data deleted successfully' });
 
     } catch (error) {
         db.close();

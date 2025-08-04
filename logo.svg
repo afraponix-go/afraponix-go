@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" viewBox="0 0 566.93 566.93">
+  <!-- Generator: Adobe Illustrator 29.1.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 142)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: url(#linear-gradient2);
+      }
+
+      .st1 {
+        fill: url(#linear-gradient1);
+      }
+
+      .st2 {
+        fill: url(#linear-gradient3);
+      }
+
+      .st3 {
+        fill: url(#linear-gradient6);
+      }
+
+      .st4 {
+        fill: url(#linear-gradient7);
+      }
+
+      .st5 {
+        fill: url(#linear-gradient5);
+      }
+
+      .st6 {
+        fill: url(#linear-gradient4);
+      }
+
+      .st7 {
+        fill: url(#linear-gradient);
+      }
+    </style>
+    <linearGradient id="linear-gradient" x1="220.67" y1="384.91" x2="410.41" y2="384.91" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#49f911"/>
+      <stop offset="1" stop-color="#45e7dd"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient1" x1="156.52" y1="400.22" x2="277.15" y2="400.22" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#58dcfd"/>
+      <stop offset="1" stop-color="#2e3195"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient2" x1="235.29" y1="252.83" x2="425.03" y2="252.83" gradientTransform="translate(581.55 434.85) rotate(-180)" xlink:href="#linear-gradient"/>
+    <linearGradient id="linear-gradient3" x1="171.14" y1="268.14" x2="291.77" y2="268.14" gradientTransform="translate(581.55 434.85) rotate(-180)" xlink:href="#linear-gradient1"/>
+    <linearGradient id="linear-gradient4" x1="185.47" y1="335.09" x2="375.21" y2="335.09" gradientTransform="translate(49.82 531.72) rotate(-90)" xlink:href="#linear-gradient"/>
+    <linearGradient id="linear-gradient5" x1="121.31" y1="350.4" x2="241.94" y2="350.4" gradientTransform="translate(49.82 531.72) rotate(-90)" xlink:href="#linear-gradient1"/>
+    <linearGradient id="linear-gradient6" x1="270.5" y1="302.65" x2="460.24" y2="302.65" gradientTransform="translate(484.67 -49.82) rotate(90)" xlink:href="#linear-gradient"/>
+    <linearGradient id="linear-gradient7" x1="206.34" y1="317.96" x2="326.97" y2="317.96" gradientTransform="translate(484.67 -49.82) rotate(90)" xlink:href="#linear-gradient1"/>
+  </defs>
+  <g>
+    <g>
+      <path class="st7" d="M283.9,415.31l-63.23-63.22c37.66-33.03,94.96-31.64,130.87,4.26l58.87,58.87v.05c-34.95,34.94-91.59,34.96-126.51.04h0Z"/>
+      <path class="st1" d="M156.52,415.92c33.05,33.05,85.49,34.84,120.63,5.4l-63.02-63.01-57.61,57.61Z"/>
+    </g>
+    <g>
+      <path class="st0" d="M283.03,151.62l63.23,63.22c-37.66,33.03-94.96,31.64-130.87-4.26l-58.87-58.87v-.05c34.95-34.94,91.59-34.96,126.51-.04h0Z"/>
+      <path class="st2" d="M410.41,151.01c-33.05-33.05-85.49-34.84-120.63-5.4l63.02,63.01,57.61-57.61Z"/>
+    </g>
+  </g>
+  <g>
+    <g>
+      <path class="st6" d="M415.31,283.03l-63.22,63.23c-33.03-37.66-31.64-94.96,4.26-130.87l58.87-58.87h.05c34.94,34.95,34.96,91.59.04,126.51h0Z"/>
+      <path class="st5" d="M415.92,410.41c33.05-33.05,34.84-85.49,5.4-120.63l-63.01,63.02,57.61,57.61Z"/>
+    </g>
+    <g>
+      <path class="st3" d="M151.62,283.9l63.22-63.23c33.03,37.66,31.64,94.96-4.26,130.87l-58.87,58.87h-.05c-34.94-34.95-34.96-91.59-.04-126.51h0Z"/>
+      <path class="st4" d="M151.01,156.52c-33.05,33.05-34.84,85.49-5.4,120.63l63.01-63.02-57.61-57.61Z"/>
+    </g>
+  </g>
+</svg>
