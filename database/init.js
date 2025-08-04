@@ -316,6 +316,18 @@ function getDatabase() {
             });
         };
         
+        // Emulate SQLite's db.all() method (returns all rows)
+        connection.all = function(sql, params, callback) {
+            if (typeof params === 'function') {
+                callback = params;
+                params = [];
+            }
+            this.query(sql, params, (err, results) => {
+                if (err) return callback(err);
+                callback(null, results || []);
+            });
+        };
+        
         // Emulate SQLite's db.run() method (returns lastID and changes)
         connection.run = function(sql, params, callback) {
             if (typeof params === 'function') {
