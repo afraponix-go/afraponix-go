@@ -6998,6 +6998,10 @@ class AquaponicsApp {
                 
                 ${growBedSummaryHtml}
             `;
+            
+            // Initialize quick action buttons after rendering
+            this.initializeQuickActions();
+            
         } finally {
             this.plantOverviewRendering = false;
             this.plantOverviewRenderTimeout = null;
@@ -7581,7 +7585,7 @@ class AquaponicsApp {
                 const bedTypeName = bed.bed_type?.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Unknown';
                 
                 summaryHtml += `
-                    <div class="bed-summary-card">
+                    <div class="bed-summary-card" data-bed-id="${bed.id}">
                         <div class="bed-summary-header">
                             <h4>${bed.bed_name || `Bed ${bed.bed_number}`}</h4>
                             <span class="bed-type-badge">${bedTypeName}</span>
@@ -7611,6 +7615,52 @@ class AquaponicsApp {
                         <div class="bed-crops">
                             ${this.generateBedCropDisplay(bedAllocations, bedPlantData, bed.id)}
                         </div>
+                        
+                        <!-- Quick Action Buttons -->
+                        <div class="bed-quick-actions">
+                            <button class="quick-action-btn plant-btn" data-bed-id="${bed.id}" data-bed-name="${bed.bed_name || `Bed ${bed.bed_number}`}">
+                                🌱 Plant
+                            </button>
+                            <button class="quick-action-btn harvest-btn" data-bed-id="${bed.id}" data-bed-name="${bed.bed_name || `Bed ${bed.bed_number}`}">
+                                🌾 Harvest
+                            </button>
+                            <button class="quick-action-btn details-btn" data-bed-id="${bed.id}">
+                                📊 Details
+                            </button>
+                        </div>
+                        
+                        <!-- Inline Quick Plant Form (Hidden by default) -->
+                        <div class="inline-quick-form plant-form" id="quick-plant-${bed.id}" style="display: none;">
+                            <h5>Quick Plant - ${bed.bed_name || `Bed ${bed.bed_number}`}</h5>
+                            <div class="quick-form-grid">
+                                <select class="quick-crop-select" id="quick-crop-${bed.id}">
+                                    <option value="">Select crop...</option>
+                                    ${bedAllocations.map(alloc => `
+                                        <option value="${alloc.crop_type}">${this.cleanCustomCropName(alloc.crop_type)}</option>
+                                    `).join('')}
+                                </select>
+                                <input type="number" class="quick-plant-count" id="quick-count-${bed.id}" placeholder="Count" min="1">
+                                <button class="quick-submit-btn" onclick="window.appManager.quickPlantSubmit('${bed.id}')">Plant</button>
+                                <button class="quick-cancel-btn" onclick="window.appManager.toggleQuickForm('plant-${bed.id}')">Cancel</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Inline Quick Harvest Form (Hidden by default) -->
+                        <div class="inline-quick-form harvest-form" id="quick-harvest-${bed.id}" style="display: none;">
+                            <h5>Quick Harvest - ${bed.bed_name || `Bed ${bed.bed_number}`}</h5>
+                            <div class="quick-form-grid">
+                                <select class="quick-crop-select" id="harvest-crop-${bed.id}">
+                                    <option value="">Select crop...</option>
+                                    ${[...new Set(bedPlantData.filter(p => p.crop_type && !p.plants_harvested).map(p => p.crop_type))].map(crop => `
+                                        <option value="${crop}">${this.cleanCustomCropName(crop)}</option>
+                                    `).join('')}
+                                </select>
+                                <input type="number" class="quick-harvest-count" id="harvest-count-${bed.id}" placeholder="Plants" min="0">
+                                <input type="number" class="quick-harvest-weight" id="harvest-weight-${bed.id}" placeholder="Weight (kg)" min="0" step="0.1">
+                                <button class="quick-submit-btn" onclick="window.appManager.quickHarvestSubmit('${bed.id}')">Harvest</button>
+                                <button class="quick-cancel-btn" onclick="window.appManager.toggleQuickForm('harvest-${bed.id}')">Cancel</button>
+                            </div>
+                        </div>
                     </div>
                 `;
             });
@@ -7625,6 +7675,525 @@ class AquaponicsApp {
         } catch (error) {
             console.error('Error generating grow bed summary:', error);
             return '<div class="grow-bed-summary"><div class="error">Error loading grow bed summary.</div></div>';
+        }
+    }
+
+    // Toggle inline quick forms
+    toggleQuickForm(formType) {
+        const formId = `quick-${formType}`;
+        const form = document.getElementById(formId);
+        if (form) {
+            const isVisible = form.style.display !== 'none';
+            
+            // Hide all other forms in the same card
+            const card = form.closest('.bed-summary-card');
+            if (card) {
+                card.querySelectorAll('.inline-quick-form').forEach(f => {
+                    f.style.display = 'none';
+                });
+            }
+            
+            // Toggle this form
+            form.style.display = isVisible ? 'none' : 'block';
+            
+            // If opening, focus the first input
+            if (!isVisible) {
+                const firstInput = form.querySelector('select, input');
+                if (firstInput) firstInput.focus();
+            }
+        }
+    }
+    
+    // Quick plant submission
+    async quickPlantSubmit(bedId) {
+        const cropSelect = document.getElementById(`quick-crop-${bedId}`);
+        const countInput = document.getElementById(`quick-count-${bedId}`);
+        
+        if (!cropSelect.value || !countInput.value) {
+            this.showNotification('Please fill in all fields', 'error');
+            return;
+        }
+        
+        try {
+            // Get current date/time
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 16);
+            
+            // Generate batch ID
+            const batchId = `BATCH-${Date.now()}`;
+            
+            const plantData = {
+                systemId: this.activeSystemId,
+                date: dateStr,
+                growBedId: bedId,
+                cropType: cropSelect.value,
+                plantCount: parseInt(countInput.value),
+                stage: 'seedling',
+                batchId: batchId,
+                seedVariety: '',
+                daysToHarvest: 30
+            };
+            
+            await this.makeApiCall('/data/plant-growth', {
+                method: 'POST',
+                body: JSON.stringify(plantData)
+            });
+            
+            this.showNotification(`Planted ${countInput.value} ${this.cleanCustomCropName(cropSelect.value)}`, 'success');
+            
+            // Clear form and hide
+            cropSelect.value = '';
+            countInput.value = '';
+            this.toggleQuickForm(`plant-${bedId}`);
+            
+            // Refresh the overview
+            await this.updatePlantOverview();
+            
+        } catch (error) {
+            console.error('Quick plant error:', error);
+            this.showNotification('Failed to record planting', 'error');
+        }
+    }
+    
+    // Quick harvest submission
+    async quickHarvestSubmit(bedId) {
+        const cropSelect = document.getElementById(`harvest-crop-${bedId}`);
+        const countInput = document.getElementById(`harvest-count-${bedId}`);
+        const weightInput = document.getElementById(`harvest-weight-${bedId}`);
+        
+        if (!cropSelect.value || !countInput.value || !weightInput.value) {
+            this.showNotification('Please fill in all fields', 'error');
+            return;
+        }
+        
+        try {
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 16);
+            
+            const harvestData = {
+                systemId: this.activeSystemId,
+                date: dateStr,
+                growBedId: bedId,
+                cropType: cropSelect.value,
+                plantsHarvested: parseInt(countInput.value),
+                harvestWeight: parseFloat(weightInput.value) * 1000, // Convert kg to grams
+                quality: 'good'
+            };
+            
+            await this.makeApiCall('/data/plant-growth', {
+                method: 'POST',
+                body: JSON.stringify(harvestData)
+            });
+            
+            this.showNotification(`Harvested ${countInput.value} ${this.cleanCustomCropName(cropSelect.value)} (${weightInput.value}kg)`, 'success');
+            
+            // Clear form and hide
+            cropSelect.value = '';
+            countInput.value = '';
+            weightInput.value = '';
+            this.toggleQuickForm(`harvest-${bedId}`);
+            
+            // Refresh the overview
+            await this.updatePlantOverview();
+            
+        } catch (error) {
+            console.error('Quick harvest error:', error);
+            this.showNotification('Failed to record harvest', 'error');
+        }
+    }
+    
+    // Initialize quick action buttons
+    initializeQuickActions() {
+        // Use event delegation for dynamically created buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('quick-action-btn')) {
+                e.preventDefault();
+                
+                const bedId = e.target.dataset.bedId;
+                
+                if (e.target.classList.contains('plant-btn')) {
+                    this.toggleQuickForm(`plant-${bedId}`);
+                } else if (e.target.classList.contains('harvest-btn')) {
+                    this.toggleQuickForm(`harvest-${bedId}`);
+                } else if (e.target.classList.contains('details-btn')) {
+                    // Switch to Plant & Harvest tab with this bed selected
+                    this.switchToPlantHarvestTab();
+                    setTimeout(() => {
+                        const bedSelect = document.getElementById('plant-grow-bed');
+                        if (bedSelect) {
+                            bedSelect.value = bedId;
+                            bedSelect.dispatchEvent(new Event('change'));
+                        }
+                    }, 100);
+                }
+            }
+        });
+        
+        // Initialize keyboard shortcuts
+        this.initializeKeyboardShortcuts();
+    }
+    
+    // Initialize keyboard shortcuts
+    initializeKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Only activate shortcuts when not typing in an input
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+                return;
+            }
+            
+            // Check for command/ctrl key combinations
+            const isModKey = e.metaKey || e.ctrlKey;
+            
+            if (isModKey) {
+                switch(e.key.toLowerCase()) {
+                    case 'p':
+                        e.preventDefault();
+                        this.openQuickPlantDialog();
+                        break;
+                    case 'h':
+                        e.preventDefault();
+                        this.openQuickHarvestDialog();
+                        break;
+                    case 'k':
+                        e.preventDefault();
+                        this.openCommandPalette();
+                        break;
+                    case '/':
+                        e.preventDefault();
+                        this.focusSearch();
+                        break;
+                }
+            }
+            
+            // Single key shortcuts (when not in input)
+            switch(e.key.toLowerCase()) {
+                case '?':
+                    e.preventDefault();
+                    this.showKeyboardShortcuts();
+                    break;
+                case 'g':
+                    if (!this.gKeyPressed) {
+                        this.gKeyPressed = true;
+                        setTimeout(() => { this.gKeyPressed = false; }, 1000);
+                    } else {
+                        // Double 'g' pressed
+                        e.preventDefault();
+                        switch(e.key.toLowerCase()) {
+                            case 'p':
+                                this.navigateToPlants();
+                                break;
+                            case 'd':
+                                this.navigateToDashboard();
+                                break;
+                            case 'f':
+                                this.navigateToFish();
+                                break;
+                        }
+                    }
+                    break;
+            }
+        });
+    }
+    
+    // Quick plant dialog
+    openQuickPlantDialog() {
+        // Find the first grow bed and open its plant form
+        const firstPlantBtn = document.querySelector('.quick-action-btn.plant-btn');
+        if (firstPlantBtn) {
+            firstPlantBtn.click();
+        } else {
+            // Navigate to plant tab if no beds visible
+            this.navigateToPlants();
+        }
+    }
+    
+    // Quick harvest dialog
+    openQuickHarvestDialog() {
+        const firstHarvestBtn = document.querySelector('.quick-action-btn.harvest-btn');
+        if (firstHarvestBtn) {
+            firstHarvestBtn.click();
+        } else {
+            this.navigateToPlants();
+        }
+    }
+    
+    // Show keyboard shortcuts help
+    showKeyboardShortcuts() {
+        const shortcuts = `
+            <div style="padding: 1rem;">
+                <h3>⌨️ Keyboard Shortcuts</h3>
+                <div style="display: grid; gap: 0.5rem; margin-top: 1rem;">
+                    <div><kbd>Cmd/Ctrl + P</kbd> - Quick Plant</div>
+                    <div><kbd>Cmd/Ctrl + H</kbd> - Quick Harvest</div>
+                    <div><kbd>Cmd/Ctrl + K</kbd> - Command Palette</div>
+                    <div><kbd>Cmd/Ctrl + /</kbd> - Focus Search</div>
+                    <div><kbd>?</kbd> - Show this help</div>
+                    <div><kbd>g g</kbd> - Go to Dashboard</div>
+                    <div><kbd>g p</kbd> - Go to Plants</div>
+                    <div><kbd>g f</kbd> - Go to Fish</div>
+                </div>
+            </div>
+        `;
+        
+        this.showNotification(shortcuts, 'info', 5000);
+    }
+    
+    // Navigation helpers
+    navigateToPlants() {
+        const plantsBtn = document.querySelector('[data-view="plants"]');
+        if (plantsBtn) plantsBtn.click();
+    }
+    
+    navigateToDashboard() {
+        const dashBtn = document.querySelector('[data-view="dashboard"]');
+        if (dashBtn) dashBtn.click();
+    }
+    
+    navigateToFish() {
+        const fishBtn = document.querySelector('[data-view="fish"]');
+        if (fishBtn) fishBtn.click();
+    }
+    
+    focusSearch() {
+        // Implement search focus if there's a search bar
+        const searchInput = document.querySelector('.search-input');
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+        }
+    }
+    
+    // Command Palette functionality
+    openCommandPalette() {
+        // Remove existing palette if any
+        const existing = document.getElementById('command-palette');
+        if (existing) {
+            existing.remove();
+            return;
+        }
+        
+        // Create command palette
+        const palette = document.createElement('div');
+        palette.id = 'command-palette';
+        palette.className = 'command-palette-overlay';
+        palette.innerHTML = `
+            <div class="command-palette">
+                <div class="command-palette-header">
+                    <input type="text" 
+                           id="command-input" 
+                           class="command-input" 
+                           placeholder="Type a command or search..."
+                           autocomplete="off">
+                    <button class="command-close" onclick="window.appManager.closeCommandPalette()">✕</button>
+                </div>
+                <div class="command-results" id="command-results">
+                    <div class="command-section">
+                        <div class="command-section-title">Quick Actions</div>
+                        <div class="command-item" data-command="plant">
+                            <span class="command-icon">🌱</span>
+                            <span class="command-text">Plant Crops</span>
+                            <span class="command-shortcut">Cmd+P</span>
+                        </div>
+                        <div class="command-item" data-command="harvest">
+                            <span class="command-icon">🌾</span>
+                            <span class="command-text">Harvest Crops</span>
+                            <span class="command-shortcut">Cmd+H</span>
+                        </div>
+                        <div class="command-item" data-command="water-quality">
+                            <span class="command-icon">💧</span>
+                            <span class="command-text">Add Water Quality Data</span>
+                        </div>
+                        <div class="command-item" data-command="fish-feed">
+                            <span class="command-icon">🐟</span>
+                            <span class="command-text">Record Fish Feeding</span>
+                        </div>
+                    </div>
+                    <div class="command-section">
+                        <div class="command-section-title">Navigation</div>
+                        <div class="command-item" data-command="go-dashboard">
+                            <span class="command-icon">📊</span>
+                            <span class="command-text">Go to Dashboard</span>
+                            <span class="command-shortcut">g g</span>
+                        </div>
+                        <div class="command-item" data-command="go-plants">
+                            <span class="command-icon">🌿</span>
+                            <span class="command-text">Go to Plants</span>
+                            <span class="command-shortcut">g p</span>
+                        </div>
+                        <div class="command-item" data-command="go-fish">
+                            <span class="command-icon">🐠</span>
+                            <span class="command-text">Go to Fish</span>
+                            <span class="command-shortcut">g f</span>
+                        </div>
+                        <div class="command-item" data-command="go-settings">
+                            <span class="command-icon">⚙️</span>
+                            <span class="command-text">Go to Settings</span>
+                        </div>
+                    </div>
+                    <div class="command-section">
+                        <div class="command-section-title">System</div>
+                        <div class="command-item" data-command="refresh">
+                            <span class="command-icon">🔄</span>
+                            <span class="command-text">Refresh Data</span>
+                        </div>
+                        <div class="command-item" data-command="help">
+                            <span class="command-icon">❓</span>
+                            <span class="command-text">Show Keyboard Shortcuts</span>
+                            <span class="command-shortcut">?</span>
+                        </div>
+                        <div class="command-item" data-command="logout">
+                            <span class="command-icon">🚪</span>
+                            <span class="command-text">Logout</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(palette);
+        
+        // Focus input
+        const input = document.getElementById('command-input');
+        input.focus();
+        
+        // Set up event listeners
+        input.addEventListener('input', (e) => this.filterCommands(e.target.value));
+        input.addEventListener('keydown', (e) => this.handleCommandNavigation(e));
+        
+        // Click handler for commands
+        document.querySelectorAll('.command-item').forEach(item => {
+            item.addEventListener('click', () => this.executeCommand(item.dataset.command));
+        });
+        
+        // Close on ESC or outside click
+        palette.addEventListener('click', (e) => {
+            if (e.target === palette) {
+                this.closeCommandPalette();
+            }
+        });
+        
+        document.addEventListener('keydown', this.commandPaletteEscHandler = (e) => {
+            if (e.key === 'Escape') {
+                this.closeCommandPalette();
+            }
+        });
+    }
+    
+    closeCommandPalette() {
+        const palette = document.getElementById('command-palette');
+        if (palette) {
+            palette.remove();
+            if (this.commandPaletteEscHandler) {
+                document.removeEventListener('keydown', this.commandPaletteEscHandler);
+            }
+        }
+    }
+    
+    filterCommands(query) {
+        const items = document.querySelectorAll('.command-item');
+        const sections = document.querySelectorAll('.command-section');
+        
+        if (!query) {
+            items.forEach(item => item.style.display = 'flex');
+            sections.forEach(section => section.style.display = 'block');
+            return;
+        }
+        
+        const lowerQuery = query.toLowerCase();
+        sections.forEach(section => {
+            let hasVisibleItems = false;
+            
+            section.querySelectorAll('.command-item').forEach(item => {
+                const text = item.querySelector('.command-text').textContent.toLowerCase();
+                const matches = text.includes(lowerQuery);
+                item.style.display = matches ? 'flex' : 'none';
+                if (matches) hasVisibleItems = true;
+            });
+            
+            section.style.display = hasVisibleItems ? 'block' : 'none';
+        });
+    }
+    
+    handleCommandNavigation(e) {
+        const items = Array.from(document.querySelectorAll('.command-item')).filter(
+            item => item.style.display !== 'none'
+        );
+        
+        const currentIndex = items.findIndex(item => item.classList.contains('selected'));
+        
+        switch(e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                const nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+                items.forEach(item => item.classList.remove('selected'));
+                if (items[nextIndex]) items[nextIndex].classList.add('selected');
+                break;
+                
+            case 'ArrowUp':
+                e.preventDefault();
+                const prevIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+                items.forEach(item => item.classList.remove('selected'));
+                if (items[prevIndex]) items[prevIndex].classList.add('selected');
+                break;
+                
+            case 'Enter':
+                e.preventDefault();
+                const selected = document.querySelector('.command-item.selected');
+                if (selected) {
+                    this.executeCommand(selected.dataset.command);
+                } else if (items.length > 0) {
+                    this.executeCommand(items[0].dataset.command);
+                }
+                break;
+        }
+    }
+    
+    executeCommand(command) {
+        this.closeCommandPalette();
+        
+        switch(command) {
+            case 'plant':
+                this.openQuickPlantDialog();
+                break;
+            case 'harvest':
+                this.openQuickHarvestDialog();
+                break;
+            case 'water-quality':
+                this.navigateToDashboard();
+                setTimeout(() => {
+                    const waterBtn = document.querySelector('.action-btn[onclick*="Water Quality"]');
+                    if (waterBtn) waterBtn.click();
+                }, 100);
+                break;
+            case 'fish-feed':
+                this.navigateToFish();
+                setTimeout(() => {
+                    const feedBtn = document.querySelector('.action-btn[onclick*="Feeding"]');
+                    if (feedBtn) feedBtn.click();
+                }, 100);
+                break;
+            case 'go-dashboard':
+                this.navigateToDashboard();
+                break;
+            case 'go-plants':
+                this.navigateToPlants();
+                break;
+            case 'go-fish':
+                this.navigateToFish();
+                break;
+            case 'go-settings':
+                const settingsBtn = document.querySelector('[data-view="settings"]');
+                if (settingsBtn) settingsBtn.click();
+                break;
+            case 'refresh':
+                location.reload();
+                break;
+            case 'help':
+                this.showKeyboardShortcuts();
+                break;
+            case 'logout':
+                this.logout();
+                break;
         }
     }
 
