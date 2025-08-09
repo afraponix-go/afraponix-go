@@ -11756,3 +11756,269 @@ kbd {
     border-radius: 6px;
     border: 1px solid #f5c6cb;
 }
+
+/* ============================================
+   Unified Bed Overview
+   ============================================ */
+
+.unified-bed-overview {
+    margin-top: 2rem;
+}
+
+.unified-bed-overview h3 {
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: center;
+    justify-content: center;
+}
+
+.unified-bed-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.unified-bed-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+    border: 1px solid #e1e5e9;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.unified-bed-card:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.bed-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f8f9fa;
+}
+
+.bed-title-section h4 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.bed-type-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.bed-specs-mini {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.spec-item {
+    background: #f8f9fa;
+    color: #6c757d;
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: 1px solid #e9ecef;
+}
+
+.bed-progress-section {
+    margin-bottom: 1.25rem;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.progress-label {
+    font-size: 0.9rem;
+    color: #495057;
+    font-weight: 500;
+}
+
+.progress-percentage {
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+}
+
+.progress-percentage.good {
+    background: #d4edda;
+    color: #155724;
+}
+
+.progress-percentage.medium {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.progress-percentage.low {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.allocation-summary {
+    margin-top: 0.5rem;
+    text-align: center;
+}
+
+.allocation-summary small {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+/* Batch Section Styling */
+.bed-batches-section {
+    margin: 1.25rem 0;
+    padding: 1rem;
+    background: #f8f9fc;
+    border-radius: 8px;
+    border: 1px solid #e1e5e9;
+}
+
+.bed-batches-section h6 {
+    margin: 0 0 0.75rem 0;
+    color: #2c3e50;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.batches-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+}
+
+.batch-mini-card {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.batch-mini-card:hover {
+    border-color: #adb5bd;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.batch-mini-card.ready-harvest {
+    border-color: #28a745;
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+}
+
+.batch-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.batch-id {
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 0.75rem;
+    background: #e9ecef;
+    color: #495057;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.ready-badge {
+    background: #28a745;
+    color: white;
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.batch-crop {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.batch-details {
+    display: grid;
+    gap: 0.3rem;
+}
+
+.batch-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.batch-stat .stat-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.batch-stat .stat-value {
+    font-size: 0.75rem;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.no-batches {
+    text-align: center;
+    color: #6c757d;
+    font-style: italic;
+    padding: 1rem;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .unified-bed-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .unified-bed-card {
+        padding: 1rem;
+    }
+    
+    .bed-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+    
+    .batches-grid {
+        grid-template-columns: 1fr;
+    }
+}

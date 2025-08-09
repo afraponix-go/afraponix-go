@@ -6947,11 +6947,8 @@ class AquaponicsApp {
             // Generate batch statistics
             const batchStats = this.generateBatchStatistics(plantData);
             
-            // Generate grow bed summary
-            const growBedSummaryHtml = await this.generateGrowBedSummary();
-            
-            // Generate batch overview section
-            const batchOverviewHtml = await this.generateBatchOverview(plantData);
+            // Generate unified grow bed overview (includes batches and all bed info)
+            const unifiedBedOverviewHtml = await this.generateUnifiedBedOverview(plantData);
             
             // Generate nutrient overview section  
             const nutrientOverviewHtml = await this.generateNutrientOverview();
@@ -6994,9 +6991,7 @@ class AquaponicsApp {
                 
                 ${nutrientOverviewHtml}
                 
-                ${batchOverviewHtml}
-                
-                ${growBedSummaryHtml}
+                ${unifiedBedOverviewHtml}
             `;
             
             // Initialize quick action buttons after rendering
@@ -7533,6 +7528,230 @@ class AquaponicsApp {
         } catch (error) {
             console.error('Error populating harvest form:', error);
             this.showNotification('❌ Error populating harvest form', 'error');
+        }
+    }
+
+    // Generate unified bed overview that includes all bed info and batches
+    async generateUnifiedBedOverview(plantData) {
+        if (!this.activeSystemId) {
+            return '<div class="unified-bed-overview"><div class="no-data">Please select a system to view grow bed information.</div></div>';
+        }
+
+        try {
+            // Get allocations, grow beds, and fresh plant data
+            const [allocations, growBeds] = await Promise.all([
+                this.makeApiCall(`/plants/allocations/${this.activeSystemId}`),
+                this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`)
+            ]);
+
+            if (!growBeds || growBeds.length === 0) {
+                return '<div class="unified-bed-overview"><div class="no-data">No grow beds configured for this system.</div></div>';
+            }
+
+            // Create batch map for quick lookup
+            const batchMap = new Map();
+            plantData.forEach(entry => {
+                if (entry.batch_id && entry.crop_type) {
+                    const key = `${entry.grow_bed_id}-${entry.batch_id}`;
+                    if (!batchMap.has(key)) {
+                        batchMap.set(key, {
+                            batchId: entry.batch_id,
+                            cropType: entry.crop_type,
+                            growBedId: entry.grow_bed_id,
+                            dateFirst: entry.date,
+                            plantCount: 0,
+                            harvestedCount: 0,
+                            seedVariety: entry.seed_variety || '',
+                            daysToHarvest: entry.days_to_harvest || null,
+                            entries: []
+                        });
+                    }
+                    
+                    const batch = batchMap.get(key);
+                    batch.entries.push(entry);
+                    
+                    if (entry.plants_harvested > 0) {
+                        batch.harvestedCount += entry.plants_harvested;
+                    } else {
+                        batch.plantCount += entry.plant_count || 0;
+                    }
+                    
+                    // Keep earliest date
+                    if (new Date(entry.date) < new Date(batch.dateFirst)) {
+                        batch.dateFirst = entry.date;
+                    }
+                }
+            });
+
+            let summaryHtml = `
+                <div class="unified-bed-overview">
+                    <h3>🌿 Grow Bed Overview</h3>
+                    <p style="color: #666; margin-bottom: 1.5rem; text-align: center;">
+                        Complete view of each grow bed including specifications, current crops, batches, and quick actions.
+                    </p>
+                    <div class="unified-bed-grid">
+            `;
+
+            // Generate card for each grow bed
+            growBeds.forEach(bed => {
+                // Get allocations for this bed
+                const bedAllocations = allocations.filter(alloc => alloc.grow_bed_id == bed.id);
+                
+                // Get plant data for this bed
+                const bedPlantData = plantData.filter(p => p.grow_bed_id == bed.id);
+                
+                // Get batches for this bed
+                const bedBatches = Array.from(batchMap.values()).filter(batch => batch.growBedId == bed.id);
+                
+                // Calculate bed statistics
+                const totalAllocatedPercentage = bedAllocations.reduce((sum, alloc) => sum + (Number(alloc.percentage_allocated) || 0), 0);
+                const totalAllocatedPlants = bedAllocations.reduce((sum, alloc) => sum + (Number(alloc.plants_planted) || 0), 0);
+                
+                const totalActualPlants = this.getCropPlantCount(bedPlantData);
+                const plantedPercentage = totalAllocatedPlants > 0 
+                    ? Math.round((totalActualPlants / totalAllocatedPlants) * 100)
+                    : 0;
+
+                const bedTypeName = bed.bed_type?.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Unknown';
+                
+                summaryHtml += `
+                    <div class="unified-bed-card" data-bed-id="${bed.id}">
+                        <div class="bed-header">
+                            <div class="bed-title-section">
+                                <h4>${bed.bed_name || `Bed ${bed.bed_number}`}</h4>
+                                <span class="bed-type-badge">${bedTypeName}</span>
+                            </div>
+                            <div class="bed-specs-mini">
+                                <span class="spec-item">${(parseFloat(bed.area_m2) || parseFloat(bed.equivalent_m2) || 0).toFixed(1)}m²</span>
+                                <span class="spec-item">${bed.volume_liters || 0}L</span>
+                                <span class="spec-item">${bed.plant_capacity || 'N/A'} capacity</span>
+                            </div>
+                        </div>
+                        
+                        <div class="bed-progress-section">
+                            <div class="progress-header">
+                                <span class="progress-label">Planting Progress: ${totalActualPlants} / ${totalAllocatedPlants}</span>
+                                <span class="progress-percentage ${plantedPercentage >= 80 ? 'good' : plantedPercentage >= 50 ? 'medium' : 'low'}">${plantedPercentage}%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${Math.min(plantedPercentage, 100)}%"></div>
+                            </div>
+                            <div class="allocation-summary">
+                                <small>Allocated: ${totalAllocatedPercentage.toFixed(1)}% of bed area</small>
+                            </div>
+                        </div>
+                        
+                        ${this.generateBedCropDisplay(bedAllocations, bedPlantData, bed.id)}
+                        
+                        <!-- Current Batches Section -->
+                        <div class="bed-batches-section">
+                            <h6>📦 Active Batches</h6>
+                            ${bedBatches.length > 0 ? `
+                                <div class="batches-grid">
+                                    ${bedBatches.map(batch => {
+                                        const daysSincePlanted = Math.floor((new Date() - new Date(batch.dateFirst)) / (1000 * 60 * 60 * 24));
+                                        const daysToHarvest = batch.daysToHarvest || 'N/A';
+                                        const isReady = batch.daysToHarvest && daysSincePlanted >= batch.daysToHarvest;
+                                        const remainingPlants = batch.plantCount - batch.harvestedCount;
+                                        
+                                        return `
+                                            <div class="batch-mini-card ${isReady ? 'ready-harvest' : ''}">
+                                                <div class="batch-header">
+                                                    <span class="batch-id">${batch.batchId}</span>
+                                                    ${isReady ? '<span class="ready-badge">Ready!</span>' : ''}
+                                                </div>
+                                                <div class="batch-crop">${this.cleanCustomCropName(batch.cropType)}</div>
+                                                <div class="batch-details">
+                                                    <div class="batch-stat">
+                                                        <span class="stat-label">Plants:</span>
+                                                        <span class="stat-value">${remainingPlants} active</span>
+                                                    </div>
+                                                    <div class="batch-stat">
+                                                        <span class="stat-label">Age:</span>
+                                                        <span class="stat-value">${daysSincePlanted} days</span>
+                                                    </div>
+                                                    ${batch.seedVariety ? `
+                                                        <div class="batch-stat">
+                                                            <span class="stat-label">Variety:</span>
+                                                            <span class="stat-value">${batch.seedVariety}</span>
+                                                        </div>
+                                                    ` : ''}
+                                                    <div class="batch-stat">
+                                                        <span class="stat-label">Harvest:</span>
+                                                        <span class="stat-value">${daysToHarvest} days</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            ` : '<div class="no-batches">No active batches</div>'}
+                        </div>
+                        
+                        <!-- Quick Action Buttons -->
+                        <div class="bed-quick-actions">
+                            <button class="quick-action-btn plant-btn" data-bed-id="${bed.id}" data-bed-name="${bed.bed_name || `Bed ${bed.bed_number}`}">
+                                🌱 Plant
+                            </button>
+                            <button class="quick-action-btn harvest-btn" data-bed-id="${bed.id}" data-bed-name="${bed.bed_name || `Bed ${bed.bed_number}`}">
+                                🌾 Harvest
+                            </button>
+                            <button class="quick-action-btn details-btn" data-bed-id="${bed.id}">
+                                📊 Details
+                            </button>
+                        </div>
+                        
+                        <!-- Inline Quick Plant Form (Hidden by default) -->
+                        <div class="inline-quick-form plant-form" id="quick-plant-${bed.id}" style="display: none;">
+                            <h5>Quick Plant - ${bed.bed_name || `Bed ${bed.bed_number}`}</h5>
+                            <div class="quick-form-grid">
+                                <select class="quick-crop-select" id="quick-crop-${bed.id}">
+                                    <option value="">Select crop...</option>
+                                    ${bedAllocations.map(alloc => `
+                                        <option value="${alloc.crop_type}">${this.cleanCustomCropName(alloc.crop_type)}</option>
+                                    `).join('')}
+                                </select>
+                                <input type="number" class="quick-plant-count" id="quick-count-${bed.id}" placeholder="Count" min="1">
+                                <button class="quick-submit-btn" onclick="window.appManager.quickPlantSubmit('${bed.id}')">Plant</button>
+                                <button class="quick-cancel-btn" onclick="window.appManager.toggleQuickForm('plant-${bed.id}')">Cancel</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Inline Quick Harvest Form (Hidden by default) -->
+                        <div class="inline-quick-form harvest-form" id="quick-harvest-${bed.id}" style="display: none;">
+                            <h5>Quick Harvest - ${bed.bed_name || `Bed ${bed.bed_number}`}</h5>
+                            <div class="quick-form-grid">
+                                <select class="quick-crop-select" id="harvest-crop-${bed.id}">
+                                    <option value="">Select crop...</option>
+                                    ${[...new Set(bedPlantData.filter(p => p.crop_type && !p.plants_harvested).map(p => p.crop_type))].map(crop => `
+                                        <option value="${crop}">${this.cleanCustomCropName(crop)}</option>
+                                    `).join('')}
+                                </select>
+                                <input type="number" class="quick-harvest-count" id="harvest-count-${bed.id}" placeholder="Plants" min="0">
+                                <input type="number" class="quick-harvest-weight" id="harvest-weight-${bed.id}" placeholder="Weight (kg)" min="0" step="0.1">
+                                <button class="quick-submit-btn" onclick="window.appManager.quickHarvestSubmit('${bed.id}')">Harvest</button>
+                                <button class="quick-cancel-btn" onclick="window.appManager.toggleQuickForm('harvest-${bed.id}')">Cancel</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Bed Details Section (Hidden by default) -->
+                        <div class="bed-details-section" id="bed-details-${bed.id}" style="display: none;">
+                            <div class="details-loading">Loading bed details...</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            summaryHtml += `
+                    </div>
+                </div>
+            `;
+
+            return summaryHtml;
+
+        } catch (error) {
+            console.error('Error generating unified bed overview:', error);
+            return '<div class="unified-bed-overview"><div class="error">Error loading grow bed information.</div></div>';
         }
     }
 
