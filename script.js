@@ -7661,6 +7661,11 @@ class AquaponicsApp {
                                 <button class="quick-cancel-btn" onclick="window.appManager.toggleQuickForm('harvest-${bed.id}')">Cancel</button>
                             </div>
                         </div>
+                        
+                        <!-- Bed Details Section (Hidden by default) -->
+                        <div class="bed-details-section" id="bed-details-${bed.id}" style="display: none;">
+                            <div class="details-loading">Loading bed details...</div>
+                        </div>
                     </div>
                 `;
             });
@@ -7816,15 +7821,8 @@ class AquaponicsApp {
                 } else if (e.target.classList.contains('harvest-btn')) {
                     this.toggleQuickForm(`harvest-${bedId}`);
                 } else if (e.target.classList.contains('details-btn')) {
-                    // Switch to Plant & Harvest tab with this bed selected
-                    this.switchToPlantHarvestTab();
-                    setTimeout(() => {
-                        const bedSelect = document.getElementById('plant-grow-bed');
-                        if (bedSelect) {
-                            bedSelect.value = bedId;
-                            bedSelect.dispatchEvent(new Event('change'));
-                        }
-                    }, 100);
+                    // Show bed details inline
+                    this.toggleBedDetails(bedId);
                 }
             }
         });
@@ -7961,6 +7959,183 @@ class AquaponicsApp {
             searchInput.focus();
             searchInput.select();
         }
+    }
+    
+    // Toggle bed details section
+    async toggleBedDetails(bedId) {
+        const detailsSection = document.getElementById(`bed-details-${bedId}`);
+        if (!detailsSection) return;
+        
+        const isVisible = detailsSection.style.display !== 'none';
+        
+        // Hide all other details sections
+        document.querySelectorAll('.bed-details-section').forEach(section => {
+            section.style.display = 'none';
+        });
+        
+        // Hide all quick forms too
+        document.querySelectorAll('.inline-quick-form').forEach(form => {
+            form.style.display = 'none';
+        });
+        
+        if (isVisible) {
+            // Already visible, just hide it
+            detailsSection.style.display = 'none';
+            return;
+        }
+        
+        // Show and populate details
+        detailsSection.style.display = 'block';
+        
+        try {
+            // Get bed details, allocations, and plant history
+            const [beds, allocations, plantHistory] = await Promise.all([
+                this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`),
+                this.makeApiCall(`/plants/allocations/${this.activeSystemId}`),
+                this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`)
+            ]);
+            
+            const bed = beds.find(b => b.id == bedId);
+            const bedAllocations = allocations.filter(a => a.grow_bed_id == bedId);
+            const bedPlantHistory = plantHistory.filter(p => p.grow_bed_id == bedId);
+            
+            if (!bed) {
+                detailsSection.innerHTML = '<div class="error">Bed not found</div>';
+                return;
+            }
+            
+            // Generate detailed view
+            const detailsHtml = this.generateBedDetailsHtml(bed, bedAllocations, bedPlantHistory);
+            detailsSection.innerHTML = detailsHtml;
+            
+        } catch (error) {
+            console.error('Error loading bed details:', error);
+            detailsSection.innerHTML = '<div class="error">Failed to load bed details</div>';
+        }
+    }
+    
+    // Generate detailed bed information HTML
+    generateBedDetailsHtml(bed, allocations, plantHistory) {
+        const bedTypeName = bed.bed_type?.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Unknown';
+        
+        // Recent activity (last 10 entries)
+        const recentActivity = plantHistory
+            .sort((a, b) => new Date(b.date || b.created_at) - new Date(a.date || a.created_at))
+            .slice(0, 10);
+        
+        // Current crops with counts
+        const currentCrops = {};
+        plantHistory.forEach(entry => {
+            if (!entry.crop_type) return;
+            
+            const cleanName = this.cleanCustomCropName(entry.crop_type);
+            if (!currentCrops[cleanName]) {
+                currentCrops[cleanName] = { planted: 0, harvested: 0 };
+            }
+            
+            if (entry.plants_harvested) {
+                currentCrops[cleanName].harvested += entry.plants_harvested || 0;
+            } else {
+                currentCrops[cleanName].planted += entry.plant_count || 0;
+            }
+        });
+        
+        return `
+            <div class="bed-details-content">
+                <h5>📊 ${bed.bed_name || `Bed ${bed.bed_number}`} Details</h5>
+                
+                <!-- Bed Specifications -->
+                <div class="details-section">
+                    <h6>🏗️ Specifications</h6>
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Type:</span>
+                            <span class="detail-value">${bedTypeName}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Area:</span>
+                            <span class="detail-value">${(parseFloat(bed.area_m2) || parseFloat(bed.equivalent_m2) || 0).toFixed(1)}m²</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Volume:</span>
+                            <span class="detail-value">${bed.volume_liters || 0}L</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Capacity:</span>
+                            <span class="detail-value">${bed.plant_capacity || 'N/A'} plants</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Dimensions:</span>
+                            <span class="detail-value">${bed.length_meters || 0}m × ${bed.width_meters || 0}m × ${bed.height_meters || 0}m</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Current Crops -->
+                <div class="details-section">
+                    <h6>🌿 Current Crops</h6>
+                    <div class="current-crops-list">
+                        ${Object.keys(currentCrops).length > 0 ? Object.entries(currentCrops).map(([crop, counts]) => {
+                            const remaining = counts.planted - counts.harvested;
+                            return `
+                                <div class="crop-detail-item">
+                                    <span class="crop-name">${crop}</span>
+                                    <span class="crop-counts">
+                                        ${remaining > 0 ? `${remaining} active` : 'None active'}
+                                        <small>(${counts.planted} planted, ${counts.harvested} harvested)</small>
+                                    </span>
+                                </div>
+                            `;
+                        }).join('') : '<div class="no-data">No crops currently planted</div>'}
+                    </div>
+                </div>
+                
+                <!-- Allocations -->
+                <div class="details-section">
+                    <h6>📋 Crop Allocations</h6>
+                    <div class="allocations-list">
+                        ${allocations.length > 0 ? allocations.map(alloc => `
+                            <div class="allocation-item">
+                                <span class="crop-name">${this.cleanCustomCropName(alloc.crop_type)}</span>
+                                <span class="allocation-percentage">${alloc.percentage_allocated || 0}%</span>
+                                <span class="allocation-plants">${alloc.plants_planted || 0} plants</span>
+                            </div>
+                        `).join('') : '<div class="no-data">No crop allocations set</div>'}
+                    </div>
+                </div>
+                
+                <!-- Recent Activity -->
+                <div class="details-section">
+                    <h6>📅 Recent Activity</h6>
+                    <div class="activity-list">
+                        ${recentActivity.length > 0 ? recentActivity.map(activity => {
+                            const date = new Date(activity.date || activity.created_at);
+                            const isHarvest = activity.plants_harvested > 0;
+                            return `
+                                <div class="activity-item">
+                                    <span class="activity-icon">${isHarvest ? '🌾' : '🌱'}</span>
+                                    <div class="activity-content">
+                                        <div class="activity-description">
+                                            ${isHarvest ? 'Harvested' : 'Planted'} 
+                                            ${isHarvest ? activity.plants_harvested : activity.plant_count} 
+                                            ${this.cleanCustomCropName(activity.crop_type)}
+                                            ${isHarvest && activity.harvest_weight ? ` (${(activity.harvest_weight / 1000).toFixed(1)}kg)` : ''}
+                                        </div>
+                                        <div class="activity-date">${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('') : '<div class="no-data">No recent activity</div>'}
+                    </div>
+                </div>
+                
+                <div class="details-actions">
+                    <button class="details-close-btn" onclick="window.appManager.toggleBedDetails('${bed.id}')">
+                        Close Details
+                    </button>
+                </div>
+            </div>
+        `;
     }
     
     // Command Palette functionality
