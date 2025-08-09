@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getDatabase } = require('../database/init');
+const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
 
 // All routes require authentication
@@ -9,32 +9,29 @@ router.use(authenticateToken);
 // Get spray programmes for a system
 router.get('/', async (req, res) => {
     const { system_id } = req.query;
-    const db = getDatabase();
+    let connection;
 
     if (!system_id) {
         return res.status(400).json({ error: 'System ID is required' });
     }
 
     try {
-        const programmes = await new Promise((resolve, reject) => {
-            db.all(`
-                SELECT 
-                    sp.*,
-                    CASE 
-                        WHEN COUNT(sa.id) > 0 THEN 1 
-                        ELSE 0 
-                    END as applied,
-                    MAX(sa.application_date) as last_application_date
-                FROM spray_programmes sp
-                LEFT JOIN spray_applications sa ON sp.id = sa.programme_id
-                WHERE sp.system_id = ? AND (sp.status = 'active' OR sp.status = 'inactive' OR sp.status IS NULL)
-                GROUP BY sp.id
-                ORDER BY sp.created_at DESC
-            `, [system_id], (err, rows) => {
-                if (err) reject(err);
-                else resolve(rows);
-            });
-        });
+        connection = await getDatabase();
+        
+        const [programmes] = await connection.execute(`
+            SELECT 
+                sp.*,
+                CASE 
+                    WHEN COUNT(sa.id) > 0 THEN 1 
+                    ELSE 0 
+                END as applied,
+                MAX(sa.application_date) as last_application_date
+            FROM spray_programmes sp
+            LEFT JOIN spray_applications sa ON sp.id = sa.programme_id
+            WHERE sp.system_id = ? AND (sp.status = 'active' OR sp.status = 'inactive' OR sp.status IS NULL)
+            GROUP BY sp.id
+            ORDER BY sp.created_at DESC
+        `, [system_id]);
 
         // Transform database format to match frontend expectations
         const transformedProgrammes = programmes.map(prog => ({
@@ -65,11 +62,11 @@ router.get('/', async (req, res) => {
         console.log('📊 Spray programmes status distribution:', statusCount);
         console.log('🔍 Inactive programmes:', transformedProgrammes.filter(p => p.status === 'inactive').map(p => `${p.id}: ${p.product_name}`));
 
-        db.close();
+        await connection.end();
         res.json({ programmes: transformedProgrammes });
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Error fetching spray programmes:', error);
         
         // Fallback to mock data if database fails
@@ -164,9 +161,11 @@ router.post('/', async (req, res) => {
         });
     }
 
-    const db = getDatabase();
+    let connection;
 
     try {
+        connection = await getDatabase();
+        
         // Build target field based on category
         let target_field = '';
         if (category === 'insecticides' && target_pest) {
@@ -183,27 +182,21 @@ router.post('/', async (req, res) => {
         // Build frequency text
         const frequency_text = frequency_days ? `Every ${frequency_days} days` : '';
 
-        const result = await new Promise((resolve, reject) => {
-            db.run(`
-                INSERT INTO spray_programmes 
-                (system_id, category, product_name, active_ingredient, target_pest, application_rate, frequency, start_date, end_date, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [system_id, category, product_name, active_ingredient, target_field, full_application_rate, frequency_text, start_date, end_date, notes], 
-            function(err) {
-                if (err) reject(err);
-                else resolve({ id: this.lastID });
-            });
-        });
+        const [result] = await connection.execute(`
+            INSERT INTO spray_programmes 
+            (system_id, category, product_name, active_ingredient, target_pest, application_rate, frequency, start_date, end_date, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [system_id, category, product_name, active_ingredient, target_field, full_application_rate, frequency_text, start_date, end_date, notes]);
 
-        db.close();
+        await connection.end();
         res.json({ 
             success: true, 
-            id: result.id, 
+            id: result.insertId, 
             message: 'Spray programme created successfully' 
         });
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Error creating spray programme:', error);
         res.status(500).json({ error: 'Failed to create spray programme' });
     }
@@ -222,29 +215,25 @@ router.post('/record', async (req, res) => {
         effectiveness_rating,
         notes 
     } = req.body;
-    const db = getDatabase();
+    let connection;
 
     if (!programme_id || !application_date) {
         return res.status(400).json({ error: 'Programme ID and application date are required' });
     }
 
     try {
-        const result = await new Promise((resolve, reject) => {
-            db.run(`
-                INSERT INTO spray_applications 
-                (programme_id, application_date, dilution_rate, volume_applied, weather_conditions, effectiveness_rating, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            `, [programme_id, application_date, dilution_rate, volume_applied, weather_conditions, effectiveness_rating, notes], 
-            function(err) {
-                if (err) reject(err);
-                else resolve({ id: this.lastID });
-            });
-        });
+        connection = await getDatabase();
+        
+        const [result] = await connection.execute(`
+            INSERT INTO spray_applications 
+            (programme_id, application_date, dilution_rate, volume_applied, weather_conditions, effectiveness_rating, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, [programme_id, application_date, dilution_rate, volume_applied, weather_conditions, effectiveness_rating, notes]);
 
-        db.close();
+        await connection.end();
         res.json({ 
             success: true, 
-            application_id: result.id,
+            application_id: result.insertId,
             message: 'Spray application recorded successfully',
             data: {
                 programme_id,
@@ -259,7 +248,7 @@ router.post('/record', async (req, res) => {
         });
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Error recording spray application:', error);
         res.status(500).json({ error: 'Failed to record spray application' });
     }
@@ -278,28 +267,24 @@ router.put('/:id', async (req, res) => {
         end_date,
         notes 
     } = req.body;
-    const db = getDatabase();
+    let connection;
 
     if (!id) {
         return res.status(400).json({ error: 'Programme ID is required' });
     }
 
     try {
-        await new Promise((resolve, reject) => {
-            db.run(`
-                UPDATE spray_programmes 
-                SET product_name = ?, active_ingredient = ?, target_pest = ?, 
-                    application_rate = ?, frequency = ?, start_date = ?, 
-                    end_date = ?, notes = ?
-                WHERE id = ?
-            `, [product_name, active_ingredient, target_pest, application_rate, frequency, start_date, end_date, notes, id], 
-            function(err) {
-                if (err) reject(err);
-                else resolve();
-            });
-        });
+        connection = await getDatabase();
+        
+        await connection.execute(`
+            UPDATE spray_programmes 
+            SET product_name = ?, active_ingredient = ?, target_pest = ?, 
+                application_rate = ?, frequency = ?, start_date = ?, 
+                end_date = ?, notes = ?
+            WHERE id = ?
+        `, [product_name, active_ingredient, target_pest, application_rate, frequency, start_date, end_date, notes, id]);
 
-        db.close();
+        await connection.end();
         res.json({ 
             success: true, 
             message: 'Spray programme updated successfully',
@@ -318,7 +303,7 @@ router.put('/:id', async (req, res) => {
         });
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Error updating spray programme:', error);
         res.status(500).json({ error: 'Failed to update spray programme' });
     }
@@ -327,42 +312,38 @@ router.put('/:id', async (req, res) => {
 // Delete spray programme
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
-    const db = getDatabase();
+    let connection;
 
     if (!id) {
         return res.status(400).json({ error: 'Programme ID is required' });
     }
 
     try {
+        connection = await getDatabase();
+        
         // Mark programme as inactive instead of deleting it (preserves history)
-        await new Promise((resolve, reject) => {
-            db.run('UPDATE spray_programmes SET status = ?, end_date = ? WHERE id = ?', 
-                ['inactive', new Date().toISOString().split('T')[0], id], (err) => {
-                if (err) reject(err);
-                else resolve();
-            });
-        });
+        await connection.execute('UPDATE spray_programmes SET status = ?, end_date = ? WHERE id = ?', 
+            ['inactive', new Date().toISOString().split('T')[0], id]);
 
         // Keep spray_applications intact - this preserves the history
         // Only the programme is marked as inactive, stopping future applications
 
-        db.close();
+        await connection.end();
         res.json({ 
             success: true, 
             message: 'Spray programme removed from schedule (history preserved)'
         });
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Error deleting spray programme:', error);
         res.status(500).json({ error: 'Failed to delete spray programme' });
     }
 });
 
 // Get spray programme calendar/schedule
-router.get('/calendar', (req, res) => {
+router.get('/calendar', async (req, res) => {
     const { system_id, month, year } = req.query;
-    const db = getDatabase();
 
     if (!system_id) {
         return res.status(400).json({ error: 'System ID is required' });
@@ -406,34 +387,31 @@ router.get('/calendar', (req, res) => {
 // Get application history for a spray programme
 router.get('/:id/history', async (req, res) => {
     const { id } = req.params;
-    const db = getDatabase();
+    let connection;
 
     if (!id) {
         return res.status(400).json({ error: 'Programme ID is required' });
     }
 
     try {
-        const history = await new Promise((resolve, reject) => {
-            db.all(`
-                SELECT sa.*, sp.product_name, sp.category
-                FROM spray_applications sa
-                JOIN spray_programmes sp ON sa.programme_id = sp.id
-                WHERE sp.id = ?
-                ORDER BY sa.application_date DESC
-            `, [id], (err, rows) => {
-                if (err) reject(err);
-                else resolve(rows);
-            });
-        });
+        connection = await getDatabase();
+        
+        const [history] = await connection.execute(`
+            SELECT sa.*, sp.product_name, sp.category
+            FROM spray_applications sa
+            JOIN spray_programmes sp ON sa.programme_id = sp.id
+            WHERE sp.id = ?
+            ORDER BY sa.application_date DESC
+        `, [id]);
 
-        db.close();
+        await connection.end();
         res.json({ 
             programme_id: id,
             applications: history 
         });
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Error fetching spray programme history:', error);
         res.status(500).json({ error: 'Failed to fetch spray programme history' });
     }
@@ -442,34 +420,27 @@ router.get('/:id/history', async (req, res) => {
 // Create default spray programmes for a new system
 router.post('/create-defaults', async (req, res) => {
     const { system_id, force } = req.body;
-    const db = getDatabase();
+    let connection;
 
     if (!system_id) {
         return res.status(400).json({ error: 'System ID is required' });
     }
 
     try {
+        connection = await getDatabase();
+        
         // Check if system already has spray programmes
-        const existingProgrammes = await new Promise((resolve, reject) => {
-            db.all('SELECT COUNT(*) as count FROM spray_programmes WHERE system_id = ?', [system_id], (err, rows) => {
-                if (err) reject(err);
-                else resolve(rows[0].count);
-            });
-        });
+        const [existingRows] = await connection.execute('SELECT COUNT(*) as count FROM spray_programmes WHERE system_id = ?', [system_id]);
+        const existingProgrammes = existingRows[0].count;
 
         if (existingProgrammes > 0 && !force) {
-            db.close();
+            await connection.end();
             return res.json({ message: 'System already has spray programmes', created: 0 });
         }
 
         // If force flag is set, delete existing programmes first
         if (force && existingProgrammes > 0) {
-            await new Promise((resolve, reject) => {
-                db.run('DELETE FROM spray_programmes WHERE system_id = ?', [system_id], (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
+            await connection.execute('DELETE FROM spray_programmes WHERE system_id = ?', [system_id]);
             console.log('Deleted existing programmes for system:', system_id);
         }
 
@@ -672,24 +643,16 @@ router.post('/create-defaults', async (req, res) => {
         // Insert all default programmes
         let createdCount = 0;
         for (const programme of defaultProgrammes) {
-            await new Promise((resolve, reject) => {
-                db.run(`
-                    INSERT INTO spray_programmes 
-                    (system_id, category, product_name, active_ingredient, target_pest, application_rate, frequency, notes)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                `, [system_id, programme.category, programme.product_name, programme.active_ingredient, 
-                    programme.target_pest, programme.application_rate, programme.frequency, programme.notes], 
-                function(err) {
-                    if (err) reject(err);
-                    else {
-                        createdCount++;
-                        resolve();
-                    }
-                });
-            });
+            await connection.execute(`
+                INSERT INTO spray_programmes 
+                (system_id, category, product_name, active_ingredient, target_pest, application_rate, frequency, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `, [system_id, programme.category, programme.product_name, programme.active_ingredient, 
+                programme.target_pest, programme.application_rate, programme.frequency, programme.notes]);
+            createdCount++;
         }
 
-        db.close();
+        await connection.end();
         res.json({ 
             success: true, 
             message: `${createdCount} default spray programmes created successfully`,
@@ -697,7 +660,7 @@ router.post('/create-defaults', async (req, res) => {
         });
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Error creating default spray programmes:', error);
         res.status(500).json({ error: 'Failed to create default spray programmes' });
     }

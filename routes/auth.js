@@ -2,7 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { getDatabase } = require('../database/init');
+const { getDatabase } = require('../database/init-mariadb');
 const { sendPasswordResetEmail, sendVerificationEmail } = require('../utils/emailService');
 
 const router = express.Router();
@@ -24,19 +24,16 @@ router.post('/register', async (req, res) => {
         return res.status(400).json({ error: 'Password must be at least 6 characters long' });
     }
 
-    const db = getDatabase();
+    let connection;
 
     try {
+        connection = await getDatabase();
+        
         // Check if user already exists
-        const existingUser = await new Promise((resolve, reject) => {
-            db.get('SELECT id FROM users WHERE username = ? OR email = ?', [username, email], (err, row) => {
-                if (err) reject(err);
-                else resolve(row);
-            });
-        });
-
-        if (existingUser) {
-            db.close();
+        const [existingUserRows] = await connection.execute('SELECT id FROM users WHERE username = ? OR email = ?', [username, email]);
+        
+        if (existingUserRows.length > 0) {
+            await connection.end();
             return res.status(400).json({ error: 'Username or email already exists' });
         }
 
@@ -49,17 +46,11 @@ router.post('/register', async (req, res) => {
         const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
 
         // Create user with unverified email
-        const result = await new Promise((resolve, reject) => {
-            db.run('INSERT INTO users (username, email, first_name, last_name, password_hash, email_verified, verification_token, verification_token_expiry) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', 
-                [username, email, firstName, lastName, passwordHash, 0, verificationToken, formatDateForMySQL(verificationTokenExpiry)], 
-                function(err) {
-                    if (err) reject(err);
-                    else resolve({ id: this.lastID });
-                }
-            );
-        });
-
-        db.close();
+        const [result] = await connection.execute('INSERT INTO users (username, email, first_name, last_name, password_hash, email_verified, verification_token, verification_token_expiry) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', 
+            [username, email, firstName, lastName, passwordHash, 0, verificationToken, formatDateForMySQL(verificationTokenExpiry)]);
+        
+        const userId = result.insertId;
+        await connection.end();
 
         // Send verification email
         const emailResult = await sendVerificationEmail(email, verificationToken, username);
@@ -73,7 +64,7 @@ router.post('/register', async (req, res) => {
             message: 'Registration successful! Please check your email to verify your account.',
             needsVerification: true,
             user: { 
-                id: result.id, 
+                id: userId, 
                 username, 
                 email, 
                 firstName, 
@@ -85,7 +76,7 @@ router.post('/register', async (req, res) => {
         });
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Registration error:', error);
         res.status(500).json({ error: 'Failed to create user' });
     }
@@ -99,33 +90,35 @@ router.post('/login', async (req, res) => {
         return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    const db = getDatabase();
+    let connection;
 
     try {
-        // Find user
-        const user = await new Promise((resolve, reject) => {
-            db.get('SELECT * FROM users WHERE username = ? OR email = ?', [username, username], (err, row) => {
-                if (err) reject(err);
-                else resolve(row);
-            });
-        });
+        connection = await getDatabase();
 
-        if (!user) {
-            db.close();
+        // Find user
+        const [userRows] = await connection.execute(
+            'SELECT * FROM users WHERE username = ? OR email = ?', 
+            [username, username]
+        );
+
+        if (userRows.length === 0) {
+            await connection.end();
             return res.status(401).json({ error: 'Invalid credentials' });
         }
+
+        const user = userRows[0];
 
         // Check password
         const isValidPassword = await bcrypt.compare(password, user.password_hash);
         
         if (!isValidPassword) {
-            db.close();
+            await connection.end();
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
         // Check if email is verified
         if (!user.email_verified) {
-            db.close();
+            await connection.end();
             return res.status(403).json({ 
                 error: 'Email not verified',
                 message: 'Please check your email and verify your account before logging in.',
@@ -134,7 +127,7 @@ router.post('/login', async (req, res) => {
             });
         }
 
-        db.close();
+        await connection.end();
 
         // Generate JWT token
         const token = jwt.sign(
@@ -163,7 +156,7 @@ router.post('/login', async (req, res) => {
         });
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Login error:', error);
         res.status(500).json({ error: 'Failed to authenticate user' });
     }
@@ -177,25 +170,27 @@ router.get('/verify', async (req, res) => {
         return res.status(401).json({ error: 'No token provided' });
     }
 
+    let connection;
+
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         
-        const db = getDatabase();
-        const user = await new Promise((resolve, reject) => {
-            db.get('SELECT id, username, email, user_role, subscription_status FROM users WHERE id = ?', [decoded.userId], (err, row) => {
-                if (err) reject(err);
-                else resolve(row);
-            });
-        });
-        db.close();
+        connection = await getDatabase();
+        const [userRows] = await connection.execute(
+            'SELECT id, username, email, user_role, subscription_status FROM users WHERE id = ?', 
+            [decoded.userId]
+        );
+        
+        await connection.end();
 
-        if (!user) {
+        if (userRows.length === 0) {
             return res.status(401).json({ error: 'User not found' });
         }
 
-        res.json({ user });
+        res.json({ user: userRows[0] });
 
     } catch (error) {
+        if (connection) await connection.end();
         console.error('Token verification error:', error);
         res.status(401).json({ error: 'Invalid token' });
     }
@@ -209,19 +204,17 @@ router.post('/forgot-password', async (req, res) => {
         return res.status(400).json({ error: 'Email is required' });
     }
 
-    const db = getDatabase();
+    let connection;
 
     try {
+        connection = await getDatabase();
+        
         // Find user by email
-        const user = await new Promise((resolve, reject) => {
-            db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => {
-                if (err) reject(err);
-                else resolve(row);
-            });
-        });
+        const [userRows] = await connection.execute('SELECT * FROM users WHERE email = ?', [email]);
+        const user = userRows[0];
 
         if (!user) {
-            db.close();
+            await connection.end();
             // Don't reveal if email exists or not for security
             return res.json({ 
                 message: 'If an account with that email exists, we\'ve sent a password reset link.' 
@@ -233,17 +226,10 @@ router.post('/forgot-password', async (req, res) => {
         const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
 
         // Store reset token in database
-        await new Promise((resolve, reject) => {
-            db.run('UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE id = ?', 
-                [resetToken, formatDateForMySQL(resetTokenExpiry), user.id], 
-                function(err) {
-                    if (err) reject(err);
-                    else resolve();
-                }
-            );
-        });
+        await connection.execute('UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE id = ?', 
+            [resetToken, formatDateForMySQL(resetTokenExpiry), user.id]);
 
-        db.close();
+        await connection.end();
 
         // Send password reset email
         const emailResult = await sendPasswordResetEmail(email, resetToken, user.username);
@@ -258,7 +244,7 @@ router.post('/forgot-password', async (req, res) => {
         }
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Password reset request error:', error);
         res.status(500).json({ error: 'Failed to process password reset request' });
     }
@@ -272,36 +258,26 @@ router.post('/verify-email', async (req, res) => {
         return res.status(400).json({ error: 'Verification token is required' });
     }
 
-    const db = getDatabase();
+    let connection;
 
     try {
-        // Find user with valid verification token
+        connection = await getDatabase();
         
-        const user = await new Promise((resolve, reject) => {
-            db.get('SELECT * FROM users WHERE verification_token = ? AND verification_token_expiry > ?', 
-                [token, formatDateForMySQL(new Date())], (err, row) => {
-                if (err) reject(err);
-                else resolve(row);
-            });
-        });
+        // Find user with valid verification token
+        const [userRows] = await connection.execute('SELECT * FROM users WHERE verification_token = ? AND verification_token_expiry > ?', 
+            [token, formatDateForMySQL(new Date())]);
+        const user = userRows[0];
 
         if (!user) {
-            db.close();
+            await connection.end();
             return res.status(400).json({ error: 'Invalid or expired verification token' });
         }
 
         // Mark email as verified and clear verification token
-        await new Promise((resolve, reject) => {
-            db.run('UPDATE users SET email_verified = 1, verification_token = NULL, verification_token_expiry = NULL WHERE id = ?', 
-                [user.id], 
-                function(err) {
-                    if (err) reject(err);
-                    else resolve();
-                }
-            );
-        });
+        await connection.execute('UPDATE users SET email_verified = 1, verification_token = NULL, verification_token_expiry = NULL WHERE id = ?', 
+            [user.id]);
 
-        db.close();
+        await connection.end();
 
         // Generate JWT token for automatic login after verification
         const authToken = jwt.sign(
@@ -332,7 +308,7 @@ router.post('/verify-email', async (req, res) => {
         });
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Email verification error:', error);
         res.status(500).json({ error: 'Failed to verify email' });
     }
@@ -346,19 +322,17 @@ router.post('/resend-verification', async (req, res) => {
         return res.status(400).json({ error: 'Email is required' });
     }
 
-    const db = getDatabase();
+    let connection;
 
     try {
+        connection = await getDatabase();
+        
         // Find user by email
-        const user = await new Promise((resolve, reject) => {
-            db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => {
-                if (err) reject(err);
-                else resolve(row);
-            });
-        });
+        const [userRows] = await connection.execute('SELECT * FROM users WHERE email = ?', [email]);
+        const user = userRows[0];
 
         if (!user) {
-            db.close();
+            await connection.end();
             // Don't reveal if email exists or not for security
             return res.json({ 
                 message: 'If an account with that email exists and is unverified, we\'ve sent a new verification link.' 
@@ -367,7 +341,7 @@ router.post('/resend-verification', async (req, res) => {
 
         // Check if already verified
         if (user.email_verified) {
-            db.close();
+            await connection.end();
             return res.status(400).json({ error: 'Email is already verified' });
         }
 
@@ -376,17 +350,10 @@ router.post('/resend-verification', async (req, res) => {
         const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
 
         // Update verification token in database
-        await new Promise((resolve, reject) => {
-            db.run('UPDATE users SET verification_token = ?, verification_token_expiry = ? WHERE id = ?', 
-                [verificationToken, formatDateForMySQL(verificationTokenExpiry), user.id], 
-                function(err) {
-                    if (err) reject(err);
-                    else resolve();
-                }
-            );
-        });
+        await connection.execute('UPDATE users SET verification_token = ?, verification_token_expiry = ? WHERE id = ?', 
+            [verificationToken, formatDateForMySQL(verificationTokenExpiry), user.id]);
 
-        db.close();
+        await connection.end();
 
         // Send verification email
         console.log('📧 Attempting to send verification email to:', email);
@@ -404,7 +371,7 @@ router.post('/resend-verification', async (req, res) => {
         }
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Resend verification error:', error);
         res.status(500).json({ error: 'Failed to process verification request' });
     }
@@ -422,21 +389,18 @@ router.post('/reset-password', async (req, res) => {
         return res.status(400).json({ error: 'Password must be at least 6 characters long' });
     }
 
-    const db = getDatabase();
+    let connection;
 
     try {
-        // Find user with valid reset token
+        connection = await getDatabase();
         
-        const user = await new Promise((resolve, reject) => {
-            db.get('SELECT * FROM users WHERE reset_token = ? AND reset_token_expiry > ?', 
-                [token, formatDateForMySQL(new Date())], (err, row) => {
-                if (err) reject(err);
-                else resolve(row);
-            });
-        });
+        // Find user with valid reset token
+        const [userRows] = await connection.execute('SELECT * FROM users WHERE reset_token = ? AND reset_token_expiry > ?', 
+            [token, formatDateForMySQL(new Date())]);
+        const user = userRows[0];
 
         if (!user) {
-            db.close();
+            await connection.end();
             return res.status(400).json({ error: 'Invalid or expired reset token' });
         }
 
@@ -445,22 +409,15 @@ router.post('/reset-password', async (req, res) => {
         const passwordHash = await bcrypt.hash(password, saltRounds);
 
         // Update password and clear reset token
-        await new Promise((resolve, reject) => {
-            db.run('UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?', 
-                [passwordHash, user.id], 
-                function(err) {
-                    if (err) reject(err);
-                    else resolve();
-                }
-            );
-        });
+        await connection.execute('UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?', 
+            [passwordHash, user.id]);
 
-        db.close();
+        await connection.end();
 
         res.json({ message: 'Password has been reset successfully' });
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Password reset error:', error);
         res.status(500).json({ error: 'Failed to reset password' });
     }

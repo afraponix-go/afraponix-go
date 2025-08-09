@@ -1,4 +1,4 @@
-const { getDatabase } = require('./init');
+const { getDatabase } = require('./init-mariadb');
 
 /**
  * Migration script to add batch tracking fields to existing plant_growth table
@@ -14,22 +14,19 @@ async function migrateBatchTracking() {
         return;
     }
 
-    const db = getDatabase();
+    let connection;
     
     try {
+        connection = await getDatabase();
         console.log('📊 Checking if batch tracking columns already exist...');
         
         // Check if batch_id column exists
-        const batchIdExists = await new Promise((resolve, reject) => {
-            db.query("SHOW COLUMNS FROM plant_growth LIKE 'batch_id'", (err, results) => {
-                if (err) reject(err);
-                else resolve(results.length > 0);
-            });
-        });
+        const [batchIdResults] = await connection.execute("SHOW COLUMNS FROM plant_growth LIKE 'batch_id'");
+        const batchIdExists = batchIdResults.length > 0;
         
         if (batchIdExists) {
             console.log('✅ Batch tracking columns already exist - no migration needed');
-            db.close();
+            await connection.end();
             return;
         }
         
@@ -44,12 +41,7 @@ async function migrateBatchTracking() {
         ];
         
         for (const query of alterQueries) {
-            await new Promise((resolve, reject) => {
-                db.query(query, (err, results) => {
-                    if (err) reject(err);
-                    else resolve(results);
-                });
-            });
+            await connection.execute(query);
             console.log('✅ Added column:', query.match(/ADD COLUMN (\w+)/)[1]);
         }
         
@@ -62,12 +54,7 @@ async function migrateBatchTracking() {
         
         for (const query of indexQueries) {
             try {
-                await new Promise((resolve, reject) => {
-                    db.query(query, (err, results) => {
-                        if (err) reject(err);
-                        else resolve(results);
-                    });
-                });
+                await connection.execute(query);
                 console.log('✅ Added index:', query.match(/INDEX (\w+)/)[1]);
             } catch (error) {
                 // Indexes might already exist, continue
@@ -86,7 +73,7 @@ async function migrateBatchTracking() {
         console.error('❌ Migration failed:', error);
         throw error;
     } finally {
-        db.close();
+        if (connection) await connection.end();
     }
 }
 

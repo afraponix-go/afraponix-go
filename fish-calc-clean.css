@@ -1,0 +1,257 @@
+/* Clean Fish Calculator Styles */
+
+.fish-calc-header.clean {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px;
+    border-radius: 8px 8px 0 0;
+    text-align: center;
+    margin-bottom: 0;
+}
+
+.calc-title-clean {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.title-icon-clean {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+}
+
+.calc-title-clean h2 {
+    margin: 5px 0 3px;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.calc-title-clean p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 0.85rem;
+}
+
+.fish-calc-content.clean {
+    background: white;
+    border-radius: 0 0 15px 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.calc-section {
+    padding: 25px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.calc-section:last-child {
+    border-bottom: none;
+}
+
+.section-header.clean {
+    margin-bottom: 20px;
+}
+
+.section-header.clean h3 {
+    font-size: 1.3rem;
+    color: #1e293b;
+    margin: 0;
+    font-weight: 600;
+}
+
+.form-row {
+    margin-bottom: 20px;
+}
+
+.form-row label {
+    display: block;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+}
+
+.form-row input,
+.form-row select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 1rem;
+    background: white;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-row input:focus,
+.form-row select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+}
+
+.density-hint {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-top: 5px;
+    padding: 8px 12px;
+    background: #f9fafb;
+    border-radius: 6px;
+}
+
+.field-hint {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    margin-top: 5px;
+}
+
+.growth-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+    padding: 15px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+}
+
+.growth-stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.stage-label {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 4px;
+}
+
+.stage-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.growth-arrow {
+    font-size: 1.5rem;
+    color: #667eea;
+    font-weight: bold;
+}
+
+.schedule-preview {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f0f9ff;
+    border-radius: 8px;
+    border: 1px solid #bae6fd;
+}
+
+.preview-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #0369a1;
+    margin-bottom: 10px;
+}
+
+.schedule-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.schedule-time {
+    background: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: #0369a1;
+    border: 1px solid #0ea5e9;
+    font-weight: 500;
+}
+
+.calc-buttons {
+    padding: 25px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.calc-btn {
+    padding: 15px 30px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 180px;
+}
+
+.calc-btn.primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 4px 6px rgba(102, 126, 234, 0.25);
+}
+
+.calc-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(102, 126, 234, 0.4);
+}
+
+.calc-btn.secondary {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.calc-btn.secondary:hover {
+    background: #e2e8f0;
+    transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+    .fish-calc-header.clean {
+        padding: 20px 15px;
+    }
+    
+    .calc-section {
+        padding: 20px 15px;
+    }
+    
+    .calc-buttons {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 20px 15px;
+    }
+    
+    .calc-btn {
+        min-width: auto;
+    }
+    
+    .growth-preview {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .growth-arrow {
+        transform: rotate(90deg);
+    }
+}

@@ -1,0 +1,263 @@
+-- MariaDB initialization script for development
+-- This file is automatically loaded when the Docker container starts
+
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    first_name VARCHAR(255),
+    last_name VARCHAR(255),
+    password_hash TEXT NOT NULL,
+    user_role VARCHAR(50) DEFAULT 'basic',
+    subscription_status VARCHAR(50) DEFAULT 'basic',
+    reset_token TEXT,
+    reset_token_expiry TIMESTAMP NULL,
+    email_verified BOOLEAN DEFAULT 0,
+    verification_token TEXT,
+    verification_token_expiry TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Systems table
+CREATE TABLE IF NOT EXISTS systems (
+    id VARCHAR(255) PRIMARY KEY,
+    user_id INT NOT NULL,
+    system_name VARCHAR(255) NOT NULL,
+    system_type VARCHAR(100) NOT NULL DEFAULT 'media-bed',
+    fish_type VARCHAR(100) DEFAULT 'tilapia',
+    fish_tank_count INT DEFAULT 1,
+    total_fish_volume DECIMAL(10,2) DEFAULT 1000,
+    grow_bed_count INT DEFAULT 4,
+    total_grow_volume DECIMAL(10,2) DEFAULT 800,
+    total_grow_area DECIMAL(10,2) DEFAULT 2.0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Plant growth table with batch tracking
+CREATE TABLE IF NOT EXISTS plant_growth (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    system_id VARCHAR(255) NOT NULL,
+    grow_bed_id INT,
+    date VARCHAR(20) NOT NULL,
+    crop_type VARCHAR(100),
+    count INT,
+    harvest_weight DECIMAL(8,2),
+    plants_harvested INT,
+    new_seedlings INT,
+    pest_control TEXT,
+    health VARCHAR(100),
+    growth_stage VARCHAR(100),
+    batch_id VARCHAR(50),
+    seed_variety VARCHAR(100),
+    batch_created_date VARCHAR(20),
+    days_to_harvest INT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE,
+    INDEX idx_batch_id (batch_id),
+    INDEX idx_batch_date (batch_created_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Grow beds table
+CREATE TABLE IF NOT EXISTS grow_beds (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    system_id VARCHAR(255) NOT NULL,
+    bed_number INT NOT NULL,
+    bed_type VARCHAR(100) NOT NULL,
+    bed_name VARCHAR(255),
+    volume_liters DECIMAL(10,2) NOT NULL,
+    area_m2 DECIMAL(8,2),
+    length_meters DECIMAL(8,2),
+    width_meters DECIMAL(8,2),
+    height_meters DECIMAL(8,2),
+    plant_capacity INT,
+    vertical_count INT,
+    plants_per_vertical INT,
+    equivalent_m2 DECIMAL(8,2) NOT NULL,
+    reservoir_volume DECIMAL(10,2),
+    trough_length DECIMAL(8,2),
+    trough_count INT,
+    plant_spacing DECIMAL(6,2),
+    reservoir_volume_liters DECIMAL(10,2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Water quality table
+CREATE TABLE IF NOT EXISTS water_quality (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    system_id VARCHAR(255) NOT NULL,
+    date VARCHAR(20) NOT NULL,
+    ph DECIMAL(4,2),
+    ec DECIMAL(8,2),
+    dissolved_oxygen DECIMAL(6,2),
+    temperature DECIMAL(5,2),
+    ammonia DECIMAL(8,2),
+    nitrite DECIMAL(8,2),
+    nitrate DECIMAL(8,2),
+    iron DECIMAL(8,2),
+    potassium DECIMAL(8,2),
+    calcium DECIMAL(8,2),
+    phosphorus DECIMAL(8,2),
+    magnesium DECIMAL(8,2),
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Fish health table
+CREATE TABLE IF NOT EXISTS fish_health (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    system_id VARCHAR(255) NOT NULL,
+    fish_tank_id INT NOT NULL DEFAULT 1,
+    date VARCHAR(20) NOT NULL,
+    count INT,
+    mortality INT,
+    average_weight DECIMAL(8,2),
+    feed_consumption DECIMAL(8,2),
+    behavior TEXT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Operations table
+CREATE TABLE IF NOT EXISTS operations (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    system_id VARCHAR(255) NOT NULL,
+    date VARCHAR(20) NOT NULL,
+    operation_type VARCHAR(100),
+    water_volume DECIMAL(10,2),
+    chemical_added TEXT,
+    amount_added TEXT,
+    downtime_duration DECIMAL(8,2),
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Additional tables for complete functionality
+CREATE TABLE IF NOT EXISTS custom_crops (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    crop_name VARCHAR(255) NOT NULL,
+    target_n DECIMAL(8,2),
+    target_p DECIMAL(8,2),
+    target_k DECIMAL(8,2),
+    target_ca DECIMAL(8,2),
+    target_mg DECIMAL(8,2),
+    target_fe DECIMAL(8,2),
+    target_ec DECIMAL(8,2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS plant_allocations (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    system_id VARCHAR(255) NOT NULL,
+    grow_bed_id INT NOT NULL,
+    crop_type VARCHAR(100) NOT NULL,
+    percentage_allocated DECIMAL(5,2) NOT NULL,
+    plants_planted INT DEFAULT 0,
+    plant_spacing INT DEFAULT 30,
+    date_planted VARCHAR(20),
+    status VARCHAR(50) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS system_shares (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    system_id VARCHAR(255) NOT NULL,
+    owner_id INT NOT NULL,
+    shared_with_id INT NOT NULL,
+    permission_level VARCHAR(50) DEFAULT 'view',
+    status VARCHAR(50) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE,
+    FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (shared_with_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS fish_tanks (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    system_id VARCHAR(255) NOT NULL,
+    tank_number INT NOT NULL,
+    size_m3 DECIMAL(8,2) NOT NULL,
+    volume_liters DECIMAL(10,2) NOT NULL,
+    fish_type VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE,
+    UNIQUE(system_id, tank_number)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS spray_programmes (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    system_id VARCHAR(255) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    product_name VARCHAR(255) NOT NULL,
+    active_ingredient TEXT,
+    target_pest TEXT,
+    application_rate TEXT,
+    frequency TEXT,
+    start_date VARCHAR(20),
+    end_date VARCHAR(20),
+    status VARCHAR(50) DEFAULT 'active',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS spray_applications (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    programme_id INT NOT NULL,
+    application_date VARCHAR(20) NOT NULL,
+    dilution_rate TEXT,
+    volume_applied DECIMAL(8,2),
+    weather_conditions TEXT,
+    effectiveness_rating INT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (programme_id) REFERENCES spray_programmes (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS sensor_configs (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    system_id VARCHAR(255) NOT NULL,
+    sensor_name VARCHAR(255) NOT NULL,
+    sensor_type VARCHAR(100) NOT NULL,
+    device_id VARCHAR(255) NOT NULL,
+    telemetry_key VARCHAR(255),
+    api_url VARCHAR(500),
+    api_token TEXT,
+    update_interval INT DEFAULT 300,
+    active BOOLEAN DEFAULT 1,
+    last_reading TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS sensor_readings (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    sensor_id INT NOT NULL,
+    reading_time TIMESTAMP NOT NULL,
+    value DECIMAL(10,2),
+    unit VARCHAR(50),
+    raw_data JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sensor_id) REFERENCES sensor_configs (id) ON DELETE CASCADE,
+    INDEX idx_sensor_time (sensor_id, reading_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- Insert some sample data for development
+INSERT IGNORE INTO users (username, email, first_name, last_name, password_hash, email_verified) 
+VALUES ('admin', 'admin@aquaponics.local', 'Admin', 'User', '$2a$10$rZ4UzQ9mxLzK.vF0bL0WqOd7nQjvZ1gF8vZ1gF8vZ1gF8vZ1gF8vZ1g', 1);
+
+-- Note: The password hash above is for 'admin123' - change in production!

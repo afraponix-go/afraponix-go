@@ -1,15 +1,14 @@
-const { getDatabase } = require('./database/init');
+const { getDatabase } = require('./database/init-mariadb');
 
 async function listUsers() {
-    const db = getDatabase();
+    let connection;
     
     try {
-        const users = await new Promise((resolve, reject) => {
-            db.all('SELECT id, username, email, first_name, last_name, user_role, subscription_status, created_at FROM users', (err, rows) => {
-                if (err) reject(err);
-                else resolve(rows);
-            });
-        });
+        connection = await getDatabase();
+        
+        const [users] = await connection.execute(
+            'SELECT id, username, email, first_name, last_name, user_role, subscription_status, created_at FROM users'
+        );
         
         console.log(`📊 Found ${users.length} users in database:`);
         console.log('='.repeat(80));
@@ -29,11 +28,11 @@ async function listUsers() {
             });
         }
         
-        db.close();
+        await connection.end();
         
     } catch (error) {
         console.error('❌ Error listing users:', error);
-        db.close();
+        if (connection) await connection.end();
     }
 }
 

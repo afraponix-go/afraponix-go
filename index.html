@@ -9,6 +9,8 @@
     <title>Afraponix Go - Aquaponics Monitor</title>
     <link rel="icon" href="logo.svg" type="image/svg+xml">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="enhanced-calculator.css">
+    <link rel="stylesheet" href="fish-calc-clean.css">
     <link rel="manifest" href="manifest.json">
     <script src="chart.min.js"></script>
 </head>
@@ -16,22 +18,52 @@
     <!-- Loading Screen -->
     <div id="loading-screen">
         <div class="loading-content">
-            <svg class="loading-logo" viewBox="0 0 566.93 566.93" xmlns="http://www.w3.org/2000/svg">
+            <svg class="loading-logo" viewBox="0 0 566.93 566.93" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
                 <defs>
-                    <linearGradient id="loading-gradient1" x1="220.67" y1="384.91" x2="410.41" y2="384.91" gradientUnits="userSpaceOnUse">
+                    <style>
+                        .st0 { fill: url(#loading-linear-gradient2); }
+                        .st1 { fill: url(#loading-linear-gradient1); }
+                        .st2 { fill: url(#loading-linear-gradient3); }
+                        .st3 { fill: url(#loading-linear-gradient6); }
+                        .st4 { fill: url(#loading-linear-gradient7); }
+                        .st5 { fill: url(#loading-linear-gradient5); }
+                        .st6 { fill: url(#loading-linear-gradient4); }
+                        .st7 { fill: url(#loading-linear-gradient); }
+                    </style>
+                    <linearGradient id="loading-linear-gradient" x1="220.67" y1="384.91" x2="410.41" y2="384.91" gradientUnits="userSpaceOnUse">
                         <stop offset="0" stop-color="#49f911"/>
                         <stop offset="1" stop-color="#45e7dd"/>
                     </linearGradient>
-                    <linearGradient id="loading-gradient2" x1="156.52" y1="400.22" x2="277.15" y2="400.22" gradientUnits="userSpaceOnUse">
+                    <linearGradient id="loading-linear-gradient1" x1="156.52" y1="400.22" x2="277.15" y2="400.22" gradientUnits="userSpaceOnUse">
                         <stop offset="0" stop-color="#58dcfd"/>
                         <stop offset="1" stop-color="#2e3195"/>
                     </linearGradient>
+                    <linearGradient id="loading-linear-gradient2" x1="235.29" y1="252.83" x2="425.03" y2="252.83" gradientTransform="translate(581.55 434.85) rotate(-180)" xlink:href="#loading-linear-gradient"/>
+                    <linearGradient id="loading-linear-gradient3" x1="171.14" y1="268.14" x2="291.77" y2="268.14" gradientTransform="translate(581.55 434.85) rotate(-180)" xlink:href="#loading-linear-gradient1"/>
+                    <linearGradient id="loading-linear-gradient4" x1="185.47" y1="335.09" x2="375.21" y2="335.09" gradientTransform="translate(49.82 531.72) rotate(-90)" xlink:href="#loading-linear-gradient"/>
+                    <linearGradient id="loading-linear-gradient5" x1="121.31" y1="350.4" x2="241.94" y2="350.4" gradientTransform="translate(49.82 531.72) rotate(-90)" xlink:href="#loading-linear-gradient1"/>
+                    <linearGradient id="loading-linear-gradient6" x1="270.5" y1="302.65" x2="460.24" y2="302.65" gradientTransform="translate(484.67 -49.82) rotate(90)" xlink:href="#loading-linear-gradient"/>
+                    <linearGradient id="loading-linear-gradient7" x1="206.34" y1="317.96" x2="326.97" y2="317.96" gradientTransform="translate(484.67 -49.82) rotate(90)" xlink:href="#loading-linear-gradient1"/>
                 </defs>
                 <g>
-                    <path style="fill: url(#loading-gradient1);" d="M283.9,415.31l-63.23-63.22c37.66-33.03,94.96-31.64,130.87,4.26l58.87,58.87v.05c-34.95,34.94-91.59,34.96-126.51.04h0Z"/>
-                    <path style="fill: url(#loading-gradient2);" d="M156.52,415.92c33.05,33.05,85.49,34.84,120.63,5.4l-63.02-63.01-57.61,57.61Z"/>
-                    <path style="fill: url(#loading-gradient1);" d="M283.46,168.28l63.23,63.22c-37.66,33.03-94.96,31.64-130.87-4.26l-58.87-58.87v-.05c34.95-34.94,91.59-34.96,126.51-.04h0Z"/>
-                    <path style="fill: url(#loading-gradient2);" d="M410.84,167.66c-33.05-33.05-85.49-34.84-120.63-5.4l63.02,63.01,57.61-57.61Z"/>
+                    <g>
+                        <path class="st7" d="M283.9,415.31l-63.23-63.22c37.66-33.03,94.96-31.64,130.87,4.26l58.87,58.87v.05c-34.95,34.94-91.59,34.96-126.51.04h0Z"/>
+                        <path class="st1" d="M156.52,415.92c33.05,33.05,85.49,34.84,120.63,5.4l-63.02-63.01-57.61,57.61Z"/>
+                    </g>
+                    <g>
+                        <path class="st0" d="M283.03,151.62l63.23,63.22c-37.66,33.03-94.96,31.64-130.87-4.26l-58.87-58.87v-.05c34.95-34.94,91.59-34.96,126.51-.04h0Z"/>
+                        <path class="st2" d="M410.41,151.01c-33.05-33.05-85.49-34.84-120.63-5.4l63.02,63.01,57.61-57.61Z"/>
+                    </g>
+                </g>
+                <g>
+                    <g>
+                        <path class="st6" d="M415.31,283.03l-63.22,63.23c-33.03-37.66-31.64-94.96,4.26-130.87l58.87-58.87h.05c34.94,34.95,34.96,91.59.04,126.51h0Z"/>
+                        <path class="st5" d="M415.92,410.41c33.05-33.05,34.84-85.49,5.4-120.63l-63.01,63.02,57.61,57.61Z"/>
+                    </g>
+                    <g>
+                        <path class="st3" d="M151.62,283.9l63.22-63.23c33.03,37.66,31.64,94.96-4.26,130.87l-58.87,58.87h-.05c-34.94-34.95-34.96-91.59-.04-126.51h0Z"/>
+                        <path class="st4" d="M151.01,156.52c-33.05,33.05-34.84,85.49-5.4,120.63l63.01-63.02-57.61-57.61Z"/>
+                    </g>
                 </g>
             </svg>
             <h2 class="loading-title">Afraponix Go</h2>
@@ -51,29 +83,29 @@
                     <svg class="logo-icon" viewBox="0 0 566.93 566.93" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
                         <defs>
                             <style>
-                                .st0 { fill: url(#linear-gradient2); }
-                                .st1 { fill: url(#linear-gradient1); }
-                                .st2 { fill: url(#linear-gradient3); }
-                                .st3 { fill: url(#linear-gradient6); }
-                                .st4 { fill: url(#linear-gradient7); }
-                                .st5 { fill: url(#linear-gradient5); }
-                                .st6 { fill: url(#linear-gradient4); }
-                                .st7 { fill: url(#linear-gradient); }
+                                .st0 { fill: url(#header-linear-gradient2); }
+                                .st1 { fill: url(#header-linear-gradient1); }
+                                .st2 { fill: url(#header-linear-gradient3); }
+                                .st3 { fill: url(#header-linear-gradient6); }
+                                .st4 { fill: url(#header-linear-gradient7); }
+                                .st5 { fill: url(#header-linear-gradient5); }
+                                .st6 { fill: url(#header-linear-gradient4); }
+                                .st7 { fill: url(#header-linear-gradient); }
                             </style>
-                            <linearGradient id="linear-gradient" x1="220.67" y1="384.91" x2="410.41" y2="384.91" gradientUnits="userSpaceOnUse">
+                            <linearGradient id="header-linear-gradient" x1="220.67" y1="384.91" x2="410.41" y2="384.91" gradientUnits="userSpaceOnUse">
                                 <stop offset="0" stop-color="#49f911"/>
                                 <stop offset="1" stop-color="#45e7dd"/>
                             </linearGradient>
-                            <linearGradient id="linear-gradient1" x1="156.52" y1="400.22" x2="277.15" y2="400.22" gradientUnits="userSpaceOnUse">
+                            <linearGradient id="header-linear-gradient1" x1="156.52" y1="400.22" x2="277.15" y2="400.22" gradientUnits="userSpaceOnUse">
                                 <stop offset="0" stop-color="#58dcfd"/>
                                 <stop offset="1" stop-color="#2e3195"/>
                             </linearGradient>
-                            <linearGradient id="linear-gradient2" x1="235.29" y1="252.83" x2="425.03" y2="252.83" gradientTransform="translate(581.55 434.85) rotate(-180)" xlink:href="#linear-gradient"/>
-                            <linearGradient id="linear-gradient3" x1="171.14" y1="268.14" x2="291.77" y2="268.14" gradientTransform="translate(581.55 434.85) rotate(-180)" xlink:href="#linear-gradient1"/>
-                            <linearGradient id="linear-gradient4" x1="185.47" y1="335.09" x2="375.21" y2="335.09" gradientTransform="translate(49.82 531.72) rotate(-90)" xlink:href="#linear-gradient"/>
-                            <linearGradient id="linear-gradient5" x1="121.31" y1="350.4" x2="241.94" y2="350.4" gradientTransform="translate(49.82 531.72) rotate(-90)" xlink:href="#linear-gradient1"/>
-                            <linearGradient id="linear-gradient6" x1="270.5" y1="302.65" x2="460.24" y2="302.65" gradientTransform="translate(484.67 -49.82) rotate(90)" xlink:href="#linear-gradient"/>
-                            <linearGradient id="linear-gradient7" x1="206.34" y1="317.96" x2="326.97" y2="317.96" gradientTransform="translate(484.67 -49.82) rotate(90)" xlink:href="#linear-gradient1"/>
+                            <linearGradient id="header-linear-gradient2" x1="235.29" y1="252.83" x2="425.03" y2="252.83" gradientTransform="translate(581.55 434.85) rotate(-180)" xlink:href="#header-linear-gradient"/>
+                            <linearGradient id="header-linear-gradient3" x1="171.14" y1="268.14" x2="291.77" y2="268.14" gradientTransform="translate(581.55 434.85) rotate(-180)" xlink:href="#header-linear-gradient1"/>
+                            <linearGradient id="header-linear-gradient4" x1="185.47" y1="335.09" x2="375.21" y2="335.09" gradientTransform="translate(49.82 531.72) rotate(-90)" xlink:href="#header-linear-gradient"/>
+                            <linearGradient id="header-linear-gradient5" x1="121.31" y1="350.4" x2="241.94" y2="350.4" gradientTransform="translate(49.82 531.72) rotate(-90)" xlink:href="#header-linear-gradient1"/>
+                            <linearGradient id="header-linear-gradient6" x1="270.5" y1="302.65" x2="460.24" y2="302.65" gradientTransform="translate(484.67 -49.82) rotate(90)" xlink:href="#header-linear-gradient"/>
+                            <linearGradient id="header-linear-gradient7" x1="206.34" y1="317.96" x2="326.97" y2="317.96" gradientTransform="translate(484.67 -49.82) rotate(90)" xlink:href="#header-linear-gradient1"/>
                         </defs>
                         <g>
                             <g>
@@ -126,29 +158,115 @@
     <main>
         <div class="mobile-content">
         <section id="dashboard" class="view active">
-            <div class="current-system-display" id="current-system-dashboard">
-                <!-- Current system name will be displayed here -->
+            <div class="dashboard-header">
+                <div class="current-system-display" id="current-system-dashboard">
+                    <!-- Current system name will be displayed here -->
+                </div>
+                <button class="metrics-config-btn" onclick="openMetricsConfig()" title="Configure Dashboard Metrics">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 10v6m11-7h-6M7 12H1m15.54-6.54l-4.24 4.24M9.88 14.12l-4.24 4.24m12.72 0l-4.24-4.24M9.88 9.88L5.64 5.64"></path>
+                    </svg>
+                    Metrics
+                </button>
             </div>
             <div class="charts-grid">
-                <div class="chart-card">
+                <div class="chart-card" data-metric="temperature">
                     <h3>Water Temperature</h3>
-                    <div class="stat-value" id="water-temp">24.5°C</div>
+                    <div class="stat-value" id="water-temp">Loading...</div>
                     <canvas id="temp-chart" width="200" height="100"></canvas>
+                    <div class="chart-timestamp" id="temp-chart-timestamp">Last updated: Loading...</div>
                 </div>
-                <div class="chart-card">
+                <div class="chart-card" data-metric="ph">
                     <h3>pH Level</h3>
-                    <div class="stat-value" id="ph-level">6.8</div>
+                    <div class="stat-value" id="ph-level">Loading...</div>
                     <canvas id="ph-chart" width="200" height="100"></canvas>
+                    <div class="chart-timestamp" id="ph-chart-timestamp">Last updated: Loading...</div>
                 </div>
-                <div class="chart-card">
+                <div class="chart-card" data-metric="dissolved_oxygen">
                     <h3>Dissolved Oxygen</h3>
-                    <div class="stat-value" id="dissolved-oxygen">7.2 mg/L</div>
+                    <div class="stat-value" id="dissolved-oxygen">Loading...</div>
                     <canvas id="oxygen-chart" width="200" height="100"></canvas>
+                    <div class="chart-timestamp" id="oxygen-chart-timestamp">Last updated: Loading...</div>
                 </div>
-                <div class="chart-card">
+                <div class="chart-card" data-metric="ammonia">
                     <h3>Ammonia</h3>
-                    <div class="stat-value" id="ammonia">0.1 ppm</div>
+                    <div class="stat-value" id="ammonia">Loading...</div>
                     <canvas id="ammonia-chart" width="200" height="100"></canvas>
+                    <div class="chart-timestamp" id="ammonia-chart-timestamp">Last updated: Loading...</div>
+                </div>
+                <div class="chart-card" data-metric="humidity">
+                    <h3>Humidity</h3>
+                    <div class="stat-value" id="humidity">Loading...</div>
+                    <canvas id="humidity-chart" width="200" height="100"></canvas>
+                    <div class="chart-timestamp" id="humidity-chart-timestamp">Last updated: Loading...</div>
+                </div>
+                <div class="chart-card" data-metric="salinity">
+                    <h3>Salinity</h3>
+                    <div class="stat-value" id="salinity">Loading...</div>
+                    <canvas id="salinity-chart" width="200" height="100"></canvas>
+                    <div class="chart-timestamp" id="salinity-chart-timestamp">Last updated: Loading...</div>
+                </div>
+                
+                <!-- Additional Nutrient Metrics -->
+                <div class="chart-card" data-metric="ec">
+                    <h3>EC (Conductivity)</h3>
+                    <div class="stat-value" id="ec">Loading...</div>
+                    <canvas id="ec-chart" width="200" height="100"></canvas>
+                    <div class="chart-timestamp" id="ec-chart-timestamp">Last updated: Loading...</div>
+                </div>
+                <div class="chart-card" data-metric="nitrate">
+                    <h3>Nitrate</h3>
+                    <div class="stat-value" id="nitrate">Loading...</div>
+                    <canvas id="nitrate-chart" width="200" height="100"></canvas>
+                    <div class="chart-timestamp" id="nitrate-chart-timestamp">Last updated: Loading...</div>
+                </div>
+                <div class="chart-card" data-metric="nitrite">
+                    <h3>Nitrite</h3>
+                    <div class="stat-value" id="nitrite">Loading...</div>
+                    <canvas id="nitrite-chart" width="200" height="100"></canvas>
+                    <div class="chart-timestamp" id="nitrite-chart-timestamp">Last updated: Loading...</div>
+                </div>
+                <div class="chart-card" data-metric="phosphorus">
+                    <h3>Phosphorus</h3>
+                    <div class="stat-value" id="phosphorus">Loading...</div>
+                    <canvas id="phosphorus-chart" width="200" height="100"></canvas>
+                    <div class="chart-timestamp" id="phosphorus-chart-timestamp">Last updated: Loading...</div>
+                </div>
+                <div class="chart-card" data-metric="potassium">
+                    <h3>Potassium</h3>
+                    <div class="stat-value" id="potassium">Loading...</div>
+                    <canvas id="potassium-chart" width="200" height="100"></canvas>
+                    <div class="chart-timestamp" id="potassium-chart-timestamp">Last updated: Loading...</div>
+                </div>
+                <div class="chart-card" data-metric="calcium">
+                    <h3>Calcium</h3>
+                    <div class="stat-value" id="calcium">Loading...</div>
+                    <canvas id="calcium-chart" width="200" height="100"></canvas>
+                    <div class="chart-timestamp" id="calcium-chart-timestamp">Last updated: Loading...</div>
+                </div>
+                <div class="chart-card" data-metric="magnesium">
+                    <h3>Magnesium</h3>
+                    <div class="stat-value" id="magnesium">Loading...</div>
+                    <canvas id="magnesium-chart" width="200" height="100"></canvas>
+                    <div class="chart-timestamp" id="magnesium-chart-timestamp">Last updated: Loading...</div>
+                </div>
+                <div class="chart-card" data-metric="iron">
+                    <h3>Iron</h3>
+                    <div class="stat-value" id="iron">Loading...</div>
+                    <canvas id="iron-chart" width="200" height="100"></canvas>
+                    <div class="chart-timestamp" id="iron-chart-timestamp">Last updated: Loading...</div>
+                </div>
+            </div>
+            
+            <!-- Live Sensor Data Section -->
+            <div class="sensor-data-overview">
+                <h2>📡 Live Sensor Data</h2>
+                <p style="text-align: center; color: #666; font-style: italic; margin-bottom: 1rem;">
+                    Real-time data from your connected IoT sensors. Configure sensors in Settings → Sensor Config.
+                </p>
+                <div id="sensor-data-container" class="sensor-grid">
+                    <!-- Live sensor data cards will be populated here -->
                 </div>
             </div>
             
@@ -192,8 +310,8 @@
                     
                     <div class="dosing-tabs">
                         <button id="quick-calc-tab" class="dosing-tab active">Quick Calculator</button>
-                        <button id="custom-nutrients-tab" class="dosing-tab">Custom Nutrients</button>
                         <button id="mixing-schedule-tab" class="dosing-tab">Mixing Schedule</button>
+                        <button id="custom-nutrients-tab" class="dosing-tab">Custom Nutrients</button>
                     </div>
                     
                     <!-- Quick Calculator Tab -->
@@ -205,11 +323,18 @@
                                     <option value="">Select Crop</option>
                                     <optgroup label="Leafy Greens">
                                         <option value="lettuce">Lettuce</option>
+                                        <option value="lettuce_batavian">Lettuce - Batavian</option>
+                                        <option value="lettuce_butter">Lettuce - Butter</option>
+                                        <option value="lettuce_cos">Lettuce - Cos</option>
+                                        <option value="lettuce_icty">Lettuce - Icty</option>
+                                        <option value="lettuce_datem">Lettuce - Datem</option>
+                                        <option value="lettuce_oak">Lettuce - Oak</option>
                                         <option value="spinach">Spinach</option>
                                         <option value="kale">Kale</option>
                                         <option value="swiss_chard">Swiss Chard</option>
                                         <option value="arugula">Arugula</option>
                                         <option value="pac_choi">Pac Choi</option>
+                                        <option value="celery">Celery</option>
                                     </optgroup>
                                     <optgroup label="Herbs">
                                         <option value="basil">Basil</option>
@@ -219,6 +344,10 @@
                                         <option value="chives">Chives</option>
                                         <option value="oregano">Oregano</option>
                                         <option value="thyme">Thyme</option>
+                                    </optgroup>
+                                    <optgroup label="Onions & Leeks">
+                                        <option value="spring_onion">Spring Onion</option>
+                                        <option value="leeks">Leeks</option>
                                     </optgroup>
                                     <optgroup label="Fruiting Vegetables">
                                         <option value="tomatoes">Tomatoes</option>
@@ -288,7 +417,7 @@
                                     </svg>
                                     Save Current Levels
                                 </button>
-                                <button class="form-btn secondary" onclick="app.clearCurrentNutrientLevels()"><span class="icon-placeholder" data-icon="delete"></span>Clear All</button>
+                                <button class="form-btn secondary" onclick="app.clearCurrentNutrientLevels()">🗑️ Clear All</button>
                             </div>
                         </div>
                         
@@ -353,6 +482,12 @@
                     
                     <!-- Mixing Schedule Tab -->
                     <div id="mixing-schedule-content" class="dosing-content">
+                        <div class="dosing-results-section">
+                            <div id="dosing-results-display" style="display: none;">
+                                <!-- Recommended dosing plan will be displayed here after calculation -->
+                            </div>
+                        </div>
+                        
                         <div class="mixing-schedule-section">
                             <h4>Mixing Schedule & Maintenance</h4>
                             <p style="color: #666; margin-bottom: 1rem;">Follow this schedule for optimal nutrient mixing and system maintenance.</p>
@@ -445,6 +580,31 @@
                 <div class="tank-info-grid">
                     <!-- Tank-specific information will be populated here -->
                 </div>
+                
+                <!-- Fish Management Actions -->
+                <div class="fish-actions-container">
+                    <h3>Quick Actions</h3>
+                    <div class="fish-action-buttons">
+                        <button class="action-btn primary" onclick="app.showAddFishModal()">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                            </svg>
+                            Add New Fish
+                        </button>
+                        <button class="action-btn warning" onclick="app.showMortalityModal()">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                            Record Mortalities
+                        </button>
+                        <button class="action-btn success" onclick="app.showFeedingModal()">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                            </svg>
+                            Record Fish Feed
+                        </button>
+                    </div>
+                </div>
             </div>
             
             <div id="fish-health-monitoring-content" class="fish-mgmt-content">
@@ -485,8 +645,9 @@
                                 <span class="status-indicator" id="nitrate-indicator">●</span>
                                 <span class="status-text" id="nitrate-status-text">No data</span>
                             </div>
-                            <div class="stat-value" id="plant-nitrate">0.0 mg/L</div>
-                            <canvas id="nitrate-chart" width="200" height="100"></canvas>
+                            <div class="stat-value" id="plant-nitrate">Loading...</div>
+                            <canvas id="plant-nitrate-chart" width="200" height="100"></canvas>
+                            <div class="chart-timestamp" id="plant-nitrate-chart-timestamp">Last updated: Loading...</div>
                         </div>
                         <div class="chart-card">
                             <h3>Phosphorus (P)</h3>
@@ -494,8 +655,9 @@
                                 <span class="status-indicator" id="phosphorus-indicator">●</span>
                                 <span class="status-text" id="phosphorus-status-text">No data</span>
                             </div>
-                            <div class="stat-value" id="plant-phosphorus">0.0 mg/L</div>
-                            <canvas id="phosphorus-chart" width="200" height="100"></canvas>
+                            <div class="stat-value" id="plant-phosphorus">Loading...</div>
+                            <canvas id="plant-phosphorus-chart" width="200" height="100"></canvas>
+                            <div class="chart-timestamp" id="plant-phosphorus-chart-timestamp">Last updated: Loading...</div>
                         </div>
                         <div class="chart-card">
                             <h3>Potassium (K)</h3>
@@ -503,8 +665,9 @@
                                 <span class="status-indicator" id="potassium-indicator">●</span>
                                 <span class="status-text" id="potassium-status-text">No data</span>
                             </div>
-                            <div class="stat-value" id="plant-potassium">0.0 mg/L</div>
-                            <canvas id="potassium-chart" width="200" height="100"></canvas>
+                            <div class="stat-value" id="plant-potassium">Loading...</div>
+                            <canvas id="plant-potassium-chart" width="200" height="100"></canvas>
+                            <div class="chart-timestamp" id="plant-potassium-chart-timestamp">Last updated: Loading...</div>
                         </div>
                         <div class="chart-card">
                             <h3>Iron (Fe)</h3>
@@ -512,8 +675,9 @@
                                 <span class="status-indicator" id="iron-indicator">●</span>
                                 <span class="status-text" id="iron-status-text">No data</span>
                             </div>
-                            <div class="stat-value" id="plant-iron">0.0 mg/L</div>
-                            <canvas id="iron-chart" width="200" height="100"></canvas>
+                            <div class="stat-value" id="plant-iron">Loading...</div>
+                            <canvas id="plant-iron-chart" width="200" height="100"></canvas>
+                            <div class="chart-timestamp" id="plant-iron-chart-timestamp">Last updated: Loading...</div>
                         </div>
                         <div class="chart-card">
                             <h3>Calcium (Ca)</h3>
@@ -521,8 +685,19 @@
                                 <span class="status-indicator" id="calcium-indicator">●</span>
                                 <span class="status-text" id="calcium-status-text">No data</span>
                             </div>
-                            <div class="stat-value" id="plant-calcium">0.0 mg/L</div>
-                            <canvas id="calcium-chart" width="200" height="100"></canvas>
+                            <div class="stat-value" id="plant-calcium">Loading...</div>
+                            <canvas id="plant-calcium-chart" width="200" height="100"></canvas>
+                            <div class="chart-timestamp" id="plant-calcium-chart-timestamp">Last updated: Loading...</div>
+                        </div>
+                        <div class="chart-card">
+                            <h3>EC/TDS (μS/cm)</h3>
+                            <div class="nutrient-status" id="ec-status">
+                                <span class="status-indicator" id="ec-indicator">●</span>
+                                <span class="status-text" id="ec-status-text">No data</span>
+                            </div>
+                            <div class="stat-value" id="plant-ec">Loading...</div>
+                            <canvas id="plant-ec-chart" width="200" height="100"></canvas>
+                            <div class="chart-timestamp" id="plant-ec-chart-timestamp">Last updated: Loading...</div>
                         </div>
                         <div class="chart-card">
                             <h3>pH Level</h3>
@@ -530,8 +705,29 @@
                                 <span class="status-indicator" id="ph-indicator">●</span>
                                 <span class="status-text" id="ph-status-text">No data</span>
                             </div>
-                            <div class="stat-value" id="plant-ph">0.0</div>
+                            <div class="stat-value" id="plant-ph">Loading...</div>
                             <canvas id="plant-ph-chart" width="200" height="100"></canvas>
+                            <div class="chart-timestamp" id="plant-ph-chart-timestamp">Last updated: Loading...</div>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Humidity (%)</h3>
+                            <div class="nutrient-status" id="humidity-status">
+                                <span class="status-indicator" id="humidity-indicator">●</span>
+                                <span class="status-text" id="humidity-status-text">No data</span>
+                            </div>
+                            <div class="stat-value" id="plant-humidity">Loading...</div>
+                            <canvas id="plant-humidity-chart" width="200" height="100"></canvas>
+                            <div class="chart-timestamp" id="plant-humidity-chart-timestamp">Last updated: Loading...</div>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Salinity (ppt)</h3>
+                            <div class="nutrient-status" id="salinity-status">
+                                <span class="status-indicator" id="salinity-indicator">●</span>
+                                <span class="status-text" id="salinity-status-text">No data</span>
+                            </div>
+                            <div class="stat-value" id="plant-salinity">Loading...</div>
+                            <canvas id="plant-salinity-chart" width="200" height="100"></canvas>
+                            <div class="chart-timestamp" id="plant-salinity-chart-timestamp">Last updated: Loading...</div>
                         </div>
                     </div>
                 </div>
@@ -568,14 +764,18 @@
                         
                         <div class="plant-action-tabs">
                             <button id="planting-tab" class="plant-action-tab active">
-                                <div class="tab-icon">🌱</div>
+                                <div class="tab-icon">
+                                    <img src="icons/plant-icon.svg" alt="Plant" class="tab-icon-svg">
+                                </div>
                                 <div class="tab-content">
                                     <div class="tab-title">Plant & Transplant</div>
                                     <div class="tab-subtitle">Add new seedlings</div>
                                 </div>
                             </button>
                             <button id="harvesting-tab" class="plant-action-tab">
-                                <div class="tab-icon">🌾</div>
+                                <div class="tab-icon">
+                                    <img src="icons/harvest-icon.svg" alt="Harvest" class="tab-icon-svg">
+                                </div>
                                 <div class="tab-content">
                                     <div class="tab-title">Harvest</div>
                                     <div class="tab-subtitle">Record crop yields</div>
@@ -586,10 +786,11 @@
                         <div id="planting-form-content" class="plant-action-content active">
                             <div class="modern-form-card">
                                 <div class="form-header">
-                                    <div class="form-header-icon">🌱</div>
+                                    <div class="form-header-icon">
+                                        <img src="icons/plant-icon.svg" alt="Plant" class="header-icon-svg">
+                                    </div>
                                     <div class="form-header-text">
                                         <h3>Record New Planting</h3>
-                                        <p>Add seedlings, transplants, or direct plantings to your grow beds</p>
                                     </div>
                                 </div>
                                 
@@ -621,11 +822,18 @@
                                             <option value="">Choose your crop...</option>
                                             <optgroup label="Leafy Greens">
                                                 <option value="lettuce">Lettuce</option>
+                                                <option value="lettuce_batavian">Lettuce - Batavian</option>
+                                                <option value="lettuce_butter">Lettuce - Butter</option>
+                                                <option value="lettuce_cos">Lettuce - Cos</option>
+                                                <option value="lettuce_icty">Lettuce - Icty</option>
+                                                <option value="lettuce_datem">Lettuce - Datem</option>
+                                                <option value="lettuce_oak">Lettuce - Oak</option>
                                                 <option value="spinach">Spinach</option>
                                                 <option value="kale">Kale</option>
                                                 <option value="swiss_chard">Swiss Chard</option>
                                                 <option value="arugula">Arugula</option>
                                                 <option value="pac_choi">Pac Choi</option>
+                                                <option value="celery">Celery</option>
                                             </optgroup>
                                             <optgroup label="Herbs">
                                                 <option value="basil">Basil</option>
@@ -635,6 +843,10 @@
                                                 <option value="chives">Chives</option>
                                                 <option value="oregano">Oregano</option>
                                                 <option value="thyme">Thyme</option>
+                                            </optgroup>
+                                            <optgroup label="Onions & Leeks">
+                                                <option value="spring_onion">Spring Onion</option>
+                                                <option value="leeks">Leeks</option>
                                             </optgroup>
                                             <optgroup label="Fruiting Vegetables">
                                                 <option value="tomatoes">Tomatoes</option>
@@ -654,6 +866,13 @@
                                         <input type="number" id="plant-count" class="modern-input" min="1" step="1" placeholder="How many plants?" required>
                                     </div>
                                     
+                                    <div id="remaining-plants-display" class="remaining-plants-info" style="display: none;">
+                                        <h5 class="remaining-header">📊 Current Batches in Selected Bed</h5>
+                                        <div id="remaining-plants-container" class="remaining-plants-container">
+                                            <!-- Crop remaining plants will be displayed here -->
+                                        </div>
+                                    </div>
+                                    
                                     <div class="form-field-group">
                                         <label for="plant-stage" class="modern-label">
                                             <span class="label-icon">🌿</span>
@@ -664,6 +883,39 @@
                                             <option value="transplant">Transplant</option>
                                             <option value="vegetative">Vegetative growth</option>
                                         </select>
+                                    </div>
+                                    
+                                    <div class="form-field-group">
+                                        <label for="plant-batch-id" class="modern-label">
+                                            <span class="label-icon">🏷️</span>
+                                            <span class="label-text">Batch ID</span>
+                                        </label>
+                                        <input type="text" id="plant-batch-id" class="modern-input" readonly placeholder="Auto-generated when saved">
+                                        <small class="field-help">Unique identifier for tracking this plant batch</small>
+                                    </div>
+                                    
+                                    <div class="form-field-group">
+                                        <label for="plant-seed-variety" class="modern-label">
+                                            <span class="label-icon">🌰</span>
+                                            <span class="label-text">Seed Variety (Optional)</span>
+                                        </label>
+                                        <div class="seed-variety-container">
+                                            <select id="plant-seed-variety" class="modern-select">
+                                                <option value="">Select variety...</option>
+                                                <option value="__add_new__">➕ Add New Variety</option>
+                                            </select>
+                                        </div>
+                                        <input type="text" id="plant-seed-variety-custom" class="modern-input" placeholder="Enter new variety name" style="display: none; margin-top: 8px;">
+                                        <small class="field-help">Specific variety or cultivar of the seed</small>
+                                    </div>
+                                    
+                                    <div class="form-field-group">
+                                        <label for="plant-days-to-harvest" class="modern-label">
+                                            <span class="label-icon">⏱️</span>
+                                            <span class="label-text">Days to Harvest (Optional)</span>
+                                        </label>
+                                        <input type="number" id="plant-days-to-harvest" class="modern-input" min="1" max="365" placeholder="e.g., 45">
+                                        <small class="field-help">Expected days from planting to harvest</small>
                                     </div>
                                     
                                     <div class="form-field-group full-width">
@@ -687,10 +939,11 @@
                         <div id="harvesting-form-content" class="plant-action-content">
                             <div class="modern-form-card">
                                 <div class="form-header">
-                                    <div class="form-header-icon">🌾</div>
+                                    <div class="form-header-icon">
+                                        <img src="icons/harvest-icon.svg" alt="Harvest" class="header-icon-svg">
+                                    </div>
                                     <div class="form-header-text">
                                         <h3>Record Harvest</h3>
-                                        <p>Track your crop yields and harvest quality</p>
                                     </div>
                                 </div>
                                 
@@ -722,11 +975,18 @@
                                             <option value="">Choose crop to harvest...</option>
                                             <optgroup label="Leafy Greens">
                                                 <option value="lettuce">Lettuce</option>
+                                                <option value="lettuce_batavian">Lettuce - Batavian</option>
+                                                <option value="lettuce_butter">Lettuce - Butter</option>
+                                                <option value="lettuce_cos">Lettuce - Cos</option>
+                                                <option value="lettuce_icty">Lettuce - Icty</option>
+                                                <option value="lettuce_datem">Lettuce - Datem</option>
+                                                <option value="lettuce_oak">Lettuce - Oak</option>
                                                 <option value="spinach">Spinach</option>
                                                 <option value="kale">Kale</option>
                                                 <option value="swiss_chard">Swiss Chard</option>
                                                 <option value="arugula">Arugula</option>
                                                 <option value="pac_choi">Pac Choi</option>
+                                                <option value="celery">Celery</option>
                                             </optgroup>
                                             <optgroup label="Herbs">
                                                 <option value="basil">Basil</option>
@@ -737,6 +997,10 @@
                                                 <option value="oregano">Oregano</option>
                                                 <option value="thyme">Thyme</option>
                                             </optgroup>
+                                            <optgroup label="Onions & Leeks">
+                                                <option value="spring_onion">Spring Onion</option>
+                                                <option value="leeks">Leeks</option>
+                                            </optgroup>
                                             <optgroup label="Fruiting Vegetables">
                                                 <option value="tomatoes">Tomatoes</option>
                                                 <option value="peppers">Peppers</option>
@@ -746,34 +1010,62 @@
                                             <option value="other">Other</option>
                                         </select>
                                     </div>
-                                    
-                                    <div class="form-field-group">
-                                        <label for="harvest-plant-count" class="modern-label">
-                                            <span class="label-icon">🔢</span>
-                                            <span class="label-text">Plants Harvested</span>
-                                        </label>
-                                        <input type="number" id="harvest-plant-count" class="modern-input" min="1" step="1" placeholder="How many plants?" required>
+
+                                    <!-- Batch Summary Display -->
+                                    <div id="harvest-batch-summary" class="batch-summary-container" style="display: none;">
+                                        <div class="batch-summary-header">
+                                            <span class="batch-summary-icon">📊</span>
+                                            <span class="batch-summary-title">Available Batches for Harvest</span>
+                                        </div>
+                                        <div id="harvest-batch-summary-content" class="batch-summary-content">
+                                            <!-- Batch summary content will be populated here -->
+                                        </div>
                                     </div>
                                     
-                                    <div class="form-field-group">
-                                        <label for="harvest-weight" class="modern-label">
-                                            <span class="label-icon">⚖️</span>
-                                            <span class="label-text">Total Weight (kg)</span>
-                                        </label>
-                                        <input type="number" id="harvest-weight" class="modern-input" min="0" step="0.1" placeholder="0.0 kg" required>
-                                    </div>
-                                    
-                                    <div class="form-field-group">
-                                        <label for="harvest-quality" class="modern-label">
-                                            <span class="label-icon">⭐</span>
-                                            <span class="label-text">Harvest Quality</span>
-                                        </label>
-                                        <select id="harvest-quality" class="modern-select">
-                                            <option value="excellent">Excellent</option>
-                                            <option value="good">Good</option>
-                                            <option value="fair">Fair</option>
-                                            <option value="poor">Poor</option>
-                                        </select>
+                                    <!-- Batch selection now handled via checkboxes in the summary above -->
+                                    <div id="selected-batches-display" class="selected-batches-container full-width" style="display: none;">
+                                        <div class="selected-batches-header">
+                                            <span class="label-icon">✅</span>
+                                            <span class="label-text">Selected Batches for Harvest</span>
+                                        </div>
+                                        <div id="selected-batches-list" class="selected-batches-list">
+                                            <!-- Selected batches will be displayed here -->
+                                        </div>
+                                        
+                                        <!-- Harvest details for selected batches -->
+                                        <div class="selected-batches-inputs">
+                                            <div class="harvest-input-row">
+                                                <div class="harvest-input-field">
+                                                    <label for="harvest-plant-count" class="compact-label">
+                                                        <span class="label-icon">🔢</span>
+                                                        <span class="label-text">Plants Removed</span>
+                                                    </label>
+                                                    <input type="number" id="harvest-plant-count" class="compact-input" min="0" step="1" placeholder="0 for fruit only" required>
+                                                </div>
+                                                <div class="harvest-input-field">
+                                                    <label for="harvest-weight" class="compact-label">
+                                                        <span class="label-icon">⚖️</span>
+                                                        <span class="label-text">Total Weight (kg)</span>
+                                                    </label>
+                                                    <input type="number" id="harvest-weight" class="compact-input" min="0" step="0.1" placeholder="0.0" required>
+                                                </div>
+                                                <div class="harvest-input-field">
+                                                    <label for="harvest-quality" class="compact-label">
+                                                        <span class="label-icon">⭐</span>
+                                                        <span class="label-text">Quality</span>
+                                                    </label>
+                                                    <select id="harvest-quality" class="compact-input">
+                                                        <option value="excellent">Excellent</option>
+                                                        <option value="good">Good</option>
+                                                        <option value="fair">Fair</option>
+                                                        <option value="poor">Poor</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="harvest-input-help">
+                                                <small class="field-help">Enter 0 plants if harvesting fruit/produce but leaving plants in bed (tomatoes, cucumbers, etc.)</small>
+                                            </div>
+                                        </div>
                                     </div>
                                     
                                     <div class="form-field-group full-width">
@@ -903,7 +1195,7 @@
                 </button>
                 <button id="system-sharing-tab" class="settings-tab" data-target="system-sharing-content">
                     <span class="tab-icon">
-                        <svg id="Layer_1" viewBox="0 0 2048 2048" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+                        <svg id="settings-icon-layer" viewBox="0 0 2048 2048" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
                             <path d="m739.27 704.236v-.011c-3.123-11.625-5.538-23.483-7.226-35.509-68.498 43.095-127.49 101.612-171.08 169.825-44.266 69.268-72.57 148.589-82.254 230.21 11.309-1.477 22.766-2.3 34.328-2.447 19.326-146.986 102.371-279.793 226.232-362.068z" fill="#0051b1"/>
                             <path d="m1312.707 1560.809c-85.334 57.895-184.742 88.404-288.707 88.404-103.954 0-203.362-30.498-288.696-88.394-3.144 3.46-6.372 6.857-9.695 10.191-4.811 4.832-9.769 9.473-14.843 13.915 92.192 64.194 200.186 98.047 313.234 98.047 113.058 0 221.053-33.853 313.234-98.068-3.523-3.08-6.984-6.256-10.37-9.516-4.863-4.663-9.6-9.537-14.157-14.579z" fill="#0051b1"/>
                             <path d="m1534.963 1066.303c6.836.095 13.672.422 20.36.981 4.673.39 9.336.875 13.967 1.487-9.684-81.632-37.989-160.963-82.254-230.231-43.59-68.213-102.583-126.731-171.08-169.836-1.688 12.037-4.104 23.895-7.226 35.531 123.861 82.286 206.906 215.083 226.233 362.068z" fill="#0051b1"/>
@@ -919,6 +1211,25 @@
                         </svg>
                     </span>
                     <span class="tab-label">System Sharing</span>
+                </button>
+                <button id="sensor-config-tab" class="settings-tab" data-target="sensor-config-content">
+                    <span class="tab-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+                            <path d="M12 2L13.09 8.26L22 9L13.09 9.74L12 16L10.91 9.74L2 9L10.91 8.26L12 2Z" fill="#0051b1"/>
+                            <circle cx="12" cy="12" r="3" fill="#0051b1"/>
+                            <path d="M19.07 4.93L16.28 7.72C15.9 7.34 15.46 7.03 15 6.8L17.8 4C18.46 4.66 19.07 4.93 19.07 4.93Z" fill="#0051b1"/>
+                        </svg>
+                    </span>
+                    <span class="tab-label">Sensor Config</span>
+                </button>
+                <button id="credentials-tab" class="settings-tab" data-target="credentials-content">
+                    <span class="tab-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+                            <path d="M6 10V8C6 5.79086 7.79086 4 10 4H14C16.2091 4 18 5.79086 18 8V10H19C19.5523 10 20 10.4477 20 11V19C20 19.5523 19.5523 20 19 20H5C4.44772 20 4 19.5523 4 19V11C4 10.4477 4.44772 10 5 10H6ZM8 8V10H16V8C16 6.89543 15.1046 6 14 6H10C8.89543 6 8 6.89543 8 8Z" fill="#0051b1"/>
+                            <circle cx="12" cy="15" r="2" fill="#ffffff"/>
+                        </svg>
+                    </span>
+                    <span class="tab-label">Credentials</span>
                 </button>
                 <button id="danger-zone-tab" class="settings-tab" data-target="danger-zone-content">
                     <span class="tab-icon">
@@ -944,7 +1255,7 @@
                 </button>
                 <button id="admin-settings-tab" class="settings-tab" data-target="admin-settings-content" style="display: none;">
                     <span class="tab-icon">
-                        <svg id="Layer_1" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+                        <svg id="sharing-icon-layer" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
                             <path d="m94.0654297 75.902832c-.2158203-.484375-.6152344-.8637695-1.1103516-1.0537109l-3.28125-1.2597656 3.2099609-1.4291992c1.0087891-.4492188 1.4628906-1.6313477 1.0136719-2.640625l-2.6431885-5.9368286c1.7651978-4.8695679 2.7457276-10.1109009 2.7457276-15.5827027 0-11.1640625-4.0493164-21.9301758-11.4018555-30.3154297-.7285156-.8310547-1.9926758-.9140625-2.8222656-.1855469-.8305664.7285156-.9135742 1.9921875-.1855469 2.8222656 6.7128907 7.6557618 10.409668 17.4853516 10.409668 27.678711 0 4.6452026-.7808228 9.1049805-2.1866455 13.2816772l-3.0203857 1.3447876 1.2587891-3.2807617c.3955078-1.03125-.1191406-2.1879883-1.1503906-2.5839844l-7.46875-2.8666992c-.4960938-.190918-1.0449219-.1762695-1.5302734.0400391-.484375.2158203-.8632813.6152344-1.0537109 1.1103516l-1.2587891 3.2807617-1.4296875-3.2104492c-.4501953-1.0087891-1.6298828-1.4633789-2.640625-1.0136719l-4.3305664 1.9280396c-2.211853-.6133423-4.5099487-1.1209106-6.8984985-1.4874268 6.3834227-3.6067505 10.7095335-10.4458618 10.7095335-18.2861328 0-11.5795898-9.4204102-21-21-21s-21 9.4204102-21 21c0 7.8405151 4.326416 14.6797485 10.710083 18.286438-11.3953247 1.74823-21.046936 6.3448486-27.0621948 12.6242065-2.9633179-5.7511597-4.6478882-12.2642212-4.6478882-19.1671753 0-23.1586914 18.8413086-42 42-42 9.7084961 0 19.1767578 3.3896484 26.6601563 9.5444336.8535156.7021484 2.1142578.5791016 2.8149414-.2739258.7016602-.8530273.5791016-2.1132813-.2739258-2.8149414-8.1972656-6.7426758-18.5678711-10.4555664-29.2011719-10.4555664-25.3642578 0-46 20.6357422-46 46s20.6357422 46 46 46c5.3840332 0 10.5408325-.9549561 15.3410645-2.6687012l7.2263184 2.7736816c.2314453.0888672.4736328.1328125.7167969.1328125.2773438 0 .5546875-.0576172.8134766-.1728516.484375-.2158203.8632813-.6152344 1.0537109-1.1103516l1.2587891-3.2807617 1.4296875 3.2104492c.4501953 1.0083008 1.6289063 1.4633789 2.640625 1.0136719l7.3085938-3.2539063c.484375-.2158203.8632813-.6152344 1.0537109-1.1103516s.1757813-1.0458984-.0400391-1.5302734l-1.4296875-3.2109375 3.28125 1.2597656c1.0273438.3935547 2.1875-.1196289 2.5839844-1.1503906l2.8671875-7.46875c.1904295-.495117.1757811-1.0458983-.0400392-1.5302733zm-63.0654297-39.6463012c0-9.3740234 7.6259766-17 17-17s17 7.6259766 17 17-7.6259766 17-17 17-17-7.6259766-17-17zm31.4240723 51.1575927c-4.4987183 1.6622315-9.3515015 2.5858765-14.4240723 2.5858765-14.8234863 0-27.8681641-7.7263794-35.3450928-19.3563232 6.7062378-7.7986451 20.0123902-12.887146 35.3450928-12.887146 4.5681763 0 8.9508057.4594116 13.0375366 1.3029175-.0198364.3187256.0274048.6401978.159729.9371338l1.4296875 3.2109375-3.28125-1.2597656c-1.0302734-.3964844-2.1875.1186523-2.5839844 1.1503906l-2.8671875 7.46875c-.1904297.4951172-.1757813 1.0458984.0400391 1.5302734s.6152344.8637695 1.1103516 1.0537109l3.28125 1.2597656-3.2099609 1.4291992c-1.0087891.4492188-1.4628906 1.6313477-1.0136719 2.640625l3.2539063 7.3085938c.2158203.484375.6152344.8637695 1.1103516 1.0537109.4951172.1894531 1.0439453.175293 1.5302734-.0400391l3.2099609-1.4291992zm25.7966308-5.8130493-3.3925781-1.3022461c-.8115234-.3120117-1.7294922-.0634766-2.2734375.6118164-.3515625.4350586-.7578125.8608398-1.2080078 1.2651367-.6464844.5795898-.8447266 1.5092773-.4921875 2.3022461l1.4804688 3.3251953-3.6542969 1.6269531-1.4804688-3.3251953c-.3535156-.7929688-1.1855469-1.2617188-2.0400391-1.175293-.6015625.0644531-1.1796875.0820313-1.7490234.0517578-.8789063-.0424805-1.6650391.4707031-1.9755859 1.2802734l-1.3017578 3.3920898-3.734375-1.4331055 1.3017578-3.3925781c.3105469-.8100586.0644531-1.7280273-.6113281-2.2729492-.4384766-.3540039-.8632813-.7602539-1.2636719-1.2075195-.5771484-.6464844-1.5087891-.847168-2.3037109-.4931641l-3.3251953 1.4804688-1.6269531-3.6542969 3.3251953-1.4804688c.7929688-.3530273 1.2675781-1.1772461 1.1748047-2.0405273-.0644531-.6005859-.0820313-1.1894531-.0517578-1.7504883.0458984-.8657227-.4707031-1.6630859-1.2802734-1.9736328l-3.3925781-1.3022461 1.4335938-3.734375 3.3925781 1.3022461c.8115234.3129883 1.7294922.0634766 2.2734375-.6118164.3515625-.4350586.7578125-.8608398 1.2080078-1.2651367.6464844-.5795898.8447266-1.5092773.4921875-2.3022461l-1.4804688-3.3251953 3.6542969-1.6269531 1.4804688 3.3251953c.3535156.793457 1.1865234 1.2651367 2.0400391 1.175293.6015625-.0644531 1.1777344-.0834961 1.7490234-.0517578.8925781.0527344 1.6650391-.4702148 1.9755859-1.2802734l1.3017578-3.3920898 3.734375 1.4331055-1.3017578 3.3925781c-.3105469.8100586-.0644531 1.7280273.6113281 2.2729492.4384766.3540039.8632813.7602539 1.2636719 1.2075195.578125.6464844 1.5087891.8481445 2.3037109.4931641l3.3251953-1.4804688 1.6269531 3.6542969-3.3251953 1.4804688c-.7939453.3535156-1.2685547 1.1791992-1.1748047 2.0429688.0644531.59375.0820313 1.1816406.0517578 1.7480469-.0458984.8657227.4707031 1.6630859 1.2802734 1.9736328l3.3925781 1.3022461zm-10.9951172-16.0034179c-1.0371094-.3979492-2.1210938-.5996094-3.2236328-.5996094-3.7001953 0-7.0771484 2.3212891-8.4042969 5.7763672-1.7783203 4.6328125.5439453 9.8491211 5.1767578 11.6279297 1.0371094.3979492 2.1210938.5996094 3.2236328.5996094 3.7001953 0 7.0771484-2.3212891 8.4042969-5.7763672 1.7783204-4.6328126-.5439453-9.8491212-5.1767578-11.6279297zm1.4423829 10.1943359c-.7373047 1.9199219-2.6142578 3.2099609-4.6699219 3.2099609-.6103516 0-1.2128906-.1123047-1.7900391-.3339844-2.5742188-.9882813-3.8642578-3.8862305-2.8759766-6.4599609.7373047-1.9199219 2.6142578-3.2099609 4.6699219-3.2099609.6103516 0 1.2128906.1123047 1.7900391.3339844 2.5742187.9882812 3.8642578 3.8862304 2.8759766 6.4599609z" fill="#0051b1"/>
                         </svg>
                     </span>
@@ -1121,7 +1432,7 @@
                 
                 <!-- Grow Beds Configuration Content -->
                 <div id="grow-beds-config-content" class="system-config-content">
-                    <h4 style="margin-bottom: 1rem; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">🌱 Grow Bed Configuration</h4>
+                    <h4 style="margin-bottom: 1rem; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">Grow Bed Configuration</h4>
                     <p style="color: #666; margin-bottom: 1rem;">Configure each grow bed individually with type-specific dimensions and auto-calculations.</p>
                     
                     <!-- Summary Information -->
@@ -1241,6 +1552,224 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sensor Config Content -->
+            <div id="sensor-config-content" class="settings-content">
+                <div class="form-section">
+                    <h3>🔧 Sensor Configuration</h3>
+                    <p>Configure sensors to automatically collect data from your aquaponics system.</p>
+                    
+                    <!-- ThingsBoard Credential Status -->
+                    <div id="tb-credential-status" class="credential-status-container">
+                        <div class="credential-status checking">
+                            <span class="status-icon">⏳</span>
+                            <span class="status-text">Checking ThingsBoard connection...</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Sensor Config Tabs -->
+                    <div class="sensor-config-tabs">
+                        <button id="add-sensor-tab" class="sensor-tab active" data-target="add-sensor-content">
+                            <span class="tab-icon">➕</span>
+                            <span class="tab-label">Add New</span>
+                        </button>
+                        <button id="existing-sensors-tab" class="sensor-tab" data-target="existing-sensors-content">
+                            <span class="tab-icon">📋</span>
+                            <span class="tab-label">Existing Sensors</span>
+                        </button>
+                    </div>
+
+                    <!-- Add New Sensor Tab Content -->
+                    <div id="add-sensor-content" class="sensor-tab-content active">
+                    <!-- Add New Sensor Form -->
+                    <div class="sensor-form-container">
+                        <form id="add-sensor-form" class="sensor-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="sensor-name">Sensor Name:</label>
+                                    <input type="text" id="sensor-name" name="sensor_name" placeholder="e.g., Water Temperature Sensor" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="sensor-type">Sensor Type:</label>
+                                    <select id="sensor-type" name="sensor_type" required>
+                                        <option value="">Select Type</option>
+                                        <option value="temperature">Temperature</option>
+                                        <option value="ph">pH Level</option>
+                                        <option value="dissolved_oxygen">Dissolved Oxygen</option>
+                                        <option value="ec">Electrical Conductivity</option>
+                                        <option value="water_level">Water Level</option>
+                                        <option value="flow_rate">Flow Rate</option>
+                                        <option value="humidity">Humidity</option>
+                                        <option value="light">Light Intensity</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="device-id">Device ID:</label>
+                                    <input type="text" id="device-id" name="device_id" placeholder="ThingsBoard device identifier" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="telemetry-key">Telemetry Key:</label>
+                                    <select id="telemetry-key" name="telemetry_key" required disabled>
+                                        <option value="">Select device first...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="update-interval">Update Interval (seconds):</label>
+                                    <input type="number" id="update-interval" name="update_interval" value="300" min="60" max="3600">
+                                </div>
+                                <div class="form-group">
+                                    <label for="sensor-active">Sensor Status:</label>
+                                    <select id="sensor-active" name="active">
+                                        <option value="1">Active</option>
+                                        <option value="0">Inactive</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- Data Mapping Section -->
+                            <div class="form-section-header">
+                                <h5>📊 Data Mapping (Optional)</h5>
+                                <p class="help-text">Map sensor data to existing database fields for automatic integration.</p>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="mapped-table">Map to Table:</label>
+                                    <select id="mapped-table" name="mapped_table">
+                                        <option value="">Don't map to database</option>
+                                        <option value="nutrient_readings">Nutrient Readings</option>
+                                        <option value="fish_health">Fish Health</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="mapped-field">Map to Field:</label>
+                                    <select id="mapped-field" name="mapped_field" disabled>
+                                        <option value="">Select table first</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="data-transform">Data Transform (Optional):</label>
+                                    <select id="data-transform" name="data_transform">
+                                        <option value="">No transformation</option>
+                                        <option value="celsius_to_fahrenheit">Celsius to Fahrenheit</option>
+                                        <option value="fahrenheit_to_celsius">Fahrenheit to Celsius</option>
+                                        <option value="multiply_100">Multiply by 100</option>
+                                        <option value="divide_100">Divide by 100</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <div class="mapping-preview" id="mapping-preview" style="display: none;">
+                                        <strong>Preview:</strong>
+                                        <span id="mapping-description"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="button" id="test-sensor-connection" class="btn btn-secondary">Test Connection</button>
+                                <button type="submit" class="btn btn-primary">Add Sensor</button>
+                            </div>
+                        </form>
+                    </div>
+                    </div>
+
+                    <!-- Existing Sensors Tab Content -->
+                    <div id="existing-sensors-content" class="sensor-tab-content">
+                    <!-- Existing Sensors List -->
+                    <div class="sensors-list-container">
+                        <div id="sensors-list" class="sensors-list">
+                            <!-- Sensors will be loaded here dynamically -->
+                        </div>
+                    </div>
+                    
+                    <!-- API Configuration -->
+                    <div class="api-config-container">
+                        <h4>API Configuration</h4>
+                        <div class="api-config-info">
+                            <p><strong>Current API Endpoint:</strong> <span id="current-api-url">https://tb.datascapeindustrial.com</span></p>
+                            <p><strong>Authentication:</strong> Using environment variables for security</p>
+                            <p class="help-text">
+                                <strong>Note:</strong> API credentials are stored securely as environment variables. 
+                                Contact your system administrator to update API tokens or URLs.
+                            </p>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Credentials Content -->
+            <div id="credentials-content" class="settings-content">
+                <div class="form-section">
+                    <h3>🔐 ThingsBoard Credentials</h3>
+                    <p>Manage secure authentication credentials for your ThingsBoard IoT platform integration.</p>
+                    
+                    <!-- Add/Update ThingsBoard Credentials -->
+                    <div class="credentials-form-container">
+                        <h4>ThingsBoard Authentication</h4>
+                        <form id="thingsboard-credentials-form" class="credentials-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="tb-api-url">ThingsBoard API URL:</label>
+                                    <input type="url" id="tb-api-url" name="api_url" value="https://tb.datascapeindustrial.com" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="tb-username">Username:</label>
+                                    <input type="text" id="tb-username" name="username" placeholder="Your ThingsBoard username" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="tb-password">Password:</label>
+                                    <input type="password" id="tb-password" name="password" placeholder="Your ThingsBoard password" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="button" id="test-tb-credentials" class="btn btn-secondary">Test Credentials</button>
+                                <button type="submit" class="btn btn-primary">Save Credentials</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Current Credentials Status -->
+                    <div class="credentials-status-container">
+                        <h4>Current Status</h4>
+                        <div id="credentials-status" class="status-indicator">
+                            <div class="status-item">
+                                <span class="status-label">ThingsBoard Connection:</span>
+                                <span id="tb-status" class="status-value">Not configured</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Last Updated:</span>
+                                <span id="tb-last-updated" class="status-value">Never</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Security Information -->
+                    <div class="security-info">
+                        <h4>🔒 Security Information</h4>
+                        <ul>
+                            <li><strong>Encryption:</strong> All credentials are encrypted using AES-256-CBC before storage</li>
+                            <li><strong>Access:</strong> Only your system can decrypt and access these credentials</li>
+                            <li><strong>Usage:</strong> Credentials are used for sensor data collection and API testing</li>
+                            <li><strong>Best Practice:</strong> Use dedicated service accounts with minimal permissions</li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -1401,29 +1930,29 @@
                 <svg viewBox="0 0 566.92913 566.92913" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
                     <defs>
                         <style>
-                            .cls-1 { fill: url(#linear-gradient-8); }
-                            .cls-2 { fill: url(#linear-gradient-7); }
-                            .cls-3 { fill: url(#linear-gradient-5); }
-                            .cls-4 { fill: url(#linear-gradient-6); }
-                            .cls-5 { fill: url(#linear-gradient-4); }
-                            .cls-6 { fill: url(#linear-gradient-3); }
-                            .cls-7 { fill: url(#linear-gradient-2); }
-                            .cls-8 { fill: url(#linear-gradient); }
+                            .cls-1 { fill: url(#settings-linear-gradient-8); }
+                            .cls-2 { fill: url(#settings-linear-gradient-7); }
+                            .cls-3 { fill: url(#settings-linear-gradient-5); }
+                            .cls-4 { fill: url(#settings-linear-gradient-6); }
+                            .cls-5 { fill: url(#settings-linear-gradient-4); }
+                            .cls-6 { fill: url(#settings-linear-gradient-3); }
+                            .cls-7 { fill: url(#settings-linear-gradient-2); }
+                            .cls-8 { fill: url(#settings-linear-gradient); }
                         </style>
-                        <linearGradient id="linear-gradient" x1="182.34016" y1="446.83708" x2="487.90864" y2="446.83708" gradientUnits="userSpaceOnUse">
+                        <linearGradient id="settings-linear-gradient" x1="182.34016" y1="446.83708" x2="487.90864" y2="446.83708" gradientUnits="userSpaceOnUse">
                             <stop offset="0" stop-color="#49f911"/>
                             <stop offset="1" stop-color="#45e7dd"/>
                         </linearGradient>
-                        <linearGradient id="linear-gradient-2" x1="79.02049" y1="471.49672" x2="273.29051" y2="471.49672" gradientUnits="userSpaceOnUse">
+                        <linearGradient id="settings-linear-gradient-2" x1="79.02049" y1="471.49672" x2="273.29051" y2="471.49672" gradientUnits="userSpaceOnUse">
                             <stop offset="0" stop-color="#58dcfd"/>
                             <stop offset="1" stop-color="#2e3195"/>
                         </linearGradient>
-                        <linearGradient id="linear-gradient-3" x1="196.95907" y1="314.75412" x2="502.52755" y2="314.75412" gradientTransform="translate(581.54804 434.84618) rotate(-180)" xlink:href="#linear-gradient"/>
-                        <linearGradient id="linear-gradient-4" x1="93.6394" y1="339.41377" x2="287.90942" y2="339.41377" gradientTransform="translate(581.54804 434.84618) rotate(-180)" xlink:href="#linear-gradient-2"/>
-                        <linearGradient id="linear-gradient-5" x1="147.13592" y1="397.01393" x2="452.7044" y2="397.01393" gradientTransform="translate(49.82315 531.7249) rotate(-90)" xlink:href="#linear-gradient"/>
-                        <linearGradient id="linear-gradient-6" x1="43.81625" y1="421.67357" x2="238.08627" y2="421.67357" gradientTransform="translate(49.82315 531.7249) rotate(-90)" xlink:href="#linear-gradient-2"/>
-                        <linearGradient id="linear-gradient-7" x1="232.1633" y1="364.57727" x2="537.73179" y2="364.57727" gradientTransform="translate(484.66933 -49.82315) rotate(90)" xlink:href="#linear-gradient"/>
-                        <linearGradient id="linear-gradient-8" x1="128.84364" y1="389.23691" x2="323.11366" y2="389.23691" gradientTransform="translate(484.66933 -49.82315) rotate(90)" xlink:href="#linear-gradient-2"/>
+                        <linearGradient id="settings-linear-gradient-3" x1="196.95907" y1="314.75412" x2="502.52755" y2="314.75412" gradientTransform="translate(581.54804 434.84618) rotate(-180)" xlink:href="#settings-linear-gradient"/>
+                        <linearGradient id="settings-linear-gradient-4" x1="93.6394" y1="339.41377" x2="287.90942" y2="339.41377" gradientTransform="translate(581.54804 434.84618) rotate(-180)" xlink:href="#settings-linear-gradient-2"/>
+                        <linearGradient id="settings-linear-gradient-5" x1="147.13592" y1="397.01393" x2="452.7044" y2="397.01393" gradientTransform="translate(49.82315 531.7249) rotate(-90)" xlink:href="#settings-linear-gradient"/>
+                        <linearGradient id="settings-linear-gradient-6" x1="43.81625" y1="421.67357" x2="238.08627" y2="421.67357" gradientTransform="translate(49.82315 531.7249) rotate(-90)" xlink:href="#settings-linear-gradient-2"/>
+                        <linearGradient id="settings-linear-gradient-7" x1="232.1633" y1="364.57727" x2="537.73179" y2="364.57727" gradientTransform="translate(484.66933 -49.82315) rotate(90)" xlink:href="#settings-linear-gradient"/>
+                        <linearGradient id="settings-linear-gradient-8" x1="128.84364" y1="389.23691" x2="323.11366" y2="389.23691" gradientTransform="translate(484.66933 -49.82315) rotate(90)" xlink:href="#settings-linear-gradient-2"/>
                     </defs>
                     <g>
                         <g>
@@ -1499,7 +2028,7 @@
     </nav>
 
     <!-- Authentication Modal -->
-    <div id="auth-modal" class="modal" style="display: none;">
+    <div id="auth-modal" class="modal">
         <div class="modal-content">
             <span class="close" id="close-modal">&times;</span>
             
@@ -1832,7 +2361,7 @@
     </div>
 
     <!-- New System Modal -->
-    <div id="new-system-modal" class="modal" style="display: none;">
+    <div id="new-system-modal" class="modal">
         <div class="modal-content system-modal">
             <div class="modal-header">
                 <h2>Create New Aquaponics System</h2>
@@ -1854,11 +2383,6 @@
                 <div class="progress-step" data-step="3">
                     <div class="step-number">3</div>
                     <div class="step-label">Grow Beds</div>
-                </div>
-                <div class="progress-line"></div>
-                <div class="progress-step" data-step="4">
-                    <div class="step-number">4</div>
-                    <div class="step-label">Plant Allocation</div>
                 </div>
             </div>
             
@@ -1882,11 +2406,7 @@
                             <span class="label-text">System Type</span>
                         </label>
                         <select id="new-system-type" class="modern-select" required>
-                            <option value="">Select system type...</option>
-                            <option value="media-bed">Media Bed</option>
-                            <option value="nft">NFT (Nutrient Film Technique)</option>
-                            <option value="dwc">DWC (Deep Water Culture)</option>
-                            <option value="hybrid">Hybrid System</option>
+                            <option value="aquaponics">Aquaponics</option>
                         </select>
                     </div>
                     
@@ -1927,24 +2447,9 @@
                     </div>
                 </div>
                 
-                <!-- Step 4: Plant Allocation -->
-                <div class="wizard-step" data-step="4">
-                    <h3 class="step-title">Plant Allocation (Optional)</h3>
-                    <p class="step-description">Allocate crops to your grow beds now or configure later</p>
-                    
-                    <div id="plant-allocation-container">
-                        <!-- Dynamic plant allocation fields will be inserted here -->
-                    </div>
-                    
-                    <div class="skip-notice">
-                        <span class="info-icon">ℹ️</span>
-                        You can skip this step and configure plant allocation later in the Settings tab
-                    </div>
-                </div>
-                
                 <!-- Navigation Buttons -->
                 <div class="wizard-navigation">
-                    <button type="button" class="nav-btn prev-btn" onclick="app.prevSystemStep()" style="display: none;">
+                    <button type="button" class="nav-btn prev-btn" onclick="app.prevSystemStep()">
                         <span class="btn-icon">←</span>
                         Previous
                     </button>
@@ -1952,7 +2457,7 @@
                         Next
                         <span class="btn-icon">→</span>
                     </button>
-                    <button type="submit" class="nav-btn submit-btn" style="display: none;">
+                    <button type="submit" class="nav-btn submit-btn">
                         <span class="btn-icon">✓</span>
                         Create System
                     </button>
@@ -1962,7 +2467,7 @@
     </div>
 
     <!-- Custom Confirmation Modal -->
-    <div id="confirm-modal" class="modal" style="display: none;">
+    <div id="confirm-modal" class="modal">
         <div class="modal-content confirm-modal-content">
             <div class="modal-header confirm-header">
                 <div class="confirm-icon">
@@ -1979,6 +2484,311 @@
             <div class="modal-footer confirm-footer">
                 <button id="confirm-cancel" class="btn btn-secondary">Cancel</button>
                 <button id="confirm-ok" class="btn btn-danger">Remove from Programme</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fish Management Modals -->
+    <!-- Add New Fish Modal -->
+    <div id="add-fish-modal" class="modal">
+        <div class="modal-content fish-modal">
+            <div class="modal-header">
+                <h2>🐟 Add New Fish</h2>
+                <span class="close" onclick="app.closeModal('add-fish-modal')">&times;</span>
+            </div>
+            <form id="add-fish-form">
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="add-fish-tank">Select Tank</label>
+                            <select id="add-fish-tank" required>
+                                <!-- Tank options will be populated dynamically -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="add-fish-date">Date</label>
+                            <input type="date" id="add-fish-date" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="add-fish-count">Number of Fish</label>
+                            <input type="number" id="add-fish-count" min="1" required placeholder="e.g., 50">
+                        </div>
+                        <div class="form-group">
+                            <label for="add-fish-avg-weight">Average Weight (g)</label>
+                            <input type="number" id="add-fish-avg-weight" min="1" step="0.1" required placeholder="e.g., 25.5">
+                        </div>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="add-fish-notes">Notes (optional)</label>
+                        <textarea id="add-fish-notes" rows="3" placeholder="Source, breed, observations, etc."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="app.closeModal('add-fish-modal')" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                        Add Fish
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Record Mortality Modal -->
+    <div id="mortality-modal" class="modal">
+        <div class="modal-content fish-modal">
+            <div class="modal-header">
+                <h2>⚠️ Record Fish Mortality</h2>
+                <span class="close" onclick="app.closeModal('mortality-modal')">&times;</span>
+            </div>
+            <form id="mortality-form">
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="mortality-tank">Select Tank</label>
+                            <select id="mortality-tank" required>
+                                <!-- Tank options will be populated dynamically -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="mortality-date">Date</label>
+                            <input type="date" id="mortality-date" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="mortality-count">Number of Dead Fish</label>
+                            <input type="number" id="mortality-count" min="1" required placeholder="e.g., 3">
+                        </div>
+                        <div class="form-group">
+                            <label for="mortality-cause">Suspected Cause</label>
+                            <select id="mortality-cause">
+                                <option value="">Unknown</option>
+                                <option value="disease">Disease</option>
+                                <option value="water_quality">Water Quality</option>
+                                <option value="temperature">Temperature Shock</option>
+                                <option value="oxygen">Low Oxygen</option>
+                                <option value="aggression">Aggression</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="mortality-notes">Notes (optional)</label>
+                        <textarea id="mortality-notes" rows="3" placeholder="Symptoms, environmental conditions, actions taken, etc."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="app.closeModal('mortality-modal')" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                        </svg>
+                        Record Mortality
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Record Feeding Modal -->
+    <div id="feeding-modal" class="modal">
+        <div class="modal-content fish-modal">
+            <div class="modal-header">
+                <h2>🍽️ Record Fish Feeding</h2>
+                <span class="close" onclick="app.closeModal('feeding-modal')">&times;</span>
+            </div>
+            <form id="feeding-form">
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="feeding-tank">Select Tank</label>
+                            <select id="feeding-tank" required>
+                                <option value="all">All Tanks</option>
+                                <!-- Individual tank options will be populated dynamically -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="feeding-amount">Feed Amount (g)</label>
+                            <input type="number" id="feeding-amount" min="0.1" step="0.1" required placeholder="e.g., 125.5">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="feeding-date">Date</label>
+                            <input type="date" id="feeding-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="feeding-time">Time</label>
+                            <input type="time" id="feeding-time" required>
+                        </div>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="feeding-type">Feed Type</label>
+                        <input type="text" id="feeding-type" placeholder="e.g., Pellets 3mm, Flakes, Bloodworms" required>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="feeding-notes">Notes (optional)</label>
+                        <textarea id="feeding-notes" rows="3" placeholder="Fish behavior, appetite, water conditions, feeding response, etc."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="app.closeModal('feeding-modal')" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7z"/>
+                        </svg>
+                        Record Feeding
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Harvest Fish Modal -->
+    <div id="harvest-fish-modal" class="modal">
+        <div class="modal-content fish-modal">
+            <div class="modal-header">
+                <h3>🐟 Harvest Fish - Tank <span id="harvest-tank-number"></span></h3>
+                <span class="close" onclick="app.closeModal('harvest-fish-modal')">&times;</span>
+            </div>
+            <form id="harvest-fish-form" onsubmit="app.submitFishHarvest(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="harvest-date">Harvest Date:</label>
+                        <input type="date" id="harvest-date" name="harvest_date" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="harvest-fish-count">Number of Fish Harvested:</label>
+                        <input type="number" id="harvest-fish-count" name="fish_count" min="1" required 
+                               placeholder="e.g., 50">
+                        <small class="field-note">Enter the total number of fish harvested</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="harvest-total-weight">Total Weight (kg):</label>
+                        <input type="number" id="harvest-total-weight" name="total_weight" step="0.1" min="0" required 
+                               placeholder="e.g., 125.5">
+                        <small class="field-note">Enter the total weight of all harvested fish</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="harvest-average-weight">Average Weight per Fish:</label>
+                        <input type="text" id="harvest-average-weight" name="average_weight" readonly 
+                               style="background: #f5f5f5; color: #666;">
+                        <small class="field-note">Automatically calculated from total weight and fish count</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="harvest-notes">Notes (optional):</label>
+                        <textarea id="harvest-notes" name="notes" rows="3" 
+                                placeholder="e.g., Fish health condition, market destination, etc."></textarea>
+                    </div>
+                    
+                    <input type="hidden" id="harvest-tank-id" name="tank_number">
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="form-btn secondary" onclick="app.closeModal('harvest-fish-modal')">Cancel</button>
+                    <button type="submit" class="form-btn">🐟 Record Harvest</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Metrics Configuration Modal -->
+    <div id="metrics-config-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Configure Dashboard Metrics</h3>
+                <button type="button" class="close-btn" onclick="closeMetricsConfig()">×</button>
+            </div>
+            <div class="modal-body">
+                <p>Select which metrics to display on your dashboard:</p>
+                <div class="metrics-checklist">
+                    <h4>Water Quality Parameters</h4>
+                    <label class="metric-option">
+                        <input type="checkbox" data-metric="temperature" value="temperature" checked>
+                        <span class="checkmark"></span>
+                        Temperature
+                    </label>
+                    <label class="metric-option">
+                        <input type="checkbox" data-metric="ph" value="ph" checked>
+                        <span class="checkmark"></span>
+                        pH Level
+                    </label>
+                    <label class="metric-option">
+                        <input type="checkbox" data-metric="dissolved_oxygen" value="dissolved_oxygen" checked>
+                        <span class="checkmark"></span>
+                        Dissolved Oxygen
+                    </label>
+                    <label class="metric-option">
+                        <input type="checkbox" data-metric="ammonia" value="ammonia" checked>
+                        <span class="checkmark"></span>
+                        Ammonia
+                    </label>
+                    <label class="metric-option">
+                        <input type="checkbox" data-metric="ec" value="ec" checked>
+                        <span class="checkmark"></span>
+                        EC (Conductivity)
+                    </label>
+                    <label class="metric-option">
+                        <input type="checkbox" data-metric="humidity" value="humidity" checked>
+                        <span class="checkmark"></span>
+                        Humidity
+                    </label>
+                    <label class="metric-option">
+                        <input type="checkbox" data-metric="salinity" value="salinity" checked>
+                        <span class="checkmark"></span>
+                        Salinity
+                    </label>
+                    
+                    <h4 style="margin-top: 20px;">Nutrient Parameters</h4>
+                    <label class="metric-option">
+                        <input type="checkbox" data-metric="nitrate" value="nitrate" checked>
+                        <span class="checkmark"></span>
+                        Nitrate
+                    </label>
+                    <label class="metric-option">
+                        <input type="checkbox" data-metric="nitrite" value="nitrite" checked>
+                        <span class="checkmark"></span>
+                        Nitrite
+                    </label>
+                    <label class="metric-option">
+                        <input type="checkbox" data-metric="phosphorus" value="phosphorus" checked>
+                        <span class="checkmark"></span>
+                        Phosphorus
+                    </label>
+                    <label class="metric-option">
+                        <input type="checkbox" data-metric="potassium" value="potassium" checked>
+                        <span class="checkmark"></span>
+                        Potassium
+                    </label>
+                    <label class="metric-option">
+                        <input type="checkbox" data-metric="calcium" value="calcium" checked>
+                        <span class="checkmark"></span>
+                        Calcium
+                    </label>
+                    <label class="metric-option">
+                        <input type="checkbox" data-metric="magnesium" value="magnesium" checked>
+                        <span class="checkmark"></span>
+                        Magnesium
+                    </label>
+                    <label class="metric-option">
+                        <input type="checkbox" data-metric="iron" value="iron" checked>
+                        <span class="checkmark"></span>
+                        Iron
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeMetricsConfig()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveMetricsConfig()">Save Configuration</button>
             </div>
         </div>
     </div>

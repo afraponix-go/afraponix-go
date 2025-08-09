@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  mariadb:
+    image: mariadb:10.6
+    container_name: afraponix-dev-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: dev123
+      MYSQL_DATABASE: aquaponics_dev
+      MYSQL_USER: aquaponics
+      MYSQL_PASSWORD: dev123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_dev_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  adminer:
+    image: adminer:4.8.1
+    container_name: afraponix-dev-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mariadb
+    environment:
+      ADMINER_DEFAULT_SERVER: mariadb
+
+volumes:
+  mariadb_dev_data:
+    driver: local

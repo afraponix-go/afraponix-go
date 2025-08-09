@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');
 const { authenticateToken } = require('../middleware/auth');
+const { getDatabase } = require('../database/init-mariadb');
 
 const router = express.Router();
 
@@ -114,6 +115,85 @@ router.post('/smtp/test', async (req, res) => {
     } catch (error) {
         console.error('SMTP test failed:', error);
         res.status(500).json({ error: 'SMTP test failed: ' + error.message });
+    }
+});
+
+// Send email endpoint for nutrient plans and other system emails
+router.post('/send-email', async (req, res) => {
+    try {
+        const { subject, html, type } = req.body;
+        
+        // Get user email from the database using the authenticated user ID
+        const connection = await getDatabase();
+        const [userRows] = await connection.execute(
+            'SELECT email FROM users WHERE id = ?', 
+            [req.user.userId]
+        );
+        await connection.end();
+        
+        if (userRows.length === 0) {
+            return res.status(404).json({ 
+                error: 'User not found' 
+            });
+        }
+        
+        const userEmail = userRows[0].email;
+        
+        // Validate required fields
+        if (!subject || !html) {
+            return res.status(400).json({ 
+                error: 'Missing required fields: subject, html' 
+            });
+        }
+        
+        // Load SMTP configuration
+        const configPath = path.join(__dirname, '..', 'config', 'smtp.json');
+        let smtpConfig;
+        try {
+            const configData = await fs.readFile(configPath, 'utf8');
+            smtpConfig = JSON.parse(configData);
+        } catch (error) {
+            return res.status(500).json({ 
+                error: 'SMTP not configured. Please configure SMTP settings first.' 
+            });
+        }
+        
+        // Create nodemailer transporter
+        const nodemailer = require('nodemailer');
+        const transporter = nodemailer.createTransporter({
+            host: smtpConfig.host,
+            port: smtpConfig.port,
+            secure: smtpConfig.secure,
+            auth: {
+                user: smtpConfig.auth.user,
+                pass: smtpConfig.auth.pass
+            }
+        });
+        
+        // Email options
+        const mailOptions = {
+            from: `"${smtpConfig.from.name}" <${smtpConfig.from.address}>`,
+            to: userEmail,
+            subject: subject,
+            html: html
+        };
+        
+        // Send email
+        const info = await transporter.sendMail(mailOptions);
+        
+        console.log('Email sent successfully:', info.messageId);
+        res.json({ 
+            success: true, 
+            message: 'Email sent successfully',
+            messageId: info.messageId,
+            type: type || 'general'
+        });
+        
+    } catch (error) {
+        console.error('Failed to send email:', error);
+        res.status(500).json({ 
+            error: 'Failed to send email: ' + error.message 
+        });
     }
 });
 

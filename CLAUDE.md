@@ -4,7 +4,7 @@
 Afraponix Go is an aquaponics management application built with:
 - **Frontend**: JavaScript (React-style SPA), HTML, CSS
 - **Backend**: Node.js, Express.js
-- **Database**: SQLite
+- **Database**: MariaDB/MySQL
 - **Authentication**: JWT tokens
 - **Architecture**: RESTful API
 
@@ -168,6 +168,51 @@ Afraponix Go is an aquaponics management application built with:
   - Database: Updated existing harvest_weight values from kg to grams
 - **Result**: Harvest weights now correctly display as kg/g based on value
 
+#### 9. **Water Quality Parameters Enhancement** 💧
+- **Issue**: Water quality system lacked humidity and salinity tracking capabilities
+- **Solution**: 
+  - Added humidity and salinity columns to water_quality table
+  - Updated API endpoints to handle new parameters
+  - Added humidity and salinity charts to both dashboard and plant tabs
+  - Enhanced sensor data collection service to support new parameters
+- **Files Modified**: 
+  - `/database/add-humidity-column.js` - Migration script for humidity column (executed, then deleted)
+  - `/database/add-salinity-column.js` - Migration script for salinity column (executed, then deleted)
+  - `/routes/data.js:103,114-116` - Updated POST endpoint to handle humidity/salinity
+  - `/index.html` - Added humidity and salinity chart cards to dashboard and plant tabs
+  - `/script.js:3183-3190` - Added chart initialization for new parameters
+  - `/script.js:3291-3325` - Updated dashboard charts with new data
+  - `/services/sensor-collector.js` - Added support for humidity/salinity sensors
+- **Result**: Complete humidity and salinity tracking with charts, dashboard stats, and sensor integration
+
+#### 10. **Chart Modal Recognition Fix** 🔧
+- **Issue**: Clicking salinity chart caused JavaScript error "Unknown data field for dashboard modal"
+- **Root Cause**: Modal function didn't recognize humidity and salinity as valid chart data fields
+- **Solution**: Added humidity and salinity to recognized data fields in `openDashboardChartModal()`
+- **Files Modified**: `/script.js:3261` - Added humidity and salinity to modal field recognition
+- **Result**: All water quality chart modals now work correctly
+
+#### 11. **Dashboard "No Data" Display Fix** 🎯
+- **Issue**: pH and ammonia displayed "No data" on dashboard despite having valid historical data
+- **Root Cause**: Duplicate `getLatestWaterQualityData()` functions - second simple version overrode composite version
+- **Investigation**: 
+  - Database contained valid pH=7.70 and ammonia=0.00 values in historical records
+  - Most recent record had null values, but older records contained data
+  - First function (line 2891) implemented composite logic to find most recent non-null values
+  - Second function (line 12200) simply returned most recent record by date (with null values)
+  - JavaScript function override caused wrong function to be used
+- **Solution**: Removed duplicate simple function, keeping composite version that finds most recent non-null values
+- **Files Modified**: `/script.js:12200-12208` - Removed duplicate getLatestWaterQualityData() function
+- **Result**: Dashboard now correctly displays pH=7.7 and ammonia=0.0 from available historical data
+
+#### 12. **Database Schema Verification** ✅
+- **Task**: Verified migration from old water_quality nutrient columns to new nutrient_readings table
+- **Findings**: 
+  - New nutrient_readings table properly in use with source attribution (📡/📝/🧪 icons)
+  - Humidity and salinity columns successfully added to water_quality table
+  - Auto data flagging working correctly for sensor vs manual data
+- **Result**: Database schema properly migrated and functioning as intended
+
 [... rest of existing file remains unchanged ...]
 
 ## Memory
@@ -175,3 +220,4 @@ Afraponix Go is an aquaponics management application built with:
 - Added comprehensive memory tracking for the Afraponix Go project, documenting key development milestones, system architecture, and resolved issues
 - Implemented a structured approach to recording session work, including completed tasks, file modifications, and result summaries
 - Created a detailed overview of the project's technical evolution, focusing on UI improvements, data synchronization, and error handling
+- claude.md

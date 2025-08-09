@@ -1,21 +1,22 @@
 const bcrypt = require('bcryptjs');
-const { getDatabase } = require('./database/init');
+const { getDatabase } = require('./database/init-mariadb');
 
 async function resetPassword(email, newPassword) {
-    const db = getDatabase();
+    let connection;
     
     try {
+        connection = await getDatabase();
+        
         // Check if user exists
-        const user = await new Promise((resolve, reject) => {
-            db.get('SELECT id, username, email FROM users WHERE email = ?', [email], (err, row) => {
-                if (err) reject(err);
-                else resolve(row);
-            });
-        });
+        const [userRows] = await connection.execute(
+            'SELECT id, username, email FROM users WHERE email = ?', 
+            [email]
+        );
+        const user = userRows[0];
         
         if (!user) {
             console.log(`❌ User with email ${email} not found`);
-            db.close();
+            await connection.end();
             return;
         }
         
@@ -26,22 +27,20 @@ async function resetPassword(email, newPassword) {
         const passwordHash = await bcrypt.hash(newPassword, saltRounds);
         
         // Update password
-        await new Promise((resolve, reject) => {
-            db.run('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, user.id], (err) => {
-                if (err) reject(err);
-                else resolve();
-            });
-        });
+        await connection.execute(
+            'UPDATE users SET password_hash = ? WHERE id = ?', 
+            [passwordHash, user.id]
+        );
         
         console.log(`🔑 Password reset successfully for ${user.username}`);
         console.log(`📧 Email: ${email}`);
         console.log(`🔐 New password: ${newPassword}`);
         
-        db.close();
+        await connection.end();
         
     } catch (error) {
         console.error('❌ Error resetting password:', error);
-        db.close();
+        if (connection) await connection.end();
     }
 }
 

@@ -92,10 +92,30 @@ async function createTables(connection) {
             calcium DECIMAL(8,2),
             phosphorus DECIMAL(8,2),
             magnesium DECIMAL(8,2),
+            humidity DECIMAL(8,2),
+            salinity DECIMAL(8,2),
             notes TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
         ) ENGINE=InnoDB`,
+
+        // Nutrient readings table (individual nutrient records)
+        `CREATE TABLE IF NOT EXISTS nutrient_readings (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            system_id VARCHAR(255) NOT NULL,
+            nutrient_type VARCHAR(50) NOT NULL,
+            value DECIMAL(8,2) NOT NULL,
+            unit VARCHAR(10) DEFAULT 'mg/L',
+            reading_date DATETIME NOT NULL,
+            source VARCHAR(20) DEFAULT 'manual',
+            notes TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE,
+            INDEX idx_nutrient_system_type (system_id, nutrient_type),
+            INDEX idx_nutrient_date (reading_date),
+            INDEX idx_nutrient_system_date (system_id, reading_date)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
         // Grow beds table
         `CREATE TABLE IF NOT EXISTS grow_beds (
@@ -138,6 +158,38 @@ async function createTables(connection) {
             FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
         ) ENGINE=InnoDB`,
 
+        // Fish inventory table (current state)
+        `CREATE TABLE IF NOT EXISTS fish_inventory (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            system_id VARCHAR(255) NOT NULL,
+            fish_tank_id INT NOT NULL,
+            current_count INT DEFAULT 0,
+            average_weight DECIMAL(8,2) DEFAULT NULL,
+            fish_type VARCHAR(50) DEFAULT 'tilapia',
+            batch_id VARCHAR(100) DEFAULT NULL,
+            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE,
+            UNIQUE KEY unique_system_tank (system_id, fish_tank_id)
+        ) ENGINE=InnoDB`,
+
+        // Fish events table (historical log)
+        `CREATE TABLE IF NOT EXISTS fish_events (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            system_id VARCHAR(255) NOT NULL,
+            fish_tank_id INT NOT NULL,
+            event_type VARCHAR(50) NOT NULL,
+            count_change INT DEFAULT 0,
+            weight DECIMAL(8,2) DEFAULT NULL,
+            notes TEXT DEFAULT NULL,
+            event_date TIMESTAMP NOT NULL,
+            batch_id VARCHAR(100) DEFAULT NULL,
+            user_id VARCHAR(255) DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE,
+            INDEX idx_fish_events_system_tank_date (system_id, fish_tank_id, event_date DESC)
+        ) ENGINE=InnoDB`,
+
         // Plant growth table
         `CREATE TABLE IF NOT EXISTS plant_growth (
             id INT PRIMARY KEY AUTO_INCREMENT,
@@ -152,10 +204,16 @@ async function createTables(connection) {
             pest_control TEXT,
             health VARCHAR(100),
             growth_stage VARCHAR(100),
+            batch_id VARCHAR(50),
+            seed_variety VARCHAR(100),
+            batch_created_date VARCHAR(20),
+            days_to_harvest INT,
             notes TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE,
-            FOREIGN KEY (grow_bed_id) REFERENCES grow_beds (id) ON DELETE SET NULL
+            FOREIGN KEY (grow_bed_id) REFERENCES grow_beds (id) ON DELETE SET NULL,
+            INDEX idx_batch_id (batch_id),
+            INDEX idx_batch_date (batch_created_date)
         ) ENGINE=InnoDB`,
 
         // Operations table
@@ -197,6 +255,7 @@ async function createTables(connection) {
             crop_type VARCHAR(100) NOT NULL,
             percentage_allocated DECIMAL(5,2) NOT NULL,
             plants_planted INT DEFAULT 0,
+            plant_spacing INT DEFAULT 30,
             date_planted VARCHAR(20),
             status VARCHAR(50) DEFAULT 'active',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -273,6 +332,39 @@ async function createTables(connection) {
             notes TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (programme_id) REFERENCES spray_programmes (id) ON DELETE CASCADE
+        ) ENGINE=InnoDB`,
+
+        // Sensor configurations table
+        `CREATE TABLE IF NOT EXISTS sensor_configs (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            system_id VARCHAR(255) NOT NULL,
+            sensor_name VARCHAR(255) NOT NULL,
+            sensor_type VARCHAR(100) NOT NULL,
+            device_id VARCHAR(255) NOT NULL,
+            telemetry_key VARCHAR(255),
+            api_url VARCHAR(500),
+            api_token TEXT,
+            update_interval INT DEFAULT 300,
+            active BOOLEAN DEFAULT 1,
+            last_reading TIMESTAMP NULL,
+            mapped_table VARCHAR(100),
+            mapped_field VARCHAR(100),
+            data_transform VARCHAR(255),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
+        ) ENGINE=InnoDB`,
+
+        // Sensor readings table
+        `CREATE TABLE IF NOT EXISTS sensor_readings (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            sensor_id INT NOT NULL,
+            reading_time TIMESTAMP NOT NULL,
+            value DECIMAL(10,2),
+            unit VARCHAR(50),
+            raw_data JSON,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (sensor_id) REFERENCES sensor_configs (id) ON DELETE CASCADE,
+            INDEX idx_sensor_time (sensor_id, reading_time)
         ) ENGINE=InnoDB`
     ];
 

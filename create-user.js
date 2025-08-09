@@ -1,21 +1,22 @@
 const bcrypt = require('bcryptjs');
-const { getDatabase } = require('./database/init');
+const { getDatabase } = require('./database/init-mariadb');
 
 async function createUser(username, email, password, firstName, lastName, role = 'basic') {
-    const db = getDatabase();
+    let connection;
     
     try {
+        connection = await getDatabase();
+        
         // Check if user already exists
-        const existingUser = await new Promise((resolve, reject) => {
-            db.get('SELECT id FROM users WHERE username = ? OR email = ?', [username, email], (err, row) => {
-                if (err) reject(err);
-                else resolve(row);
-            });
-        });
+        const [existingRows] = await connection.execute(
+            'SELECT id FROM users WHERE username = ? OR email = ?', 
+            [username, email]
+        );
+        const existingUser = existingRows[0];
         
         if (existingUser) {
             console.log(`❌ User with username '${username}' or email '${email}' already exists`);
-            db.close();
+            await connection.end();
             return;
         }
         
@@ -24,30 +25,24 @@ async function createUser(username, email, password, firstName, lastName, role =
         const passwordHash = await bcrypt.hash(password, saltRounds);
         
         // Create user
-        const result = await new Promise((resolve, reject) => {
-            db.run(
-                'INSERT INTO users (username, email, first_name, last_name, password_hash, user_role, subscription_status) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-                [username, email, firstName, lastName, passwordHash, role, 'basic'], 
-                function(err) {
-                    if (err) reject(err);
-                    else resolve({ id: this.lastID });
-                }
-            );
-        });
+        const [result] = await connection.execute(
+            'INSERT INTO users (username, email, first_name, last_name, password_hash, user_role, subscription_status) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+            [username, email, firstName, lastName, passwordHash, role, 'basic']
+        );
         
         console.log(`✅ User created successfully!`);
-        console.log(`👤 ID: ${result.id}`);
+        console.log(`👤 ID: ${result.insertId}`);
         console.log(`📧 Email: ${email}`);
         console.log(`👨‍💼 Username: ${username}`);
         console.log(`🔐 Password: ${password}`);
         console.log(`👤 Name: ${firstName} ${lastName}`);
         console.log(`🏷️ Role: ${role}`);
         
-        db.close();
+        await connection.end();
         
     } catch (error) {
         console.error('❌ Error creating user:', error);
-        db.close();
+        if (connection) await connection.end();
     }
 }
 

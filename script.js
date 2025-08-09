@@ -5,7 +5,7 @@ class AquaponicsApp {
         this.currentDataTab = 'water-quality-form';
         this.systems = {};
         this.activeSystemId = null;
-        this.dataRecords = { waterQuality: [], fishHealth: [], plantGrowth: [], operations: [] };
+        this.dataRecords = { waterQuality: [], fishInventory: { tanks: [] }, fishEvents: [], plantGrowth: [], operations: [] };
         this.user = null;
         this.token = localStorage.getItem('auth_token');
         this.charts = {};
@@ -14,6 +14,8 @@ class AquaponicsApp {
             ? 'http://127.0.0.1:8000/api' 
             : '/api';
         this.isLoading = true; // Track loading state to suppress notifications
+        this.plantOverviewRendering = false; // Prevent concurrent renders
+        this.plantOverviewRenderTimeout = null; // Debounce multiple render requests
         
         // Shared crop nutrient targets from dosing calculator
         this.cropTargets = {
@@ -183,9 +185,6 @@ class AquaponicsApp {
             config.headers.Authorization = `Bearer ${token}`;
         }
 
-        console.log('🌐 Making API call to:', url);
-        console.log('📋 Config:', { ...config, headers: { ...config.headers, Authorization: config.headers.Authorization ? '[HIDDEN]' : 'Not set' } });
-
         try {
             const response = await fetch(url, config);
             
@@ -264,19 +263,22 @@ class AquaponicsApp {
         // Show main content
         document.querySelector('.mobile-content').style.display = 'block';
         document.querySelector('.bottom-nav').style.display = 'flex';
+        
+        // Ensure dashboard is updated when app UI is shown
+        setTimeout(() => {
+            this.updateDashboardFromData().catch(console.error);
+        }, 100);
     }
 
     async login(username, password) {
         // Rate limiting - prevent multiple login attempts within 3 seconds
         const now = Date.now();
         if (this.lastLoginAttempt && (now - this.lastLoginAttempt) < 3000) {
-            console.log('Rate limited: Too soon since last attempt');
+
             return { success: false, error: 'Please wait before trying again' };
         }
         this.lastLoginAttempt = now;
-        
-        console.log('Starting login attempt...');
-        
+
         try {
             const response = await this.makeApiCall('/auth/login', {
                 method: 'POST',
@@ -290,8 +292,7 @@ class AquaponicsApp {
             this.showAppUI();
             await this.loadUserData();
             this.closeAuthModal();
-            
-            console.log('Login successful');
+
             return { success: true };
         } catch (error) {
             console.error('Login failed:', error.message);
@@ -339,12 +340,12 @@ class AquaponicsApp {
     }
 
     async logout() {
-        console.log('Logout initiated');
+
         this.token = null;
         this.user = null;
         this.systems = {};
         this.activeSystemId = null;
-        this.dataRecords = { waterQuality: [], fishHealth: [], plantGrowth: [], operations: [] };
+        this.dataRecords = { waterQuality: [], fishInventory: { tanks: [] }, fishEvents: [], plantGrowth: [], operations: [] };
         
         // Hide admin button and SMTP section
         const adminBtn = document.getElementById('admin-btn');
@@ -363,14 +364,14 @@ class AquaponicsApp {
         
         // Show notification that logout was successful
         this.showNotification('Successfully logged out', 'success');
-        console.log('Logout completed');
+
     }
 
     // Notification System
     createNotificationContainer() {
         let container = document.getElementById('notification-container');
         if (container) {
-            console.log('Notification container already exists');
+
             // Force reapply styles to existing container
             container.style.position = 'fixed';
             container.style.top = '70px';
@@ -400,20 +401,11 @@ class AquaponicsApp {
         container.style.visibility = 'visible';
         
         document.body.appendChild(container);
-        console.log('Created notification container with forced positioning');
-        
+
         // Double-check styles after DOM insertion
         setTimeout(() => {
             const computedStyles = window.getComputedStyle(container);
-            console.log('Container styles after creation:', {
-                position: computedStyles.position,
-                top: computedStyles.top,
-                right: computedStyles.right,
-                zIndex: computedStyles.zIndex,
-                display: computedStyles.display,
-                visibility: computedStyles.visibility
-            });
-            
+
             // Force styles again if they're not applied
             if (computedStyles.position !== 'fixed') {
                 console.warn('Position not fixed! Forcing styles again...');
@@ -425,47 +417,31 @@ class AquaponicsApp {
     showNotification(message, type = 'info', duration = 4000) {
         // Suppress notifications during loading unless it's the success message after loading completes
         if (this.isLoading && !message.includes('Afraponix Go loaded successfully')) {
-            console.log('🔕 Notification suppressed during loading:', message, type);
+
             return;
         }
-        
-        console.log('🔔 showNotification called:', message, type);
-        console.log('this object:', this);
-        console.log('typeof this.createNotificationContainer:', typeof this.createNotificationContainer);
-        
+
         // Ensure notification container exists
         if (!document.getElementById('notification-container')) {
-            console.log('Container not found, creating...');
+
             this.createNotificationContainer();
         }
         
         // Try to show inline notification first
         // Temporarily disabled to debug toast notifications
         // if (this.showInlineNotification(message, type, duration)) {
-        //     console.log('📍 Used inline notification');
-        //     return;
+        // //     return;
         // }
 
         // Fallback to toast notification
         const container = document.getElementById('notification-container');
-        console.log('📦 Notification container found:', !!container);
+
         if (!container) {
             console.warn('Notification container not found, falling back to alert');
             alert(message);
             return;
         }
-        
-        // Debug container visibility
         const containerStyles = window.getComputedStyle(container);
-        console.log('Container visibility:', {
-            display: containerStyles.display,
-            visibility: containerStyles.visibility,
-            opacity: containerStyles.opacity,
-            position: containerStyles.position,
-            top: containerStyles.top,
-            right: containerStyles.right,
-            zIndex: containerStyles.zIndex
-        });
 
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
@@ -486,9 +462,7 @@ class AquaponicsApp {
         `;
 
         container.appendChild(notification);
-        console.log('🎨 Added notification to container');
-        console.log('Container children:', container.children.length);
-        
+
         // Force container visibility again right before adding notification
         container.style.position = 'fixed';
         container.style.top = '70px';
@@ -496,18 +470,8 @@ class AquaponicsApp {
         container.style.zIndex = '99999';
         container.style.display = 'block';
         container.style.visibility = 'visible';
-        
-        // Debug notification visibility
         const notificationStyles = window.getComputedStyle(notification);
-        console.log('Notification visibility:', {
-            display: notificationStyles.display,
-            visibility: notificationStyles.visibility,
-            opacity: notificationStyles.opacity,
-            width: notificationStyles.width,
-            height: notificationStyles.height,
-            background: notificationStyles.background
-        });
-        
+
         // Try to force visibility of the notification element itself
         notification.style.position = 'relative';
         notification.style.display = 'flex';
@@ -522,22 +486,7 @@ class AquaponicsApp {
         setTimeout(() => {
             const finalContainerStyles = window.getComputedStyle(container);
             const finalNotificationStyles = window.getComputedStyle(notification);
-            console.log('🔍 Final container position:', {
-                position: finalContainerStyles.position,
-                top: finalContainerStyles.top,
-                right: finalContainerStyles.right,
-                display: finalContainerStyles.display,
-                visibility: finalContainerStyles.visibility,
-                zIndex: finalContainerStyles.zIndex
-            });
-            console.log('🔍 Final notification styles:', {
-                display: finalNotificationStyles.display,
-                visibility: finalNotificationStyles.visibility,
-                opacity: finalNotificationStyles.opacity,
-                position: finalNotificationStyles.position,
-                width: finalNotificationStyles.width,
-                height: finalNotificationStyles.height
-            });
+
         }, 50);
 
         // Auto-remove after duration
@@ -582,12 +531,12 @@ class AquaponicsApp {
             
             // Set up event handlers
             const handleCancel = () => {
-                modal.style.display = 'none';
+                modal.classList.remove('show');
                 resolve(false);
             };
             
             const handleOk = () => {
-                modal.style.display = 'none';
+                modal.classList.remove('show');
                 resolve(true);
             };
             
@@ -604,7 +553,7 @@ class AquaponicsApp {
             document.addEventListener('keydown', handleEscape);
             
             // Show modal
-            modal.style.display = 'flex';
+            modal.classList.add('show');
             
             // Focus the cancel button by default
             setTimeout(() => cancelBtn.focus(), 100);
@@ -634,7 +583,7 @@ class AquaponicsApp {
         
         // Show modal and verification processing message
         const modal = document.getElementById('auth-modal');
-        modal.style.display = 'block';
+        modal.classList.add('show');
         
         const modalContent = document.querySelector('#auth-modal .modal-content');
         modalContent.innerHTML = `
@@ -814,13 +763,12 @@ class AquaponicsApp {
 
         if (confirmed) {
             try {
-                console.log('🔄 Resending verification email to:', email);
+
                 const response = await this.makeApiCall('/auth/resend-verification', {
                     method: 'POST',
                     body: JSON.stringify({ email })
                 });
 
-                console.log('✅ Resend response:', response);
                 // Email sent successfully - no additional notification needed since the confirm dialog already informed the user
             } catch (error) {
                 console.error('❌ Resend error:', error);
@@ -830,14 +778,11 @@ class AquaponicsApp {
     }
 
     showInlineNotification(message, type = 'info', duration = 4000) {
-        console.log('📍 showInlineNotification called:', message, type);
-        
+
         // Find the current active view or form context
         const activeView = document.querySelector('.view.active');
         const activeForm = document.querySelector('.data-form.active, .dosing-content.active, .calculator-content.active');
-        console.log('🎯 Active view found:', !!activeView);
-        console.log('📋 Active form found:', !!activeForm);
-        
+
         let targetContainer = null;
         
         // Determine where to show the inline notification
@@ -1047,10 +992,10 @@ class AquaponicsApp {
         if (logoutBtn) {
             logoutBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
-                console.log('Logout button clicked');
+
                 await this.logout();
             });
-            console.log('Logout button event listener attached');
+
         } else {
             console.error('Logout button not found');
         }
@@ -1084,7 +1029,7 @@ class AquaponicsApp {
             
             // Prevent submission if login is already in progress
             if (isLoginInProgress) {
-                console.log('Login already in progress, ignoring submission');
+
                 return;
             }
             
@@ -1099,7 +1044,7 @@ class AquaponicsApp {
             // Debounce form submission
             loginSubmitTimeout = setTimeout(async () => {
                 if (isLoginInProgress) {
-                    console.log('Login already in progress, ignoring debounced submission');
+
                     return;
                 }
                 
@@ -1152,12 +1097,12 @@ class AquaponicsApp {
             forgotPasswordForm.style.display = 'block';
         }
         
-        modal.style.display = 'flex';
+        modal.classList.add('show');
         this.clearMessages();
     }
 
     closeAuthModal() {
-        document.getElementById('auth-modal').style.display = 'none';
+        document.getElementById('auth-modal').classList.remove('show');
         this.clearMessages();
     }
 
@@ -1330,7 +1275,7 @@ class AquaponicsApp {
                     this.loadSystemManagement();
                 } else if (targetView === 'plants') {
                     this.updatePlantManagement();
-                    this.updatePlantNutrientData();
+                    this.updatePlantNutrientData().catch(console.error);
                 } else if (targetView === 'fish-tank') {
                     // Load fish overview tab by default when fish tank view is accessed
                     setTimeout(() => {
@@ -1403,17 +1348,14 @@ class AquaponicsApp {
     }
 
     setupPlantManagementTabs() {
-        console.log('Setting up plant management tabs...');
+
         const mgmtTabs = document.querySelectorAll('.plant-mgmt-tab');
         const mgmtContents = document.querySelectorAll('.plant-mgmt-content');
-        console.log('Found plant mgmt tabs:', mgmtTabs.length);
-        console.log('Found plant mgmt contents:', mgmtContents.length);
-        
+
         mgmtTabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 const targetContent = tab.id.replace('-tab', '-content');
-                console.log('Plant mgmt tab clicked:', tab.id, '-> target:', targetContent);
-                
+
                 mgmtTabs.forEach(t => t.classList.remove('active'));
                 mgmtContents.forEach(c => {
                     c.classList.remove('active');
@@ -1427,7 +1369,7 @@ class AquaponicsApp {
                 
                 tab.classList.add('active');
                 const targetElement = document.getElementById(targetContent);
-                console.log('Target element found:', !!targetElement);
+
                 if (targetElement) {
                     targetElement.classList.add('active');
                     // Force visibility with direct styles only for active element
@@ -1436,28 +1378,30 @@ class AquaponicsApp {
                     targetElement.style.opacity = '1';
                     targetElement.style.position = 'relative';
                     targetElement.style.zIndex = '999';
-                    console.log('Added active class to:', targetContent);
-                    console.log('Forced styles applied to element');
+
                 }
                 
                 // Load data for specific tabs
                 if (targetContent === 'plant-overview-content') {
                     this.updatePlantOverview().catch(console.error);
+                    // Ensure nutrient data is loaded for plant overview
+                    setTimeout(() => {
+                        this.updatePlantNutrientData().catch(console.error);
+                    }, 200);
                 } else if (targetContent === 'allocation-management-content') {
                     this.loadPlantAllocations();
                 } else if (targetContent === 'custom-crops-content') {
-                    console.log('Setting up Custom Crops tab');
+
                     this.loadCustomCrops();
                 } else if (targetContent === 'spray-programmes-content') {
-                    console.log('Setting up Spray Programmes tab');
+
                     this.setupSprayProgrammes();
                 } else if (targetContent === 'planting-harvesting-content') {
-                    console.log('Setting up Plant & Harvest tab');
-                    
+
                     // Ensure the plants view is active
                     const plantsView = document.getElementById('plants');
                     if (!plantsView.classList.contains('active')) {
-                        console.log('Plants view not active, activating it...');
+
                         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
                         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
                         plantsView.classList.add('active');
@@ -1466,10 +1410,7 @@ class AquaponicsApp {
                     }
                     
                     const targetEl = document.getElementById(targetContent);
-                    console.log('Target element classes:', targetEl ? targetEl.className : 'NOT FOUND');
-                    console.log('Plants view active:', plantsView.classList.contains('active'));
-                    console.log('Plants view display:', getComputedStyle(plantsView).display);
-                    
+
                     // Ensure visibility
                     if (targetEl) {
                         targetEl.style.display = 'block';
@@ -1482,7 +1423,7 @@ class AquaponicsApp {
                             this.setupPlantActionTabs();
                             this.initializePlantActionForms();
                             this.updateRecentPlantEntries();
-                            console.log('Plant & Harvest tab initialization completed');
+
                         } catch (error) {
                             console.error('Error initializing Plant & Harvest tab:', error);
                         }
@@ -1498,14 +1439,11 @@ class AquaponicsApp {
     setupPlantActionTabs() {
         const actionTabs = document.querySelectorAll('.plant-action-tab');
         const actionContents = document.querySelectorAll('.plant-action-content');
-        console.log('Found action tabs:', actionTabs.length);
-        console.log('Found action contents:', actionContents.length);
-        
+
         actionTabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 const targetContent = tab.id.replace('-tab', '-form-content');
-                console.log('Plant action tab clicked:', tab.id, '-> target:', targetContent);
-                
+
                 actionTabs.forEach(t => t.classList.remove('active'));
                 actionContents.forEach(c => c.classList.remove('active'));
                 
@@ -1513,9 +1451,9 @@ class AquaponicsApp {
                 const targetElement = document.getElementById(targetContent);
                 if (targetElement) {
                     targetElement.classList.add('active');
-                    console.log('Plant action target element found and activated:', targetContent);
+
                 } else {
-                    console.log('Plant action target element NOT found:', targetContent);
+
                 }
             });
         });
@@ -1554,13 +1492,53 @@ class AquaponicsApp {
                     const newHarvestBedSelect = document.getElementById('harvest-grow-bed');
                     
                     // Add event listeners for bed selection changes
-                    newPlantBedSelect.addEventListener('change', () => this.updatePlantCropDropdown());
-                    newHarvestBedSelect.addEventListener('change', () => this.updateHarvestCropDropdown());
+                    newPlantBedSelect.addEventListener('change', () => {
+                        this.updatePlantCropDropdown();
+                        this.updateRemainingPlantsDisplay();
+                    });
+                    newHarvestBedSelect.addEventListener('change', () => {
+                        this.updateHarvestCropDropdown();
+                        // Hide batch summary and clear selections when bed changes
+                        const summaryContainer = document.getElementById('harvest-batch-summary');
+                        if (summaryContainer) summaryContainer.style.display = 'none';
+                        this.clearBatchSelections();
+                    });
+                    
+                    // Add event listener for plant crop type changes  
+                    const plantCropSelect = document.getElementById('plant-crop-type');
+                    if (plantCropSelect) {
+                        plantCropSelect.addEventListener('change', () => {
+                            this.updateRemainingPlantsDisplay();
+                            this.updateSeedVarietiesForCrop(plantCropSelect.value);
+                        });
+                    }
+                    
+                    // Initialize seed variety dropdown functionality
+                    this.initializeSeedVarietyDropdown();
+                    
+                    // Add event listener for harvest crop type changes
+                    const harvestCropSelect = document.getElementById('harvest-crop-type');
+                    if (harvestCropSelect) {
+                        harvestCropSelect.addEventListener('change', async () => {
+                            console.log('🚀 Harvest crop select changed, calling updateHarvestBatchSummary');
+                            await this.updateHarvestBatchSummary();
+                            console.log('✅ updateHarvestBatchSummary completed');
+                            // Check if there's a pending batch preselection
+                            if (this.pendingBatchPreselection) {
+                                console.log('🎯 Attempting to preselect pending batch:', this.pendingBatchPreselection);
+                                this.preselectBatchInCheckboxes(this.pendingBatchPreselection);
+                                this.pendingBatchPreselection = null;
+                            }
+                        });
+                    }
                 }
                 
                 // Initialize crop dropdowns
                 await this.updatePlantCropDropdown();
                 await this.updateHarvestCropDropdown();
+                
+                // Initialize remaining plants display
+                await this.updateRemainingPlantsDisplay();
                 
             } catch (error) {
                 console.error('Error loading grow beds for plant forms:', error);
@@ -1596,7 +1574,7 @@ class AquaponicsApp {
             
             if (bedAllocations.length === 0) {
                 plantCropSelect.innerHTML += '<option value="" disabled>No crops allocated for this bed</option>';
-                this.showNotification('🌱 Please allocate crops for this grow bed first in the Settings → Crop Allocation tab.', 'warning');
+                this.showNotification('Please allocate crops for this grow bed first in the Settings → Crop Allocation tab.', 'warning');
                 return;
             }
             
@@ -1638,7 +1616,8 @@ class AquaponicsApp {
             // Get all planted crops in the selected bed (including unallocated ones)
             const plantData = await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`);
             const plantedCrops = plantData
-                .filter(entry => entry.grow_bed_id == selectedBedId && entry.count > 0)
+                .filter(entry => entry.grow_bed_id == selectedBedId && 
+                    (entry.new_seedlings > 0 || entry.count > 0)) // Support both batch and legacy entries
                 .map(entry => entry.crop_type)
                 .filter(Boolean);
             
@@ -1679,21 +1658,290 @@ class AquaponicsApp {
     }
 
     // Plant management functionality
+    async updateRemainingPlantsDisplay() {
+        const plantBedSelect = document.getElementById('plant-grow-bed');
+        const plantCropSelect = document.getElementById('plant-crop-type');
+        const remainingPlantsDisplay = document.getElementById('remaining-plants-display');
+        const remainingPlantsContainer = document.getElementById('remaining-plants-container');
+        
+        if (!plantBedSelect || !remainingPlantsDisplay || !remainingPlantsContainer) {
+            return;
+        }
+        
+        const selectedBedId = plantBedSelect.value;
+        const selectedCrop = plantCropSelect ? plantCropSelect.value : null;
+        
+        // Hide display if no bed selected
+        if (!selectedBedId) {
+            remainingPlantsDisplay.style.display = 'none';
+            return;
+        }
+        
+        try {
+            // Get current plant data, grow bed data, and allocations
+            const [plantData, growBeds, allocations] = await Promise.all([
+                this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`),
+                this.getGrowBedsForSystem(),
+                this.makeApiCall(`/plants/allocations/${this.activeSystemId}`)
+            ]);
+            
+            // Find the selected bed
+            const selectedBed = growBeds.find(bed => bed.id === parseInt(selectedBedId));
+            
+            // Get all active batches for this bed
+            const activeBatches = this.getActiveBatchesForBed(plantData, selectedBedId);
+            
+            let html = '<div class="bed-capacity-info">';
+            
+            if (selectedCrop) {
+                // Show crop-specific capacity
+                const cropAllocation = allocations.find(alloc => 
+                    parseInt(alloc.grow_bed_id) === parseInt(selectedBedId) && 
+                    alloc.crop_type.toLowerCase() === selectedCrop.toLowerCase()
+                );
+                
+                if (cropAllocation) {
+                    // Calculate allocated area and capacity for this crop
+                    const bedArea = selectedBed ? (selectedBed.equivalent_m2 || 0) : 0;
+                    const allocatedPercentage = parseFloat(cropAllocation.percentage_allocated) || 0;
+                    const allocatedArea = (allocatedPercentage / 100) * bedArea;
+                    const plantSpacing = parseFloat(cropAllocation.plant_spacing) || 30;
+                    
+                    // Calculate capacity from allocated area and spacing
+                    const areaCm2 = allocatedArea * 10000;
+                    const spacePerPlant = plantSpacing * plantSpacing;
+                    const cropCapacity = Math.floor(areaCm2 / spacePerPlant);
+                    
+                    // Calculate currently planted for this crop
+                    const cropBatches = activeBatches.filter(batch => 
+                        batch.cropType.toLowerCase() === selectedCrop.toLowerCase()
+                    );
+                    const currentlyPlanted = cropBatches.reduce((sum, batch) => sum + (batch.planted - batch.harvested), 0);
+                    const availableSpaces = Math.max(0, cropCapacity - currentlyPlanted);
+                    
+                    html += `<div class="capacity-summary">`;
+                    html += `<span class="capacity-label">${this.cleanCropName(selectedCrop)} Capacity:</span>`;
+                    html += `<span class="capacity-used">${currentlyPlanted}</span>`;
+                    html += `<span class="capacity-separator">/</span>`;
+                    html += `<span class="capacity-total">${cropCapacity}</span>`;
+                    html += `<span class="capacity-available">(${availableSpaces} spaces available)</span>`;
+                    html += `</div>`;
+                } else {
+                    html += `<div class="capacity-summary">`;
+                    html += `<span class="capacity-label">${this.cleanCropName(selectedCrop)}:</span>`;
+                    html += `<span class="capacity-error">No allocation found for this crop in this bed</span>`;
+                    html += `</div>`;
+                }
+            } else {
+                // Show general bed capacity if no crop selected
+                const bedCapacity = selectedBed ? (selectedBed.plant_capacity || 0) : 0;
+                const totalCurrentPlants = activeBatches.reduce((sum, batch) => sum + (batch.planted - batch.harvested), 0);
+                const availableSpaces = Math.max(0, bedCapacity - totalCurrentPlants);
+                
+                html += `<div class="capacity-summary">`;
+                html += `<span class="capacity-label">Bed Capacity:</span>`;
+                html += `<span class="capacity-used">${totalCurrentPlants}</span>`;
+                html += `<span class="capacity-separator">/</span>`;
+                html += `<span class="capacity-total">${bedCapacity}</span>`;
+                html += `<span class="capacity-available">(${availableSpaces} spaces available)</span>`;
+                html += `</div>`;
+            }
+            
+            html += '</div>';
+            
+            if (activeBatches.length === 0) {
+                html += '<div class="no-batches-message">No active plant batches in this bed</div>';
+                remainingPlantsContainer.innerHTML = html;
+                remainingPlantsDisplay.style.display = 'block';
+                return;
+            }
+            
+            // Build HTML for all crops with remaining plants
+            html += '<div class="remaining-crops-grid">';
+            
+            activeBatches.forEach(batch => {
+                const remaining = batch.planted - batch.harvested;
+                const percentage = batch.planted > 0 ? Math.round((remaining / batch.planted) * 100) : 0;
+                const statusClass = remaining === 0 ? 'fully-harvested' : percentage > 50 ? 'healthy' : 'low';
+                const cropIcon = this.getCropIcon(batch.cropType);
+                
+                html += `
+                    <div class="crop-remaining-card ${statusClass}" data-batch-id="${batch.batchId}">
+                        <div class="crop-header">
+                            <div class="crop-title">
+                                <span class="crop-icon">${cropIcon}</span>
+                                <span class="crop-name">${this.cleanCropName(batch.cropType)}</span>
+                            </div>
+                            <button class="batch-edit-btn" onclick="window.app.editBatchGrowBed('${batch.batchId}', ${selectedBedId})" title="Change grow bed">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="batch-info">
+                            <span class="batch-id">Batch: ${batch.batchId}</span>
+                            <span class="batch-date">${batch.plantedDate}</span>
+                        </div>
+                        <div class="batch-stats">
+                            <div class="plant-stats">
+                                <span class="planted">Planted: ${batch.planted}</span>
+                                <span class="harvested">Harvested: ${batch.harvested}</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            remainingPlantsContainer.innerHTML = html;
+            remainingPlantsDisplay.style.display = 'block';
+            
+        } catch (error) {
+            console.error('Error updating remaining plants display:', error);
+            remainingPlantsDisplay.style.display = 'none';
+        }
+    }
+    
+    getActiveBatchesForBed(plantData, bedId) {
+        // Get all batches for this bed with remaining plants
+        const batches = new Map();
+        
+        // Process all plant records for this bed
+        plantData.forEach(record => {
+            if (record.grow_bed_id == bedId && record.batch_id) {
+                if (!batches.has(record.batch_id)) {
+                    batches.set(record.batch_id, {
+                        batchId: record.batch_id,
+                        cropType: record.crop_type,
+                        planted: 0,
+                        harvested: 0,
+                        plantedDate: record.date
+                    });
+                }
+                
+                const batch = batches.get(record.batch_id);
+                
+                // Track planted and harvested counts
+                if (record.new_seedlings > 0) {
+                    batch.planted += record.new_seedlings;
+                    // Use the first planting date as the batch date
+                    if (!batch.plantedDate || record.date < batch.plantedDate) {
+                        batch.plantedDate = record.date;
+                    }
+                } else if (record.plants_harvested > 0) {
+                    batch.harvested += record.plants_harvested;
+                }
+            }
+        });
+        
+        // Convert to array and filter to only include batches with remaining plants
+        const activeBatches = Array.from(batches.values()).filter(batch => {
+            return (batch.planted - batch.harvested) > 0;
+        });
+        
+        // Sort by planted date (most recent first)
+        activeBatches.sort((a, b) => b.plantedDate.localeCompare(a.plantedDate));
+        
+        return activeBatches;
+    }
+
+    getCurrentBatchForCrop(plantData, bedId, cropType) {
+        // Find the most recent batch for this crop in this bed that still has plants
+        const cropBatches = new Map();
+        
+        // Process all plant records for this bed and crop
+        plantData.forEach(record => {
+            if (record.grow_bed_id == bedId && record.crop_type === cropType && record.batch_id) {
+                if (!cropBatches.has(record.batch_id)) {
+                    cropBatches.set(record.batch_id, {
+                        batchId: record.batch_id,
+                        planted: 0,
+                        harvested: 0,
+                        lastDate: record.date
+                    });
+                }
+                
+                const batch = cropBatches.get(record.batch_id);
+                
+                // Update last date to find most recent batch
+                if (record.date > batch.lastDate) {
+                    batch.lastDate = record.date;
+                }
+                
+                // Count planted and harvested
+                if (record.new_seedlings > 0) {
+                    batch.planted += record.new_seedlings;
+                } else if (record.plants_harvested > 0) {
+                    batch.harvested += record.plants_harvested;
+                }
+            }
+        });
+        
+        // Find the most recent batch that still has plants
+        let currentBatch = null;
+        let mostRecentDate = '';
+        
+        cropBatches.forEach(batch => {
+            const remaining = batch.planted - batch.harvested;
+            if (remaining > 0 && batch.lastDate > mostRecentDate) {
+                mostRecentDate = batch.lastDate;
+                currentBatch = batch;
+            }
+        });
+        
+        return currentBatch;
+    }
+
     async recordPlanting() {
         if (!this.activeSystemId) {
             this.showNotification('🏗️ Please select a system first.', 'warning');
             return;
         }
 
+        // Generate batch ID using utility function
+        const batchId = this.generateBatchId();
+        
+        // Display the generated batch ID in the form
+        document.getElementById('plant-batch-id').value = batchId;
+
+        // Handle seed variety - check if custom variety was entered
+        let seedVariety = null;
+        const seedVarietySelect = document.getElementById('plant-seed-variety');
+        const customVarietyInput = document.getElementById('plant-seed-variety-custom');
+        const cropType = document.getElementById('plant-crop-type').value;
+        
+        if (seedVarietySelect.value === '__add_new__' && customVarietyInput.value.trim()) {
+            // User wants to add a new variety
+            const newVariety = customVarietyInput.value.trim();
+            const success = await this.addNewSeedVariety(cropType, newVariety);
+            if (success) {
+                seedVariety = newVariety;
+            } else {
+                return; // Stop if variety addition failed
+            }
+        } else if (seedVarietySelect.value && seedVarietySelect.value !== '__add_new__') {
+            // User selected an existing variety
+            seedVariety = seedVarietySelect.value;
+        }
+
         const data = {
             date: document.getElementById('plant-date').value,
             grow_bed_id: parseInt(document.getElementById('plant-grow-bed').value),
-            crop_type: document.getElementById('plant-crop-type').value,
+            crop_type: cropType,
             count: parseInt(document.getElementById('plant-count').value),
             new_seedlings: parseInt(document.getElementById('plant-count').value),
             growth_stage: document.getElementById('plant-stage').value,
             health: 'good',
-            notes: document.getElementById('plant-notes').value
+            notes: document.getElementById('plant-notes').value,
+            // New batch tracking fields
+            batch_id: batchId,
+            seed_variety: seedVariety,
+            batch_created_date: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+            days_to_harvest: parseInt(document.getElementById('plant-days-to-harvest').value) || null
         };
 
         if (!data.grow_bed_id || !data.crop_type || !data.count) {
@@ -1710,10 +1958,22 @@ class AquaponicsApp {
             // Reload data and update displays
             await this.loadDataRecords();
             await this.updateDashboardFromData();
-            this.updatePlantManagement(); // This will refresh the overview if it's active
+            // Update other plant management components (not overview to avoid double-render)
+            this.updateGrowBeds();
+            this.updatePlantGrowthHistoryDisplay();
+            this.updatePlantRecommendations();
+            this.updateRecentPlantEntries();
+            await this.updatePlantOverview(); // Force update plant overview to refresh batch data
+            this.updateRemainingPlantsDisplay(); // Update remaining plants display
             
-            this.showNotification(`🌱 Recorded planting of ${data.count} ${this.cleanCustomCropName(data.crop_type)} plants!`, 'success');
+            this.showNotification(`🌱 Recorded planting of ${data.count} ${this.cleanCustomCropName(data.crop_type)} plants in batch ${batchId}!`, 'success');
             this.clearPlantingForm();
+            
+            // Redirect to plant overview tab
+            const overviewTab = document.getElementById('plant-overview-tab');
+            if (overviewTab) {
+                overviewTab.click();
+            }
         } catch (error) {
             console.error('Failed to record planting:', error);
             this.showNotification('❌ Failed to record planting. Please try again.', 'error');
@@ -1726,6 +1986,21 @@ class AquaponicsApp {
             return;
         }
 
+        const selectedBatches = this.getSelectedBatches();
+
+        // For now, require exactly one batch selection
+        if (selectedBatches.length === 0) {
+            this.showNotification('📝 Please select at least one batch to harvest from.', 'warning');
+            return;
+        }
+        
+        if (selectedBatches.length > 1) {
+            this.showNotification('📝 Please select only one batch at a time for now.', 'warning');
+            return;
+        }
+
+        const batchId = selectedBatches[0];
+
         const data = {
             date: document.getElementById('harvest-date').value,
             grow_bed_id: parseInt(document.getElementById('harvest-grow-bed').value),
@@ -1734,10 +2009,13 @@ class AquaponicsApp {
             harvest_weight: parseFloat(document.getElementById('harvest-weight').value) * 1000, // Convert kg to grams
             health: document.getElementById('harvest-quality').value,
             growth_stage: 'harvest',
-            notes: document.getElementById('harvest-notes').value
+            notes: document.getElementById('harvest-notes').value,
+            // Add batch tracking
+            batch_id: batchId
         };
 
-        if (!data.grow_bed_id || !data.crop_type || !data.plants_harvested || !data.harvest_weight) {
+        // Validate required fields - plants_harvested can be 0 for fruit-only harvests
+        if (!data.grow_bed_id || !data.crop_type || isNaN(data.plants_harvested) || !data.harvest_weight) {
             this.showNotification('📝 Please fill in all required fields.', 'warning');
             return;
         }
@@ -1751,10 +2029,33 @@ class AquaponicsApp {
             // Reload data and update displays
             await this.loadDataRecords();
             await this.updateDashboardFromData();
-            this.updatePlantManagement(); // This will refresh the overview if it's active
+            // Update other plant management components (not overview to avoid double-render)
+            this.updateGrowBeds();
+            this.updatePlantGrowthHistoryDisplay();
+            this.updatePlantRecommendations();
+            this.updateRecentPlantEntries();
+            await this.updatePlantOverview(); // Force update plant overview to refresh batch data
+            this.updateRemainingPlantsDisplay(); // Update remaining plants display
             
-            this.showNotification(`🥬 Recorded harvest of ${data.harvest_weight}kg from ${data.plants_harvested} ${this.cleanCustomCropName(data.crop_type)} plants!`, 'success');
+            // Create appropriate success message based on whether plants were removed
+            const weightMsg = `${(data.harvest_weight/1000).toFixed(1)}kg`;
+            const cropName = this.cleanCustomCropName(data.crop_type);
+            let successMsg;
+            
+            if (data.plants_harvested > 0) {
+                successMsg = `🥬 Recorded harvest of ${weightMsg} from ${data.plants_harvested} ${cropName} plants!`;
+            } else {
+                successMsg = `🍅 Recorded harvest of ${weightMsg} ${cropName} produce (plants remain in bed)!`;
+            }
+            
+            this.showNotification(successMsg, 'success');
             this.clearHarvestForm();
+            
+            // Redirect to plant overview tab
+            const overviewTab = document.getElementById('plant-overview-tab');
+            if (overviewTab) {
+                overviewTab.click();
+            }
         } catch (error) {
             console.error('Failed to record harvest:', error);
             this.showNotification('❌ Failed to record harvest. Please try again.', 'error');
@@ -1768,6 +2069,11 @@ class AquaponicsApp {
         document.getElementById('plant-stage').value = 'seedling';
         document.getElementById('plant-notes').value = '';
         document.getElementById('plant-date').value = new Date().toISOString().slice(0, 16);
+        document.getElementById('plant-batch-id').value = '';
+        document.getElementById('plant-seed-variety').value = '';
+        document.getElementById('plant-seed-variety-custom').value = '';
+        document.getElementById('plant-seed-variety-custom').style.display = 'none';
+        document.getElementById('plant-days-to-harvest').value = '';
     }
 
     clearHarvestForm() {
@@ -1778,20 +2084,650 @@ class AquaponicsApp {
         document.getElementById('harvest-quality').value = 'excellent';
         document.getElementById('harvest-notes').value = '';
         document.getElementById('harvest-date').value = new Date().toISOString().slice(0, 16);
+        
+        // Clear batch selections
+        this.clearBatchSelections();
+        
+        // Hide batch summary
+        const summaryContainer = document.getElementById('harvest-batch-summary');
+        if (summaryContainer) summaryContainer.style.display = 'none';
+    }
+
+    // Seed variety dropdown functionality
+    initializeSeedVarietyDropdown() {
+        const seedVarietySelect = document.getElementById('plant-seed-variety');
+        const customInput = document.getElementById('plant-seed-variety-custom');
+        
+        if (seedVarietySelect && customInput) {
+            seedVarietySelect.addEventListener('change', (e) => {
+                if (e.target.value === '__add_new__') {
+                    customInput.style.display = 'block';
+                    customInput.focus();
+                } else {
+                    customInput.style.display = 'none';
+                    customInput.value = '';
+                }
+            });
+        }
+    }
+    
+    async updateSeedVarietiesForCrop(cropType) {
+        const seedVarietySelect = document.getElementById('plant-seed-variety');
+        if (!seedVarietySelect || !cropType) {
+            // Reset dropdown if no crop selected
+            if (seedVarietySelect) {
+                seedVarietySelect.innerHTML = `
+                    <option value="">Select variety...</option>
+                    <option value="__add_new__">➕ Add New Variety</option>
+                `;
+            }
+            return;
+        }
+        
+        try {
+            const data = await this.makeApiCall(`/seed-varieties/crop/${cropType}`);
+            
+            // Build dropdown options
+            let optionsHtml = '<option value="">Select variety...</option>';
+            
+            if (data.varieties && data.varieties.length > 0) {
+                data.varieties.forEach(variety => {
+                    optionsHtml += `<option value="${variety.variety_name}">${variety.variety_name}</option>`;
+                });
+            }
+            
+            optionsHtml += '<option value="__add_new__">➕ Add New Variety</option>';
+            seedVarietySelect.innerHTML = optionsHtml;
+            
+        } catch (error) {
+            console.error('Error fetching seed varieties:', error);
+        }
+    }
+    
+    async addNewSeedVariety(cropType, varietyName) {
+        try {
+            await this.makeApiCall('/seed-varieties', {
+                method: 'POST',
+                body: JSON.stringify({
+                    crop_type: cropType,
+                    variety_name: varietyName
+                })
+            });
+            
+            // Refresh the dropdown with the new variety
+            await this.updateSeedVarietiesForCrop(cropType);
+            
+            // Select the newly added variety
+            const seedVarietySelect = document.getElementById('plant-seed-variety');
+            if (seedVarietySelect) {
+                seedVarietySelect.value = varietyName;
+            }
+            
+            this.showNotification(`✅ Added new variety: ${varietyName}`, 'success');
+            return true;
+            
+        } catch (error) {
+            console.error('Error adding seed variety:', error);
+            this.showNotification(`❌ Failed to add variety: ${error.message || 'Unknown error'}`, 'error');
+            return false;
+        }
+    }
+
+    // Batch tracking utility functions
+    generateBatchId(date = new Date()) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        
+        return `BATCH_${year}${month}${day}_${hours}${minutes}${seconds}`;
+    }
+
+    parseBatchIdDate(batchId) {
+        if (!batchId || !batchId.startsWith('BATCH_')) {
+            return null;
+        }
+        
+        const parts = batchId.split('_');
+        if (parts.length !== 3) {
+            return null;
+        }
+        
+        const datePart = parts[1]; // YYYYMMDD
+        const timePart = parts[2]; // HHMMSS
+        
+        if (datePart.length !== 8 || timePart.length !== 6) {
+            return null;
+        }
+        
+        const year = parseInt(datePart.substr(0, 4));
+        const month = parseInt(datePart.substr(4, 2)) - 1; // Month is 0-indexed
+        const day = parseInt(datePart.substr(6, 2));
+        const hours = parseInt(timePart.substr(0, 2));
+        const minutes = parseInt(timePart.substr(2, 2));
+        const seconds = parseInt(timePart.substr(4, 2));
+        
+        return new Date(year, month, day, hours, minutes, seconds);
+    }
+
+    calculateBatchAge(batchIdOrBatch, currentDate = new Date()) {
+        let batchDate;
+        
+        // Check if we received a batch object with date_planted
+        if (typeof batchIdOrBatch === 'object' && batchIdOrBatch.date_planted) {
+            // Use the actual planting date from the batch object
+            batchDate = new Date(batchIdOrBatch.date_planted);
+        } else {
+            // Fallback to parsing the batch ID (for backward compatibility)
+            const batchId = typeof batchIdOrBatch === 'string' ? batchIdOrBatch : batchIdOrBatch.batch_id;
+            batchDate = this.parseBatchIdDate(batchId);
+        }
+        
+        if (!batchDate) {
+            return 0;
+        }
+        
+        const diffTime = Math.abs(currentDate - batchDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays;
+    }
+
+    async updateHarvestBatchDropdown() {
+        const growBedSelect = document.getElementById('harvest-grow-bed');
+        const cropTypeSelect = document.getElementById('harvest-crop-type');
+        const batchSelect = document.getElementById('harvest-batch-id');
+        
+        if (!growBedSelect.value || !cropTypeSelect.value) {
+            batchSelect.innerHTML = '<option value="">Select batch to harvest from...</option>';
+            return;
+        }
+
+        try {
+            // Get plant data for the selected grow bed and crop type
+            const plantData = await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`);
+            
+            // Filter for batches that match the selected grow bed and crop type
+            // and have batch_id (planted entries, not harvests)
+            const availableBatches = plantData.filter(record => {
+                return record.grow_bed_id == growBedSelect.value && 
+                       record.crop_type === cropTypeSelect.value &&
+                       record.batch_id &&
+                       record.new_seedlings > 0; // Records with new plantings (regardless of harvest status)
+            });
+
+            // Create a unique list of batches with remaining plant counts
+            const uniqueBatches = {};
+            availableBatches.forEach(batch => {
+                if (!uniqueBatches[batch.batch_id]) {
+                    uniqueBatches[batch.batch_id] = {
+                        batch_id: batch.batch_id,
+                        seed_variety: batch.seed_variety,
+                        batch_created_date: batch.batch_created_date,
+                        date_planted: batch.date, // Use actual planting date
+                        days_to_harvest: batch.days_to_harvest,
+                        planted_count: 0
+                    };
+                }
+                uniqueBatches[batch.batch_id].planted_count += (batch.new_seedlings || 0);
+            });
+            
+            // Calculate remaining plants for each batch (planted - harvested)
+            Object.keys(uniqueBatches).forEach(batchId => {
+                const harvestedCount = this.getBatchHarvestedCount(plantData, batchId);
+                uniqueBatches[batchId].remaining_count = Math.max(0, uniqueBatches[batchId].planted_count - harvestedCount);
+            });
+
+            // Build dropdown options
+            let optionsHtml = '<option value="">Select batch to harvest from...</option>';
+            
+            // Filter out batches with no remaining plants
+            const availableBatchList = Object.values(uniqueBatches).filter(batch => batch.remaining_count > 0);
+            
+            if (availableBatchList.length === 0) {
+                optionsHtml += '<option value="" disabled>No batches with harvestable plants available</option>';
+            } else {
+                availableBatchList.forEach(batch => {
+                    try {
+                        const age = this.calculateBatchAge(batch); // Pass full batch object
+                        const variety = batch.seed_variety ? ` (${batch.seed_variety})` : '';
+                        const harvestInfo = batch.days_to_harvest ? 
+                            `, ${batch.days_to_harvest - age} days until expected harvest` : '';
+                        
+                        optionsHtml += `<option value="${batch.batch_id}">
+                            ${batch.batch_id}${variety} - ${batch.remaining_count} plants available, ${age} days old${harvestInfo}
+                        </option>`;
+                    } catch (error) {
+                        console.error('Error processing batch:', batch.batch_id, error);
+                        optionsHtml += `<option value="${batch.batch_id}">
+                            ${batch.batch_id} - ${batch.remaining_count} plants available
+                        </option>`;
+                    }
+                });
+            }
+
+            batchSelect.innerHTML = optionsHtml;
+            
+        } catch (error) {
+            console.error('Error loading batch data:', error);
+            batchSelect.innerHTML = '<option value="">Error loading batches</option>';
+        }
+    }
+
+    async updateHarvestBatchSummary() {
+        const growBedSelect = document.getElementById('harvest-grow-bed');
+        const cropTypeSelect = document.getElementById('harvest-crop-type');
+        const summaryContainer = document.getElementById('harvest-batch-summary');
+        const summaryContent = document.getElementById('harvest-batch-summary-content');
+        
+        if (!growBedSelect.value || !cropTypeSelect.value) {
+            console.log(`❌ Early return - bed: '${growBedSelect.value}', crop: '${cropTypeSelect.value}'`);
+            summaryContainer.style.display = 'none';
+            return;
+        }
+
+        try {
+            // Get plant data for the selected grow bed and crop type
+            const plantData = await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`);
+            
+            console.log(`Harvest batch summary - Selected bed: ${growBedSelect.value}, crop: ${cropTypeSelect.value}`);
+            console.log(`Total plant records: ${plantData.length}`);
+            
+            // Filter for batches that match the selected grow bed and crop type
+            const availableBatches = plantData.filter(record => {
+                const matches = record.grow_bed_id == growBedSelect.value && 
+                       record.crop_type === cropTypeSelect.value &&
+                       record.batch_id &&
+                       record.new_seedlings > 0; // Records with new plantings (regardless of harvest status)
+                
+                if (record.batch_id === 'batch_tomato_20250727') {
+                    console.log(`Debug batch_tomato_20250727: bed_id=${record.grow_bed_id}, crop=${record.crop_type}, seedlings=${record.new_seedlings}, matches=${matches}`);
+                }
+                
+                return matches;
+            });
+            
+            console.log(`Filtered batches: ${availableBatches.length}`);
+
+            // Create a unique list of batches with remaining plant counts
+            const uniqueBatches = {};
+            availableBatches.forEach(batch => {
+                if (!uniqueBatches[batch.batch_id]) {
+                    uniqueBatches[batch.batch_id] = {
+                        batch_id: batch.batch_id,
+                        seed_variety: batch.seed_variety,
+                        batch_created_date: batch.batch_created_date,
+                        date_planted: batch.date, // Use actual planting date
+                        days_to_harvest: batch.days_to_harvest,
+                        planted_count: 0
+                    };
+                }
+                uniqueBatches[batch.batch_id].planted_count += (batch.new_seedlings || 0);
+            });
+            
+            // Calculate remaining plants for each batch (planted - harvested)
+            Object.keys(uniqueBatches).forEach(batchId => {
+                const harvestedCount = this.getBatchHarvestedCount(plantData, batchId);
+                uniqueBatches[batchId].remaining_count = Math.max(0, uniqueBatches[batchId].planted_count - harvestedCount);
+            });
+
+            // Filter out batches with no remaining plants
+            const availableBatchList = Object.values(uniqueBatches).filter(batch => batch.remaining_count > 0);
+            
+            // Debug: Log batch processing results
+            console.log(`Harvest batch summary - Found ${Object.keys(uniqueBatches).length} total batches, ${availableBatchList.length} with remaining plants`);
+            if (Object.keys(uniqueBatches).length > 0) {
+                console.log('All batches with counts:', Object.values(uniqueBatches).map(b => `${b.batch_id}: ${b.remaining_count}/${b.planted_count}`));
+            }
+            
+            if (availableBatchList.length === 0) {
+                summaryContent.innerHTML = '<div class="no-batches">No batches with harvestable plants available for this crop</div>';
+            } else {
+                let summaryHtml = '';
+                availableBatchList.forEach(batch => {
+                    try {
+                        const age = this.calculateBatchAge(batch); // Pass full batch object
+                        const variety = batch.seed_variety ? ` (${batch.seed_variety})` : '';
+                        const harvestInfo = batch.days_to_harvest ? 
+                            `, ${batch.days_to_harvest - age} days until expected harvest` : '';
+                        
+                        summaryHtml += `
+                            <div class="batch-summary-item selectable" data-batch-id="${batch.batch_id}">
+                                <div class="batch-checkbox-container">
+                                    <input type="checkbox" class="batch-checkbox" id="batch-${batch.batch_id}" 
+                                           data-batch-id="${batch.batch_id}">
+                                    <div class="batch-checkbox-content">
+                                        <div class="batch-summary-row">
+                                            <span class="batch-id">${batch.batch_id}${variety}</span>
+                                            <span class="batch-plants">${batch.remaining_count} plants</span>
+                                        </div>
+                                        <div class="batch-summary-row">
+                                            <span class="batch-age">${age} days old</span>
+                                            ${harvestInfo ? `<span class="batch-harvest-info">${harvestInfo}</span>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } catch (error) {
+                        console.error('Error processing batch:', batch.batch_id, error);
+                        summaryHtml += `
+                            <div class="batch-summary-item selectable" data-batch-id="${batch.batch_id}">
+                                <div class="batch-checkbox-container">
+                                    <input type="checkbox" class="batch-checkbox" id="batch-${batch.batch_id}" 
+                                           data-batch-id="${batch.batch_id}">
+                                    <div class="batch-checkbox-content">
+                                        <div class="batch-summary-row">
+                                            <span class="batch-id">${batch.batch_id}</span>
+                                            <span class="batch-plants">${batch.remaining_count} plants</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+                summaryContent.innerHTML = summaryHtml;
+                
+                // Add event listeners for checkboxes
+                this.setupBatchCheckboxListeners();
+            }
+
+            summaryContainer.style.display = 'block';
+            
+        } catch (error) {
+            console.error('Error loading batch summary:', error);
+            summaryContent.innerHTML = '<div class="no-batches">Error loading batch information</div>';
+            summaryContainer.style.display = 'block';
+        }
+    }
+
+    setupBatchCheckboxListeners() {
+        const checkboxes = document.querySelectorAll('.batch-checkbox');
+        const batchItems = document.querySelectorAll('.batch-summary-item.selectable');
+        
+        // Add click listeners to checkboxes
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const batchId = e.target.dataset.batchId;
+                this.toggleBatchSelection(batchId, e.target.checked);
+            });
+        });
+        
+        // Add click listeners to batch items (clicking anywhere toggles checkbox)
+        batchItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                // Don't trigger if the checkbox itself was clicked
+                if (e.target.type === 'checkbox') return;
+                
+                const batchId = item.dataset.batchId;
+                const checkbox = item.querySelector('.batch-checkbox');
+                if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    this.toggleBatchSelection(batchId, checkbox.checked);
+                }
+            });
+        });
+    }
+
+    toggleBatchSelection(batchId, isSelected) {
+        const batchItem = document.querySelector(`.batch-summary-item[data-batch-id="${batchId}"]`);
+        
+        if (isSelected) {
+            batchItem.classList.add('selected');
+            this.addToSelectedBatches(batchId);
+        } else {
+            batchItem.classList.remove('selected');
+            this.removeFromSelectedBatches(batchId);
+        }
+        
+        this.updateSelectedBatchesDisplay();
+    }
+
+    addToSelectedBatches(batchId) {
+        if (!this.selectedBatches) {
+            this.selectedBatches = new Set();
+        }
+        this.selectedBatches.add(batchId);
+    }
+
+    removeFromSelectedBatches(batchId) {
+        if (this.selectedBatches) {
+            this.selectedBatches.delete(batchId);
+        }
+    }
+
+    updateSelectedBatchesDisplay() {
+        const selectedBatchesContainer = document.getElementById('selected-batches-display');
+        const selectedBatchesList = document.getElementById('selected-batches-list');
+        
+        if (!this.selectedBatches || this.selectedBatches.size === 0) {
+            selectedBatchesContainer.style.display = 'none';
+            // Clear input values when no batches selected
+            const plantCountInput = document.getElementById('harvest-plant-count');
+            const weightInput = document.getElementById('harvest-weight');
+            const qualityInput = document.getElementById('harvest-quality');
+            if (plantCountInput) plantCountInput.value = '';
+            if (weightInput) weightInput.value = '';
+            if (qualityInput) qualityInput.value = 'excellent';
+            return;
+        }
+        
+        let selectedHtml = '';
+        this.selectedBatches.forEach(batchId => {
+            const batchInfo = this.getBatchDisplayInfo(batchId);
+            selectedHtml += `
+                <div class="selected-batch-tag">
+                    <span>${batchInfo}</span>
+                    <span class="remove-batch" data-batch-id="${batchId}" onclick="app.removeBatchSelection('${batchId}')">×</span>
+                </div>
+            `;
+        });
+        
+        selectedBatchesList.innerHTML = selectedHtml;
+        selectedBatchesContainer.style.display = 'block';
+    }
+
+    getBatchDisplayInfo(batchId) {
+        const batchItem = document.querySelector(`.batch-summary-item[data-batch-id="${batchId}"]`);
+        if (batchItem) {
+            const batchIdSpan = batchItem.querySelector('.batch-id');
+            const batchPlantsSpan = batchItem.querySelector('.batch-plants');
+            return `${batchIdSpan?.textContent || batchId} - ${batchPlantsSpan?.textContent || ''}`;
+        }
+        return batchId;
+    }
+
+    removeBatchSelection(batchId) {
+        const checkbox = document.querySelector(`.batch-checkbox[data-batch-id="${batchId}"]`);
+        if (checkbox) {
+            checkbox.checked = false;
+            this.toggleBatchSelection(batchId, false);
+        }
+    }
+
+    getSelectedBatches() {
+        return this.selectedBatches ? Array.from(this.selectedBatches) : [];
+    }
+
+    clearBatchSelections() {
+        if (this.selectedBatches) {
+            this.selectedBatches.clear();
+        }
+        
+        // Uncheck all checkboxes
+        const checkboxes = document.querySelectorAll('.batch-checkbox:checked');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+            const batchItem = document.querySelector(`.batch-summary-item[data-batch-id="${checkbox.dataset.batchId}"]`);
+            if (batchItem) {
+                batchItem.classList.remove('selected');
+            }
+        });
+        
+        this.updateSelectedBatchesDisplay();
+    }
+
+    preselectBatchInCheckboxes(batchId) {
+        try {
+            // Find the checkbox for the specific batch
+            const checkbox = document.querySelector(`.batch-checkbox[data-batch-id="${batchId}"]`);
+            if (checkbox) {
+                checkbox.checked = true;
+                this.toggleBatchSelection(batchId, true);
+
+            } else {
+                console.warn('⚠️ Could not find checkbox for batch:', batchId);
+                // The batch might not have loaded yet, try again in a moment
+                setTimeout(() => {
+                    const retryCheckbox = document.querySelector(`.batch-checkbox[data-batch-id="${batchId}"]`);
+                    if (retryCheckbox) {
+                        retryCheckbox.checked = true;
+                        this.toggleBatchSelection(batchId, true);
+
+                    } else {
+                        console.error('❌ Failed to find batch checkbox even on retry:', batchId);
+                        // Debug: List all available batch checkboxes
+                        const allCheckboxes = document.querySelectorAll('.batch-checkbox');
+                        console.log('Available batch checkboxes:', Array.from(allCheckboxes).map(cb => cb.dataset.batchId));
+                    }
+                }, 500);
+            }
+        } catch (error) {
+            console.error('Error pre-selecting batch:', error);
+        }
+    }
+
+    async editBatchGrowBed(batchId, currentBedId) {
+        try {
+            // Get all grow beds for this system
+            const growBeds = await this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`);
+            
+            // Find current bed info - handle both number and string IDs
+            const currentBed = growBeds.find(bed => bed.id == currentBedId || bed.bed_number == currentBedId);
+            const currentBedDisplay = currentBed ? `Bed ${currentBed.bed_number} - ${currentBed.bed_name} (${currentBed.bed_type.toUpperCase()})` : 'Unknown/Invalid Bed (needs reassignment)';
+            
+            // Create dropdown options for grow beds (if current bed is unknown, show all beds)
+            let bedOptionsHtml = '';
+            growBeds.forEach(bed => {
+                // If current bed is unknown (not found), show all beds
+                // If current bed is known, exclude it from options
+                if (!currentBed || bed.id !== currentBedId) {
+                    bedOptionsHtml += `<option value="${bed.id}">Bed ${bed.bed_number} - ${bed.bed_name} (${bed.bed_type.toUpperCase()})</option>`;
+                }
+            });
+            
+            if (bedOptionsHtml === '') {
+                this.showNotification('No other grow beds available to move batch to', 'warning');
+                return;
+            }
+            
+            // Create modal for bed selection
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content batch-move-modal">
+                    <div class="modal-header">
+                        <h4>Move Batch</h4>
+                        <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="batch-move-info">
+                            <div class="batch-detail">
+                                <span class="label">Batch ID:</span>
+                                <span class="batch-id-display">${batchId}</span>
+                            </div>
+                            <div class="batch-detail">
+                                <span class="label">Current Location:</span>
+                                <span class="current-bed ${!currentBed ? 'unknown-bed' : ''}">${currentBedDisplay}</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-bed-select">Move to:</label>
+                            <select id="new-bed-select" class="form-control">
+                                <option value="">Choose destination bed...</option>
+                                ${bedOptionsHtml}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+                        <button class="btn btn-primary" onclick="window.app.confirmBatchMove('${batchId}', ${currentBedId})">Move Batch</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Show the modal
+            modal.classList.add('show');
+            
+        } catch (error) {
+            console.error('Error opening batch edit modal:', error);
+            this.showNotification('Failed to load grow beds for batch move', 'error');
+        }
+    }
+
+    async confirmBatchMove(batchId, currentBedId) {
+        const newBedSelect = document.getElementById('new-bed-select');
+        const newBedId = newBedSelect.value;
+        
+        if (!newBedId) {
+            this.showNotification('Please select a destination grow bed', 'warning');
+            return;
+        }
+        
+        try {
+            // Use the new efficient endpoint to update all batch records at once
+
+            await this.makeApiCall(`/data/batch/${this.activeSystemId}/${batchId}/grow-bed`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    newGrowBedId: newBedId
+                })
+            });
+            
+            // Close modal
+            const modal = document.querySelector('.modal .batch-move-modal');
+            if (modal) {
+                modal.closest('.modal').remove();
+            }
+            
+            // Comprehensive data refresh to show updated batch data across all views
+            await this.loadDataRecords();
+            await this.updateDashboardFromData();
+            // Update other plant management components (not overview to avoid double-render)
+            this.updateGrowBeds();
+            this.updatePlantGrowthHistoryDisplay();
+            this.updatePlantRecommendations();
+            this.updateRecentPlantEntries();
+            await this.updatePlantOverview(); // Force update plant overview to refresh batch data
+            this.updateRemainingPlantsDisplay(); // Update remaining plants display
+            
+            this.showNotification(`Batch ${batchId} moved successfully`, 'success');
+            
+        } catch (error) {
+            console.error('Error moving batch:', error);
+            this.showNotification('Failed to move batch', 'error');
+            
+            // Close modal even on error
+            const modal = document.querySelector('.modal .batch-move-modal');
+            if (modal) {
+                modal.closest('.modal').remove();
+            }
+        }
     }
 
     setupFishManagementTabs() {
-        console.log('Setting up fish management tabs...');
+
         const fishTabs = document.querySelectorAll('.fish-mgmt-tab');
         const fishContents = document.querySelectorAll('.fish-mgmt-content');
-        console.log('Found fish mgmt tabs:', fishTabs.length);
-        console.log('Found fish mgmt contents:', fishContents.length);
-        
+
         fishTabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 const targetContent = tab.id.replace('-tab', '-content');
-                console.log('Fish mgmt tab clicked:', tab.id, '-> target:', targetContent);
-                
+
                 fishTabs.forEach(t => t.classList.remove('active'));
                 fishContents.forEach(c => {
                     c.classList.remove('active');
@@ -1800,25 +2736,25 @@ class AquaponicsApp {
                 
                 tab.classList.add('active');
                 const targetElement = document.getElementById(targetContent);
-                console.log('Target element found:', !!targetElement);
+
                 if (targetElement) {
                     targetElement.classList.add('active');
                     targetElement.style.display = 'block';
-                    console.log('Added active class to:', targetContent);
+
                 }
                 
                 // Load data for specific tabs
                 if (targetContent === 'fish-overview-content') {
-                    console.log('Loading fish overview data');
+
                     this.loadFishOverview();
                 } else if (targetContent === 'fish-health-entry-content') {
-                    console.log('Loading fish health entry form');
+
                     this.loadFishHealthEntry();
                 } else if (targetContent === 'tank-information-content') {
-                    console.log('Loading tank information');
+
                     this.loadTankInformation();
                 } else if (targetContent === 'fish-health-monitoring-content') {
-                    console.log('Loading fish health monitoring');
+
                     this.loadFishHealthMonitoring();
                 }
             });
@@ -1847,6 +2783,10 @@ class AquaponicsApp {
                         this.displayGrowBedStatus();
                     } else if (targetContent === 'system-sharing-content') {
                         this.loadSystemSharing();
+                    } else if (targetContent === 'sensor-config-content') {
+                        this.loadSensorConfiguration();
+                    } else if (targetContent === 'credentials-content') {
+                        this.loadCredentialsStatus();
                     } else if (targetContent === 'admin-settings-content') {
                         this.loadAdminUsers(); // Default to user management
                     }
@@ -1928,12 +2868,14 @@ class AquaponicsApp {
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
                 modal.style.display = 'none';
+                modal.classList.remove('show');
             });
         }
 
         if (closeBtnSecondary) {
             closeBtnSecondary.addEventListener('click', () => {
                 modal.style.display = 'none';
+                modal.classList.remove('show');
             });
         }
 
@@ -1942,14 +2884,16 @@ class AquaponicsApp {
             modal.addEventListener('click', (e) => {
                 if (e.target === modal) {
                     modal.style.display = 'none';
+                    modal.classList.remove('show');
                 }
             });
         }
 
         // Close modal with escape key
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && modal && modal.style.display === 'block') {
+            if (e.key === 'Escape' && modal && modal.classList.contains('show')) {
                 modal.style.display = 'none';
+                modal.classList.remove('show');
             }
         });
 
@@ -1963,30 +2907,59 @@ class AquaponicsApp {
     }
 
     async updateDashboardFromData() {
-        const latestData = this.getLatestWaterQualityData();
+        // Get latest sensor data to supplement/override manual data
+        const sensorData = await this.getLatestSensorData();
         
-        if (latestData) {
-            // Update dashboard with latest manual readings
-            document.getElementById('water-temp').textContent = latestData.temperature ? `${latestData.temperature.toFixed(1)}°C` : 'No data';
-            document.getElementById('ph-level').textContent = latestData.ph ? latestData.ph.toFixed(1) : 'No data';
-            document.getElementById('dissolved-oxygen').textContent = latestData.dissolved_oxygen ? `${latestData.dissolved_oxygen.toFixed(1)} mg/L` : 'No data';
-            document.getElementById('ammonia').textContent = latestData.ammonia ? `${latestData.ammonia.toFixed(2)} ppm` : 'No data';
-        } else {
-            // No manual data entered yet
-            document.getElementById('water-temp').textContent = 'No data';
-            document.getElementById('ph-level').textContent = 'No data';
-            document.getElementById('dissolved-oxygen').textContent = 'No data';
-            document.getElementById('ammonia').textContent = 'No data';
-        }
+        // Get latest data from nutrient_readings table (now includes all water quality + nutrients)
+        const nutrientData = await this.getLatestNutrientValues();
+        
+        // Combine all data sources, prioritizing sensor data, then nutrient_readings
+        const displayData = {
+            temperature: sensorData.temperature || nutrientData.temperature?.value,
+            ph: sensorData.ph || nutrientData.ph?.value,
+            dissolved_oxygen: sensorData.dissolved_oxygen || nutrientData.dissolved_oxygen?.value,
+            ammonia: sensorData.ammonia || nutrientData.ammonia?.value,
+            humidity: sensorData.humidity || nutrientData.humidity?.value,
+            salinity: sensorData.salinity || nutrientData.salinity?.value,
+            ec: sensorData.ec || nutrientData.ec?.value
+        };
+        
+        // Update dashboard with combined data, showing data source
+        document.getElementById('water-temp').innerHTML = this.formatSensorValue(displayData.temperature, '°C', 
+            sensorData.temperature ? '📡' : (nutrientData.temperature?.value ? '📝' : ''));
+        document.getElementById('ph-level').innerHTML = this.formatSensorValue(displayData.ph, '', 
+            sensorData.ph ? '📡' : (nutrientData.ph?.value ? '📝' : ''));
+        document.getElementById('dissolved-oxygen').innerHTML = this.formatSensorValue(displayData.dissolved_oxygen, 'mg/L', 
+            sensorData.dissolved_oxygen ? '📡' : (nutrientData.dissolved_oxygen?.value ? '📝' : ''));
+        document.getElementById('ammonia').innerHTML = this.formatSensorValue(displayData.ammonia, 'ppm', 
+            sensorData.ammonia ? '📡' : (nutrientData.ammonia?.value ? '📝' : ''));
+        document.getElementById('humidity').innerHTML = this.formatSensorValue(displayData.humidity, '%', 
+            sensorData.humidity ? '📡' : (nutrientData.humidity?.value ? '📝' : ''));
+        document.getElementById('salinity').innerHTML = this.formatSensorValue(displayData.salinity, 'ppt', 
+            sensorData.salinity ? '📡' : (nutrientData.salinity?.value ? '📝' : ''));
+        
+        // Update additional nutrient metrics
+        document.getElementById('ec').innerHTML = this.formatSensorValue(displayData.ec || nutrientData.ec?.value, 'μS/cm', 
+            sensorData.ec ? '📡' : (nutrientData.ec?.value ? '📝' : ''));
+        document.getElementById('nitrate').innerHTML = this.formatSensorValue(nutrientData.nitrate?.value, 'mg/L', '🧪');
+        document.getElementById('nitrite').innerHTML = this.formatSensorValue(nutrientData.nitrite?.value, 'mg/L', '🧪');
+        document.getElementById('phosphorus').innerHTML = this.formatSensorValue(nutrientData.phosphorus?.value, 'mg/L', '🧪');
+        document.getElementById('potassium').innerHTML = this.formatSensorValue(nutrientData.potassium?.value, 'mg/L', '🧪');
+        document.getElementById('calcium').innerHTML = this.formatSensorValue(nutrientData.calcium?.value, 'mg/L', '🧪');
+        document.getElementById('magnesium').innerHTML = this.formatSensorValue(nutrientData.magnesium?.value, 'mg/L', '🧪');
+        document.getElementById('iron').innerHTML = this.formatSensorValue(nutrientData.iron?.value, 'mg/L', '🧪');
         
         // Update charts with historical data
-        this.updateCharts();
+        await this.updateCharts();
         
         // Update latest data entries
         this.updateLatestDataEntries();
         
+        // Update live sensor data display
+        await this.updateLiveSensorData();
+        
         // Update plant tab nutrient data
-        this.updatePlantNutrientData();
+        this.updatePlantNutrientData().catch(console.error);
         
         // Update data history displays
         this.updateDataHistoryDisplays();
@@ -1995,7 +2968,7 @@ class AquaponicsApp {
         await this.updateFishTankSummary();
         
         // Update plant management interface
-        this.updatePlantManagement();
+        await this.updatePlantManagement();
         
         // Update recent water quality entry section
         this.updateRecentWaterQualityEntry();
@@ -2012,20 +2985,227 @@ class AquaponicsApp {
             return null;
         }
         
-        // Find the most recent entry that has actual data (not all null/empty values)
+        // Return an object with the most recent non-null value for each parameter
+        const result = {
+            temperature: null,
+            ph: null,
+            dissolved_oxygen: null,
+            ammonia: null,
+            humidity: null,
+            salinity: null,
+            ec: null,
+            date: null,
+            notes: null
+        };
+        
+        // Find the most recent non-null value for each parameter
         for (const entry of this.dataRecords.waterQuality) {
-            const hasData = entry.temperature || entry.ph || entry.dissolved_oxygen || 
-                           entry.ammonia || entry.nitrite || entry.nitrate || 
-                           entry.ec || entry.iron || entry.potassium || 
-                           entry.calcium || entry.phosphorus || entry.magnesium;
-            
-            if (hasData) {
-                return entry;
+            if (result.temperature === null && entry.temperature !== null && entry.temperature !== undefined) {
+                result.temperature = entry.temperature;
             }
+            if (result.ph === null && entry.ph !== null && entry.ph !== undefined) {
+                result.ph = entry.ph;
+            }
+            if (result.dissolved_oxygen === null && entry.dissolved_oxygen !== null && entry.dissolved_oxygen !== undefined) {
+                result.dissolved_oxygen = entry.dissolved_oxygen;
+            }
+            if (result.ammonia === null && entry.ammonia !== null && entry.ammonia !== undefined) {
+                result.ammonia = entry.ammonia;
+            }
+            if (result.humidity === null && entry.humidity !== null && entry.humidity !== undefined) {
+                result.humidity = entry.humidity;
+            }
+            if (result.salinity === null && entry.salinity !== null && entry.salinity !== undefined) {
+                result.salinity = entry.salinity;
+            }
+            if (result.ec === null && entry.ec !== null && entry.ec !== undefined) {
+                result.ec = entry.ec;
+            }
+            if (result.date === null) {
+                result.date = entry.date;
+            }
+            if (result.notes === null && entry.notes) {
+                result.notes = entry.notes;
+            }
+            
+            // Stop early if we found all values
+            const allFound = Object.keys(result).every(key => 
+                key === 'notes' || result[key] !== null
+            );
+            if (allFound) break;
         }
         
-        // If no entries have data, return the most recent entry anyway
-        return this.dataRecords.waterQuality[0];
+        return result;
+    }
+
+    async getLatestSensorData() {
+        if (!this.activeSystemId) return {};
+        
+        try {
+            // Get all sensors for the system
+            const sensorsResponse = await this.makeApiCall(`/sensors/system/${this.activeSystemId}`);
+            const sensors = sensorsResponse.sensors || [];
+            
+            const sensorData = {};
+            
+            // For each sensor, get the latest reading from sensor_readings table
+            for (const sensor of sensors) {
+                try {
+                    // Check if sensor has mapping to water quality fields
+                    if (sensor.mapped_table === 'water_quality' && sensor.mapped_field) {
+                        // Get latest water quality data to see if sensor data is there
+                        const latestWQ = this.getLatestWaterQualityData();
+                        if (latestWQ && latestWQ[sensor.mapped_field]) {
+                            sensorData[sensor.mapped_field] = latestWQ[sensor.mapped_field];
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error getting data for sensor ${sensor.sensor_name}:`, error);
+                }
+            }
+            
+            return sensorData;
+        } catch (error) {
+            console.error('Error fetching sensor data:', error);
+            return {};
+        }
+    }
+
+    formatSensorValue(value, unit, sourceIcon = '') {
+        if (value === null || value === undefined || value === '' || isNaN(parseFloat(value))) {
+            return 'No data';
+        }
+        
+        const numValue = parseFloat(value);
+        const formattedValue = unit === 'ppm' ? numValue.toFixed(2) : numValue.toFixed(1);
+        const unitText = unit ? ` ${unit}` : '';
+        const sourceIndicator = sourceIcon ? `<span style="font-size: 0.8em; opacity: 0.7; margin-left: 4px;" title="${sourceIcon === '📡' ? 'Sensor data' : 'Manual entry'}">${sourceIcon}</span>` : '';
+        
+        return `${formattedValue}${unitText}${sourceIndicator}`;
+    }
+
+    async updateLiveSensorData() {
+        const container = document.getElementById('sensor-data-container');
+        if (!container || !this.activeSystemId) return;
+        
+        try {
+            // Get all sensors for the system
+            const sensorsResponse = await this.makeApiCall(`/sensors/system/${this.activeSystemId}`);
+            const sensors = sensorsResponse.sensors || [];
+            
+            if (sensors.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; color: #666; padding: 2rem; border: 2px dashed #ddd; border-radius: 8px; margin: 1rem 0;">
+                        <p><strong>No sensors configured yet</strong></p>
+                        <p>Add sensors in <strong>Settings → Sensor Config</strong> to see live data here.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Build sensor cards HTML
+            let sensorsHtml = '';
+            for (const sensor of sensors) {
+                const isActive = sensor.active;
+                const isOnline = this.isSensorOnline(sensor.last_reading, sensor.update_interval, sensor.sensor_name);
+                
+                // Determine status icon based on both active and online status
+                let statusIcon = '⚫'; // Default: manual data
+                let statusText = 'Manual Data';
+                if (isActive && isOnline) {
+                    statusIcon = '🟢';
+                    statusText = 'Sensor Data (Online)';
+                } else if (isActive && !isOnline) {
+                    statusIcon = '🔴';
+                    statusText = 'Sensor Data (Offline)';
+                } else {
+                    statusIcon = '⚫';
+                    statusText = 'Manual Data';
+                }
+                
+                const lastUpdate = sensor.last_reading ? new Date(sensor.last_reading).toLocaleString() : 'Never';
+
+                // Get latest value from water quality data if mapped
+                let currentValue = 'No data';
+                if (sensor.mapped_table === 'water_quality' && sensor.mapped_field) {
+                    const latestWQ = this.getLatestWaterQualityData();
+                    if (latestWQ && latestWQ[sensor.mapped_field]) {
+                        const value = parseFloat(latestWQ[sensor.mapped_field]);
+                        const unit = this.getSensorUnit(sensor.sensor_type, sensor.mapped_field);
+                        currentValue = isNaN(value) ? 'No data' : `${value.toFixed(1)} ${unit}`;
+                    }
+                }
+                
+                // Check if sensor is properly mapped (not null, undefined, or empty string)
+                const isMapped = sensor.mapped_field && sensor.mapped_field.trim() !== '';
+                
+                sensorsHtml += `
+                    <div class="sensor-card ${!isOnline ? 'sensor-offline' : ''}">
+                        <div class="sensor-header">
+                            <h4>${statusIcon} ${sensor.sensor_name}</h4>
+                            <span class="sensor-type">${sensor.sensor_type}</span>
+                        </div>
+                        <div class="sensor-value">${currentValue}</div>
+                        <div class="sensor-details">
+                            <small>Status: <strong>${statusText}</strong></small>
+                            <small>Last update: ${lastUpdate}</small>
+                            ${isMapped ? `<small>Maps to: ${sensor.mapped_field.replace('_', ' ')}</small>` : '<small>Not mapped to database</small>'}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = sensorsHtml;
+            
+        } catch (error) {
+            console.error('Error loading sensor data:', error);
+            container.innerHTML = `
+                <div style="text-align: center; color: #dc3545; padding: 2rem; border: 1px solid #dc3545; border-radius: 8px; margin: 1rem 0;">
+                    <p><strong>Error loading sensor data</strong></p>
+                    <p>Please check your sensor configuration and try again.</p>
+                </div>
+            `;
+        }
+    }
+
+    isSensorOnline(lastReading, updateInterval = 300, sensorName = 'Unknown') {
+        if (!lastReading) {
+            return false;
+        }
+        
+        const lastReadingTime = new Date(lastReading).getTime();
+        
+        // Check if date parsing failed
+        if (isNaN(lastReadingTime)) {
+            console.warn('⚠️  Invalid sensor date format:', lastReading);
+            return false;
+        }
+        
+        const currentTime = Date.now();
+        const timeDiff = currentTime - lastReadingTime;
+        
+        // Consider sensor offline if no data for more than 3 hours or 3 times the update interval, whichever is larger
+        const offlineThreshold = Math.max(updateInterval * 3 * 1000, 10800000); // Min 3 hours
+        
+        const isOnline = timeDiff < offlineThreshold;
+        
+        // Debug logging removed - issue identified as IoT device connectivity
+        
+        return isOnline;
+    }
+    
+    getSensorUnit(sensorType, mappedField) {
+        const unitMappings = {
+            'temperature': '°C',
+            'ph': '',
+            'dissolved_oxygen': 'mg/L',
+            'ec': 'mS/cm', 
+            'ammonia': 'ppm',
+            'nitrite': 'ppm',
+            'nitrate': 'ppm'
+        };
+        
+        return unitMappings[mappedField] || unitMappings[sensorType] || '';
     }
 
     updateRecentWaterQualityEntry() {
@@ -2044,7 +3224,7 @@ class AquaponicsApp {
         }
 
         const entryDate = new Date(latestData.date);
-        const formattedDate = entryDate.toLocaleDateString() + ' ' + entryDate.toLocaleTimeString();
+        const formattedDate = this.formatDateDDMMYYYY(entryDate) + ' ' + entryDate.toLocaleTimeString();
         
         // Check if this is the chronologically most recent entry
         const chronologicallyLatest = this.dataRecords.waterQuality[0];
@@ -2067,31 +3247,31 @@ class AquaponicsApp {
                     <div class="data-grid">
                         <div class="data-item">
                             <span class="data-label">Temperature:</span>
-                            <span class="data-value">${latestData.temperature ? latestData.temperature.toFixed(1) + '°C' : 'Not recorded'}</span>
+                            <span class="data-value">${(latestData.temperature && !isNaN(parseFloat(latestData.temperature))) ? parseFloat(latestData.temperature).toFixed(1) + '°C' : 'Not recorded'}</span>
                         </div>
                         <div class="data-item">
                             <span class="data-label">pH Level:</span>
-                            <span class="data-value">${latestData.ph ? latestData.ph.toFixed(1) : 'Not recorded'}</span>
+                            <span class="data-value">${(latestData.ph && !isNaN(parseFloat(latestData.ph))) ? parseFloat(latestData.ph).toFixed(1) : 'Not recorded'}</span>
                         </div>
                         <div class="data-item">
                             <span class="data-label">Dissolved Oxygen:</span>
-                            <span class="data-value">${latestData.dissolved_oxygen ? latestData.dissolved_oxygen.toFixed(1) + ' mg/L' : 'Not recorded'}</span>
+                            <span class="data-value">${(latestData.dissolved_oxygen && !isNaN(parseFloat(latestData.dissolved_oxygen))) ? parseFloat(latestData.dissolved_oxygen).toFixed(1) + ' mg/L' : 'Not recorded'}</span>
                         </div>
                         <div class="data-item">
                             <span class="data-label">Ammonia:</span>
-                            <span class="data-value">${latestData.ammonia ? latestData.ammonia.toFixed(2) + ' ppm' : 'Not recorded'}</span>
+                            <span class="data-value">${(latestData.ammonia && !isNaN(parseFloat(latestData.ammonia))) ? parseFloat(latestData.ammonia).toFixed(2) + ' ppm' : 'Not recorded'}</span>
                         </div>
                         <div class="data-item">
                             <span class="data-label">Nitrite:</span>
-                            <span class="data-value">${latestData.nitrite ? latestData.nitrite.toFixed(2) + ' ppm' : 'Not recorded'}</span>
+                            <span class="data-value">${(latestData.nitrite && !isNaN(parseFloat(latestData.nitrite))) ? parseFloat(latestData.nitrite).toFixed(2) + ' ppm' : 'Not recorded'}</span>
                         </div>
                         <div class="data-item">
                             <span class="data-label">Nitrate:</span>
-                            <span class="data-value">${latestData.nitrate ? latestData.nitrate.toFixed(1) + ' ppm' : 'Not recorded'}</span>
+                            <span class="data-value">${(latestData.nitrate && !isNaN(parseFloat(latestData.nitrate))) ? parseFloat(latestData.nitrate).toFixed(1) + ' ppm' : 'Not recorded'}</span>
                         </div>
                         <div class="data-item">
                             <span class="data-label">EC:</span>
-                            <span class="data-value">${latestData.ec ? latestData.ec.toFixed(0) + ' µS/cm' : 'Not recorded'}</span>
+                            <span class="data-value">${(latestData.ec && !isNaN(parseFloat(latestData.ec))) ? parseFloat(latestData.ec).toFixed(0) + ' µS/cm' : 'Not recorded'}</span>
                         </div>
                         ${latestData.notes ? `
                         <div class="data-item notes">
@@ -2179,12 +3359,25 @@ class AquaponicsApp {
         this.initChart('ph-chart', 'pH Level', '#4ECDC4', 'ph');
         this.initChart('oxygen-chart', 'Dissolved Oxygen (mg/L)', '#45B7D1', 'dissolved_oxygen');
         this.initChart('ammonia-chart', 'Ammonia (ppm)', '#FFA07A', 'ammonia');
+        this.initChart('humidity-chart', 'Humidity (%)', '#98D8C8', 'humidity');
+        this.initChart('salinity-chart', 'Salinity (ppt)', '#F7DC6F', 'salinity');
+        
+        // Initialize nutrient charts
+        this.initChart('ec-chart', 'EC (μS/cm)', '#9B59B6', 'ec');
+        this.initChart('nitrate-chart', 'Nitrate (mg/L)', '#E74C3C', 'nitrate');
+        this.initChart('nitrite-chart', 'Nitrite (mg/L)', '#E67E22', 'nitrite');
+        this.initChart('phosphorus-chart', 'Phosphorus (mg/L)', '#F39C12', 'phosphorus');
+        this.initChart('potassium-chart', 'Potassium (mg/L)', '#2ECC71', 'potassium');
+        this.initChart('calcium-chart', 'Calcium (mg/L)', '#3498DB', 'calcium');
+        this.initChart('magnesium-chart', 'Magnesium (mg/L)', '#1ABC9C', 'magnesium');
+        this.initChart('iron-chart', 'Iron (mg/L)', '#34495E', 'iron');
     }
 
     initChart(canvasId, label, color, dataField) {
-        const ctx = document.getElementById(canvasId).getContext('2d');
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
         
-        this.charts[canvasId] = new Chart(ctx, {
+        this.charts[canvasId] = new Chart(ctx.getContext('2d'), {
             type: 'line',
             data: {
                 labels: [],
@@ -2197,7 +3390,8 @@ class AquaponicsApp {
                     fill: true,
                     tension: 0.4,
                     pointRadius: 2,
-                    pointHoverRadius: 4
+                    pointHoverRadius: 4,
+                    spanGaps: true  // Connect all points since we filter out nulls
                 }]
             },
             options: {
@@ -2221,39 +3415,234 @@ class AquaponicsApp {
                     point: {
                         radius: 0
                     }
+                },
+                onClick: (event, elements) => {
+
+                    this.openDashboardChartModal(canvasId, label, dataField, color);
                 }
             }
         });
+        
+        // Add cursor pointer and direct click handler as fallback
+        ctx.style.cursor = 'pointer';
+        ctx.addEventListener('click', (e) => {
+
+            this.openDashboardChartModal(canvasId, label, dataField, color);
+        });
+
     }
 
-    updateCharts() {
+    async openDashboardChartModal(canvasId, label, dataField, color) {
+
+        try {
+            let chartData = [];
+            let chartLabels = [];
+            
+            if (dataField === 'ph' || dataField === 'temperature' || dataField === 'dissolved_oxygen' || dataField === 'ammonia' || dataField === 'humidity' || dataField === 'salinity') {
+                // Water quality parameters - get from water_quality table
+
+                const waterQualityData = this.dataRecords.waterQuality || [];
+                
+                // Get last 30 records for detailed modal view
+                const recentData = waterQualityData.slice(0, 30).reverse();
+                chartData = recentData.map(entry => {
+                    const value = entry[dataField];
+                    // Return null for missing values to create gaps in the chart
+                    return (value !== undefined && value !== null && value !== '') ? value : null;
+                });
+                chartLabels = recentData.map(entry => this.formatDateDDMMYYYY(new Date(entry.date)));
+                
+            } else {
+                // This might be a nutrient parameter in the future
+
+                return;
+            }
+            
+            // Use the existing nutrient modal (it works for any parameter)
+            await this.openNutrientModal(canvasId, label, chartLabels, chartData, color);
+            
+        } catch (error) {
+            console.error('Error opening dashboard chart modal:', error);
+        }
+    }
+
+    async updateCharts() {
         if (Object.keys(this.charts).length === 0) {
             this.initializeCharts();
         }
 
         const data = this.dataRecords.waterQuality;
-        if (data.length === 0) return;
+        if (data.length === 0) {
+            // Update timestamps to show no data
+            this.updateChartTimestamp('temp-chart-timestamp', 'No data available');
+            this.updateChartTimestamp('ph-chart-timestamp', 'No data available');
+            this.updateChartTimestamp('oxygen-chart-timestamp', 'No data available');
+            this.updateChartTimestamp('ammonia-chart-timestamp', 'No data available');
+            this.updateChartTimestamp('humidity-chart-timestamp', 'No data available');
+            this.updateChartTimestamp('salinity-chart-timestamp', 'No data available');
+            return;
+        }
 
-        // Get last 10 data points for charts
-        const recentData = data.slice(0, 10).reverse();
-        const labels = recentData.map(item => {
-            const date = new Date(item.date);
-            return date.getMonth() + 1 + '/' + date.getDate();
-        });
+        // Get data for charts - use more records to ensure we capture sparse parameters like DO
+        const chartData = data.slice(0, 30); // Increased from 10 to 30 to capture more sparse data
+        
+        // For each parameter, get the most recent 10 non-null values
+        const getRecentNonNullData = (paramName) => {
+            return chartData
+                .filter(item => item[paramName] !== null && item[paramName] !== undefined)
+                .slice(0, 10)
+                .reverse();
+        };
+        
+        // Get recent data for each parameter independently
+        const tempData = getRecentNonNullData('temperature');
+        const phData = getRecentNonNullData('ph');
+        const doData = getRecentNonNullData('dissolved_oxygen');
+        const ammoniaData = getRecentNonNullData('ammonia');
+        const humidityData = getRecentNonNullData('humidity');
+        const salinityData = getRecentNonNullData('salinity');
+        
+        // Create charts with individual data sets and labels
+        if (tempData.length > 0) {
+            const tempLabels = tempData.map(item => {
+                const date = new Date(item.date);
+                return date.getMonth() + 1 + '/' + date.getDate();
+            });
+            this.updateChart('temp-chart', tempLabels, tempData.map(item => item.temperature));
+        }
+        
+        if (phData.length > 0) {
+            const phLabels = phData.map(item => {
+                const date = new Date(item.date);
+                return date.getMonth() + 1 + '/' + date.getDate();
+            });
+            this.updateChart('ph-chart', phLabels, phData.map(item => item.ph));
+        }
+        
+        if (doData.length > 0) {
+            const doLabels = doData.map(item => {
+                const date = new Date(item.date);
+                return date.getMonth() + 1 + '/' + date.getDate();
+            });
+            this.updateChart('oxygen-chart', doLabels, doData.map(item => item.dissolved_oxygen));
+        }
+        
+        if (ammoniaData.length > 0) {
+            const ammoniaLabels = ammoniaData.map(item => {
+                const date = new Date(item.date);
+                return date.getMonth() + 1 + '/' + date.getDate();
+            });
+            this.updateChart('ammonia-chart', ammoniaLabels, ammoniaData.map(item => item.ammonia));
+        }
+        
+        if (humidityData.length > 0) {
+            const humidityLabels = humidityData.map(item => {
+                const date = new Date(item.date);
+                return date.getMonth() + 1 + '/' + date.getDate();
+            });
+            this.updateChart('humidity-chart', humidityLabels, humidityData.map(item => item.humidity));
+        }
+        
+        if (salinityData.length > 0) {
+            const salinityLabels = salinityData.map(item => {
+                const date = new Date(item.date);
+                return date.getMonth() + 1 + '/' + date.getDate();
+            });
+            this.updateChart('salinity-chart', salinityLabels, salinityData.map(item => item.salinity));
+        }
 
-        // Update each chart
-        this.updateChart('temp-chart', labels, recentData.map(item => item.temperature || null));
-        this.updateChart('ph-chart', labels, recentData.map(item => item.ph || null));
-        this.updateChart('oxygen-chart', labels, recentData.map(item => item.dissolved_oxygen || null));
-        this.updateChart('ammonia-chart', labels, recentData.map(item => item.ammonia || null));
+        // Get the most recent data entry for timestamp
+        const latestEntry = data[0];
+        const lastUpdateTime = new Date(latestEntry.date).toLocaleString();
+
+        // Update timestamps for water quality charts
+        this.updateChartTimestamp('temp-chart-timestamp', lastUpdateTime);
+        this.updateChartTimestamp('ph-chart-timestamp', lastUpdateTime);
+        this.updateChartTimestamp('oxygen-chart-timestamp', lastUpdateTime);
+        this.updateChartTimestamp('ammonia-chart-timestamp', lastUpdateTime);
+        this.updateChartTimestamp('humidity-chart-timestamp', lastUpdateTime);
+        this.updateChartTimestamp('salinity-chart-timestamp', lastUpdateTime);
+        
+        // Update nutrient charts
+        console.log('About to call updateNutrientCharts');
+        await this.updateNutrientCharts();
     }
 
     updateChart(chartId, labels, data) {
         if (!this.charts[chartId]) return;
         
-        this.charts[chartId].data.labels = labels;
-        this.charts[chartId].data.datasets[0].data = data;
+        // Filter out null/undefined values and their corresponding labels
+        const filteredData = [];
+        const filteredLabels = [];
+        for (let i = 0; i < data.length; i++) {
+            if (data[i] !== null && data[i] !== undefined && data[i] !== '') {
+                filteredData.push(data[i]);
+                filteredLabels.push(labels[i]);
+            }
+        }
+        
+        this.charts[chartId].data.labels = filteredLabels;
+        this.charts[chartId].data.datasets[0].data = filteredData;
         this.charts[chartId].update('none'); // No animation for better performance
+    }
+
+    async updateNutrientCharts() {
+        try {
+            // Get latest nutrient data for current values
+            const nutrientData = await this.makeApiCall(`/data/nutrients/latest/${this.activeSystemId}`);
+            
+            // Get historical nutrient data for charts
+            const historicalData = await this.makeApiCall(`/data/nutrients/${this.activeSystemId}?limit=30`);
+            if (!historicalData || historicalData.length === 0) {
+                console.warn('No historical nutrient data available');
+                return;
+            }
+            
+            // Function to get recent non-null data for a specific nutrient
+            const getRecentNutrientData = (nutrientType) => {
+                return historicalData
+                    .filter(item => item.nutrient_type === nutrientType && item.value !== null && item.value !== undefined)
+                    .slice(0, 10)
+                    .reverse();
+            };
+            
+            // Update each nutrient chart
+            const nutrientTypes = ['ec', 'nitrate', 'nitrite', 'phosphorus', 'potassium', 'calcium', 'magnesium', 'iron'];
+            
+            for (const nutrientType of nutrientTypes) {
+                const data = getRecentNutrientData(nutrientType);
+                console.log(`${nutrientType} data:`, data.length, 'records');
+                
+                if (data.length > 0) {
+                    const labels = data.map(item => {
+                        const date = new Date(item.reading_date);
+                        return date.getMonth() + 1 + '/' + date.getDate();
+                    });
+                    const values = data.map(item => parseFloat(item.value));
+                    console.log(`Updating ${nutrientType} chart with:`, values);
+                    this.updateChart(`${nutrientType}-chart`, labels, values);
+                    
+                    // Update timestamp
+                    const latestReading = data[data.length - 1];
+                    const timestamp = new Date(latestReading.reading_date).toLocaleString();
+                    this.updateChartTimestamp(`${nutrientType}-chart-timestamp`, timestamp);
+                } else {
+                    // No data available
+                    console.log(`No data for ${nutrientType} chart`);
+                    this.updateChartTimestamp(`${nutrientType}-chart-timestamp`, 'No data available');
+                }
+            }
+        } catch (error) {
+            console.error('Error updating nutrient charts:', error);
+            console.error('Error details:', error.message, error.stack);
+        }
+    }
+
+    updateChartTimestamp(elementId, timestamp) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = `Last updated: ${timestamp}`;
+        }
     }
 
     updateLatestDataEntries() {
@@ -2271,13 +3660,15 @@ class AquaponicsApp {
             });
         }
 
-        if (this.dataRecords.fishHealth.length > 0) {
-            const latest = this.dataRecords.fishHealth[0];
+        // Get fish inventory summary
+        const fishData = this.getLatestFishHealthData();
+        if (fishData) {
+            const fishDataWithWeight = this.getLatestFishHealthDataWithWeight();
             entries.push({
-                type: 'Fish Health',
+                type: 'Fish Inventory',
                 className: 'fish-health',
-                date: latest.date,
-                content: this.formatFishHealthEntry(latest)
+                date: fishData.date,
+                content: `${fishData.count || 0} fish${fishDataWithWeight?.average_weight ? `, avg ${fishDataWithWeight.average_weight.toFixed(0)}g` : ''}`
             });
         }
 
@@ -2380,7 +3771,7 @@ class AquaponicsApp {
         } else if (diffDays < 7) {
             return `${diffDays} days ago`;
         } else {
-            return date.toLocaleDateString();
+            return this.formatDateDDMMYYYY(date);
         }
     }
 
@@ -2420,7 +3811,8 @@ class AquaponicsApp {
         const container = document.getElementById('fish-health-history');
         if (!container) return;
         
-        const data = this.dataRecords.fishHealth.slice(0, 5); // Show last 5 entries
+        // Fish events will be loaded on demand - for now show placeholder
+        const data = []; // TODO: Load recent fish events from API
         
         if (data.length === 0) {
             container.innerHTML = '<div class="data-history-empty">No fish health data recorded yet.</div>';
@@ -2508,6 +3900,30 @@ class AquaponicsApp {
             }
         }
         
+        // Calculate actual tank count based on configured tanks
+        const tankConfigs = systemConfig.fish_tanks || [];
+        
+        // If no tank configs loaded, create mock tanks based on system configuration
+        if (tankConfigs.length === 0 && systemConfig.fish_tank_count > 0) {
+            const totalVolume = systemConfig.total_fish_volume || 7000; // Default 7000L for 7 tanks
+            const volumePerTank = Math.floor(totalVolume / systemConfig.fish_tank_count);
+            
+            for (let i = 1; i <= systemConfig.fish_tank_count; i++) {
+                tankConfigs.push({
+                    id: i,
+                    tank_number: i,
+                    volume_liters: volumePerTank,
+                    size_m3: volumePerTank / 1000,
+                    fish_type: systemConfig.fish_type || 'tilapia',
+                    system_id: this.activeSystemId
+                });
+            }
+            systemConfig.fish_tanks = tankConfigs;
+
+        }
+        
+        const actualTankCount = Math.max(tankConfigs.length, systemConfig.fish_tank_count || 1);
+
         if (!systemConfig || systemConfig.system_name === 'No System Selected') {
             container.innerHTML = `
                 <div class="no-system-message">
@@ -2517,27 +3933,64 @@ class AquaponicsApp {
             return;
         }
 
-        // Get latest fish health data to calculate current fish count (prioritizes most recent)
-        const latestFishData = this.getLatestFishHealthData();
-        const fishCount = latestFishData ? latestFishData.count || 0 : 0;
-        const mortality = latestFishData ? latestFishData.mortality || 0 : 0;
-        const totalFish = fishCount;
+        // Fetch fish inventory data from the new API
+        let totalFish = 0;
+        let totalBiomassKg = 0;
+        let averageWeight = 0;
+        let inventoryTanks = [];
         
-        // Get fish health data with weight for density calculations (prioritizes weight data)
-        const latestFishDataWithWeight = this.getLatestFishHealthDataWithWeight();
+        try {
+            const fishInventoryData = await this.makeApiCall(`/fish-inventory/system/${this.activeSystemId}`);
+
+            if (fishInventoryData && fishInventoryData.tanks) {
+                inventoryTanks = fishInventoryData.tanks;
+                totalFish = inventoryTanks.reduce((sum, tank) => {
+                    const count = parseInt(tank.current_count) || 0;
+                    return sum + (isNaN(count) ? 0 : count);
+                }, 0);
+                totalBiomassKg = inventoryTanks.reduce((sum, tank) => {
+                    const biomass = parseFloat(tank.biomass_kg) || 0;
+                    return sum + (isNaN(biomass) ? 0 : biomass);
+                }, 0);
+                
+                // Calculate weighted average weight
+                if (totalFish > 0) {
+                    const totalWeight = inventoryTanks.reduce((sum, tank) => {
+                        const count = parseInt(tank.current_count) || 0;
+                        const weight = parseFloat(tank.average_weight) || 0;
+                        return sum + ((isNaN(count) ? 0 : count) * (isNaN(weight) ? 0 : weight));
+                    }, 0);
+                    averageWeight = isNaN(totalWeight) || totalFish === 0 ? 0 : totalWeight / totalFish;
+                }
+
+            }
+        } catch (error) {
+            console.error('Failed to fetch fish inventory data:', error);
+            totalFish = 0;
+            totalBiomassKg = 0;
+            averageWeight = 0;
+        }
         
         // Get fish type for calculations
         const fishType = systemConfig.fish_type || 'Unknown';
         
-        // Calculate stocking density based on weight (KG/m³)
-        const fishVolume = systemConfig.total_fish_volume || 1000;
+        // Calculate actual total volume from tank configurations
+        let fishVolume = 0;
+        if (tankConfigs.length > 0) {
+            fishVolume = tankConfigs.reduce((total, tank) => total + (parseFloat(tank.volume_liters) || 0), 0);
+
+        } else {
+            fishVolume = systemConfig.total_fish_volume || 1000;
+
+        }
         const fishVolumeM3 = fishVolume / 1000; // Convert liters to cubic meters
-        const averageWeight = latestFishDataWithWeight ? latestFishDataWithWeight.average_weight || 0 : 0;
         
-        // Use estimated weight if no actual weight data is available
+        // Use inventory biomass if available, otherwise estimate
+        let totalWeightKg = totalBiomassKg;
         let effectiveWeight = averageWeight;
-        if (effectiveWeight === 0 && totalFish > 0) {
-            // Provide reasonable estimates based on fish type for density calculation
+        
+        if (totalWeightKg === 0 && totalFish > 0) {
+            // Use estimated weight if no actual weight data is available
             const estimatedWeights = {
                 'tilapia': 250,  // 250g average for growing tilapia
                 'trout': 200,    // 200g average for growing trout  
@@ -2546,16 +3999,21 @@ class AquaponicsApp {
                 'bass': 250      // 250g average for growing bass
             };
             effectiveWeight = estimatedWeights[fishType.toLowerCase()] || 250;
+            totalWeightKg = (totalFish * effectiveWeight) / 1000; // Convert grams to kg
         }
         
-        const totalWeightKg = (totalFish * effectiveWeight) / 1000; // Convert grams to kg
+        // Add safety checks for NaN values
+
+        // Ensure values are valid numbers
+        const safeWeightKg = isNaN(totalWeightKg) || !isFinite(totalWeightKg) ? 0 : totalWeightKg;
+        const safeVolumeM3 = isNaN(fishVolumeM3) || !isFinite(fishVolumeM3) ? 1 : fishVolumeM3; // Default 1m³ to avoid division by zero
         
         // Current actual density and final harvest density  
-        const actualDensity = fishVolumeM3 > 0 && totalWeightKg > 0 ? (totalWeightKg / fishVolumeM3).toFixed(1) : 'N/A';
-        const isUsingEstimatedWeight = averageWeight === 0 && effectiveWeight > 0;
+        const actualDensity = safeVolumeM3 > 0 ? (safeWeightKg / safeVolumeM3).toFixed(1) : 'N/A';
+        const isUsingEstimatedWeight = totalBiomassKg === 0 && effectiveWeight > 0;
         const finalHarvestWeight = this.getFinalHarvestWeight(fishType);
         const finalTotalWeight = (totalFish * finalHarvestWeight) / 1000; // Convert to kg
-        const finalDensity = fishVolumeM3 > 0 && finalTotalWeight > 0 ? (finalTotalWeight / fishVolumeM3).toFixed(1) : 'N/A';
+        const finalDensity = fishVolumeM3 > 0 ? (finalTotalWeight / fishVolumeM3).toFixed(1) : 'N/A';
         
         // Calculate recommended stocking density based on fish type
         const recommendedMaxDensity = this.getRecommendedStockingDensity(fishType);
@@ -2563,13 +4021,16 @@ class AquaponicsApp {
         
         // Get last feeding time
         const lastFeedTime = this.getLastFeedingTime();
+        
+        // Get latest fish health data for tank details
+        const latestFishData = this.getLatestFishHealthData();
 
         container.innerHTML = `
             <div class="tank-summary-grid">
                 <div class="tank-summary-card">
                     <h3>Total Fish Count</h3>
                     <div class="summary-value">${totalFish}</div>
-                    <div class="summary-detail">Across ${systemConfig.fish_tank_count} tank${systemConfig.fish_tank_count > 1 ? 's' : ''}</div>
+                    <div class="summary-detail">Across ${actualTankCount} tank${actualTankCount > 1 ? 's' : ''}</div>
                 </div>
                 
                 <div class="tank-summary-card">
@@ -2608,7 +4069,7 @@ class AquaponicsApp {
                 <div class="tank-details">
                     <h4>Tank Details</h4>
                     <div class="tank-details-grid">
-                        ${this.generateTankDetails(systemConfig, latestFishData)}
+                        ${this.generateTankDetails(systemConfig, inventoryTanks, actualTankCount)}
                     </div>
                 </div>
                 
@@ -2625,9 +4086,9 @@ class AquaponicsApp {
                 </div>
             ` : ''}
             
-            ${mortality > 0 ? `
+            ${false ? `
                 <div class="mortality-alert">
-                    <strong>⚠️ Recent Mortality:</strong> ${mortality} fish reported in latest health check
+                    <strong>⚠️ Recent Mortality:</strong> mortality data from fish events coming soon
                 </div>
             ` : ''}
         `;
@@ -2639,32 +4100,51 @@ class AquaponicsApp {
     }
 
     getLatestFishHealthData() {
-        if (this.dataRecords.fishHealth.length === 0) {
+        // Return inventory summary or null
+        const inventory = this.dataRecords.fishInventory;
+        if (!inventory || !inventory.tanks || inventory.tanks.length === 0) {
             return null;
         }
         
-        // Always return the most recent record by date for fish count accuracy
-        // Weight data prioritization is handled separately in density calculations
-        return this.dataRecords.fishHealth[0];
+        // Calculate total fish across all tanks
+        const totalCount = inventory.tanks.reduce((sum, tank) => sum + (tank.current_count || 0), 0);
+        if (totalCount === 0) return null;
+        
+        // Return a fish health-like object for compatibility
+        return {
+            count: totalCount,
+            date: new Date().toISOString().split('T')[0]
+        };
     }
     
     getLatestFishHealthDataWithWeight() {
-        if (this.dataRecords.fishHealth.length === 0) {
+        // Return inventory summary with weight or null
+        const inventory = this.dataRecords.fishInventory;
+        if (!inventory || !inventory.tanks || inventory.tanks.length === 0) {
             return null;
         }
         
-        // First try to get the latest record with valid weight data
-        const recordWithWeight = this.dataRecords.fishHealth.find(record => 
-            record.average_weight !== null && record.average_weight > 0
-        );
+        // Calculate weighted average weight across all tanks
+        let totalWeight = 0;
+        let totalCount = 0;
         
-        // If we have a record with weight data, use it
-        if (recordWithWeight) {
-            return recordWithWeight;
-        }
+        inventory.tanks.forEach(tank => {
+            const count = tank.current_count || 0;
+            const weight = tank.average_weight || 0;
+            totalWeight += count * weight;
+            totalCount += count;
+        });
         
-        // Otherwise fall back to the latest record
-        return this.dataRecords.fishHealth[0];
+        if (totalCount === 0) return null;
+        
+        const averageWeight = totalWeight / totalCount;
+        
+        // Return a fish health-like object for compatibility
+        return {
+            count: totalCount,
+            average_weight: averageWeight,
+            date: new Date().toISOString().split('T')[0]
+        };
     }
 
     getOptimalStockingRate(fishType) {
@@ -2681,34 +4161,9 @@ class AquaponicsApp {
     }
 
     getLastFeedingTime() {
-        // Get latest feeding data from fish health entries
-        const fishHealthData = this.dataRecords.fishHealth || [];
-        
-        // Find the most recent entry with feed_consumption data
-        const feedingEntries = fishHealthData.filter(entry => entry.feed_consumption && entry.feed_consumption > 0);
-        
-        if (feedingEntries.length === 0) {
-            return 'No feeding data recorded';
-        }
-        
-        // Sort by date and get the most recent
-        feedingEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
-        const latestFeeding = feedingEntries[0];
-        
-        const feedTime = new Date(latestFeeding.date);
-        const now = new Date();
-        const diffMs = now - feedTime;
-        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-        const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        
-        if (diffHours === 0) {
-            return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
-        } else if (diffHours < 24) {
-            return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
-        } else {
-            const diffDays = Math.floor(diffHours / 24);
-            return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-        }
+        // TODO: Implement feeding tracking with fish events
+        // For now, return a placeholder
+        return 'Feeding tracking coming soon';
     }
 
     getFinalHarvestWeight(fishType) {
@@ -2734,38 +4189,53 @@ class AquaponicsApp {
         return densityLimits[fishType.toLowerCase()] || densityLimits.default;
     }
 
-    generateTankDetails(systemConfig, latestFishData) {
+    generateTankDetails(systemConfig, inventoryTanks, actualTankCount) {
         let details = '';
-        
-        console.log('generateTankDetails called with latestFishData:', latestFishData);
-        
+
         // Get individual tank configurations if available
         const tankConfigs = systemConfig.fish_tanks || [];
         
-        for (let i = 1; i <= systemConfig.fish_tank_count; i++) {
+        for (let i = 1; i <= actualTankCount; i++) {
             // Try to find the specific tank configuration
             const tankConfig = tankConfigs.find(tank => tank.tank_number === i);
-            const tankVolume = tankConfig ? tankConfig.volume_liters : Math.round(systemConfig.total_fish_volume / systemConfig.fish_tank_count);
+            let tankVolume = tankConfig?.volume_liters || null;
+
+            // Fallback to calculating from total volume if no specific tank config
+            if (!tankVolume && systemConfig.total_fish_volume && systemConfig.fish_tank_count > 0) {
+                tankVolume = Math.round(systemConfig.total_fish_volume / systemConfig.fish_tank_count);
+
+            }
+            
+            // Default fallback if still no volume (prevent NaN)
+            if (!tankVolume || isNaN(tankVolume) || tankVolume <= 0) {
+                tankVolume = 1000; // Default 1000L tank
+
+            }
+            
             const tankVolumeM3 = tankVolume / 1000;
+
+            // Get fish inventory data specific to this tank
+            const tankInventory = inventoryTanks.find(tank => tank.fish_tank_id === i) || {};
+            const fishCount = parseInt(tankInventory.current_count) || 0;
+            const avgWeight = parseFloat(tankInventory.average_weight) || 0;
+
+            // Use estimated weight if no actual weight data is available (same logic as main summary)
+            let effectiveWeight = avgWeight;
+            if (effectiveWeight === 0 && fishCount > 0) {
+                const estimatedWeights = {
+                    'tilapia': 250,  // 250g average for growing tilapia
+                    'trout': 200,    // 200g average for growing trout  
+                    'catfish': 300,  // 300g average for growing catfish
+                    'salmon': 350,   // 350g average for growing salmon
+                    'bass': 250      // 250g average for growing bass
+                };
+                effectiveWeight = estimatedWeights[systemConfig.fish_type?.toLowerCase()] || 250;
+            }
             
-            // Get fish health data specific to this tank
-            // For now, we'll look for data where fish_tank_id matches the tank number
-            // If no specific data exists, we'll check if the data is for tank 1 and this is the first/main tank
-            const tankFishData = this.getTankSpecificFishData(i, latestFishData);
-            const fishCount = tankFishData ? tankFishData.count || 0 : 0;
-            const avgWeight = tankFishData ? tankFishData.average_weight || 0 : 0;
+            const dailyFeed = this.calculateDailyFeedAmount(fishCount, effectiveWeight, systemConfig.fish_type);
             
-            console.log(`Tank ${i} Debug:`, {
-                tankFishData,
-                fishCount,
-                avgWeight,
-                latestFishData
-            });
-            
-            const dailyFeed = this.calculateDailyFeedAmount(fishCount, avgWeight, systemConfig.fish_type);
-            
-            // Calculate actual density for this tank
-            const tankBiomassKg = (fishCount * avgWeight) / 1000; // Convert grams to kg
+            // Calculate actual density for this tank using effective weight
+            const tankBiomassKg = (fishCount * effectiveWeight) / 1000; // Convert grams to kg
             const actualDensity = tankVolumeM3 > 0 && tankBiomassKg > 0 ? (tankBiomassKg / tankVolumeM3).toFixed(1) : '0.0';
             const maxDensity = this.getRecommendedStockingDensity(systemConfig.fish_type);
             const densityPercentage = Math.min((parseFloat(actualDensity) / maxDensity) * 100, 100);
@@ -2821,17 +4291,21 @@ class AquaponicsApp {
     getTankSpecificFishData(tankNumber, latestFishData) {
         // If we have fish health data, check if it's specific to this tank
         if (!latestFishData) return null;
-        
-        // For now, most fish health data is entered for tank 1 (fish_tank_id = 1)
-        // If this is tank 1, return the data as-is
-        // For other tanks, we'll need to check if there's specific data or return null
-        if (tankNumber === 1) {
+
+        // Check if the fish health data is specifically for this tank
+        if (latestFishData.fish_tank_id && latestFishData.fish_tank_id === tankNumber) {
+
             return latestFishData;
         }
         
-        // For tanks 2-7, we'll need to check if there's specific tank data
-        // Since most systems track fish collectively, we'll return null for empty tanks for now
-        // This can be enhanced later to support individual tank tracking
+        // If no specific tank ID is set, assume it's for tank 1 (legacy data)
+        if (!latestFishData.fish_tank_id && tankNumber === 1) {
+
+            return latestFishData;
+        }
+        
+        // For all other cases, this tank has no fish
+
         return null;
     }
 
@@ -2882,8 +4356,14 @@ class AquaponicsApp {
 
         const ctx = canvas.getContext('2d');
         
-        // Calculate fish density data over time - only use entries with actual weight data
-        const fishHealthData = this.dataRecords.fishHealth || [];
+        // Destroy existing chart if it exists
+        if (this.fishDensityChart) {
+            this.fishDensityChart.destroy();
+            this.fishDensityChart = null;
+        }
+        
+        // Fish density chart will be updated to use fish events data later
+        const fishHealthData = []; // TODO: Load fish events for density chart
         const systemConfig = this.loadSystemConfig();
         const fishVolumeM3 = (systemConfig?.total_fish_volume || 1000) / 1000;
         
@@ -2900,11 +4380,11 @@ class AquaponicsApp {
         }).reverse(); // Reverse to show chronological order
         
         const labels = validHealthData.map(entry => {
-            return new Date(entry.date).toLocaleDateString();
+            return this.formatDateDDMMYYYY(new Date(entry.date));
         }).reverse();
 
-        // Create chart
-        new Chart(ctx, {
+        // Create and store chart instance
+        this.fishDensityChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
@@ -2996,7 +4476,7 @@ class AquaponicsApp {
     }
 
     calculateFeedComparison(currentStart, currentEnd, previousStart, previousEnd) {
-        const fishHealthData = this.dataRecords.fishHealth || [];
+        const fishHealthData = []; // TODO: Load fish events for feed comparison
         
         // Calculate total feed consumption for current month
         const currentMonthData = fishHealthData.filter(entry => {
@@ -3056,16 +4536,18 @@ class AquaponicsApp {
             return total + (entry.harvest_weight || 0);
         }, 0);
         
-        // Calculate change and trend
-        const change = currentHarvest - previousHarvest;
-        const percentChange = previousHarvest > 0 ? ((change / previousHarvest) * 100).toFixed(1) : 0;
+        // Calculate change and trend (convert grams to kg)
+        const currentKg = currentHarvest / 1000;
+        const previousKg = previousHarvest / 1000;
+        const change = currentKg - previousKg;
+        const percentChange = previousKg > 0 ? ((change / previousKg) * 100).toFixed(1) : 0;
         const trend = change > 0 ? 'positive' : change < 0 ? 'negative' : 'neutral';
         const changeText = change === 0 ? 'No change' : 
                           `${change > 0 ? '+' : ''}${change.toFixed(1)}kg (${percentChange}%)`;
         
         return {
-            current: currentHarvest.toFixed(1),
-            previous: previousHarvest.toFixed(1),
+            current: currentKg.toFixed(1),
+            previous: previousKg.toFixed(1),
             change: changeText,
             trend
         };
@@ -3103,8 +4585,8 @@ class AquaponicsApp {
                 categoryName = 'Water Quality';
                 break;
             case 'fish-health':
-                data = this.dataRecords.fishHealth || [];
-                categoryName = 'Fish Health';
+                data = []; // TODO: Load fish events data
+                categoryName = 'Fish Events';
                 break;
             case 'plant-growth':
                 data = this.dataRecords.plantGrowth || [];
@@ -3298,7 +4780,7 @@ class AquaponicsApp {
     getDataByCategory(category) {
         switch(category) {
             case 'water-quality': return this.dataRecords.waterQuality;
-            case 'fish-health': return this.dataRecords.fishHealth;
+            case 'fish-health': return []; // TODO: Return fish events data
             case 'plant-growth': return this.dataRecords.plantGrowth;
             case 'operations': return this.dataRecords.operations;
             default: return [];
@@ -3362,7 +4844,7 @@ class AquaponicsApp {
     getCategoryEndpoint(category) {
         const endpoints = {
             'water-quality': '/data/water-quality',
-            'fish-health': '/data/fish-health',
+            'fish-inventory': '/fish-inventory',
             'plant-growth': '/data/plant-growth',
             'operations': '/data/operations'
         };
@@ -3400,13 +4882,13 @@ class AquaponicsApp {
         }
     }
 
-    updatePlantManagement() {
+    async updatePlantManagement() {
         // Only update plant overview if the overview tab is active
         const overviewTab = document.getElementById('plant-overview-tab');
         const overviewContent = document.getElementById('plant-overview-content');
         
         if (overviewTab && overviewTab.classList.contains('active') && overviewContent && overviewContent.classList.contains('active')) {
-            this.updatePlantOverview().catch(console.error);
+            await this.updatePlantOverview();
         }
         
         this.updateGrowBeds();
@@ -3415,86 +4897,178 @@ class AquaponicsApp {
         this.updateRecentPlantEntries();
     }
 
-    updatePlantNutrientData() {
-        const plantData = this.dataRecords.plantGrowth || [];
-        const crops = this.getCurrentCrops(plantData);
-        
-        // Get the most recent value for each nutrient (may come from different entries)
-        const recentNutrients = this.getLatestNutrientValues();
+    async updatePlantNutrientData() {
+        try {
+            console.log('updatePlantNutrientData started');
+            const plantData = this.dataRecords.plantGrowth || [];
+            const crops = this.getCurrentCrops(plantData);
+            
+            // Get the most recent value for each nutrient (may come from different entries)
+            const recentNutrients = await this.getLatestNutrientValues();
+            console.log('Latest nutrients loaded:', recentNutrients);
         
         // Update plant nutrient displays with latest readings and status indicators
-        this.updateNutrientStatus('nitrate', recentNutrients.nitrate, this.analyzeNitrate(recentNutrients.nitrate, crops));
-        this.updateNutrientStatus('phosphorus', recentNutrients.phosphorus, this.analyzePhosphorus(recentNutrients.phosphorus, crops));
-        this.updateNutrientStatus('potassium', recentNutrients.potassium, this.analyzePotassium(recentNutrients.potassium, crops));
-        this.updateNutrientStatus('iron', recentNutrients.iron, this.analyzeIron(recentNutrients.iron, crops));
-        this.updateNutrientStatus('calcium', recentNutrients.calcium, this.analyzeCalcium(recentNutrients.calcium, crops));
-        this.updateNutrientStatus('ph', recentNutrients.ph, this.analyzePH(recentNutrients.ph, crops));
+        this.updateNutrientStatus('nitrate', recentNutrients.nitrate.value, this.analyzeNitrate(recentNutrients.nitrate.value, crops), recentNutrients.nitrate.source);
+        this.updateNutrientStatus('phosphorus', recentNutrients.phosphorus.value, this.analyzePhosphorus(recentNutrients.phosphorus.value, crops), recentNutrients.phosphorus.source);
+        this.updateNutrientStatus('potassium', recentNutrients.potassium.value, this.analyzePotassium(recentNutrients.potassium.value, crops), recentNutrients.potassium.source);
+        this.updateNutrientStatus('iron', recentNutrients.iron.value, this.analyzeIron(recentNutrients.iron.value, crops), recentNutrients.iron.source);
+        this.updateNutrientStatus('calcium', recentNutrients.calcium.value, this.analyzeCalcium(recentNutrients.calcium.value, crops), recentNutrients.calcium.source);
+        this.updateNutrientStatus('ec', recentNutrients.ec?.value, this.analyzeEC(recentNutrients.ec?.value, crops), recentNutrients.ec?.source);
+        this.updateNutrientStatus('ph', recentNutrients.ph.value, this.analyzePH(recentNutrients.ph.value, crops), recentNutrients.ph.source);
+        this.updateNutrientStatus('humidity', recentNutrients.humidity.value, this.analyzeHumidity(recentNutrients.humidity.value, crops), recentNutrients.humidity.source);
+        this.updateNutrientStatus('salinity', recentNutrients.salinity.value, this.analyzeSalinity(recentNutrients.salinity.value, crops), recentNutrients.salinity.source);
         
         // Update nutrient charts
-        this.updateNutrientCharts();
+        await this.updateNutrientCharts();
         
-        // Update nutrient recommendations
-        this.updateNutrientRecommendations();
+            // Update nutrient recommendations
+            this.updateNutrientRecommendations();
+            
+            console.log('updatePlantNutrientData completed successfully');
+        } catch (error) {
+            console.error('Error in updatePlantNutrientData:', error);
+            // Set default "No data" values for all nutrients
+            ['nitrate', 'phosphorus', 'potassium', 'iron', 'calcium', 'ec', 'ph', 'humidity', 'salinity'].forEach(nutrient => {
+                const valueElement = document.getElementById(`plant-${nutrient}`);
+                const timestampElement = document.getElementById(`plant-${nutrient}-chart-timestamp`);
+                const statusElement = document.getElementById(`${nutrient}-status-text`);
+                
+                if (valueElement) valueElement.textContent = 'No data';
+                if (timestampElement) timestampElement.textContent = 'Last updated: No data available';
+                if (statusElement) statusElement.textContent = 'No data';
+            });
+        }
     }
 
-    getLatestNutrientValues() {
-        const waterQualityData = this.dataRecords.waterQuality || [];
-        
-        if (waterQualityData.length === 0) {
+    async getLatestNutrientValues() {
+        try {
+            // Fetch ALL latest values from nutrient_readings table (includes water quality + nutrients)
+            const latestNutrients = await this.makeApiCall(`/data/nutrients/latest/${this.activeSystemId}`);
+            
+            // Return all available parameters with their values and sources
             return {
-                nitrate: null,
-                phosphorus: null,
-                potassium: null,
-                iron: null,
-                calcium: null,
-                ph: null
+                // Water quality parameters
+                ph: {
+                    value: latestNutrients.ph?.value !== undefined ? latestNutrients.ph.value : null,
+                    source: latestNutrients.ph?.source || null
+                },
+                temperature: {
+                    value: latestNutrients.temperature?.value !== undefined ? latestNutrients.temperature.value : null,
+                    source: latestNutrients.temperature?.source || null
+                },
+                dissolved_oxygen: {
+                    value: latestNutrients.dissolved_oxygen?.value !== undefined ? latestNutrients.dissolved_oxygen.value : null,
+                    source: latestNutrients.dissolved_oxygen?.source || null
+                },
+                ammonia: {
+                    value: latestNutrients.ammonia?.value !== undefined ? latestNutrients.ammonia.value : null,
+                    source: latestNutrients.ammonia?.source || null
+                },
+                humidity: {
+                    value: latestNutrients.humidity?.value !== undefined ? latestNutrients.humidity.value : null,
+                    source: latestNutrients.humidity?.source || null
+                },
+                salinity: {
+                    value: latestNutrients.salinity?.value !== undefined ? latestNutrients.salinity.value : null,
+                    source: latestNutrients.salinity?.source || null
+                },
+                ec: {
+                    value: latestNutrients.ec?.value !== undefined ? latestNutrients.ec.value : null,
+                    source: latestNutrients.ec?.source || null
+                },
+                // Nutrient parameters
+                nitrate: {
+                    value: latestNutrients.nitrate?.value !== undefined ? latestNutrients.nitrate.value : null,
+                    source: latestNutrients.nitrate?.source || null
+                },
+                phosphorus: {
+                    value: latestNutrients.phosphorus?.value !== undefined ? latestNutrients.phosphorus.value : null,
+                    source: latestNutrients.phosphorus?.source || null
+                },
+                potassium: {
+                    value: latestNutrients.potassium?.value !== undefined ? latestNutrients.potassium.value : null,
+                    source: latestNutrients.potassium?.source || null
+                },
+                iron: {
+                    value: latestNutrients.iron?.value !== undefined ? latestNutrients.iron.value : null,
+                    source: latestNutrients.iron?.source || null
+                },
+                calcium: {
+                    value: latestNutrients.calcium?.value !== undefined ? latestNutrients.calcium.value : null,
+                    source: latestNutrients.calcium?.source || null
+                }
             };
-        }
-        
-        // Sort by date (most recent first)
-        const sortedData = [...waterQualityData].sort((a, b) => new Date(b.date) - new Date(a.date));
-        
-        const nutrients = {
-            nitrate: null,
-            phosphorus: null,
-            potassium: null,
-            iron: null,
-            calcium: null,
-            ph: null
-        };
-        
-        // Find the most recent non-null/non-zero value for each nutrient
-        for (const entry of sortedData) {
-            if (nutrients.nitrate === null && entry.nitrate !== null && entry.nitrate !== undefined && entry.nitrate > 0) {
-                nutrients.nitrate = entry.nitrate;
-            }
-            if (nutrients.phosphorus === null && entry.phosphorus !== null && entry.phosphorus !== undefined && entry.phosphorus > 0) {
-                nutrients.phosphorus = entry.phosphorus;
-            }
-            if (nutrients.potassium === null && entry.potassium !== null && entry.potassium !== undefined && entry.potassium > 0) {
-                nutrients.potassium = entry.potassium;
-            }
-            if (nutrients.iron === null && entry.iron !== null && entry.iron !== undefined && entry.iron > 0) {
-                nutrients.iron = entry.iron;
-            }
-            if (nutrients.calcium === null && entry.calcium !== null && entry.calcium !== undefined && entry.calcium > 0) {
-                nutrients.calcium = entry.calcium;
-            }
-            if (nutrients.ph === null && entry.ph !== null && entry.ph !== undefined && entry.ph > 0) {
-                nutrients.ph = entry.ph;
+        } catch (error) {
+            console.error('Error fetching latest nutrient values:', error);
+            
+            // Fallback to old method using water quality data
+            const waterQualityData = this.dataRecords.waterQuality || [];
+            
+            if (waterQualityData.length === 0) {
+                return {
+                    nitrate: { value: null, source: null },
+                    phosphorus: { value: null, source: null },
+                    potassium: { value: null, source: null },
+                    iron: { value: null, source: null },
+                    calcium: { value: null, source: null },
+                    ph: { value: null, source: null },
+                    humidity: { value: null, source: null },
+                    salinity: { value: null, source: null }
+                };
             }
             
-            // Stop early if we've found all nutrients
-            if (Object.values(nutrients).every(value => value !== null)) {
-                break;
+            // Sort by date (most recent first)
+            const sortedData = [...waterQualityData].sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            const nutrients = {
+                nitrate: { value: null, source: null },
+                phosphorus: { value: null, source: null },
+                potassium: { value: null, source: null },
+                iron: { value: null, source: null },
+                calcium: { value: null, source: null },
+                ph: { value: null, source: null },
+                humidity: { value: null, source: null },
+                salinity: { value: null, source: null }
+            };
+            
+            // Find the most recent non-null/non-zero value for each nutrient
+            for (const entry of sortedData) {
+                if (nutrients.nitrate.value === null && entry.nitrate !== null && entry.nitrate !== undefined && entry.nitrate > 0) {
+                    nutrients.nitrate = { value: entry.nitrate, source: 'manual' };
+                }
+                if (nutrients.phosphorus.value === null && entry.phosphorus !== null && entry.phosphorus !== undefined && entry.phosphorus > 0) {
+                    nutrients.phosphorus = { value: entry.phosphorus, source: 'manual' };
+                }
+                if (nutrients.potassium.value === null && entry.potassium !== null && entry.potassium !== undefined && entry.potassium > 0) {
+                    nutrients.potassium = { value: entry.potassium, source: 'manual' };
+                }
+                if (nutrients.iron.value === null && entry.iron !== null && entry.iron !== undefined && entry.iron > 0) {
+                    nutrients.iron = { value: entry.iron, source: 'manual' };
+                }
+                if (nutrients.calcium.value === null && entry.calcium !== null && entry.calcium !== undefined && entry.calcium > 0) {
+                    nutrients.calcium = { value: entry.calcium, source: 'manual' };
+                }
+                if (nutrients.ph.value === null && entry.ph !== null && entry.ph !== undefined && entry.ph > 0) {
+                    nutrients.ph = { value: entry.ph, source: 'manual' };
+                }
+                if (nutrients.humidity.value === null && entry.humidity !== null && entry.humidity !== undefined) {
+                    nutrients.humidity = { value: entry.humidity, source: 'manual' };
+                }
+                if (nutrients.salinity.value === null && entry.salinity !== null && entry.salinity !== undefined) {
+                    nutrients.salinity = { value: entry.salinity, source: 'manual' };
+                }
+                
+                // Stop early if we've found all nutrients
+                if (Object.values(nutrients).every(item => item.value !== null)) {
+                    break;
+                }
             }
+            
+            return nutrients;
         }
-        
-        return nutrients;
     }
 
-
-    updateNutrientStatus(nutrientName, value, analysis) {
+    updateNutrientStatus(nutrientName, value, analysis, source = null) {
         const valueElement = document.getElementById(`plant-${nutrientName}`);
         const indicatorElement = document.getElementById(`${nutrientName}-indicator`);
         const statusTextElement = document.getElementById(`${nutrientName}-status-text`);
@@ -3503,10 +5077,13 @@ class AquaponicsApp {
             console.warn(`Missing elements for ${nutrientName} status update`);
             return;
         }
-        
-        // Debug: uncomment to troubleshoot nutrient status updates
-        // console.log(`Updating ${nutrientName}: value=${value}, analysis=`, analysis);
-        
+
+        // Update timestamp for plant nutrient charts
+        const timestampElement = document.getElementById(`plant-${nutrientName}-chart-timestamp`);
+        if (timestampElement) {
+            const currentTime = new Date().toLocaleString();
+            timestampElement.textContent = `Last updated: ${currentTime}`;
+        }
         if (value === null || value === undefined) {
             // No data state
             valueElement.textContent = 'No data';
@@ -3514,12 +5091,32 @@ class AquaponicsApp {
             statusTextElement.className = 'status-text no-data';
             statusTextElement.textContent = 'No data';
         } else {
+            // Convert to number and validate
+            const numericValue = parseFloat(value);
+            
             // Update value display
-            if (nutrientName === 'ph') {
-                valueElement.textContent = value.toFixed(1);
-            } else {
-                valueElement.textContent = `${value.toFixed(1)} mg/L`;
+            if (isNaN(numericValue)) {
+                valueElement.textContent = 'Invalid data';
+                indicatorElement.className = 'status-indicator no-data';
+                statusTextElement.className = 'status-text no-data';
+                statusTextElement.textContent = 'Invalid data';
+                return;
             }
+            
+            // Determine unit based on nutrient type
+            let unit = 'mg/L';
+            if (nutrientName === 'ph') unit = '';
+            else if (nutrientName === 'humidity') unit = '%';
+            else if (nutrientName === 'salinity') unit = 'ppt';
+            
+            // Determine source icon
+            let sourceIcon = '';
+            if (source === 'sensor') sourceIcon = '📡';
+            else if (source === 'manual') sourceIcon = '📝';
+            else if (source === 'lab_test') sourceIcon = '🧪';
+            
+            // Use formatSensorValue to display with source icon
+            valueElement.innerHTML = this.formatSensorValue(numericValue, unit, sourceIcon);
             
             // Update status indicator based on analysis
             if (!analysis) {
@@ -3532,40 +5129,50 @@ class AquaponicsApp {
                 indicatorElement.className = `status-indicator ${statusClass}`;
                 statusTextElement.className = `status-text ${statusClass}`;
                 
-                // Set status text based on analysis result
-                const statusTexts = {
-                    'optimal': 'Optimal',
-                    'warning': 'Low',
-                    'critical': 'Critical',
-                    'caution': 'High'
-                };
-                statusTextElement.textContent = statusTexts[statusClass] || 'Unknown';
+                // Set status text based on analysis result and nutrient type
+                let statusText = 'Unknown';
+                if (nutrientName === 'ph') {
+                    // Special handling for pH
+                    if (statusClass === 'optimal') statusText = 'Optimal';
+                    else if (statusClass === 'caution') statusText = 'High';  // pH high shows as caution
+                    else if (statusClass === 'warning') statusText = 'Low';   // pH low shows as warning
+                    else if (statusClass === 'critical') statusText = 'Critical';
+                } else {
+                    // Standard nutrient status text
+                    const statusTexts = {
+                        'optimal': 'Optimal',
+                        'warning': 'High',
+                        'critical': 'Critical',
+                        'caution': 'Low'
+                    };
+                    statusText = statusTexts[statusClass] || 'Unknown';
+                }
+                statusTextElement.textContent = statusText;
             }
         }
     }
 
     updateRecentPlantEntries() {
-        console.log('🌱 updateRecentPlantEntries called');
+
         try {
             this.updateRecentPlantEntry();
             this.updateRecentHarvestEntry();
-            console.log('✅ Recent plant entries updated successfully');
+
         } catch (error) {
             console.error('❌ Error updating recent plant entries:', error);
         }
     }
 
     updateRecentPlantEntry() {
-        console.log('🌱 updateRecentPlantEntry called');
+
         const container = document.getElementById('recent-plant-entry');
         if (!container) {
-            console.log('❌ Recent plant entry container not found');
+
             return;
         }
 
         const latestPlantData = this.getLatestPlantData('planting');
-        console.log('🌱 Latest plant data:', latestPlantData);
-        
+
         if (!latestPlantData) {
             container.innerHTML = `
                 <div class="no-data-message">
@@ -3577,7 +5184,7 @@ class AquaponicsApp {
         }
 
         const entryDate = new Date(latestPlantData.date);
-        const formattedDate = entryDate.toLocaleDateString() + ' ' + entryDate.toLocaleTimeString();
+        const formattedDate = this.formatDateDDMMYYYY(entryDate) + ' ' + entryDate.toLocaleTimeString();
 
         container.innerHTML = `
             <div class="plant-entry">
@@ -3622,16 +5229,15 @@ class AquaponicsApp {
     }
 
     updateRecentHarvestEntry() {
-        console.log('🌾 updateRecentHarvestEntry called');
+
         const container = document.getElementById('recent-harvest-entry');
         if (!container) {
-            console.log('❌ Recent harvest entry container not found');
+
             return;
         }
 
         const latestHarvestData = this.getLatestPlantData('harvest');
-        console.log('🌾 Latest harvest data:', latestHarvestData);
-        
+
         if (!latestHarvestData) {
             container.innerHTML = `
                 <div class="no-data-message">
@@ -3643,7 +5249,7 @@ class AquaponicsApp {
         }
 
         const entryDate = new Date(latestHarvestData.date);
-        const formattedDate = entryDate.toLocaleDateString() + ' ' + entryDate.toLocaleTimeString();
+        const formattedDate = this.formatDateDDMMYYYY(entryDate) + ' ' + entryDate.toLocaleTimeString();
 
         container.innerHTML = `
             <div class="plant-entry">
@@ -3669,7 +5275,7 @@ class AquaponicsApp {
                         </div>
                         <div class="data-item">
                             <span class="data-label">Harvest Weight:</span>
-                            <span class="data-value">${latestHarvestData.harvest_weight ? latestHarvestData.harvest_weight + ' kg' : 'Not recorded'}</span>
+                            <span class="data-value">${latestHarvestData.harvest_weight ? (latestHarvestData.harvest_weight/1000).toFixed(1) + ' kg' : 'Not recorded'}</span>
                         </div>
                         <div class="data-item">
                             <span class="data-label">Grow Bed:</span>
@@ -3688,11 +5294,9 @@ class AquaponicsApp {
     }
 
     getLatestPlantData(type) {
-        console.log(`📊 getLatestPlantData called for type: ${type}`);
-        console.log('📊 Plant growth records available:', this.dataRecords.plantGrowth ? this.dataRecords.plantGrowth.length : 0);
-        
+
         if (!this.dataRecords.plantGrowth || this.dataRecords.plantGrowth.length === 0) {
-            console.log('📊 No plant growth data available');
+
             return null;
         }
 
@@ -3706,64 +5310,220 @@ class AquaponicsApp {
             return false;
         });
 
-        console.log(`📊 Filtered data for ${type}:`, filteredData.length, 'entries');
-
         if (filteredData.length === 0) {
-            console.log(`📊 No ${type} data found`);
+
             return null;
         }
 
         // Return the most recent entry (data is ordered DESC by date)
         const latestEntry = filteredData[0];
-        console.log(`📊 Latest ${type} entry:`, latestEntry);
+
         return latestEntry;
     }
 
     async editPlantEntry(entryId) {
-        // Switch to settings view, admin tab, and data edit sub-tab
-        this.currentView = 'settings';
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('settings').classList.add('active');
-        document.querySelector('[data-view="settings"]').classList.add('active');
-        
-        // Switch to admin settings tab
-        document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.settings-content').forEach(c => c.classList.remove('active'));
-        document.getElementById('admin-settings-tab').classList.add('active');
-        document.getElementById('admin-settings-content').classList.add('active');
-        
-        // Switch to data edit sub-tab
-        document.querySelectorAll('.admin-subtab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.admin-subcontent').forEach(c => c.classList.remove('active'));
-        document.getElementById('admin-data-subtab').classList.add('active');
-        document.getElementById('admin-data-subcontent').classList.add('active');
+        try {
+            // Find the plant entry in the current data records
+            const plantData = this.dataRecords.plantGrowth || [];
+            const plantEntry = plantData.find(entry => entry.id == entryId);
 
-        // Wait a bit for the view to switch, then activate data edit tab
-        setTimeout(() => {
-            const dataEditTab = document.querySelector('[data-category="plant-growth"]');
-            if (dataEditTab) {
-                // Activate plant growth edit tab
-                document.querySelectorAll('.edit-tab').forEach(t => t.classList.remove('active'));
-                dataEditTab.classList.add('active');
-                
-                // Load the data edit interface
-                this.loadDataEditInterface('plant-growth');
-                
-                // Find and populate the specific entry for editing
-                setTimeout(() => {
-                    const editRows = document.querySelectorAll('.edit-row');
-                    editRows.forEach(row => {
-                        const editButton = row.querySelector('.edit-entry-btn');
-                        if (editButton && editButton.onclick.toString().includes(entryId)) {
-                            editButton.click();
-                        }
-                    });
-                }, 500);
+            if (!plantEntry) {
+                this.showNotification('❌ Plant entry not found', 'error');
+                return;
             }
-        }, 200);
+
+            // Show the edit modal for plant entries
+            this.showPlantEditModal(plantEntry);
+            
+        } catch (error) {
+            console.error('Error loading plant entry for edit:', error);
+            this.showNotification('❌ Failed to load plant entry', 'error');
+        }
+    }
+
+    async showPlantEditModal(plantEntry) {
+        // Remove existing modal if any
+        const existingModal = document.getElementById('plant-edit-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Get grow bed options
+        const growBedOptions = await this.generateGrowBedOptions(plantEntry.grow_bed_id);
+
+        // Create modal HTML
+        const modalHtml = `
+            <div id="plant-edit-modal" class="modal-overlay">
+                <div class="modal-content plant-edit-modal">
+                    <div class="modal-header">
+                        <h3>Edit Plant Entry</h3>
+                        <button class="modal-close" onclick="document.getElementById('plant-edit-modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="plant-edit-form">
+                            <div class="form-group">
+                                <label for="edit-date">Date & Time</label>
+                                <input type="datetime-local" id="edit-date" name="date" value="${this.formatDateTimeForInput(plantEntry.date)}" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="edit-grow-bed">Grow Bed</label>
+                                <select id="edit-grow-bed" name="grow_bed_id" required>
+                                    ${growBedOptions}
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="edit-crop-type">Crop Type</label>
+                                <input type="text" id="edit-crop-type" name="crop_type" value="${plantEntry.crop_type || ''}" required>
+                            </div>
+                            
+                            ${plantEntry.new_seedlings ? `
+                                <div class="form-group">
+                                    <label for="edit-new-seedlings">New Seedlings</label>
+                                    <input type="number" id="edit-new-seedlings" name="new_seedlings" value="${plantEntry.new_seedlings || 0}" min="0">
+                                </div>
+                            ` : ''}
+                            
+                            ${plantEntry.plants_harvested ? `
+                                <div class="form-group">
+                                    <label for="edit-plants-harvested">Plants Harvested</label>
+                                    <input type="number" id="edit-plants-harvested" name="plants_harvested" value="${plantEntry.plants_harvested || 0}" min="0">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="edit-harvest-weight">Harvest Weight (kg)</label>
+                                    <input type="number" id="edit-harvest-weight" name="harvest_weight" value="${(plantEntry.harvest_weight || 0) / 1000}" step="0.01" min="0">
+                                </div>
+                            ` : ''}
+                            
+                            <div class="form-group">
+                                <label for="edit-health">Health Status</label>
+                                <select id="edit-health" name="health">
+                                    <option value="">Select health status</option>
+                                    <option value="excellent" ${plantEntry.health === 'excellent' ? 'selected' : ''}>Excellent</option>
+                                    <option value="good" ${plantEntry.health === 'good' ? 'selected' : ''}>Good</option>
+                                    <option value="fair" ${plantEntry.health === 'fair' ? 'selected' : ''}>Fair</option>
+                                    <option value="poor" ${plantEntry.health === 'poor' ? 'selected' : ''}>Poor</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="edit-notes">Notes</label>
+                                <textarea id="edit-notes" name="notes" rows="3">${plantEntry.notes || ''}</textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('plant-edit-modal').remove()">Cancel</button>
+                        <button type="button" class="btn-primary" onclick="app.savePlantEntryEdit(${plantEntry.id})">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Add modal to page
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
         
-        this.showNotification('📝 Switched to Data Edit tab for plant entry editing', 'info');
+        // Show modal with animation
+        setTimeout(() => {
+            const modal = document.getElementById('plant-edit-modal');
+            if (modal) {
+                modal.classList.add('show');
+            }
+        }, 10);
+    }
+
+    formatDateTimeForInput(dateString) {
+        // Convert the date string to the format required by datetime-local input
+        if (!dateString) return '';
+        
+        try {
+            const date = new Date(dateString);
+            // Format as YYYY-MM-DDTHH:MM
+            return date.getFullYear() + '-' + 
+                   String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(date.getDate()).padStart(2, '0') + 'T' + 
+                   String(date.getHours()).padStart(2, '0') + ':' + 
+                   String(date.getMinutes()).padStart(2, '0');
+        } catch (error) {
+            console.error('Error formatting date:', error);
+            return '';
+        }
+    }
+
+    async generateGrowBedOptions(selectedBedId) {
+        let growBeds = [];
+        
+        try {
+            // Get grow beds for the current system
+            growBeds = await this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`);
+        } catch (error) {
+
+        }
+
+        let options = '<option value="">Select grow bed</option>';
+        
+        if (growBeds && growBeds.length > 0) {
+            growBeds.forEach(bed => {
+                const selected = bed.id == selectedBedId ? 'selected' : '';
+                options += `<option value="${bed.id}" ${selected}>${bed.bed_name || `Bed ${bed.bed_number}`}</option>`;
+            });
+        } else {
+            // Fallback if no beds loaded
+            for (let i = 1; i <= 4; i++) {
+                const selected = i == selectedBedId ? 'selected' : '';
+                options += `<option value="${i}" ${selected}>Bed ${i}</option>`;
+            }
+        }
+        
+        return options;
+    }
+
+    async savePlantEntryEdit(entryId) {
+        try {
+            const form = document.getElementById('plant-edit-form');
+            const formData = new FormData(form);
+            
+            // Convert form data to object
+            const updateData = {};
+            for (let [key, value] of formData.entries()) {
+                updateData[key] = value;
+            }
+
+            // Convert harvest weight from kg to grams for storage
+            if (updateData.harvest_weight) {
+                updateData.harvest_weight = parseFloat(updateData.harvest_weight) * 1000;
+            }
+
+            // Update the plant entry via API
+            const response = await this.makeApiCall(`/data/plant-growth/${entryId}`, {
+                method: 'PUT',
+                body: JSON.stringify(updateData)
+            });
+
+            if (response) {
+                this.showNotification('✅ Plant entry updated successfully', 'success');
+                
+                // Close modal
+                document.getElementById('plant-edit-modal').remove();
+                
+                // Refresh the data and UI comprehensively
+                await this.loadDataRecords();
+                await this.updateDashboardFromData();
+                // Update other plant management components (not overview to avoid double-render)
+                this.updateGrowBeds();
+                this.updatePlantGrowthHistoryDisplay();
+                this.updatePlantRecommendations();
+                this.updateRecentPlantEntries();
+                await this.updatePlantOverview(); // Force update plant overview to refresh batch data
+                this.updateRemainingPlantsDisplay(); // Update remaining plants display
+            }
+
+        } catch (error) {
+            console.error('Error saving plant entry edit:', error);
+            this.showNotification('❌ Failed to save changes', 'error');
+        }
     }
 
     async deletePlantEntry(entryId) {
@@ -3772,7 +5532,7 @@ class AquaponicsApp {
         }
 
         try {
-            await this.makeApiCall(`/data/plant-growth/${entryId}`, {
+            await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}/${entryId}`, {
                 method: 'DELETE'
             });
             
@@ -3787,43 +5547,23 @@ class AquaponicsApp {
         }
     }
 
-    updateNutrientCharts() {
-        // Get historical water quality data for charts
-        const waterQualityData = this.dataRecords.waterQuality || [];
-        
-        // Prepare data for charts (last 7 days)
-        const recentData = waterQualityData.slice(0, 7).reverse();
-        const labels = recentData.map(entry => new Date(entry.date).toLocaleDateString());
-        
-        // Nitrate chart
-        this.createOrUpdateNutrientChart('nitrate-chart', 'Nitrate (NO₃)', labels, 
-            recentData.map(entry => entry.nitrate || 0), '#4CAF50');
-        
-        // Phosphorus chart
-        this.createOrUpdateNutrientChart('phosphorus-chart', 'Phosphorus (P)', labels, 
-            recentData.map(entry => entry.phosphorus || 0), '#FF9800');
-        
-        // Potassium chart
-        this.createOrUpdateNutrientChart('potassium-chart', 'Potassium (K)', labels, 
-            recentData.map(entry => entry.potassium || 0), '#7baaee');
-        
-        // Iron chart
-        this.createOrUpdateNutrientChart('iron-chart', 'Iron (Fe)', labels, 
-            recentData.map(entry => entry.iron || 0), '#80fb7d');
-        
-        // Calcium chart
-        this.createOrUpdateNutrientChart('calcium-chart', 'Calcium (Ca)', labels, 
-            recentData.map(entry => entry.calcium || 0), '#8dfbcc');
-        
-        // pH chart for plants
-        this.createOrUpdateNutrientChart('plant-ph-chart', 'pH Level', labels, 
-            recentData.map(entry => entry.ph || 0), '#334e9d');
-    }
-
     createOrUpdateNutrientChart(canvasId, label, labels, data, color) {
         const ctx = document.getElementById(canvasId);
-        if (!ctx) return;
-        
+        if (!ctx) {
+            console.error('Canvas not found:', canvasId);
+            return;
+        }
+
+        // Filter out null/undefined values and their corresponding labels
+        const filteredData = [];
+        const filteredLabels = [];
+        for (let i = 0; i < data.length; i++) {
+            if (data[i] !== null && data[i] !== undefined && data[i] !== '' && !isNaN(data[i])) {
+                filteredData.push(data[i]);
+                filteredLabels.push(labels[i]);
+            }
+        }
+
         // Destroy existing chart if it exists
         if (this.charts[canvasId]) {
             this.charts[canvasId].destroy();
@@ -3832,15 +5572,16 @@ class AquaponicsApp {
         this.charts[canvasId] = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: labels,
+                labels: filteredLabels,
                 datasets: [{
                     label: label,
-                    data: data,
+                    data: filteredData,
                     borderColor: color,
                     backgroundColor: color + '20',
                     borderWidth: 2,
                     fill: true,
-                    tension: 0.4
+                    tension: 0.4,
+                    spanGaps: false  // Don't connect lines across null values (shows gaps)
                 }]
             },
             options: {
@@ -3865,13 +5606,21 @@ class AquaponicsApp {
                     }
                 },
                 onClick: (event, elements) => {
-                    this.openNutrientModal(canvasId, label, labels, data, color);
+
+                    this.openNutrientModal(canvasId, label, filteredLabels, filteredData, color);
                 }
             }
         });
         
         // Add cursor pointer to indicate clickability
         ctx.style.cursor = 'pointer';
+        
+        // Add direct click handler as fallback
+        ctx.addEventListener('click', (e) => {
+
+            this.openNutrientModal(canvasId, label, filteredLabels, filteredData, color);
+        });
+
     }
 
     updateNutrientRecommendations() {
@@ -3957,36 +5706,40 @@ class AquaponicsApp {
     analyzePH(ph, crops) {
         if (!ph) return null;
         
+        // Convert to number and validate
+        const phValue = parseFloat(ph);
+        if (isNaN(phValue)) return null;
+        
         const cropOptimal = this.getOptimalPH(crops);
         let status, icon, action, content;
         
-        if (ph < 5.5) {
+        if (phValue < 5.5) {
             status = 'critical';
             icon = '⚠️';
             action = 'Add pH buffer or reduce acid input';
-            content = `pH is critically low at ${ph.toFixed(1)}. Most plants cannot absorb nutrients effectively below 5.5.`;
-        } else if (ph < cropOptimal.min) {
+            content = `pH is critically low at ${phValue.toFixed(1)}. Most plants cannot absorb nutrients effectively below 5.5.`;
+        } else if (phValue < cropOptimal.min) {
             status = 'warning';
             icon = '📉';
             action = 'Gradually increase pH';
-            content = `pH is slightly low at ${ph.toFixed(1)} for your crops. Optimal range is ${cropOptimal.min}-${cropOptimal.max}.`;
-        } else if (ph > cropOptimal.max) {
+            content = `pH is slightly low at ${phValue.toFixed(1)} for your crops. Optimal range is ${cropOptimal.min}-${cropOptimal.max}.`;
+        } else if (phValue > cropOptimal.max) {
             status = 'caution';
             icon = '📈';
             action = 'Gradually decrease pH';
-            content = `pH is slightly high at ${ph.toFixed(1)} for your crops. Optimal range is ${cropOptimal.min}-${cropOptimal.max}.`;
+            content = `pH is slightly high at ${phValue.toFixed(1)} for your crops. Optimal range is ${cropOptimal.min}-${cropOptimal.max}.`;
         } else {
             status = 'optimal';
             icon = '✅';
             action = 'Maintain current levels';
-            content = `pH is optimal at ${ph.toFixed(1)} for your crops. Plants can efficiently absorb nutrients.`;
+            content = `pH is optimal at ${phValue.toFixed(1)} for your crops. Plants can efficiently absorb nutrients.`;
         }
         
         return {
             title: 'pH Level',
             status,
             icon,
-            level: `Current: ${ph.toFixed(1)}`,
+            level: `Current: ${phValue.toFixed(1)}`,
             content,
             action,
             cropNote: crops.length > 1 ? `Optimized for: ${crops.join(', ')}` : null
@@ -3996,36 +5749,40 @@ class AquaponicsApp {
     analyzeIron(iron, crops) {
         if (iron === null || iron === undefined) return null;
         
+        // Convert to number and validate
+        const ironValue = parseFloat(iron);
+        if (isNaN(ironValue)) return null;
+        
         const optimalRange = this.getCropNutrientRange(crops, 'fe');
         let status, icon, action, content;
         
-        if (iron < optimalRange.min * 0.5) {
+        if (ironValue < optimalRange.min * 0.5) {
             status = 'critical';
             icon = '🔴';
             action = 'Add iron chelate supplement';
-            content = `Iron is critically low at ${iron.toFixed(1)} mg/L. Plants will show yellowing leaves (chlorosis). Target: ${optimalRange.min}-${optimalRange.max} mg/L.`;
-        } else if (iron < optimalRange.min) {
+            content = `Iron is critically low at ${ironValue.toFixed(1)} mg/L. Plants will show yellowing leaves (chlorosis). Target: ${optimalRange.min}-${optimalRange.max} mg/L.`;
+        } else if (ironValue < optimalRange.min) {
             status = 'warning';
             icon = '🟡';
             action = 'Consider iron supplementation';
-            content = `Iron is low at ${iron.toFixed(1)} mg/L. Target range for your crops: ${optimalRange.min}-${optimalRange.max} mg/L.`;
-        } else if (iron > optimalRange.max * 2) {
+            content = `Iron is low at ${ironValue.toFixed(1)} mg/L. Target range for your crops: ${optimalRange.min}-${optimalRange.max} mg/L.`;
+        } else if (ironValue > optimalRange.max * 2) {
             status = 'caution';
             icon = '🟠';
             action = 'Reduce iron inputs';
-            content = `Iron is high at ${iron.toFixed(1)} mg/L. Excessive iron can block other nutrient uptake. Target: ${optimalRange.min}-${optimalRange.max} mg/L.`;
+            content = `Iron is high at ${ironValue.toFixed(1)} mg/L. Excessive iron can block other nutrient uptake. Target: ${optimalRange.min}-${optimalRange.max} mg/L.`;
         } else {
             status = 'optimal';
             icon = '✅';
             action = 'Maintain current levels';
-            content = `Iron is optimal at ${iron.toFixed(1)} mg/L for your crop mix. Plants have good access for chlorophyll synthesis.`;
+            content = `Iron is optimal at ${ironValue.toFixed(1)} mg/L for your crop mix. Plants have good access for chlorophyll synthesis.`;
         }
         
         return {
             title: 'Iron (Fe)',
             status,
             icon,
-            level: `Current: ${iron.toFixed(1)} mg/L`,
+            level: `Current: ${ironValue.toFixed(1)} mg/L`,
             content,
             action,
             cropNote: `Target for your crops: ${optimalRange.min}-${optimalRange.max} mg/L`
@@ -4034,6 +5791,10 @@ class AquaponicsApp {
 
     analyzePotassium(potassium, crops) {
         if (potassium === null || potassium === undefined) return null;
+        
+        // Convert to number and validate
+        const potassiumValue = parseFloat(potassium);
+        if (isNaN(potassiumValue)) return null;
         
         // Use proper aquaponics potassium ranges (10-50 mg/L is typical for aquaponics)
         // These ranges are based on aquaponics best practices
@@ -4052,38 +5813,38 @@ class AquaponicsApp {
         
         let status, icon, action, content;
         
-        if (potassium < 5) {
+        if (potassiumValue < 5) {
             status = 'critical';
             icon = '🔴';
             action = 'Add potassium supplement or increase fish feeding';
-            content = `Potassium is critically low at ${potassium.toFixed(0)} mg/L. Plants need K for fruit development and disease resistance.`;
-        } else if (potassium < optimalMin) {
+            content = `Potassium is critically low at ${potassiumValue.toFixed(0)} mg/L. Plants need K for fruit development and disease resistance.`;
+        } else if (potassiumValue < optimalMin) {
             status = 'warning';
             icon = '🟡';
             action = 'Increase potassium gradually';
-            content = `Potassium is low at ${potassium.toFixed(0)} mg/L. Target range is ${optimalMin}-${optimalMax} mg/L for your crops.`;
-        } else if (potassium > 80) {
+            content = `Potassium is low at ${potassiumValue.toFixed(0)} mg/L. Target range is ${optimalMin}-${optimalMax} mg/L for your crops.`;
+        } else if (potassiumValue > 80) {
             status = 'caution';
             icon = '🟠';
             action = 'Reduce potassium inputs';
-            content = `Potassium is high at ${potassium.toFixed(0)} mg/L. Excessive K can interfere with calcium and magnesium uptake.`;
-        } else if (potassium > optimalMax) {
+            content = `Potassium is high at ${potassiumValue.toFixed(0)} mg/L. Excessive K can interfere with calcium and magnesium uptake.`;
+        } else if (potassiumValue > optimalMax) {
             status = 'caution';
             icon = '⚠️';
             action = 'Monitor potassium levels';
-            content = `Potassium is slightly high at ${potassium.toFixed(0)} mg/L. Consider reducing supplementation.`;
+            content = `Potassium is slightly high at ${potassiumValue.toFixed(0)} mg/L. Consider reducing supplementation.`;
         } else {
             status = 'optimal';
             icon = '✅';
             action = 'Maintain current levels';
-            content = `Potassium is optimal at ${potassium.toFixed(0)} mg/L for your crop mix. Plants have good access for metabolism and fruit quality.`;
+            content = `Potassium is optimal at ${potassiumValue.toFixed(0)} mg/L for your crop mix. Plants have good access for metabolism and fruit quality.`;
         }
         
         return {
             title: 'Potassium (K)',
             status,
             icon,
-            level: `Current: ${potassium.toFixed(0)} mg/L`,
+            level: `Current: ${potassiumValue.toFixed(0)} mg/L`,
             content,
             action,
             cropNote: `Target range: ${optimalMin}-${optimalMax} mg/L for ${crops.join(', ')}`
@@ -4092,6 +5853,10 @@ class AquaponicsApp {
 
     analyzeCalcium(calcium, crops) {
         if (calcium === null || calcium === undefined) return null;
+        
+        // Convert to number and validate
+        const calciumValue = parseFloat(calcium);
+        if (isNaN(calciumValue)) return null;
         
         // Use proper aquaponics calcium ranges (20-80 mg/L is typical for aquaponics)
         // These ranges are based on aquaponics best practices
@@ -4110,46 +5875,118 @@ class AquaponicsApp {
         
         let status, icon, action, content;
         
-        if (calcium < 10) {
+        if (calciumValue < 10) {
             status = 'critical';
             icon = '🔴';
             action = 'Add calcium supplement immediately';
-            content = `Calcium is critically low at ${calcium.toFixed(0)} mg/L. Plants will develop weak cell walls and blossom end rot.`;
-        } else if (calcium < optimalMin) {
+            content = `Calcium is critically low at ${calciumValue.toFixed(0)} mg/L. Plants will develop weak cell walls and blossom end rot.`;
+        } else if (calciumValue < optimalMin) {
             status = 'warning';
             icon = '🟡';
             action = 'Increase calcium levels';
-            content = `Calcium is low at ${calcium.toFixed(0)} mg/L. Target range is ${optimalMin}-${optimalMax} mg/L for your crops.`;
-        } else if (calcium > 120) {
+            content = `Calcium is low at ${calciumValue.toFixed(0)} mg/L. Target range is ${optimalMin}-${optimalMax} mg/L for your crops.`;
+        } else if (calciumValue > 120) {
             status = 'caution';
             icon = '🟠';
             action = 'Reduce calcium inputs';
-            content = `Calcium is high at ${calcium.toFixed(0)} mg/L. Very high Ca can reduce uptake of magnesium and other nutrients.`;
-        } else if (calcium > optimalMax) {
+            content = `Calcium is high at ${calciumValue.toFixed(0)} mg/L. Very high Ca can reduce uptake of magnesium and other nutrients.`;
+        } else if (calciumValue > optimalMax) {
             status = 'caution';
             icon = '⚠️';
             action = 'Monitor calcium levels';
-            content = `Calcium is slightly high at ${calcium.toFixed(0)} mg/L. Consider reducing supplementation.`;
+            content = `Calcium is slightly high at ${calciumValue.toFixed(0)} mg/L. Consider reducing supplementation.`;
         } else {
             status = 'optimal';
             icon = '✅';
             action = 'Maintain current levels';
-            content = `Calcium is optimal at ${calcium.toFixed(0)} mg/L for your crop mix. Plants have strong cell wall development.`;
+            content = `Calcium is optimal at ${calciumValue.toFixed(0)} mg/L for your crop mix. Plants have strong cell wall development.`;
         }
         
         return {
             title: 'Calcium (Ca)',
             status,
             icon,
-            level: `Current: ${calcium.toFixed(0)} mg/L`,
+            level: `Current: ${calciumValue.toFixed(0)} mg/L`,
             content,
             action,
             cropNote: `Target range: ${optimalMin}-${optimalMax} mg/L for ${crops.join(', ')}`
         };
     }
 
+    analyzeEC(ec, crops) {
+        if (ec === null || ec === undefined) return null;
+        
+        // Convert to number and validate
+        const ecValue = parseFloat(ec);
+        if (isNaN(ecValue)) return null;
+        
+        // EC optimal ranges for aquaponics (μS/cm)
+        // General aquaponics: 400-1500 μS/cm
+        // Leafy greens: 400-800 μS/cm
+        // Fruiting plants: 800-1500 μS/cm
+        let optimalMin = 400;
+        let optimalMax = 1200;
+        
+        // Adjust range based on crop types
+        const leafyGreens = ['lettuce', 'lettuce_batavian', 'lettuce_butter', 'lettuce_cos', 'lettuce_icty', 'lettuce_datem', 'lettuce_oak', 'spinach', 'kale', 'arugula', 'bok choy', 'basil', 'cilantro', 'mint', 'celery'];
+        const fruitingPlants = ['tomato', 'cucumber', 'pepper', 'strawberry', 'eggplant'];
+        
+        const hasLeafyGreens = crops.some(crop => leafyGreens.includes(crop.toLowerCase()));
+        const hasFruitingPlants = crops.some(crop => fruitingPlants.includes(crop.toLowerCase()));
+        
+        if (hasLeafyGreens && !hasFruitingPlants) {
+            optimalMax = 800; // Lower EC for leafy greens only
+        } else if (hasFruitingPlants) {
+            optimalMin = 800; // Higher EC for fruiting plants
+            optimalMax = 1500;
+        }
+        
+        let status, icon, action, content;
+        
+        if (ecValue < 200) {
+            status = 'critical';
+            icon = '⚠️';
+            action = 'Add nutrients immediately';
+            content = `EC is critically low at ${ecValue.toFixed(0)} μS/cm. Plants cannot get sufficient nutrients for healthy growth.`;
+        } else if (ecValue < optimalMin) {
+            status = 'low';
+            icon = '🔵';
+            action = 'Increase nutrient concentration';
+            content = `EC is low at ${ecValue.toFixed(0)} μS/cm. Consider adding nutrients or reducing water dilution.`;
+        } else if (ecValue > 2000) {
+            status = 'critical';
+            icon = '⚠️';
+            action = 'Dilute nutrients immediately';
+            content = `EC is critically high at ${ecValue.toFixed(0)} μS/cm. Risk of nutrient burn and plant stress.`;
+        } else if (ecValue > optimalMax) {
+            status = 'caution';
+            icon = '🟠';
+            action = 'Reduce nutrient concentration';
+            content = `EC is high at ${ecValue.toFixed(0)} μS/cm. Consider diluting nutrients to prevent plant stress.`;
+        } else {
+            status = 'optimal';
+            icon = '✅';
+            action = 'Maintain current levels';
+            content = `EC is optimal at ${ecValue.toFixed(0)} μS/cm for your crop mix. Good nutrient availability for plants.`;
+        }
+        
+        return {
+            title: 'EC/TDS',
+            status,
+            icon,
+            level: `Current: ${ecValue.toFixed(0)} μS/cm`,
+            content,
+            action,
+            cropNote: `Target range: ${optimalMin}-${optimalMax} μS/cm for ${crops.join(', ')}`
+        };
+    }
+
     analyzeNitrate(nitrate, crops) {
         if (nitrate === null || nitrate === undefined) return null;
+        
+        // Convert to number and validate
+        const nitrateValue = parseFloat(nitrate);
+        if (isNaN(nitrateValue)) return null;
         
         // Use proper aquaponics nitrate ranges (5-150 mg/L is typical for aquaponics)
         // These ranges are based on aquaponics best practices, not conversion from nitrogen targets
@@ -4157,7 +5994,7 @@ class AquaponicsApp {
         let optimalMax = 80;  // Maximum before potential issues
         
         // Adjust range slightly based on crop types
-        const leafyGreens = ['lettuce', 'spinach', 'kale', 'swiss_chard', 'arugula', 'watercress'];
+        const leafyGreens = ['lettuce', 'lettuce_batavian', 'lettuce_butter', 'lettuce_cos', 'lettuce_icty', 'lettuce_datem', 'lettuce_oak', 'spinach', 'kale', 'swiss_chard', 'arugula', 'watercress', 'celery'];
         const fruitingPlants = ['tomato', 'cucumber', 'pepper', 'strawberry', 'eggplant'];
         
         const hasLeafyGreens = crops.some(crop => leafyGreens.includes(crop.toLowerCase()));
@@ -4175,38 +6012,38 @@ class AquaponicsApp {
         
         let status, icon, action, content;
         
-        if (nitrate < 5) {
+        if (nitrateValue < 5) {
             status = 'critical';
             icon = '🔴';
             action = 'Increase fish feeding or check system balance';
-            content = `Nitrate is critically low at ${nitrate.toFixed(1)} mg/L. Plants need adequate nitrate for proper growth.`;
-        } else if (nitrate < optimalMin) {
+            content = `Nitrate is critically low at ${nitrateValue.toFixed(1)} mg/L. Plants need adequate nitrate for proper growth.`;
+        } else if (nitrateValue < optimalMin) {
             status = 'warning';
             icon = '🟡';
             action = 'Increase nitrate levels gradually';
-            content = `Nitrate is below optimal at ${nitrate.toFixed(1)} mg/L. Target range is ${optimalMin}-${optimalMax} mg/L for your crops.`;
-        } else if (nitrate > 150) {
+            content = `Nitrate is below optimal at ${nitrateValue.toFixed(1)} mg/L. Target range is ${optimalMin}-${optimalMax} mg/L for your crops.`;
+        } else if (nitrateValue > 150) {
             status = 'warning';
             icon = '🟠';
             action = 'Reduce feeding or increase water changes';
-            content = `Nitrate is excessively high at ${nitrate.toFixed(1)} mg/L. This can stress fish and cause algae growth.`;
-        } else if (nitrate > optimalMax) {
+            content = `Nitrate is excessively high at ${nitrateValue.toFixed(1)} mg/L. This can stress fish and cause algae growth.`;
+        } else if (nitrateValue > optimalMax) {
             status = 'caution';
             icon = '⚠️';
             action = 'Monitor nitrate levels';
-            content = `Nitrate is slightly high at ${nitrate.toFixed(1)} mg/L. Consider reducing fish feeding or adding more plants.`;
+            content = `Nitrate is slightly high at ${nitrateValue.toFixed(1)} mg/L. Consider reducing fish feeding or adding more plants.`;
         } else {
             status = 'optimal';
             icon = '✅';
             action = 'Maintain current levels';
-            content = `Nitrate is optimal at ${nitrate.toFixed(1)} mg/L. Plants have excellent nitrate availability for growth.`;
+            content = `Nitrate is optimal at ${nitrateValue.toFixed(1)} mg/L. Plants have excellent nitrate availability for growth.`;
         }
         
         return {
             title: 'Nitrate (NO₃)',
             status,
             icon,
-            level: `Current: ${nitrate.toFixed(1)} mg/L`,
+            level: `Current: ${nitrateValue.toFixed(1)} mg/L`,
             content,
             action,
             cropNote: `Target range: ${optimalMin}-${optimalMax} mg/L for ${crops.join(', ')}`
@@ -4216,44 +6053,140 @@ class AquaponicsApp {
     analyzePhosphorus(phosphorus, crops) {
         if (phosphorus === null || phosphorus === undefined) return null;
         
+        // Convert to number and validate
+        const phosphorusValue = parseFloat(phosphorus);
+        if (isNaN(phosphorusValue)) return null;
+        
         const optimalRange = this.getCropNutrientRange(crops, 'p');
         let status, icon, action, content;
         
-        if (phosphorus < optimalRange.min * 0.5) {
+        if (phosphorusValue < optimalRange.min * 0.5) {
             status = 'critical';
             icon = '🔴';
             action = 'Add phosphorus supplement';
-            content = `Phosphorus is critically low at ${phosphorus.toFixed(1)} mg/L. Plants will have poor root development and flowering.`;
-        } else if (phosphorus < optimalRange.min) {
+            content = `Phosphorus is critically low at ${phosphorusValue.toFixed(1)} mg/L. Plants will have poor root development and flowering.`;
+        } else if (phosphorusValue < optimalRange.min) {
             status = 'warning';
             icon = '🟡';
             action = 'Increase phosphorus levels';
-            content = `Phosphorus is below optimal at ${phosphorus.toFixed(1)} mg/L. Target range is ${optimalRange.min}-${optimalRange.max} mg/L for your crops.`;
-        } else if (phosphorus > optimalRange.max * 1.5) {
+            content = `Phosphorus is below optimal at ${phosphorusValue.toFixed(1)} mg/L. Target range is ${optimalRange.min}-${optimalRange.max} mg/L for your crops.`;
+        } else if (phosphorusValue > optimalRange.max * 1.5) {
             status = 'warning';
             icon = '🟠';
             action = 'Reduce phosphorus input';
-            content = `Phosphorus is excessively high at ${phosphorus.toFixed(1)} mg/L. This can cause nutrient lockout and algae growth.`;
-        } else if (phosphorus > optimalRange.max) {
+            content = `Phosphorus is excessively high at ${phosphorusValue.toFixed(1)} mg/L. This can cause nutrient lockout and algae growth.`;
+        } else if (phosphorusValue > optimalRange.max) {
             status = 'caution';
             icon = '⚠️';
             action = 'Monitor phosphorus levels';
-            content = `Phosphorus is slightly high at ${phosphorus.toFixed(1)} mg/L. Monitor for potential nutrient imbalances.`;
+            content = `Phosphorus is slightly high at ${phosphorusValue.toFixed(1)} mg/L. Monitor for potential nutrient imbalances.`;
         } else {
             status = 'optimal';
             icon = '✅';
             action = 'Maintain current levels';
-            content = `Phosphorus is optimal at ${phosphorus.toFixed(1)} mg/L. Plants have strong root and flower development.`;
+            content = `Phosphorus is optimal at ${phosphorusValue.toFixed(1)} mg/L. Plants have strong root and flower development.`;
         }
         
         return {
             title: 'Phosphorus (P)',
             status,
             icon,
-            level: `Current: ${phosphorus.toFixed(1)} mg/L`,
+            level: `Current: ${phosphorusValue.toFixed(1)} mg/L`,
             content,
             action,
             cropNote: `Optimal range: ${optimalRange.min}-${optimalRange.max} mg/L for ${crops.join(', ')}`
+        };
+    }
+
+    analyzeHumidity(humidity, crops) {
+        if (humidity === null || humidity === undefined) return null;
+        
+        // Convert to number and validate
+        const humidityValue = parseFloat(humidity);
+        if (isNaN(humidityValue)) return null;
+        
+        // Optimal humidity ranges for aquaponics (40-80%)
+        let optimalMin = 40;
+        let optimalMax = 80;
+        
+        let status, icon, action, content;
+        
+        if (humidityValue < 20) {
+            status = 'critical';
+            icon = '🔴';
+            action = 'Increase humidity immediately';
+            content = `Humidity is critically low at ${humidityValue.toFixed(1)}%. Plants will experience severe water stress and may wilt.`;
+        } else if (humidityValue < optimalMin) {
+            status = 'warning';
+            icon = '🟡';
+            action = 'Increase humidity levels';
+            content = `Humidity is low at ${humidityValue.toFixed(1)}%. Target range is ${optimalMin}-${optimalMax}% for optimal plant growth.`;
+        } else if (humidityValue > 95) {
+            status = 'critical';
+            icon = '🔴';
+            action = 'Reduce humidity to prevent mold';
+            content = `Humidity is critically high at ${humidityValue.toFixed(1)}%. Risk of fungal diseases and poor plant health.`;
+        } else if (humidityValue > optimalMax) {
+            status = 'caution';
+            icon = '🟠';
+            action = 'Reduce humidity levels';
+            content = `Humidity is high at ${humidityValue.toFixed(1)}%. May cause fungal issues and reduce nutrient uptake efficiency.`;
+        } else {
+            status = 'optimal';
+            icon = '✅';
+            action = 'Maintain current levels';
+            content = `Humidity is optimal at ${humidityValue.toFixed(1)}%. Plants have ideal conditions for transpiration and growth.`;
+        }
+        
+        return {
+            title: 'Humidity',
+            status,
+            icon,
+            level: `Current: ${humidityValue.toFixed(1)}%`,
+            content,
+            action,
+            cropNote: `Optimal range: ${optimalMin}-${optimalMax}% for aquaponics systems`
+        };
+    }
+
+    analyzeSalinity(salinity, crops) {
+        if (salinity === null || salinity === undefined) return null;
+        
+        // Convert to number and validate
+        const salinityValue = parseFloat(salinity);
+        if (isNaN(salinityValue)) return null;
+        
+        // Optimal salinity ranges for aquaponics (0.0-1.0 ppt)
+        let optimalMin = 0.0;
+        let optimalMax = 1.0;
+        
+        let status, icon, action, content;
+        
+        if (salinityValue > 3.0) {
+            status = 'critical';
+            icon = '🔴';
+            action = 'Reduce salinity immediately';
+            content = `Salinity is critically high at ${salinityValue.toFixed(1)} ppt. Both fish and plants will experience severe stress.`;
+        } else if (salinityValue > optimalMax) {
+            status = 'warning';
+            icon = '🟠';
+            action = 'Reduce salinity levels';
+            content = `Salinity is high at ${salinityValue.toFixed(1)} ppt. Target range is ${optimalMin}-${optimalMax} ppt for freshwater aquaponics.`;
+        } else {
+            status = 'optimal';
+            icon = '✅';
+            action = 'Maintain current levels';
+            content = `Salinity is optimal at ${salinityValue.toFixed(1)} ppt. Ideal conditions for freshwater fish and plant growth.`;
+        }
+        
+        return {
+            title: 'Salinity',
+            status,
+            icon,
+            level: `Current: ${salinityValue.toFixed(1)} ppt`,
+            content,
+            action,
+            cropNote: `Optimal range: ${optimalMin}-${optimalMax} ppt for freshwater aquaponics`
         };
     }
 
@@ -4394,66 +6327,217 @@ class AquaponicsApp {
         `;
     }
 
-    openNutrientModal(canvasId, label, labels, data, color) {
-        console.log('Opening nutrient modal:', { canvasId, label, labels, data, color });
+    async openNutrientModal(canvasId, label, labels, data, color) {
+
         const modal = document.getElementById('nutrient-detail-modal');
         if (!modal) {
             console.error('Modal element not found');
             return;
         }
 
-        const nutrientName = label.toLowerCase().replace(/\s+/g, '-');
-        const currentValue = data[data.length - 1];
-        const previousValue = data.length > 1 ? data[data.length - 2] : null;
-        const trend = previousValue ? (currentValue > previousValue ? 'increasing' : 'decreasing') : 'stable';
+        const nutrientName = label.toLowerCase().replace(/\s+\(.+?\)/g, '').replace(/\s+/g, '-');
         
-        console.log('Modal data processed:', { nutrientName, currentValue, previousValue, trend });
-        
-        // Calculate some basic statistics
-        const minValue = Math.min(...data.filter(val => val !== null && val !== undefined));
-        const maxValue = Math.max(...data.filter(val => val !== null && val !== undefined));
-        const avgValue = data.reduce((sum, val) => sum + (val || 0), 0) / data.length;
+        try {
+            // Fetch detailed nutrient history from new API (more data points for modal)
+            let detailedData = [];
+            let detailedLabels = [];
+            
+            // Check if this is a dashboard water quality chart
+            const isDashboardChart = ['temp-chart', 'ph-chart', 'oxygen-chart', 'ammonia-chart', 'humidity-chart', 'salinity-chart', 'ec-chart', 'nitrate-chart', 'nitrite-chart', 'phosphorus-chart', 'potassium-chart', 'calcium-chart', 'magnesium-chart', 'iron-chart'].includes(canvasId);
+            
+            if (isDashboardChart || nutrientName === 'ph-level' || nutrientName === 'temperature' || 
+                nutrientName === 'dissolved-oxygen' || nutrientName === 'ammonia' || nutrientName === 'ec/tds') {
+                // For water quality parameters, use water quality data
+                const waterQualityData = this.dataRecords.waterQuality || [];
+                const recentData = waterQualityData.slice(0, 30).reverse();
+                
+                // Map chart ID to data field
+                let dataField = 'ph'; // default
+                if (canvasId === 'temp-chart' || nutrientName === 'temperature') dataField = 'temperature';
+                else if (canvasId === 'oxygen-chart' || nutrientName === 'dissolved-oxygen') dataField = 'dissolved_oxygen';
+                else if (canvasId === 'ammonia-chart' || nutrientName === 'ammonia') dataField = 'ammonia';
+                else if (canvasId === 'ph-chart' || nutrientName === 'ph-level') dataField = 'ph';
+                else if (canvasId === 'plant-ec-chart' || nutrientName === 'ec/tds') dataField = 'ec';
+                else if (canvasId === 'humidity-chart' || nutrientName === 'humidity') dataField = 'humidity';
+                else if (canvasId === 'salinity-chart' || nutrientName === 'salinity') dataField = 'salinity';
+                
+                detailedData = recentData.map(entry => {
+                    const value = entry[dataField];
+                    // Return null for missing values to create gaps in the chart
+                    return (value !== undefined && value !== null && value !== '') ? value : null;
+                });
+                detailedLabels = recentData.map(entry => this.formatDateDDMMYYYY(new Date(entry.date)));
+            } else {
+                // Fetch from individual nutrient API
+                const nutrientType = nutrientName.replace('-', ''); // Convert 'nitrate' etc
+                const apiData = await this.makeApiCall(`/data/nutrients/${this.activeSystemId}?nutrient_type=${nutrientType}&limit=30`);
+                
+                detailedData = apiData.map(entry => {
+                    const val = parseFloat(entry.value);
+                    return (!isNaN(val) ? val : null);
+                });
+                detailedLabels = apiData.map(entry => this.formatDateDDMMYYYY(new Date(entry.reading_date))).reverse();
+                detailedData = detailedData.reverse(); // Reverse to match labels order
+            }
+            
+            // Use detailed data if available, otherwise fallback to chart data
+            const modalData = detailedData.length > 0 ? detailedData : data;
+            const modalLabels = detailedLabels.length > 0 ? detailedLabels : labels;
+            
+            // Find the most recent non-zero value (after reversing, newest is at the end)
+            let currentValue = modalData[modalData.length - 1];
+            let currentIndex = modalData.length - 1;
+            
+            // If current value is 0 or null, find the most recent non-zero value
+            if (!currentValue || currentValue === 0) {
+                for (let i = modalData.length - 1; i >= 0; i--) {
+                    if (modalData[i] && modalData[i] > 0) {
+                        currentValue = modalData[i];
+                        currentIndex = i;
+                        break;
+                    }
+                }
+            }
+            
+            // Find previous non-zero value for trend calculation (skip identical values)
+            let previousValue = null;
+            for (let i = currentIndex - 1; i >= 0; i--) {
+                if (modalData[i] && modalData[i] > 0 && modalData[i] !== currentValue) {
+                    previousValue = modalData[i];
+                    break;
+                }
+            }
+            
+            const trend = previousValue ? (currentValue > previousValue ? 'increasing' : 'decreasing') : 'stable';
 
-        // Get optimal ranges based on nutrient type
-        const optimalRange = this.getNutrientOptimalRange(nutrientName);
-        const status = this.getNutrientStatus(currentValue, optimalRange);
+            // Calculate some basic statistics
+            let minValue = 0, maxValue = 0, avgValue = 0;
+            try {
+                const filteredData = modalData.filter(val => val !== null && val !== undefined && !isNaN(val));
+                minValue = filteredData.length > 0 ? Math.min(...filteredData) : 0;
+                maxValue = filteredData.length > 0 ? Math.max(...filteredData) : 0;
+                avgValue = modalData.reduce((sum, val) => sum + (val || 0), 0) / modalData.length;
+            } catch (error) {
+                console.error('Error calculating statistics:', error);
+            }
 
-        document.getElementById('nutrient-modal-title').textContent = label;
-        document.getElementById('nutrient-modal-current').textContent = currentValue ? currentValue.toFixed(1) : 'No data';
-        document.getElementById('nutrient-modal-trend').textContent = trend;
-        document.getElementById('nutrient-modal-trend').className = `trend ${trend}`;
+            // Get optimal ranges based on nutrient type
+            const optimalRange = this.getNutrientOptimalRange(nutrientName);
+            const status = this.getNutrientStatus(currentValue, optimalRange);
 
-        // Update optimal range
-        if (optimalRange) {
-            document.getElementById('nutrient-modal-optimal').textContent = `${optimalRange.min} - ${optimalRange.max}`;
-        } else {
-            document.getElementById('nutrient-modal-optimal').textContent = 'Not specified';
+            try {
+                document.getElementById('nutrient-modal-title').textContent = label;
+                
+                // Update current reading - ensure we show the actual value
+                const currentElement = document.getElementById('nutrient-modal-current');
+                if (currentValue && parseFloat(currentValue) > 0) {
+                    currentElement.textContent = parseFloat(currentValue).toFixed(1);
+                } else {
+                    currentElement.textContent = 'No data';
+                }
+                
+                document.getElementById('nutrient-modal-trend').textContent = trend;
+                document.getElementById('nutrient-modal-trend').className = `trend ${trend}`;
+
+            } catch (error) {
+                console.error('Error updating basic modal elements:', error);
+            }
+
+            // Update optimal range
+            const optimalElement = document.getElementById('nutrient-modal-optimal');
+            if (optimalElement) {
+                if (optimalRange) {
+                    optimalElement.textContent = `${optimalRange.min} - ${optimalRange.max}`;
+                } else {
+                    optimalElement.textContent = 'Not specified';
+                }
+            }
+
+            // Update status
+            const statusElement = document.getElementById('nutrient-modal-status');
+            if (statusElement) {
+                statusElement.textContent = status.text;
+                statusElement.className = `status ${status.class}`;
+            }
+
+            // Update history table with detailed data
+            try {
+
+                this.updateNutrientHistoryTable(modalLabels, modalData);
+
+            } catch (error) {
+                console.error('Error updating history table:', error);
+            }
+
+            // Show modal
+            try {
+
+                modal.style.display = 'flex';
+                modal.classList.add('show');
+
+            } catch (error) {
+                console.error('Error showing modal:', error);
+            }
+            
+            // Create detailed chart after modal is displayed (with a small delay to ensure proper rendering)
+            setTimeout(() => {
+                this.createDetailedChart(modalLabels, modalData, color, label);
+            }, 100);
+            
+        } catch (error) {
+            console.error('Error in openNutrientModal:', error);
+            
+            // Fallback to original behavior
+            const currentValue = data[data.length - 1];
+            const trend = 'stable';
+            
+            try {
+                document.getElementById('nutrient-modal-title').textContent = label;
+                const currentElement = document.getElementById('nutrient-modal-current');
+                if (currentValue && parseFloat(currentValue) > 0) {
+                    currentElement.textContent = parseFloat(currentValue).toFixed(1);
+                } else {
+                    currentElement.textContent = 'No data';
+                }
+                
+                this.updateNutrientHistoryTable(labels, data);
+                modal.style.display = 'flex';
+                modal.classList.add('show');
+                
+                setTimeout(() => {
+                    this.createDetailedChart(labels, data, color, label);
+                }, 100);
+            } catch (fallbackError) {
+                console.error('Error in fallback modal display:', fallbackError);
+            }
         }
-
-        // Update status
-        document.getElementById('nutrient-modal-status').textContent = status.text;
-        document.getElementById('nutrient-modal-status').className = `status ${status.class}`;
-
-        // Update history table
-        this.updateNutrientHistoryTable(labels, data);
-
-        // Show modal
-        modal.style.display = 'block';
-        
-        // Create detailed chart after modal is displayed (with a small delay to ensure proper rendering)
-        setTimeout(() => {
-            this.createDetailedChart(labels, data, color, label);
-        }, 100);
     }
 
     getNutrientOptimalRange(nutrientName) {
         const ranges = {
+            // Nutrient ranges
             'nitrate': { min: 5, max: 150 },
             'phosphorus': { min: 4, max: 60 },
             'potassium': { min: 10, max: 40 },
             'iron': { min: 0.5, max: 3.0 },
             'calcium': { min: 20, max: 400 },
-            'ph-level': { min: 5.5, max: 7.5 }
+            'ph-level': { min: 5.5, max: 7.5 },
+            
+            // Dashboard water quality parameter ranges
+            'ph': { min: 5.5, max: 7.5 },
+            'temperature': { min: 18, max: 28 },
+            'dissolved-oxygen': { min: 4.0, max: 8.0 },
+            'ammonia': { min: 0.0, max: 0.5 },
+            'humidity': { min: 40, max: 80 },
+            'salinity': { min: 0.0, max: 1.0 },
+            
+            // Chart ID variations (with hyphens)
+            'temp-chart': { min: 18, max: 28 },
+            'ph-chart': { min: 5.5, max: 7.5 },
+            'oxygen-chart': { min: 4.0, max: 8.0 },
+            'ammonia-chart': { min: 0.0, max: 0.5 },
+            'humidity-chart': { min: 40, max: 80 },
+            'salinity-chart': { min: 0.0, max: 1.0 }
         };
         return ranges[nutrientName] || null;
     }
@@ -4473,14 +6557,22 @@ class AquaponicsApp {
     }
 
     createDetailedChart(labels, data, color, title) {
-        console.log('Creating detailed chart:', { labels, data, color, title });
+
         const ctx = document.getElementById('nutrient-modal-chart');
         if (!ctx) {
             console.error('Canvas element nutrient-modal-chart not found');
             return;
         }
-        
-        console.log('Canvas found:', ctx);
+
+        // Filter out null/undefined values and their corresponding labels
+        const filteredData = [];
+        const filteredLabels = [];
+        for (let i = 0; i < data.length; i++) {
+            if (data[i] !== null && data[i] !== undefined && data[i] !== '') {
+                filteredData.push(data[i]);
+                filteredLabels.push(labels[i]);
+            }
+        }
 
         // Destroy existing chart if it exists
         if (this.detailChart) {
@@ -4490,17 +6582,18 @@ class AquaponicsApp {
         this.detailChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: labels,
+                labels: filteredLabels,
                 datasets: [{
                     label: title,
-                    data: data,
+                    data: filteredData,
                     borderColor: color,
                     backgroundColor: color + '20',
                     borderWidth: 3,
                     fill: true,
                     tension: 0.4,
                     pointRadius: 6,
-                    pointHoverRadius: 8
+                    pointHoverRadius: 8,
+                    spanGaps: true  // Connect all points since we filtered out nulls
                 }]
             },
             options: {
@@ -4527,26 +6620,110 @@ class AquaponicsApp {
                 }
             }
         });
-        
-        console.log('Detailed chart created successfully:', this.detailChart);
+
     }
 
-    updateNutrientHistoryTable(labels, data) {
+    updateNutrientHistoryTable(labels, data, sourceData = null) {
         const tbody = document.querySelector('#nutrient-modal-history tbody');
         if (!tbody) return;
 
+        // Filter out null/undefined values and their corresponding labels
+        const filteredData = [];
+        const filteredLabels = [];
+        const filteredSourceData = [];
+        
+        for (let i = 0; i < data.length; i++) {
+            if (data[i] !== null && data[i] !== undefined && data[i] !== '' && !isNaN(data[i])) {
+                filteredData.push(data[i]);
+                filteredLabels.push(labels[i]);
+                if (sourceData) {
+                    filteredSourceData.push(sourceData[i]);
+                }
+            }
+        }
+
+        // Update table header to include source column if we have source data
+        const table = tbody.closest('table');
+        if (table && sourceData && filteredSourceData.length > 0) {
+            const thead = table.querySelector('thead');
+            if (thead) {
+                thead.innerHTML = `
+                    <tr>
+                        <th>Date</th>
+                        <th>Value</th>
+                        <th>Source</th>
+                        <th>Change</th>
+                    </tr>
+                `;
+            } else {
+                const newThead = document.createElement('thead');
+                newThead.innerHTML = `
+                    <tr>
+                        <th>Date</th>
+                        <th>Value</th>
+                        <th>Source</th>
+                        <th>Change</th>
+                    </tr>
+                `;
+                table.insertBefore(newThead, tbody);
+            }
+        } else if (table) {
+            // Default header without source column
+            const thead = table.querySelector('thead');
+            if (thead) {
+                thead.innerHTML = `
+                    <tr>
+                        <th>Date</th>
+                        <th>Value</th>
+                        <th>Change</th>
+                    </tr>
+                `;
+            } else {
+                const newThead = document.createElement('thead');
+                newThead.innerHTML = `
+                    <tr>
+                        <th>Date</th>
+                        <th>Value</th>
+                        <th>Change</th>
+                    </tr>
+                `;
+                table.insertBefore(newThead, tbody);
+            }
+        }
+
         tbody.innerHTML = '';
         
-        for (let i = labels.length - 1; i >= 0; i--) {
+        // Use filtered data for the table
+        for (let i = filteredLabels.length - 1; i >= 0; i--) {
             const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${labels[i]}</td>
-                <td>${data[i] ? data[i].toFixed(1) : 'No data'}</td>
-                <td class="change-indicator">
-                    ${i < labels.length - 1 && data[i] && data[i + 1] ? 
-                        this.getChangeIndicator(data[i], data[i + 1]) : '-'}
-                </td>
-            `;
+            const value = parseFloat(filteredData[i]).toFixed(1);
+            
+            // Get source information if available
+            let sourceIcon = '📝';
+            if (filteredSourceData && filteredSourceData[i]) {
+                sourceIcon = filteredSourceData[i].source === 'nutrient_readings' ? '🧪' : '📝';
+            }
+            
+            if (sourceData && filteredSourceData.length > 0) {
+                row.innerHTML = `
+                    <td>${filteredLabels[i]}</td>
+                    <td>${value}</td>
+                    <td>${sourceIcon}</td>
+                    <td class="change-indicator">
+                        ${i < filteredLabels.length - 1 ? 
+                            this.getChangeIndicator(filteredData[i], filteredData[i + 1]) : '-'}
+                    </td>
+                `;
+            } else {
+                row.innerHTML = `
+                    <td>${filteredLabels[i]}</td>
+                    <td>${value}</td>
+                    <td class="change-indicator">
+                        ${i < filteredLabels.length - 1 ? 
+                            this.getChangeIndicator(filteredData[i], filteredData[i + 1]) : '-'}
+                    </td>
+                `;
+            }
             tbody.appendChild(row);
         }
     }
@@ -4607,54 +6784,752 @@ class AquaponicsApp {
         this.showNotification(`${nutrientName} data exported successfully!`, 'success');
     }
 
-    async updatePlantOverview() {
-        const container = document.getElementById('plant-overview-container');
-        if (!container) return;
-
-        const systemConfig = this.loadSystemConfig();
-        if (!systemConfig || systemConfig.system_name === 'No System Selected') {
-            container.innerHTML = '<div class="no-plant-data">Please select a system to view plant information.</div>';
+    exportBatchData() {
+        const plantData = this.dataRecords.plantGrowth || [];
+        const batchMap = new Map();
+        
+        // Build comprehensive batch information
+        plantData.forEach(record => {
+            if (record.batch_id && record.new_seedlings > 0) {
+                // This is a planting record
+                if (!batchMap.has(record.batch_id)) {
+                    batchMap.set(record.batch_id, {
+                        batch_id: record.batch_id,
+                        crop_type: record.crop_type,
+                        seed_variety: record.seed_variety || '',
+                        days_to_harvest: record.days_to_harvest || '',
+                        planted_count: 0,
+                        harvested_weight: 0,
+                        date_planted: record.date,
+                        grow_bed_id: record.grow_bed_id || '',
+                        harvest_dates: []
+                    });
+                }
+                
+                const batch = batchMap.get(record.batch_id);
+                batch.planted_count += record.new_seedlings || 0;
+            } else if (record.batch_id && (record.plants_harvested > 0 || record.harvest_weight > 0)) {
+                // This is a harvest record
+                if (batchMap.has(record.batch_id)) {
+                    const batch = batchMap.get(record.batch_id);
+                    batch.harvested_weight += record.harvest_weight || 0;
+                    batch.harvest_dates.push(record.date);
+                }
+            }
+        });
+        
+        if (batchMap.size === 0) {
+            this.showNotification('No batch data found to export.', 'warning');
             return;
         }
-
-        const plantData = this.dataRecords.plantGrowth || [];
-        const totalPlants = this.calculateTotalPlants(plantData);
-        const activeGrowBeds = Math.min(systemConfig.grow_bed_count || 4, this.getActiveGrowBeds(plantData));
-        const totalHarvested = this.calculateTotalHarvested(plantData);
-        const lastHarvestDate = this.getLastHarvestDate(plantData);
-
-        // Generate grow bed summary
-        const growBedSummaryHtml = await this.generateGrowBedSummary();
         
-        container.innerHTML = `
-            <div class="plant-overview-stats">
-                <div class="plant-stat-card">
-                    <h4>Active Plants</h4>
-                    <div class="plant-stat-value">${totalPlants}</div>
-                    <div class="plant-stat-detail">Currently growing</div>
+        // Prepare CSV data
+        const data = [];
+        data.push([
+            'Batch ID',
+            'Crop Type', 
+            'Seed Variety',
+            'Date Planted',
+            'Days to Harvest',
+            'Plants Planted',
+            'Total Harvested (g)',
+            'Age (days)',
+            'Status',
+            'Progress (%)',
+            'Grow Bed ID',
+            'Last Harvest Date'
+        ]);
+        
+        // Sort batches by date planted
+        const sortedBatches = Array.from(batchMap.values()).sort((a, b) => 
+            new Date(b.date_planted) - new Date(a.date_planted)
+        );
+        
+        sortedBatches.forEach(batch => {
+            const age = this.calculateBatchAge(batch); // Pass full batch object
+            let status = 'Growing';
+            let progress = 0;
+            
+            if (batch.days_to_harvest) {
+                progress = Math.min((age / batch.days_to_harvest) * 100, 100);
+                
+                if (age >= batch.days_to_harvest) {
+                    status = 'Ready for Harvest';
+                } else if (progress > 70) {
+                    status = 'Approaching Harvest';
+                }
+            }
+            
+            const lastHarvestDate = batch.harvest_dates.length > 0 
+                ? batch.harvest_dates[batch.harvest_dates.length - 1] 
+                : '';
+            
+            data.push([
+                batch.batch_id,
+                batch.crop_type,
+                batch.seed_variety,
+                batch.date_planted,
+                batch.days_to_harvest,
+                batch.planted_count,
+                batch.harvested_weight.toFixed(1),
+                age,
+                status,
+                Math.round(progress),
+                batch.grow_bed_id,
+                lastHarvestDate
+            ]);
+        });
+        
+        // Create CSV content
+        const csvContent = data.map(row => 
+            row.map(cell => 
+                typeof cell === 'string' && cell.includes(',') 
+                    ? `"${cell}"` 
+                    : cell
+            ).join(',')
+        ).join('\n');
+        
+        // Create and download the file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `plant_batch_data_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Show success message
+        this.showNotification(`Batch data (${sortedBatches.length} batches) exported successfully!`, 'success');
+    }
+
+    async updatePlantOverview() {
+        // Clear any pending render timeout
+        if (this.plantOverviewRenderTimeout) {
+            clearTimeout(this.plantOverviewRenderTimeout);
+        }
+        
+        // Debounce multiple render requests
+        this.plantOverviewRenderTimeout = setTimeout(async () => {
+            await this._doPlantOverviewRender();
+        }, 100); // Wait 100ms for more requests
+    }
+
+    async _doPlantOverviewRender() {
+        // Prevent concurrent renders
+        if (this.plantOverviewRendering) {
+            return;
+        }
+        
+        this.plantOverviewRendering = true;
+        try {
+            const container = document.getElementById('plant-overview-container');
+            if (!container) {
+                console.warn('plant-overview-container not found');
+                return;
+            }
+            
+
+            const systemConfig = this.loadSystemConfig();
+            if (!systemConfig || systemConfig.system_name === 'No System Selected') {
+                container.innerHTML = '<div class="no-plant-data">Please select a system to view plant information.</div>';
+                return;
+            }
+
+            const plantData = this.dataRecords.plantGrowth || [];
+            
+            const totalPlants = this.calculateTotalPlants(plantData);
+            const activeGrowBeds = Math.min(systemConfig.grow_bed_count || 4, this.getActiveGrowBeds(plantData));
+            const totalHarvested = this.calculateTotalHarvested(plantData);
+            const lastHarvestDate = this.getLastHarvestDate(plantData);
+
+            // Generate batch statistics
+            const batchStats = this.generateBatchStatistics(plantData);
+            
+            // Generate grow bed summary
+            const growBedSummaryHtml = await this.generateGrowBedSummary();
+            
+            // Generate batch overview section
+            const batchOverviewHtml = await this.generateBatchOverview(plantData);
+            
+            // Generate nutrient overview section  
+            const nutrientOverviewHtml = await this.generateNutrientOverview();
+            
+            // Clear container and verify it's empty
+            container.innerHTML = '';
+            if (container.children.length > 0) {
+                while (container.firstChild) {
+                    container.removeChild(container.firstChild);
+                }
+            }
+            
+            
+            container.innerHTML = `
+                <div class="plant-overview-stats">
+                    <div class="plant-stat-card">
+                        <h4>Active Plants</h4>
+                        <div class="plant-stat-value">${totalPlants}</div>
+                        <div class="plant-stat-detail">Currently growing</div>
+                    </div>
+                    
+                    <div class="plant-stat-card">
+                        <h4>Active Batches</h4>
+                        <div class="plant-stat-value">${batchStats.activeBatches}</div>
+                        <div class="plant-stat-detail">Unique growing batches</div>
+                    </div>
+                    
+                    <div class="plant-stat-card">
+                        <h4>Ready for Harvest</h4>
+                        <div class="plant-stat-value">${batchStats.readyForHarvest}</div>
+                        <div class="plant-stat-detail">Batches ready</div>
+                    </div>
+                    
+                    <div class="plant-stat-card">
+                        <h4>Total Harvested</h4>
+                        <div class="plant-stat-value">${this.formatWeight(totalHarvested)}</div>
+                        <div class="plant-stat-detail">All time harvest</div>
+                    </div>
                 </div>
                 
-                <div class="plant-stat-card">
-                    <h4>Active Grow Beds</h4>
-                    <div class="plant-stat-value">${activeGrowBeds}/${systemConfig.grow_bed_count}</div>
-                    <div class="plant-stat-detail">Beds in use</div>
-                </div>
+                ${nutrientOverviewHtml}
                 
-                <div class="plant-stat-card">
-                    <h4>Total Harvested</h4>
-                    <div class="plant-stat-value">${this.formatWeight(totalHarvested)}</div>
-                    <div class="plant-stat-detail">All time harvest</div>
-                </div>
+                ${batchOverviewHtml}
                 
-                <div class="plant-stat-card">
-                    <h4>Last Harvest</h4>
-                    <div class="plant-stat-value">${lastHarvestDate || 'Never'}</div>
-                    <div class="plant-stat-detail">Most recent harvest</div>
+                ${growBedSummaryHtml}
+            `;
+        } finally {
+            this.plantOverviewRendering = false;
+            this.plantOverviewRenderTimeout = null;
+        }
+    }
+
+    async generateNutrientOverview() {
+        // Generate HTML first, then update data after rendering
+        const html = `
+            <div class="nutrient-overview-section">
+                <h3>📊 Current Nutrient Status</h3>
+                <p style="color: #666; margin-bottom: 1rem;">
+                    Real-time nutrient levels and plant health indicators for optimal growth conditions.
+                </p>
+                <div class="nutrient-cards-grid">
+                    <div class="nutrient-card">
+                        <h4>Nitrate (NO₃)</h4>
+                        <div class="nutrient-status" id="nitrate-status">
+                            <span class="status-indicator" id="nitrate-indicator">●</span>
+                            <span class="status-text" id="nitrate-status-text">No data</span>
+                        </div>
+                        <div class="stat-value" id="plant-nitrate">Loading...</div>
+                        <div class="chart-timestamp" id="plant-nitrate-chart-timestamp">Last updated: Loading...</div>
+                    </div>
+                    <div class="nutrient-card">
+                        <h4>Phosphorus (P)</h4>
+                        <div class="nutrient-status" id="phosphorus-status">
+                            <span class="status-indicator" id="phosphorus-indicator">●</span>
+                            <span class="status-text" id="phosphorus-status-text">No data</span>
+                        </div>
+                        <div class="stat-value" id="plant-phosphorus">Loading...</div>
+                        <div class="chart-timestamp" id="plant-phosphorus-chart-timestamp">Last updated: Loading...</div>
+                    </div>
+                    <div class="nutrient-card">
+                        <h4>Potassium (K)</h4>
+                        <div class="nutrient-status" id="potassium-status">
+                            <span class="status-indicator" id="potassium-indicator">●</span>
+                            <span class="status-text" id="potassium-status-text">No data</span>
+                        </div>
+                        <div class="stat-value" id="plant-potassium">Loading...</div>
+                        <div class="chart-timestamp" id="plant-potassium-chart-timestamp">Last updated: Loading...</div>
+                    </div>
+                    <div class="nutrient-card">
+                        <h4>Iron (Fe)</h4>
+                        <div class="nutrient-status" id="iron-status">
+                            <span class="status-indicator" id="iron-indicator">●</span>
+                            <span class="status-text" id="iron-status-text">No data</span>
+                        </div>
+                        <div class="stat-value" id="plant-iron">Loading...</div>
+                        <div class="chart-timestamp" id="plant-iron-chart-timestamp">Last updated: Loading...</div>
+                    </div>
+                    <div class="nutrient-card">
+                        <h4>Calcium (Ca)</h4>
+                        <div class="nutrient-status" id="calcium-status">
+                            <span class="status-indicator" id="calcium-indicator">●</span>
+                            <span class="status-text" id="calcium-status-text">No data</span>
+                        </div>
+                        <div class="stat-value" id="plant-calcium">Loading...</div>
+                        <div class="chart-timestamp" id="plant-calcium-chart-timestamp">Last updated: Loading...</div>
+                    </div>
+                    <div class="nutrient-card">
+                        <h4>EC/TDS</h4>
+                        <div class="nutrient-status" id="ec-status">
+                            <span class="status-indicator" id="ec-indicator">●</span>
+                            <span class="status-text" id="ec-status-text">No data</span>
+                        </div>
+                        <div class="stat-value" id="plant-ec">Loading...</div>
+                        <div class="chart-timestamp" id="plant-ec-chart-timestamp">Last updated: Loading...</div>
+                    </div>
                 </div>
             </div>
-            
-            ${growBedSummaryHtml}
         `;
+        
+        // Update nutrient data after a short delay to allow DOM rendering
+        setTimeout(() => {
+            this.updatePlantNutrientData().catch(console.error);
+        }, 100);
+        
+        return html;
+    }
+
+    generateBatchStatistics(plantData) {
+        const batchMap = new Map();
+        let readyForHarvest = 0;
+        
+        
+        // FIRST PASS: Process planting records to create all batches
+        plantData.forEach(record => {
+            if (record.batch_id && record.new_seedlings > 0) {
+                // This is a planting record
+                if (!batchMap.has(record.batch_id)) {
+                    batchMap.set(record.batch_id, {
+                        batch_id: record.batch_id,
+                        crop_type: record.crop_type,
+                        seed_variety: record.seed_variety,
+                        days_to_harvest: record.days_to_harvest,
+                        planted_count: 0,
+                        harvested_count: 0,
+                        date_planted: record.date
+                    });
+                }
+                
+                const batch = batchMap.get(record.batch_id);
+                batch.planted_count += record.new_seedlings || 0;
+            }
+        });
+        
+        // SECOND PASS: Process harvest records now that all batches exist
+        plantData.forEach(record => {
+            if (record.batch_id && (record.plants_harvested > 0 || record.harvest_weight > 0)) {
+                // This is a harvest record
+                if (batchMap.has(record.batch_id)) {
+                    const batch = batchMap.get(record.batch_id);
+                    batch.harvested_count += record.plants_harvested || 0;
+                }
+            }
+        });
+        
+        // Check which batches are ready for harvest
+        batchMap.forEach(batch => {
+            if (batch.days_to_harvest) {
+                const age = this.calculateBatchAge(batch); // Pass full batch object
+                if (age >= batch.days_to_harvest && batch.planted_count > batch.harvested_count) {
+                    readyForHarvest++;
+                }
+            }
+        });
+        
+        // Count only batches with remaining plants (not fully harvested)
+        let activeBatchesCount = 0;
+        batchMap.forEach(batch => {
+            const remainingPlants = batch.planted_count - batch.harvested_count;
+            if (remainingPlants > 0) {
+                activeBatchesCount++;
+            }
+        });
+        
+        return {
+            activeBatches: activeBatchesCount,
+            readyForHarvest: readyForHarvest
+        };
+    }
+
+    async generateBatchOverview(plantData) {
+        
+        const batchMap = new Map();
+        
+        // Get grow bed information for icons and types
+        let growBeds = [];
+        try {
+            growBeds = await this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`);
+        } catch (error) {
+            console.error('Error fetching grow beds for batch overview:', error);
+        }
+        
+        // Create a map for quick bed lookup
+        const bedMap = new Map();
+        growBeds.forEach(bed => {
+            bedMap.set(bed.bed_number, bed);
+        });
+        
+        // Build batch information - Two pass approach
+
+        // First pass: Build all batches from planting records
+        plantData.forEach(record => {
+            if (record.batch_id && record.new_seedlings > 0) {
+                // This is a planting record
+                if (!batchMap.has(record.batch_id)) {
+                    batchMap.set(record.batch_id, {
+                        batch_id: record.batch_id,
+                        crop_type: record.crop_type,
+                        seed_variety: record.seed_variety || '',
+                        days_to_harvest: record.days_to_harvest,
+                        planted_count: 0,
+                        harvested_count: 0,
+                        date_planted: record.date,
+                        grow_bed_id: record.grow_bed_id,
+                        last_activity_date: record.date
+                    });
+                }
+                
+                const batch = batchMap.get(record.batch_id);
+                batch.planted_count += record.new_seedlings || 0;
+                
+                // Ensure we use the earliest planting date for the batch
+                if (!batch.date_planted || new Date(record.date) < new Date(batch.date_planted)) {
+                    batch.date_planted = record.date;
+                }
+                
+                // Update grow bed ID to the most recent one (in case batch was moved)
+                if (new Date(record.date) >= new Date(batch.last_activity_date)) {
+                    batch.grow_bed_id = record.grow_bed_id;
+                    batch.last_activity_date = record.date;
+                }
+            }
+        });
+        
+        // Second pass: Add harvest data to existing batches
+        plantData.forEach(record => {
+            if (record.batch_id && (record.plants_harvested > 0 || record.harvest_weight > 0)) {
+                // This is a harvest record
+                if (batchMap.has(record.batch_id)) {
+                    const batch = batchMap.get(record.batch_id);
+                    batch.harvested_count += record.plants_harvested || 0;
+                    
+                    // Update grow bed ID to the most recent one (in case batch was moved)
+                    if (new Date(record.date) >= new Date(batch.last_activity_date)) {
+                        batch.grow_bed_id = record.grow_bed_id;
+                        batch.last_activity_date = record.date;
+                    }
+                }
+            }
+        });
+        
+        if (batchMap.size === 0) {
+            return '<div class="batch-overview"><h3>🌱 Plant Batches</h3><div class="no-batch-data">No plant batches found. Start planting to see batch tracking information.</div></div>';
+        }
+        
+        // Group batches by grow bed
+        const batchesByBed = new Map();
+        Array.from(batchMap.values()).forEach(batch => {
+            const bedId = batch.grow_bed_id || 'unknown';
+            if (!batchesByBed.has(bedId)) {
+                batchesByBed.set(bedId, []);
+            }
+            batchesByBed.get(bedId).push(batch);
+        });
+        
+        
+        let batchHtml = `
+            <div class="batch-overview">
+                <div class="batch-overview-header">
+                    <h3>🌱 Plant Batches</h3>
+                    <div class="batch-header-actions">
+                        <button id="export-batch-data" class="form-btn secondary" onclick="window.app.exportBatchData()">
+                            📊 Export Batch Data
+                        </button>
+                    </div>
+                </div>
+        `;
+        
+        // Generate HTML for each grow bed
+        const sortedBedIds = Array.from(batchesByBed.keys()).sort((a, b) => {
+            if (a === 'unknown') return 1;
+            if (b === 'unknown') return -1;
+            return a - b;
+        });
+        
+        sortedBedIds.forEach(bedId => {
+            const batches = batchesByBed.get(bedId);
+            
+            const bedInfo = bedMap.get(parseInt(bedId));
+            
+            // Get bed display info
+            let bedName, bedIcon, bedType;
+            if (bedId === 'unknown') {
+                bedName = 'Unknown Bed';
+                bedIcon = '❓';
+                bedType = 'Unknown';
+            } else if (bedInfo) {
+                bedName = bedInfo.bed_name || `Bed ${bedId}`;
+                bedIcon = this.getBedTypeIcon(bedInfo.bed_type);
+                bedType = this.getBedTypeDisplayName(bedInfo.bed_type);
+            } else {
+                // Try to find bed by ID in locally fetched growBeds data
+                const bedById = growBeds.find(bed => bed.id == bedId);
+                if (bedById) {
+                    bedName = bedById.bed_name || `Bed ${bedById.bed_number}`;
+                    bedIcon = this.getBedTypeIcon(bedById.bed_type);
+                    bedType = this.getBedTypeDisplayName(bedById.bed_type);
+                } else {
+                    bedName = `Bed ${bedId}`;
+                    bedIcon = '🛏️';
+                    bedType = 'Unknown';
+                }
+            }
+            
+            // Sort batches within each bed by readiness and age
+            const sortedBatches = batches.sort((a, b) => {
+                const ageA = this.calculateBatchAge(a); // Pass full batch object
+                const ageB = this.calculateBatchAge(b); // Pass full batch object
+                
+                const readyA = a.days_to_harvest && ageA >= a.days_to_harvest;
+                const readyB = b.days_to_harvest && ageB >= b.days_to_harvest;
+                
+                if (readyA && !readyB) return -1;
+                if (!readyA && readyB) return 1;
+                
+                return ageB - ageA;
+            });
+            
+            // Count only active batches (with remaining plants)
+            const activeBatchCount = batches.filter(batch => {
+                const remainingPlants = batch.planted_count - batch.harvested_count;
+                return remainingPlants > 0;
+            }).length;
+            
+            batchHtml += `
+                <div class="bed-batch-section">
+                    <div class="bed-batch-header">
+                        <div class="bed-info">
+                            <h4>${bedIcon} ${bedName}</h4>
+                            <span class="bed-type">${bedType}</span>
+                        </div>
+                        <span class="batch-count">${activeBatchCount} batch${activeBatchCount !== 1 ? 'es' : ''}</span>
+                    </div>
+                    <div class="batch-grid">
+            `;
+            
+            sortedBatches.forEach(batch => {
+                const age = this.calculateBatchAge(batch); // Pass the full batch object
+                const isReady = batch.days_to_harvest && age >= batch.days_to_harvest;
+                const progress = batch.days_to_harvest ? Math.min((age / batch.days_to_harvest) * 100, 100) : 0;
+                const remainingPlants = batch.planted_count - batch.harvested_count;
+
+                // Skip batches with no remaining plants (fully harvested)
+                if (remainingPlants <= 0) {
+                    return;
+                }
+                
+                let statusClass = 'growing';
+                let statusText = 'Growing';
+                let statusIcon = '🌱';
+                
+                if (isReady && remainingPlants > 0) {
+                    statusClass = 'ready';
+                    statusText = 'Ready for Harvest';
+                    statusIcon = '✅';
+                } else if (remainingPlants === 0) {
+                    statusClass = 'harvested';
+                    statusText = 'Fully Harvested';
+                    statusIcon = '✅';
+                } else if (progress > 70) {
+                    statusClass = 'approaching';
+                    statusText = 'Approaching Harvest';
+                    statusIcon = '🌿';
+                }
+                
+                const variety = batch.seed_variety ? ` (${batch.seed_variety})` : '';
+                const cleanCropName = this.cleanCustomCropName(batch.crop_type);
+                
+                batchHtml += `
+                    <div class="batch-card ${statusClass}" data-batch-id="${batch.batch_id}" data-bed-id="${bedId}" data-render-id="${Date.now()}-${Math.random()}">
+                        <div class="batch-header">
+                            <div class="batch-id">${batch.batch_id}</div>
+                            <div class="batch-status">${statusIcon} ${statusText}</div>
+                        </div>
+                        <div class="batch-details">
+                            <div class="batch-crop">${cleanCropName}${variety}</div>
+                            <div class="batch-stats">
+                                <span class="batch-stat">
+                                    <i class="stat-icon">📊</i>
+                                    ${remainingPlants}/${batch.planted_count} plants
+                                </span>
+                                <span class="batch-stat">
+                                    <i class="stat-icon">⏱️</i>
+                                    ${age} days old
+                                </span>
+                            </div>
+                        ${batch.days_to_harvest ? `
+                            <div class="batch-progress">
+                                <div class="progress-bar">
+                                    <div class="progress-fill ${statusClass}" style="width: ${progress}%"></div>
+                                </div>
+                                <div class="progress-text">${Math.round(progress)}% mature</div>
+                            </div>
+                        ` : ''}
+                        ${remainingPlants > 0 ? `
+                            <div class="batch-actions">
+                                <button class="harvest-batch-btn" onclick="window.app.harvestBatch('${batch.batch_id}', '${batch.crop_type}', ${batch.grow_bed_id}, ${remainingPlants})" 
+                                        title="Harvest this batch">
+                                    🌾 Harvest
+                                </button>
+                                <button class="move-batch-btn" onclick="window.app.editBatchGrowBed('${batch.batch_id}', ${batch.grow_bed_id})" 
+                                        title="Move batch to different grow bed">
+                                    Move
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                `;
+            });
+            
+            batchHtml += '</div></div>';
+        });
+        
+        batchHtml += '</div>';
+        
+        return batchHtml;
+    }
+
+    switchToPlantHarvestTab() {
+        try {
+            // First, switch to plants view if not already active
+            const plantsView = document.getElementById('plants');
+            if (plantsView && !plantsView.classList.contains('active')) {
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                plantsView.classList.add('active');
+                const plantsNavBtn = document.querySelector('[data-view="plants"]');
+                if (plantsNavBtn) plantsNavBtn.classList.add('active');
+            }
+            
+            // Switch to Plant & Harvest management tab
+            const plantingHarvestingTab = document.getElementById('planting-harvesting-tab');
+            if (plantingHarvestingTab) {
+                // Remove active from all plant management tabs and contents
+                document.querySelectorAll('.plant-mgmt-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.plant-mgmt-content').forEach(c => c.classList.remove('active'));
+                
+                // Activate Plant & Harvest tab
+                plantingHarvestingTab.classList.add('active');
+                const plantingHarvestingContent = document.getElementById('planting-harvesting-content');
+                if (plantingHarvestingContent) {
+                    plantingHarvestingContent.classList.add('active');
+                }
+                
+                return true;
+            }
+            
+            return false;
+        } catch (error) {
+            console.error('Error switching to plant harvest tab:', error);
+            return false;
+        }
+    }
+    
+    switchToHarvestSubTab() {
+        try {
+            // Switch to harvesting sub-tab within Plant & Harvest
+            const harvestingTab = document.getElementById('harvesting-tab');
+            if (harvestingTab && !harvestingTab.classList.contains('active')) {
+                // Remove active from all plant action tabs and contents
+                document.querySelectorAll('.plant-action-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.plant-action-content').forEach(c => c.classList.remove('active'));
+                
+                // Activate harvesting tab
+                harvestingTab.classList.add('active');
+                const harvestingContent = document.getElementById('harvesting-form-content');
+                if (harvestingContent) {
+                    harvestingContent.classList.add('active');
+                }
+                
+                return true;
+            }
+            
+            return harvestingTab && harvestingTab.classList.contains('active');
+        } catch (error) {
+            console.error('Error switching to harvest sub-tab:', error);
+            return false;
+        }
+    }
+
+    harvestBatch(batchId, cropType, growBedId, remainingPlants) {
+
+        try {
+            // Switch to Plant & Harvest tab first
+            const mainTabSwitched = this.switchToPlantHarvestTab();
+            if (!mainTabSwitched) {
+                this.showNotification('❌ Could not switch to Plant & Harvest tab', 'error');
+                return;
+            }
+            
+            // Wait for main tab to load, then switch to harvest sub-tab
+            setTimeout(() => {
+                const harvestSubTabSwitched = this.switchToHarvestSubTab();
+                if (!harvestSubTabSwitched) {
+                    this.showNotification('❌ Could not switch to harvest sub-tab', 'error');
+                    return;
+                }
+                
+                // Wait a bit more for the harvest form to be visible, then populate
+                setTimeout(() => {
+                    this.populateHarvestForm(batchId, cropType, growBedId, remainingPlants);
+                }, 300);
+            }, 200);
+            
+        } catch (error) {
+            console.error('Error in harvestBatch:', error);
+            this.showNotification('❌ Error opening harvest form', 'error');
+        }
+    }
+    
+    populateHarvestForm(batchId, cropType, growBedId, remainingPlants) {
+        try {
+            // Get form elements
+            const harvestBedSelect = document.getElementById('harvest-grow-bed');
+            const harvestCropSelect = document.getElementById('harvest-crop-type');
+            const harvestPlantCountInput = document.getElementById('harvest-plant-count');
+            const harvestDateInput = document.getElementById('harvest-date');
+
+            // Set up pending batch preselection first
+            this.pendingBatchPreselection = batchId;
+            
+            if (harvestBedSelect) {
+                console.log(`🏠 Setting harvest bed to: ${growBedId}`);
+                harvestBedSelect.value = growBedId;
+                console.log(`📤 Dispatching change event for harvest bed`);
+                harvestBedSelect.dispatchEvent(new Event('change'));
+            }
+            
+            // Wait longer for bed change to complete and crop dropdown to rebuild
+            setTimeout(() => {
+                if (harvestCropSelect) {
+                    const formattedCropType = cropType.toLowerCase().replace(/\s+/g, '_');
+                    console.log(`🔄 Setting harvest crop to: ${formattedCropType}`);
+                    harvestCropSelect.value = formattedCropType;
+                    console.log(`📤 Dispatching change event for harvest crop`);
+                    harvestCropSelect.dispatchEvent(new Event('change'));
+                }
+                
+                // Pre-fill form fields after batch summary updates
+                setTimeout(() => {
+                    if (harvestPlantCountInput) {
+                        harvestPlantCountInput.value = remainingPlants;
+                    }
+                    
+                    if (harvestDateInput) {
+                        harvestDateInput.value = new Date().toISOString().slice(0, 16);
+                    }
+                    
+                    // Show success notification
+                    this.showNotification(`🌾 Harvest form populated for batch ${batchId}`, 'success');
+                    
+                }, 100);
+            }, 800); // Increased timeout to allow bed change to complete
+            
+        } catch (error) {
+            console.error('Error populating harvest form:', error);
+            this.showNotification('❌ Error populating harvest form', 'error');
+        }
     }
 
     async generateGrowBedSummary() {
@@ -4674,21 +7549,6 @@ class AquaponicsApp {
                 return '<div class="grow-bed-summary"><div class="no-data">No grow beds configured for this system.</div></div>';
             }
 
-            console.log('🌱 Grow bed summary data:', {
-                allocations: allocations.length,
-                growBeds: growBeds.length,
-                plantData: plantData.length
-            });
-            
-            console.log('📊 Grow bed IDs:', growBeds.map(bed => ({ id: bed.id, number: bed.bed_number, type: typeof bed.id })));
-            console.log('📊 Plant data grow_bed_ids:', [...new Set(plantData.map(p => p.grow_bed_id))].map(id => ({ id, type: typeof id })));
-            console.log('📊 Sample plant entries:', plantData.slice(0, 5).map(p => ({ 
-                grow_bed_id: p.grow_bed_id, 
-                crop_type: p.crop_type, 
-                count: p.count,
-                date: p.date 
-            })));
-            
             // Check for plant entries without grow_bed_id
             const entriesWithoutBedId = plantData.filter(p => !p.grow_bed_id);
             if (entriesWithoutBedId.length > 0) {
@@ -4697,37 +7557,26 @@ class AquaponicsApp {
 
             let summaryHtml = `
                 <div class="grow-bed-summary">
-                    <h3>🌱 Grow Bed Planting Summary</h3>
+                    <h3>Grow Bed Planting Summary</h3>
                     <div class="bed-summary-grid">
             `;
 
             growBeds.forEach(bed => {
                 const bedAllocations = allocations.filter(a => a.grow_bed_id == bed.id); // Use == for type coercion
                 const bedPlantData = plantData.filter(p => p.grow_bed_id == bed.id); // Use == for type coercion
-                
-                console.log(`🔍 Bed ${bed.bed_number} (ID: ${bed.id}) filtering:`, {
-                    bedId: bed.id,
-                    bedIdType: typeof bed.id,
-                    foundAllocations: bedAllocations.length,
-                    foundPlantData: bedPlantData.length,
-                    allPlantBedIds: plantData.map(p => p.grow_bed_id)
-                });
-                
+
                 // Calculate totals
                 const totalAllocatedPlants = bedAllocations.reduce((sum, alloc) => sum + (alloc.plants_planted || 0), 0);
                 const totalActualPlants = this.calculateCurrentPlantCount(bedPlantData);
                 const plantedPercentage = totalAllocatedPlants > 0 ? Math.round((totalActualPlants / totalAllocatedPlants) * 100) : 0;
-                
-                console.log(`Bed ${bed.bed_number} calculations:`, {
-                    allocations: bedAllocations.length,
-                    plantData: bedPlantData.length,
-                    totalAllocatedPlants,
-                    totalActualPlants,
-                    plantedPercentage
-                });
-                
+
                 // Get bed utilization
-                const totalAllocatedPercentage = bedAllocations.reduce((sum, alloc) => sum + (alloc.percentage_allocated || 0), 0);
+                const totalAllocatedPercentage = (bedAllocations && Array.isArray(bedAllocations)) 
+                    ? bedAllocations.reduce((sum, alloc) => {
+                        const percentage = parseFloat(alloc.percentage_allocated) || 0;
+                        return sum + percentage;
+                    }, 0)
+                    : 0;
                 
                 const bedTypeName = bed.bed_type?.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Unknown';
                 
@@ -4745,7 +7594,7 @@ class AquaponicsApp {
                             </div>
                             <div class="bed-stat">
                                 <span class="stat-label">Allocated:</span>
-                                <span class="stat-value">${totalAllocatedPercentage.toFixed(1)}%</span>
+                                <span class="stat-value">${(Number(totalAllocatedPercentage) || 0).toFixed(1)}%</span>
                             </div>
                         </div>
                         
@@ -4760,7 +7609,7 @@ class AquaponicsApp {
                         </div>
                         
                         <div class="bed-crops">
-                            ${this.generateBedCropDisplay(bedAllocations, bedPlantData)}
+                            ${this.generateBedCropDisplay(bedAllocations, bedPlantData, bed.id)}
                         </div>
                     </div>
                 `;
@@ -4779,7 +7628,7 @@ class AquaponicsApp {
         }
     }
 
-    generateBedCropDisplay(bedAllocations, bedPlantData) {
+    generateBedCropDisplay(bedAllocations, bedPlantData, bedId) {
         // Get all crop types present in this bed (both allocated and planted)
         const allocatedCrops = new Set(bedAllocations.map(alloc => alloc.crop_type));
         const plantedCrops = new Set(bedPlantData.map(plant => plant.crop_type).filter(crop => crop));
@@ -4795,7 +7644,7 @@ class AquaponicsApp {
         allCrops.forEach(cropType => {
             const allocation = bedAllocations.find(alloc => alloc.crop_type === cropType);
             const cropPlanted = this.getCropPlantCount(bedPlantData, cropType);
-            
+
             const cleanCropName = this.cleanCustomCropName(cropType);
             const cropDisplayName = cleanCropName.charAt(0).toUpperCase() + cleanCropName.slice(1);
             
@@ -4803,11 +7652,18 @@ class AquaponicsApp {
                 // Allocated crop
                 const cropAllocated = allocation.plants_planted || 0;
                 const cropPercentage = cropAllocated > 0 ? Math.round((cropPlanted / cropAllocated) * 100) : 0;
+                if (Math.abs(cropPlanted - cropAllocated) > 0) {
+
+                }
+                
+                // Show clear indication when actual planting exceeds allocation
+                const statusClass = cropPercentage > 100 ? 'over-allocated' : '';
+                const statusText = cropPercentage > 100 ? ' (over-planted)' : '';
                 
                 cropDisplays.push(`
-                    <div class="crop-summary">
+                    <div class="crop-summary ${statusClass}">
                         <span class="crop-name">${cropDisplayName}</span>
-                        <span class="crop-progress">${cropPlanted}/${cropAllocated} (${cropPercentage}%)</span>
+                        <span class="crop-progress">${cropPlanted}/${cropAllocated} (${cropPercentage}%)${statusText}</span>
                     </div>
                 `);
             } else if (cropPlanted > 0) {
@@ -4825,69 +7681,181 @@ class AquaponicsApp {
     }
 
     calculateCurrentPlantCount(plantData) {
-        // Get the latest plant count for each crop type
-        const latestCounts = {};
+        // Use batch-based counting for accurate plant counts
+        const batchMap = new Map();
+        const cropHasBatchData = new Set();
         
-        plantData.forEach(entry => {
-            if (entry.crop_type && entry.count !== undefined) {
-                const key = entry.crop_type;
-                if (!latestCounts[key] || new Date(entry.date) > new Date(latestCounts[key].date)) {
-                    latestCounts[key] = entry;
+        // First pass: identify which crops have batch data
+        plantData.forEach(record => {
+            if (record.batch_id && record.crop_type) {
+                cropHasBatchData.add(record.crop_type);
+            }
+        });
+        
+        // Process all plant records to build batch data
+        plantData.forEach(record => {
+            if (record.batch_id && record.new_seedlings > 0) {
+                // This is a planting record with a batch
+                if (!batchMap.has(record.batch_id)) {
+                    batchMap.set(record.batch_id, {
+                        batch_id: record.batch_id,
+                        crop_type: record.crop_type,
+                        planted_count: 0,
+                        harvested_count: 0
+                    });
+                }
+                const batch = batchMap.get(record.batch_id);
+                batch.planted_count += record.new_seedlings || 0;
+            }
+        });
+        
+        // Process harvest records
+        plantData.forEach(record => {
+            if (record.batch_id && record.plants_harvested > 0) {
+                if (batchMap.has(record.batch_id)) {
+                    const batch = batchMap.get(record.batch_id);
+                    batch.harvested_count += record.plants_harvested || 0;
                 }
             }
         });
         
-        // Sum up current counts (subtract harvested plants)
+        // Calculate total from batches
         let totalCurrent = 0;
-        Object.values(latestCounts).forEach(entry => {
-            const planted = entry.count || 0;
-            const harvested = this.getHarvestedCount(plantData, entry.crop_type);
-            totalCurrent += Math.max(0, planted - harvested);
+        batchMap.forEach(batch => {
+            const remaining = Math.max(0, batch.planted_count - batch.harvested_count);
+            totalCurrent += remaining;
         });
         
+        // Only include non-batch plants for crops that have NO batch data
+        const nonBatchPlants = {};
+        plantData.forEach(entry => {
+            if (!entry.batch_id && entry.crop_type && entry.count > 0 && !entry.plants_harvested) {
+                // Only consider this non-batch plant if the crop has no batch data at all
+                if (!cropHasBatchData.has(entry.crop_type)) {
+                    const key = entry.crop_type;
+                    if (!nonBatchPlants[key] || new Date(entry.date) > new Date(nonBatchPlants[key].date)) {
+                        nonBatchPlants[key] = entry;
+                    }
+                }
+            }
+        });
+        
+        // Add non-batch plants only for crops without batch data
+        Object.values(nonBatchPlants).forEach(entry => {
+            const planted = entry.count || 0;
+            const harvested = this.getHarvestedCount(plantData.filter(p => !p.batch_id && p.crop_type === entry.crop_type), entry.crop_type);
+            totalCurrent += Math.max(0, planted - harvested);
+        });
+
         return totalCurrent;
     }
 
     getCropPlantCount(plantData, cropType) {
-        // Separate planting entries from harvest entries
-        const plantingEntries = plantData.filter(entry => 
-            entry.crop_type === cropType && 
-            entry.count !== undefined && 
-            entry.count > 0 &&
-            !entry.plants_harvested // This ensures we only get planting records
-        );
+        // Use batch-based counting for accurate crop counts
+        const batchMap = new Map();
+        let hasBatchData = false;
         
-        const latestPlantingEntry = plantingEntries.reduce((latest, entry) => {
-            return !latest || new Date(entry.date) > new Date(latest.date) ? entry : latest;
-        }, null);
-        
-        if (!latestPlantingEntry) return 0;
-        
-        const planted = latestPlantingEntry.count || 0;
-        const harvested = this.getHarvestedCount(plantData, cropType);
-        
-        console.log(`🌱 getCropPlantCount for ${cropType}:`, {
-            planted,
-            harvested,
-            remaining: Math.max(0, planted - harvested),
-            latestPlantingEntry: latestPlantingEntry,
-            plantingEntries: plantingEntries.length,
-            allCropEntries: plantData.filter(entry => entry.crop_type === cropType).length
+        // First pass: check if we have any batch data for this crop
+        plantData.filter(entry => entry.crop_type === cropType).forEach(record => {
+            if (record.batch_id) {
+                hasBatchData = true;
+            }
         });
         
-        return Math.max(0, planted - harvested);
+        // Process all records for this crop type
+        plantData.filter(entry => entry.crop_type === cropType).forEach(record => {
+            if (record.batch_id) {
+                // Batch-based plant
+                if (record.new_seedlings > 0 && !record.plants_harvested) {
+                    // This is a planting record
+                    if (!batchMap.has(record.batch_id)) {
+                        batchMap.set(record.batch_id, {
+                            planted: 0,
+                            harvested: 0
+                        });
+                    }
+                    const batch = batchMap.get(record.batch_id);
+                    batch.planted += record.new_seedlings || 0;
+                    
+                } else if (record.plants_harvested > 0) {
+                    // This is a harvest record
+                    const batchExisted = batchMap.has(record.batch_id);
+                    if (!batchExisted) {
+                        // Create batch entry if it doesn't exist yet (harvest before planting record processed)
+                        batchMap.set(record.batch_id, {
+                            planted: 0,
+                            harvested: 0
+                        });
+                    }
+                    batchMap.get(record.batch_id).harvested += record.plants_harvested;
+                    
+                }
+            }
+        });
+        
+        // Calculate total from batches
+        let totalRemaining = 0;
+        batchMap.forEach((batch, batchId) => {
+            const remaining = Math.max(0, batch.planted - batch.harvested);
+            totalRemaining += remaining;
+            
+        });
+        
+        // Only include non-batch plants if there's NO batch data for this crop
+        if (!hasBatchData) {
+            // Legacy handling for crops with no batch data
+            let nonBatchPlanted = 0;
+            let nonBatchHarvested = 0;
+            
+            plantData.filter(entry => entry.crop_type === cropType && !entry.batch_id).forEach(record => {
+                if (record.count > 0 && !record.plants_harvested) {
+                    // Keep only the latest planting for non-batch
+                    nonBatchPlanted = record.count;
+                } else if (record.plants_harvested > 0) {
+                    nonBatchHarvested += record.plants_harvested;
+                }
+            });
+            
+            totalRemaining = Math.max(0, nonBatchPlanted - nonBatchHarvested);
+        }
+
+        return totalRemaining;
     }
 
     getHarvestedCount(plantData, cropType) {
         const harvestEntries = plantData.filter(entry => entry.crop_type === cropType && entry.plants_harvested > 0);
         const totalHarvested = harvestEntries.reduce((sum, entry) => sum + (entry.plants_harvested || 0), 0);
+
+        return totalHarvested;
+    }
+
+    // Quick debug function to see all lettuce records
+    async debugLettuceRecords() {
+        if (!this.activeSystemId) {
+
+            return;
+        }
         
-        console.log(`🌾 getHarvestedCount for ${cropType}:`, {
-            harvestEntries: harvestEntries.length,
-            totalHarvested,
-            entries: harvestEntries
-        });
-        
+        try {
+            const plantData = await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`);
+            const lettuceRecords = plantData.filter(r => r.crop_type === 'lettuce');
+
+            const batchRecords = lettuceRecords.filter(r => r.batch_id);
+            const nonBatchRecords = lettuceRecords.filter(r => !r.batch_id);
+
+            return { all: lettuceRecords, batched: batchRecords, nonBatch: nonBatchRecords };
+        } catch (error) {
+            console.error('Error debugging lettuce records:', error);
+        }
+    }
+
+    getBatchHarvestedCount(plantData, batchId) {
+        const harvestEntries = plantData.filter(entry => 
+            entry.batch_id === batchId && 
+            entry.plants_harvested > 0
+        );
+        const totalHarvested = harvestEntries.reduce((sum, entry) => sum + (entry.plants_harvested || 0), 0);
+
         return totalHarvested;
     }
 
@@ -4980,22 +7948,76 @@ class AquaponicsApp {
     }
 
     calculateTotalPlants(plantData) {
-        console.log('🧮 calculateTotalPlants called with:', plantData.length, 'entries');
+
         if (plantData.length === 0) return 0;
         
-        // Get the most recent count for each crop type
-        const cropCounts = {};
-        plantData.forEach(item => {
-            if (item.crop_type && item.count) {
-                if (!cropCounts[item.crop_type] || new Date(item.date) > new Date(cropCounts[item.crop_type].date)) {
-                    cropCounts[item.crop_type] = item;
+        // Use the same batch-based counting logic as calculateCurrentPlantCount
+        const batchMap = new Map();
+        const cropHasBatchData = new Set();
+        
+        // First pass: identify which crops have batch data
+        plantData.forEach(record => {
+            if (record.batch_id && record.crop_type) {
+                cropHasBatchData.add(record.crop_type);
+            }
+        });
+        
+        // Process all plant records to build batch data
+        plantData.forEach(record => {
+            if (record.batch_id && record.new_seedlings > 0) {
+                // This is a planting record with a batch
+                if (!batchMap.has(record.batch_id)) {
+                    batchMap.set(record.batch_id, {
+                        batch_id: record.batch_id,
+                        crop_type: record.crop_type,
+                        planted_count: 0,
+                        harvested_count: 0
+                    });
+                }
+                const batch = batchMap.get(record.batch_id);
+                batch.planted_count += record.new_seedlings || 0;
+            }
+        });
+        
+        // Process harvest records
+        plantData.forEach(record => {
+            if (record.batch_id && record.plants_harvested > 0) {
+                if (batchMap.has(record.batch_id)) {
+                    const batch = batchMap.get(record.batch_id);
+                    batch.harvested_count += record.plants_harvested || 0;
                 }
             }
         });
         
-        console.log('🧮 Latest crop counts:', cropCounts);
+        // Calculate total from batches
+        let totalCurrent = 0;
+        batchMap.forEach(batch => {
+            const remaining = Math.max(0, batch.planted_count - batch.harvested_count);
+            totalCurrent += remaining;
+        });
         
-        return Object.values(cropCounts).reduce((total, item) => total + (item.count || 0), 0);
+        // Only include non-batch plants for crops that have NO batch data
+        const nonBatchPlants = {};
+        plantData.forEach(entry => {
+            if (!entry.batch_id && entry.crop_type && entry.count > 0 && !entry.plants_harvested) {
+                // Only consider this non-batch plant if the crop has no batch data at all
+                if (!cropHasBatchData.has(entry.crop_type)) {
+                    const key = entry.crop_type;
+                    if (!nonBatchPlants[key] || new Date(entry.date) > new Date(nonBatchPlants[key].date)) {
+                        nonBatchPlants[key] = entry;
+                    }
+                }
+            }
+        });
+        
+        // Add non-batch plants only for crops without batch data
+        Object.values(nonBatchPlants).forEach(entry => {
+            const planted = entry.count || 0;
+            const harvested = this.getHarvestedCount(plantData.filter(p => !p.batch_id && p.crop_type === entry.crop_type), entry.crop_type);
+            totalCurrent += Math.max(0, planted - harvested);
+        });
+
+        return totalCurrent;
     }
 
     getActiveGrowBeds(plantData) {
@@ -5014,7 +8036,8 @@ class AquaponicsApp {
 
     calculateTotalHarvested(plantData) {
         return plantData.reduce((total, item) => {
-            return total + (item.harvest_weight || 0);
+            const weight = parseFloat(item.harvest_weight) || 0;
+            return total + weight;
         }, 0);
     }
     
@@ -5306,7 +8329,7 @@ class AquaponicsApp {
             
             // Determine plant types currently growing
             const activeCrops = [...new Set(plantData.map(item => item.crop_type).filter(Boolean))];
-            const leafyGreens = ['lettuce', 'spinach', 'kale', 'swiss_chard', 'arugula', 'watercress', 'basil', 'cilantro', 'parsley'];
+            const leafyGreens = ['lettuce', 'lettuce_batavian', 'lettuce_butter', 'lettuce_cos', 'lettuce_icty', 'lettuce_datem', 'lettuce_oak', 'spinach', 'kale', 'swiss_chard', 'arugula', 'watercress', 'basil', 'cilantro', 'parsley', 'celery'];
             const fruitingPlants = ['tomato', 'cucumber', 'pepper', 'strawberry', 'eggplant', 'okra', 'beans', 'peas'];
             
             const hasLeafyGreens = activeCrops.some(crop => leafyGreens.includes(crop.toLowerCase()));
@@ -5488,14 +8511,14 @@ class AquaponicsApp {
     }
 
     getPHStatus(ph) {
-        if (ph >= 6.5 && ph <= 7.5) return 'Optimal';
-        if (ph >= 6.0 && ph <= 8.0) return 'Good';
+        if (ph >= 6.0 && ph <= 7.5) return 'Optimal';
+        if (ph >= 5.5 && ph <= 8.0) return 'Good';
         return 'Critical';
     }
 
     getPHStatusClass(ph) {
-        if (ph >= 6.5 && ph <= 7.5) return 'good';
-        if (ph >= 6.0 && ph <= 8.0) return 'warning';
+        if (ph >= 6.0 && ph <= 7.5) return 'good';
+        if (ph >= 5.5 && ph <= 8.0) return 'warning';
         return 'critical';
     }
 
@@ -5531,18 +8554,16 @@ class AquaponicsApp {
         }
     }
 
-
-
     updateSettings() {
         const settings = {
-            tempAlerts: document.getElementById('temp-alerts').checked,
-            phAlerts: document.getElementById('ph-alerts').checked,
-            autoFeed: document.getElementById('auto-feed').checked,
-            autoLights: document.getElementById('auto-lights').checked
+            tempAlerts: document.getElementById('temp-alerts')?.checked || false,
+            phAlerts: document.getElementById('ph-alerts')?.checked || false,
+            autoFeed: document.getElementById('auto-feed')?.checked || false,
+            autoLights: document.getElementById('auto-lights')?.checked || false
         };
         
         localStorage.setItem('aquaponicsSettings', JSON.stringify(settings));
-        console.log('Settings updated:', settings);
+
     }
 
     loadSettings() {
@@ -5557,159 +8578,149 @@ class AquaponicsApp {
     }
 
     initializeFishCalculator() {
-        const fishCalculatorDiv = document.getElementById('fish-calc');
+        let fishCalculatorDiv = document.getElementById('fish-calc');
+        if (!fishCalculatorDiv) {
+
+            return;
+        }
+        
         const systemConfig = this.loadSystemConfig();
         const tankVolumeL = systemConfig.total_fish_volume || 1000;
         const tankVolumeM3 = (tankVolumeL / 1000).toFixed(1);
         
+        // Add fish-calculator class for proper identification when moving between tabs
+        fishCalculatorDiv.className = 'calculator-content active fish-calculator';
+        
         fishCalculatorDiv.innerHTML = `
-            <div class="fish-calc-header">
-                <div class="calc-title">
-                    <h2>🐟 Fish Stocking Calculator</h2>
-                    <p>Plan optimal fish stocking density and feeding schedules for maximum yield</p>
+            <div class="fish-calc-header clean">
+                <div class="calc-title-clean">
+                    <div class="title-icon-clean">🐟</div>
+                    <h2>Fish Stocking Calculator</h2>
+                    <p>Design optimal stocking plans for your aquaponics system</p>
                 </div>
                 ${this.activeSystemId ? `
-                    <div class="system-info-card">
-                        <div class="system-info-header">
-                            <span class="system-icon">⚙️</span>
-                            <span class="system-name">${systemConfig.system_name || 'Current System'}</span>
-                        </div>
-                        <div class="system-details">
-                            <div class="detail-item">
-                                <span class="detail-label">Fish Volume:</span>
-                                <span class="detail-value">${tankVolumeL}L (${tankVolumeM3}m³)</span>
+                    <div class="system-info-banner">
+                        <div class="system-info-content">
+                            <div class="system-badge">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                </svg>
+                                Active System
                             </div>
-                            ${systemConfig.fish_type ? `
-                                <div class="detail-item">
-                                    <span class="detail-label">Fish Type:</span>
-                                    <span class="detail-value">${systemConfig.fish_type.charAt(0).toUpperCase() + systemConfig.fish_type.slice(1)}</span>
-                                </div>
-                            ` : ''}
+                            <div class="system-name">${systemConfig.system_name || 'Current System'}</div>
+                            <div class="system-stats">
+                                <span class="stat">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                        <path d="M21 16V4H3v12h3v3l3-3h3l3 3v-3h3zm-10-8h2v2h-2V8zm-4 0h2v2H7V8zm8 0h2v2h-2V8z"/>
+                                    </svg>
+                                    ${tankVolumeL}L (${tankVolumeM3}m³)
+                                </span>
+                                ${systemConfig.fish_type ? `
+                                    <span class="stat">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                                        </svg>
+                                        ${systemConfig.fish_type.charAt(0).toUpperCase() + systemConfig.fish_type.slice(1)}
+                                    </span>
+                                ` : ''}
+                            </div>
                         </div>
                     </div>
                 ` : ''}
             </div>
 
-            <div class="fish-calc-grid">
-                <div class="calc-card tank-specs">
-                    <div class="card-header">
-                        <h3>🏊 Tank Specifications</h3>
-                        <p>Define your fish tank parameters</p>
+            <div class="fish-calc-content clean">
+                <div class="calc-section">
+                    <div class="section-header clean">
+                        <h3>🏠 Tank Setup</h3>
                     </div>
-                    <div class="input-group">
-                        <label for="tank-volume">
-                            <span class="label-text">Fish Tank Volume</span>
-                            <span class="label-unit">(m³)</span>
-                        </label>
-                        <div class="input-with-icon">
-                            <input type="number" id="tank-volume" step="0.1" placeholder="1.0" value="${tankVolumeM3}">
-                            <span class="input-icon">📏</span>
+                    <div class="form-row">
+                        <label for="tank-volume">Tank Volume (m³)</label>
+                        <input type="number" id="tank-volume" step="0.1" placeholder="Enter volume" value="${tankVolumeM3}">
+                    </div>
+                    <div class="form-row">
+                        <label for="fish-type">Fish Species</label>
+                        <select id="fish-type">
+                            <option value="">Choose species...</option>
+                            <option value="tilapia">Tilapia - Hardy & Fast Growing</option>
+                            <option value="trout">Trout - Cool Water Premium</option>
+                            <option value="bass">Bass - Sport Fish</option>
+                            <option value="catfish">Catfish - Very Resilient</option>
+                            <option value="barramundi">Barramundi - Warm Water Premium</option>
+                            <option value="carp">Carp - Extremely Hardy</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="stocking-density">Target Density (kg/m³)</label>
+                        <input type="number" id="stocking-density" min="1" step="1" placeholder="Enter density">
+                        <div class="density-hint" id="density-indicator">Select species for recommendations</div>
+                    </div>
+                </div>
+
+                <div class="calc-section">
+                    <div class="section-header clean">
+                        <h3>📈 Growth & Harvest</h3>
+                    </div>
+                    
+                    <div class="form-grid">
+                        <div class="form-row">
+                            <label for="fingerling-weight">Starting Weight (g)</label>
+                            <input type="number" id="fingerling-weight" step="0.1" placeholder="Fingerling weight">
+                        </div>
+                        <div class="form-row">
+                            <label for="fish-harvest-weight">Harvest Weight (g)</label>
+                            <input type="number" id="fish-harvest-weight" step="1" placeholder="Target weight">
                         </div>
                     </div>
                     
-                    <div class="input-group">
-                        <label for="fish-type">
-                            <span class="label-text">Fish Species</span>
-                        </label>
-                        <div class="input-with-icon">
-                            <select id="fish-type">
-                                <option value="">Select fish species</option>
-                                <option value="tilapia">🐟 Tilapia (Hardy, fast-growing)</option>
-                                <option value="trout">🐟 Trout (Cool water, premium)</option>
-                                <option value="bass">🐠 Bass (Sport fish, good flavor)</option>
-                                <option value="catfish">🐟 Catfish (Bottom feeder, resilient)</option>
-                                <option value="barramundi">🐟 Barramundi (Premium, warm water)</option>
-                                <option value="carp">🐟 Carp (Hardy, fast-growing)</option>
-                            </select>
-                            <span class="input-icon">🐟</span>
+                    <div class="growth-preview" id="growth-timeline">
+                        <div class="growth-stage">
+                            <span class="stage-label">Start:</span>
+                            <span class="stage-value" id="start-weight">--g</span>
                         </div>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="stocking-density">
-                            <span class="label-text">Stocking Density</span>
-                            <span class="label-unit">(kg/m³)</span>
-                        </label>
-                        <div class="input-with-icon">
-                            <input type="number" id="stocking-density" min="1" step="1" placeholder="Auto-calculated">
-                            <span class="input-icon">⚖️</span>
+                        <div class="growth-arrow">→</div>
+                        <div class="growth-stage">
+                            <span class="stage-label">Harvest:</span>
+                            <span class="stage-value" id="fish-harvest-weight-display">--g</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="calc-card stocking-params">
-                    <div class="card-header">
-                        <h3>📊 Stocking Parameters</h3>
-                        <p>Set your fish stocking goals</p>
-                    </div>
-                    
-                    <div class="input-row">
-                        <div class="input-group">
-                            <label for="fingerling-weight">
-                                <span class="label-text">Fingerling Weight</span>
-                                <span class="label-unit">(g)</span>
-                            </label>
-                            <div class="input-with-icon">
-                                <input type="number" id="fingerling-weight" step="0.1" placeholder="10.0">
-                                <span class="input-icon">🐠</span>
-                            </div>
-                        </div>
-                        
-                        <div class="input-group">
-                            <label for="fish-harvest-weight">
-                                <span class="label-text">Harvest Weight</span>
-                                <span class="label-unit">(g)</span>
-                            </label>
-                            <div class="input-with-icon">
-                                <input type="number" id="fish-harvest-weight" step="1" placeholder="500">
-                                <span class="input-icon">🎯</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="calc-card feeding-schedule">
-                    <div class="card-header">
+                <div class="calc-section">
+                    <div class="section-header clean">
                         <h3>🍽️ Feeding Schedule</h3>
-                        <p>Plan your daily feeding routine</p>
+                    </div>
+                    <div class="form-row">
+                        <label for="feedings-per-day">Daily Feedings</label>
+                        <select id="feedings-per-day">
+                            <option value="1">Once daily - Evening</option>
+                            <option value="2" selected>Twice daily - Morning & Evening</option>
+                            <option value="3">Three times - Morning, Noon & Evening</option>
+                            <option value="4">Four times - Every 6 hours</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="feeding-times">Feeding Times</label>
+                        <input type="text" id="feeding-times" placeholder="e.g. 08:00, 18:00" value="08:00, 18:00">
+                        <div class="field-hint">Use 24-hour format separated by commas</div>
                     </div>
                     
-                    <div class="input-group">
-                        <label for="feedings-per-day">
-                            <span class="label-text">Feedings per Day</span>
-                        </label>
-                        <div class="input-with-icon">
-                            <select id="feedings-per-day">
-                                <option value="1">1 time - Low maintenance (6pm)</option>
-                                <option value="2" selected>2 times - Adult fish (8am, 6pm)</option>
-                                <option value="3">3 times - Growing fish (8am, 2pm, 6pm)</option>
-                                <option value="4">4 times - Fingerlings (8am, 12pm, 4pm, 8pm)</option>
-                            </select>
-                            <span class="input-icon">⏰</span>
+                    <div class="schedule-preview" id="feeding-preview">
+                        <div class="preview-label">Schedule Preview:</div>
+                        <div class="schedule-display" id="schedule-timeline">
+                            <!-- Dynamic feeding times will be displayed here -->
                         </div>
-                    </div>
-                    
-                    <div class="input-group">
-                        <label for="feeding-times">
-                            <span class="label-text">Custom Feeding Times</span>
-                        </label>
-                        <div class="input-with-icon">
-                            <input type="text" id="feeding-times" placeholder="08:00, 18:00" value="08:00, 18:00">
-                            <span class="input-icon">🕐</span>
-                        </div>
-                        <small class="input-hint">24-hour format, separated by commas</small>
                     </div>
                 </div>
             </div>
 
-            <div class="calc-actions">
+            <div class="calc-buttons">
                 <button class="calc-btn primary" id="calculate-stocking">
-                    <span class="btn-icon">🧮</span>
-                    Calculate Stocking Plan
+                    📈 Calculate Stocking Plan
                 </button>
                 <button class="calc-btn secondary" id="clear-fish-calc">
-                    ${SVGIcons.getIcon('delete', 'btn-icon-svg')}
-                    Clear All
+                    🗑️ Reset Form
                 </button>
             </div>
 
@@ -5725,10 +8736,7 @@ class AquaponicsApp {
             </div>
         `;
 
-        // Set up event listeners for fish calculator
-        document.getElementById('fish-type').addEventListener('change', this.updateFishDefaults.bind(this));
-        document.getElementById('calculate-stocking').addEventListener('click', this.calculateStocking.bind(this));
-        document.getElementById('clear-fish-calc').addEventListener('click', this.clearFishCalculator.bind(this));
+        this.bindFishCalculatorEvents();
         
         // Prepopulate system info display and fish type
         this.updateFishCalculatorSystemInfo();
@@ -5739,66 +8747,55 @@ class AquaponicsApp {
             this.updateFishDefaults();
         }
     }
+    
+    bindFishCalculatorEvents() {
+        // Set up event listeners for fish calculator
+        const fishTypeElement = document.getElementById('fish-type');
+        const calculateButton = document.getElementById('calculate-stocking');
+        const clearButton = document.getElementById('clear-fish-calc');
+        const fingerlingWeightElement = document.getElementById('fingerling-weight');
+        const harvestWeightElement = document.getElementById('fish-harvest-weight');
+        const feedingsPerDayElement = document.getElementById('feedings-per-day');
+        const feedingTimesElement = document.getElementById('feeding-times');
+        
+        if (fishTypeElement) {
+            fishTypeElement.addEventListener('change', this.updateFishDefaults.bind(this));
+        }
+        if (calculateButton) {
+            calculateButton.addEventListener('click', this.calculateStocking.bind(this));
+        }
+        if (clearButton) {
+            clearButton.addEventListener('click', this.clearFishCalculator.bind(this));
+        }
+        
+        // Add real-time preview updates
+        if (fingerlingWeightElement) {
+            fingerlingWeightElement.addEventListener('input', this.updateGrowthTimeline.bind(this));
+        }
+        if (harvestWeightElement) {
+            harvestWeightElement.addEventListener('input', this.updateGrowthTimeline.bind(this));
+        }
+        if (feedingsPerDayElement) {
+            feedingsPerDayElement.addEventListener('change', this.updateFeedingPreview.bind(this));
+        }
+        if (feedingTimesElement) {
+            feedingTimesElement.addEventListener('input', this.updateFeedingPreview.bind(this));
+        }
+        
+        // Initialize previews
+        setTimeout(() => {
+            this.updateFeedingPreview();
+            this.updateGrowthTimeline();
+        }, 100);
+    }
 
     updateFishCalculatorSystemInfo() {
         const systemConfig = this.loadSystemConfig();
         
-        // Find or create system info container
-        let systemInfoContainer = document.getElementById('fish-calc-system-info');
-        if (!systemInfoContainer) {
-            systemInfoContainer = document.createElement('div');
-            systemInfoContainer.id = 'fish-calc-system-info';
-            systemInfoContainer.className = 'calc-section';
-            
-            // Try to find fish calculator in either old location or new fish management tabs
-            let fishCalcContainer = document.getElementById('fish-calc');
-            if (!fishCalcContainer) {
-                // Look for fish calculator in the fish overview tab
-                fishCalcContainer = document.querySelector('#fish-overview-content .fish-calculator');
-            }
-            
-            if (fishCalcContainer) {
-                // Insert before tank specifications
-                const calcSection = fishCalcContainer.querySelector('.calc-section');
-                if (calcSection && calcSection.parentNode) {
-                    calcSection.parentNode.insertBefore(systemInfoContainer, calcSection);
-                } else {
-                    // If no calc-section found, append to beginning of fish calculator
-                    fishCalcContainer.insertBefore(systemInfoContainer, fishCalcContainer.firstChild);
-                }
-            } else {
-                console.warn('Fish calculator container not found, skipping system info update');
-                return;
-            }
-        }
-        
-        if (this.activeSystemId && systemConfig.system_name !== 'No System Selected') {
-            systemInfoContainer.innerHTML = `
-                <h3>System Information</h3>
-                <div class="system-info-display">
-                    <div class="info-row">
-                        <span><strong>System:</strong> ${systemConfig.system_name}</span>
-                        <span><strong>Type:</strong> ${systemConfig.system_type.toUpperCase()}</span>
-                    </div>
-                    <div class="info-row">
-                        <span><strong>Fish Tanks:</strong> ${systemConfig.fish_tank_count} (${(systemConfig.total_fish_volume / 1000).toFixed(1)}m³ total)</span>
-                        <span><strong>Grow Beds:</strong> ${systemConfig.grow_bed_count} (${systemConfig.total_grow_volume}L total)</span>
-                    </div>
-                </div>
-            `;
-        } else {
-            systemInfoContainer.innerHTML = `
-                <div class="calc-section">
-                    <h3>⚠️ No System Selected</h3>
-                    <p style="text-align: center; color: #e67e22; margin: 1rem 0;">
-                        Please select or create a system to get prepopulated values.
-                    </p>
-                    <button class="calc-btn" onclick="app.goToSettings()" style="display: block; margin: 1rem auto;">
-                        Go to Settings
-                    </button>
-                </div>
-            `;
-        }
+        // Fish calculator system info is now handled directly in the calculator initialization
+        // since the calculator remains in its original Calculators tab location
+
+        // System info is now displayed in the calculator header itself
     }
 
     updateFishDefaults() {
@@ -5808,7 +8805,79 @@ class AquaponicsApp {
             document.getElementById('stocking-density').value = fish.defaultDensity;
             document.getElementById('fingerling-weight').value = fish.defaultFingerlingWeight;
             document.getElementById('fish-harvest-weight').value = fish.harvestWeight;
+            
+            // Update density indicator
+            this.updateDensityIndicator(fish);
+            
+            // Update growth timeline
+            this.updateGrowthTimeline();
         }
+    }
+    
+    updateDensityIndicator(fish) {
+        const indicator = document.getElementById('density-indicator');
+        if (indicator && fish) {
+            const temp = fish.temperature || 'Varies';
+            const densityText = `${fish.name}: Optimal density ${fish.defaultDensity} kg/m³ at ${temp}`;
+            indicator.innerHTML = `<span class="indicator-text">${densityText}</span>`;
+        }
+    }
+    
+    updateGrowthTimeline() {
+        const fingerlingWeight = document.getElementById('fingerling-weight').value;
+        const harvestWeight = document.getElementById('fish-harvest-weight').value;
+        
+        const startWeightElement = document.getElementById('start-weight');
+        const harvestWeightElement = document.getElementById('fish-harvest-weight-display');
+        
+        if (startWeightElement && fingerlingWeight) {
+            startWeightElement.textContent = fingerlingWeight + 'g';
+        }
+        if (harvestWeightElement && harvestWeight) {
+            harvestWeightElement.textContent = harvestWeight + 'g';
+        }
+    }
+    
+    updateFeedingPreview() {
+        const feedingsPerDay = document.getElementById('feedings-per-day').value;
+        const feedingTimes = document.getElementById('feeding-times').value;
+        const timeline = document.getElementById('schedule-timeline');
+        
+        if (!timeline) return;
+        
+        if (feedingTimes && feedingTimes.trim()) {
+            const times = feedingTimes.split(',').map(time => time.trim());
+            timeline.innerHTML = times.map(time => 
+                `<div class="schedule-time">${time}</div>`
+            ).join('');
+        } else {
+            // Generate default times based on frequency
+            const defaultTimes = this.generateDefaultFeedingTimes(parseInt(feedingsPerDay));
+            timeline.innerHTML = defaultTimes.map(time => 
+                `<div class="schedule-time">${time}</div>`
+            ).join('');
+        }
+    }
+    
+    generateDefaultFeedingTimes(frequency) {
+        const times = [];
+        switch(frequency) {
+            case 1:
+                times.push('18:00');
+                break;
+            case 2:
+                times.push('08:00', '18:00');
+                break;
+            case 3:
+                times.push('08:00', '14:00', '20:00');
+                break;
+            case 4:
+                times.push('08:00', '12:00', '16:00', '20:00');
+                break;
+            default:
+                times.push('08:00', '18:00');
+        }
+        return times;
     }
 
     calculateStocking() {
@@ -6069,6 +9138,14 @@ class AquaponicsApp {
                         <input type="number" id="wq-temp" min="0" step="0.1" placeholder="18 - 30">
                     </div>
                     <div class="form-field">
+                        <label for="wq-humidity">Humidity (%):</label>
+                        <input type="number" id="wq-humidity" min="0" max="100" step="1" placeholder="40 - 80">
+                    </div>
+                    <div class="form-field">
+                        <label for="wq-salinity">Salinity (ppt):</label>
+                        <input type="number" id="wq-salinity" min="0" step="0.1" placeholder="0 - 1.0">
+                    </div>
+                    <div class="form-field">
                         <label for="wq-ammonia">Ammonia NH₃ (ppm):</label>
                         <input type="number" id="wq-ammonia" min="0" step="0.01" placeholder="< 0.5">
                     </div>
@@ -6180,7 +9257,6 @@ class AquaponicsApp {
         this.preloadFishHealthData();
     }
 
-
     async getGrowBedsForSystem() {
         const systemConfig = this.loadSystemConfig();
         
@@ -6189,7 +9265,8 @@ class AquaponicsApp {
             return Array.from({length: 4}, (_, i) => ({
                 id: i + 1,
                 bed_number: i + 1,
-                bed_type: 'media-bed'
+                bed_type: 'media-bed',
+                plant_capacity: 20
             }));
         }
 
@@ -6207,7 +9284,8 @@ class AquaponicsApp {
                     ...Array.from({length: systemConfig.grow_bed_count || 4}, (_, i) => ({
                         id: i + 1,
                         bed_number: i + 1,
-                        bed_type: 'media-bed'
+                        bed_type: 'media-bed',
+                        plant_capacity: 20
                     }))
                 ];
             } else {
@@ -6216,7 +9294,8 @@ class AquaponicsApp {
                 return Array.from({length: systemConfig.grow_bed_count || 4}, (_, i) => ({
                     id: i + 1,
                     bed_number: i + 1,
-                    bed_type: 'media-bed'
+                    bed_type: 'media-bed',
+                    plant_capacity: 20
                 }));
             }
         } catch (error) {
@@ -6225,7 +9304,8 @@ class AquaponicsApp {
             return Array.from({length: systemConfig.grow_bed_count || 4}, (_, i) => ({
                 id: i + 1,
                 bed_number: i + 1,
-                bed_type: 'media-bed'
+                bed_type: 'media-bed',
+                plant_capacity: 20
             }));
         }
     }
@@ -6281,7 +9361,8 @@ class AquaponicsApp {
         if (!this.activeSystemId) {
             this.dataRecords = {
                 waterQuality: [],
-                fishHealth: [],
+                fishInventory: { tanks: [] },
+                fishEvents: [],
                 plantGrowth: [],
                 operations: []
             };
@@ -6289,16 +9370,17 @@ class AquaponicsApp {
         }
 
         try {
-            const [waterQuality, fishHealth, plantGrowth, operations] = await Promise.all([
+            const [waterQuality, fishInventory, plantGrowth, operations] = await Promise.all([
                 this.makeApiCall(`/data/water-quality/${this.activeSystemId}`),
-                this.makeApiCall(`/data/fish-health/${this.activeSystemId}`),
+                this.makeApiCall(`/fish-inventory/system/${this.activeSystemId}`).catch(() => ({ tanks: [] })),
                 this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`),
                 this.makeApiCall(`/data/operations/${this.activeSystemId}`)
             ]);
 
             this.dataRecords = {
                 waterQuality,
-                fishHealth,
+                fishInventory: fishInventory || { tanks: [] },
+                fishEvents: [], // Will be loaded on demand
                 plantGrowth,
                 operations
             };
@@ -6306,7 +9388,8 @@ class AquaponicsApp {
             console.error('Failed to load data records:', error);
             this.dataRecords = {
                 waterQuality: [],
-                fishHealth: [],
+                fishInventory: { tanks: [] },
+                fishEvents: [],
                 plantGrowth: [],
                 operations: []
             };
@@ -6339,19 +9422,21 @@ class AquaponicsApp {
 
         const data = {
             date: document.getElementById('wq-date').value,
-            ph: parseFloat(document.getElementById('wq-ph').value) || null,
-            ec: parseFloat(document.getElementById('wq-ec').value) || null,
-            dissolved_oxygen: parseFloat(document.getElementById('wq-do').value) || null,
-            temperature: parseFloat(document.getElementById('wq-temp').value) || null,
-            ammonia: parseFloat(document.getElementById('wq-ammonia').value) || null,
-            nitrite: parseFloat(document.getElementById('wq-nitrite').value) || null,
-            nitrate: parseFloat(document.getElementById('wq-nitrate').value) || null,
-            iron: parseFloat(document.getElementById('wq-iron').value) || null,
-            potassium: parseFloat(document.getElementById('wq-potassium').value) || null,
-            calcium: parseFloat(document.getElementById('wq-calcium').value) || null,
+            ph: this.parseNumericValue(document.getElementById('wq-ph').value),
+            ec: this.parseNumericValue(document.getElementById('wq-ec').value),
+            dissolved_oxygen: this.parseNumericValue(document.getElementById('wq-do').value),
+            temperature: this.parseNumericValue(document.getElementById('wq-temp').value),
+            humidity: this.parseNumericValue(document.getElementById('wq-humidity').value),
+            salinity: this.parseNumericValue(document.getElementById('wq-salinity').value),
+            ammonia: this.parseNumericValue(document.getElementById('wq-ammonia').value),
+            nitrite: this.parseNumericValue(document.getElementById('wq-nitrite').value),
+            nitrate: this.parseNumericValue(document.getElementById('wq-nitrate').value),
+            iron: this.parseNumericValue(document.getElementById('wq-iron').value),
+            potassium: this.parseNumericValue(document.getElementById('wq-potassium').value),
+            calcium: this.parseNumericValue(document.getElementById('wq-calcium').value),
             // nitrate field already captured above
-            phosphorus: parseFloat(document.getElementById('wq-phosphorus').value) || null,
-            magnesium: parseFloat(document.getElementById('wq-magnesium').value) || null,
+            phosphorus: this.parseNumericValue(document.getElementById('wq-phosphorus').value),
+            magnesium: this.parseNumericValue(document.getElementById('wq-magnesium').value),
             notes: document.getElementById('wq-notes').value
         };
 
@@ -6391,12 +9476,12 @@ class AquaponicsApp {
             const previousData = await this.getPreviousFishCount(tankId);
             const previousCount = previousData ? previousData.count || 0 : 0;
             finalCount = Math.max(0, previousCount - mortality);
-            console.log(`Mortality-only entry: Previous ${previousCount} - ${mortality} mortality = ${finalCount} remaining`);
+
         }
         // If both count and mortality are entered, subtract mortality from entered count
         else if (mortality > 0 && enteredCount > 0) {
             finalCount = Math.max(0, enteredCount - mortality);
-            console.log(`Count with mortality: ${enteredCount} - ${mortality} = ${finalCount}`);
+
         }
 
         const data = {
@@ -6411,9 +9496,19 @@ class AquaponicsApp {
         };
 
         try {
-            await this.makeApiCall(`/data/fish-health/${this.activeSystemId}`, {
+            await this.makeApiCall(`/data/entries/fish-health`, {
                 method: 'POST',
-                body: JSON.stringify(data)
+                body: JSON.stringify({
+                    system_id: this.activeSystemId,
+                    fish_tank_id: data.fish_tank_id,
+                    date: data.date,
+                    count: data.count,
+                    mortality: data.mortality,
+                    average_weight: data.average_weight,
+                    feed_consumption: data.feed_consumption,
+                    behavior: data.behavior,
+                    notes: data.notes
+                })
             });
             
             await this.loadDataRecords();
@@ -6568,8 +9663,9 @@ class AquaponicsApp {
     showAddSystemDialog() {
         // Show the new system modal instead of a prompt
         const modal = document.getElementById('new-system-modal');
-        modal.style.display = 'block';
-        
+
+        modal.classList.add('show');
+
         // Reset wizard to step 1
         this.currentSystemStep = 1;
         this.systemWizardData = {
@@ -6588,18 +9684,17 @@ class AquaponicsApp {
         this.updateFishTankFields(1);
         this.updateGrowBedFields(2);
         
-        // Update wizard UI
-        this.updateWizardUI();
-        
-        // Focus on the system name input
+        // Focus on the system name input and update UI after modal is shown
         setTimeout(() => {
+            // Update wizard UI after modal is visible
+            this.updateWizardUI();
             document.getElementById('new-system-name').focus();
         }, 100);
     }
     
     closeNewSystemModal() {
         const modal = document.getElementById('new-system-modal');
-        modal.style.display = 'none';
+        modal.classList.remove('show');
     }
     
     updateWizardUI() {
@@ -6616,17 +9711,50 @@ class AquaponicsApp {
         });
         
         // Update navigation buttons
-        const prevBtn = document.querySelector('.prev-btn');
-        const nextBtn = document.querySelector('.next-btn');
-        const submitBtn = document.querySelector('.submit-btn');
-        
-        prevBtn.style.display = this.currentSystemStep > 1 ? 'flex' : 'none';
-        nextBtn.style.display = this.currentSystemStep < 4 ? 'flex' : 'none';
-        submitBtn.style.display = this.currentSystemStep === 4 ? 'flex' : 'none';
+        const modal = document.getElementById('new-system-modal');
+        const prevBtn = modal.querySelector('.prev-btn');
+        const nextBtn = modal.querySelector('.next-btn');
+        const submitBtn = modal.querySelector('.submit-btn');
+
+        if (prevBtn) prevBtn.style.display = this.currentSystemStep > 1 ? 'flex' : 'none';
+        if (nextBtn) nextBtn.style.display = this.currentSystemStep < 3 ? 'flex' : 'none';
+        if (submitBtn) submitBtn.style.display = this.currentSystemStep === 3 ? 'flex' : 'none';
     }
     
+    // Helper function to collect bed data directly from form fields
+    collectBedDataFromForm(bedIndex, bedType) {
+
+        if (!bedType) return {};
+        
+        const formData = {};
+        
+        if (bedType === 'dwc') {
+            formData.length = parseFloat(document.getElementById(`bed-length-${bedIndex}`)?.value) || 0;
+            formData.width = parseFloat(document.getElementById(`bed-width-${bedIndex}`)?.value) || 0;
+            formData.height = parseFloat(document.getElementById(`bed-height-${bedIndex}`)?.value) || 0;
+        } else if (bedType === 'vertical') {
+            formData.length = parseFloat(document.getElementById(`base-length-${bedIndex}`)?.value) || 0;
+            formData.width = parseFloat(document.getElementById(`base-width-${bedIndex}`)?.value) || 0;
+            formData.height = parseFloat(document.getElementById(`base-height-${bedIndex}`)?.value) || 0;
+            formData.verticals = parseInt(document.getElementById(`vertical-count-${bedIndex}`)?.value) || 0;
+            formData.plantsPerVertical = parseInt(document.getElementById(`plants-per-vertical-${bedIndex}`)?.value) || 0;
+        } else if (bedType === 'nft') {
+            formData.troughLength = parseFloat(document.getElementById(`trough-length-${bedIndex}`)?.value) || 0;
+            formData.channels = parseInt(document.getElementById(`bed-channels-${bedIndex}`)?.value) || 0;
+            formData.plantSpacing = parseFloat(document.getElementById(`plant-spacing-${bedIndex}`)?.value) || 0;
+            formData.reservoirVolume = parseFloat(document.getElementById(`reservoir-volume-${bedIndex}`)?.value) || 0;
+        } else if (bedType === 'ebb_flow') {
+            formData.length = parseFloat(document.getElementById(`bed-length-${bedIndex}`)?.value) || 0;
+            formData.width = parseFloat(document.getElementById(`bed-width-${bedIndex}`)?.value) || 0;
+            formData.height = parseFloat(document.getElementById(`bed-height-${bedIndex}`)?.value) || 0;
+            formData.plantSpacing = parseFloat(document.getElementById(`plant-spacing-${bedIndex}`)?.value) || 0;
+        }
+
+        return formData;
+    }
+
     async validateCurrentStep() {
-        console.log('🔍 validateCurrentStep called for step:', this.currentSystemStep);
+
         const errors = [];
         
         switch(this.currentSystemStep) {
@@ -6658,15 +9786,8 @@ class AquaponicsApp {
                 // For step 2, we need to give the DOM time to update after HTML generation
                 // This ensures that when validation runs, the form elements have their values set
                 await new Promise(resolve => setTimeout(resolve, 50));
-                
-                // Debug: Check if DOM elements actually have values
                 const debugEl = document.getElementById('tank-volume-1');
-                console.log('🔧 DOM Debug after timeout:', {
-                    elementExists: !!debugEl,
-                    elementValue: debugEl?.value,
-                    elementValueType: typeof debugEl?.value
-                });
-                
+
                 // Save current data first to ensure we validate current values
                 const tempStep = this.currentSystemStep;
                 this.currentSystemStep = 2; // Temporarily set to 2 for saveCurrentStepData
@@ -6688,25 +9809,7 @@ class AquaponicsApp {
                     const fishType = savedTank?.fishType || fishTypeEl?.value || '';
                     const stockingDensity = (savedTank && savedTank.stockingDensity !== null) ? savedTank.stockingDensity.toString() : (stockingDensityEl?.value?.trim() || '');
                     const harvestWeight = (savedTank && savedTank.harvestWeight !== null) ? savedTank.harvestWeight.toString() : (harvestWeightEl?.value?.trim() || '');
-                    
-                    // Debug logging
-                    console.log(`Tank ${i} validation:`, {
-                        tankName: `"${tankName}"`,
-                        tankVolume: `"${tankVolume}"`,
-                        tankVolumeNum: parseFloat(tankVolume),
-                        tankVolumeIsNaN: isNaN(parseFloat(tankVolume)),
-                        fishType: `"${fishType}"`,
-                        stockingDensity: `"${stockingDensity}"`,
-                        harvestWeight: `"${harvestWeight}"`,
-                        elementExists: {
-                            tankName: !!tankNameEl,
-                            tankVolume: !!tankVolumeEl,
-                            fishType: !!fishTypeEl,
-                            stockingDensity: !!stockingDensityEl,
-                            harvestWeight: !!harvestWeightEl
-                        }
-                    });
-                    
+
                     if (!tankName) {
                         errors.push(`Tank ${i} name is required`);
                         this.highlightError(`tank-name-${i}`);
@@ -6822,36 +9925,6 @@ class AquaponicsApp {
                     }
                 }
                 break;
-                
-            case 4:
-                // Plant allocation is optional, but validate percentages if provided
-                const allocBedCount = parseInt(document.getElementById('new-grow-bed-count').value);
-                for (let i = 1; i <= allocBedCount; i++) {
-                    const allocationRows = document.querySelectorAll(`#plant-allocation-container .allocation-bed:nth-child(${i}) .allocation-row`);
-                    let totalPercentage = 0;
-                    
-                    allocationRows.forEach((row, index) => {
-                        const crop = document.getElementById(`bed-${i}-crop-${index + 1}`)?.value;
-                        const percentage = document.getElementById(`bed-${i}-alloc-${index + 1}`)?.value;
-                        
-                        if (crop && percentage) {
-                            const percent = parseFloat(percentage);
-                            if (percent <= 0 || percent > 100) {
-                                errors.push(`Bed ${i} allocation percentage must be between 1-100%`);
-                                this.highlightError(`bed-${i}-alloc-${index + 1}`);
-                            }
-                            totalPercentage += percent;
-                        } else if (crop && !percentage) {
-                            errors.push(`Bed ${i} crop allocation percentage is required when crop is selected`);
-                            this.highlightError(`bed-${i}-alloc-${index + 1}`);
-                        }
-                    });
-                    
-                    if (totalPercentage > 100) {
-                        errors.push(`Bed ${i} total allocation cannot exceed 100%`);
-                    }
-                }
-                break;
         }
         
         if (errors.length > 0) {
@@ -6912,9 +9985,10 @@ class AquaponicsApp {
                 
             case 3:
                 // Grow beds step - save bed data
+
                 this.systemWizardData.growBeds = [];
                 const bedCount = this.systemWizardData.growBedCount || 2;
-                
+
                 for (let i = 1; i <= bedCount; i++) {
                     const name = document.getElementById(`bed-name-${i}`)?.value || `Bed ${i}`;
                     const type = document.getElementById(`bed-type-${i}`)?.value;
@@ -6927,7 +10001,7 @@ class AquaponicsApp {
                     const plantsPerVertical = document.getElementById(`bed-plants-per-vertical-${i}`)?.value;
                     const channels = document.getElementById(`bed-channels-${i}`)?.value;
                     
-                    this.systemWizardData.growBeds.push({
+                    const bedData = {
                         name,
                         type,
                         length: length ? parseFloat(length) : null,
@@ -6936,8 +10010,11 @@ class AquaponicsApp {
                         verticals: verticals ? parseInt(verticals) : null,
                         plantsPerVertical: plantsPerVertical ? parseInt(plantsPerVertical) : null,
                         channels: channels ? parseInt(channels) : null
-                    });
+                    };
+
+                    this.systemWizardData.growBeds.push(bedData);
                 }
+
                 break;
         }
     }
@@ -6948,7 +10025,7 @@ class AquaponicsApp {
         // Save current step data before moving to next step
         this.saveCurrentStepData();
         
-        if (this.currentSystemStep < 4) {
+        if (this.currentSystemStep < 3) {
             this.currentSystemStep++;
             this.updateWizardUI();
             
@@ -6961,8 +10038,6 @@ class AquaponicsApp {
                 // Ensure grow bed fields are properly initialized
                 const bedCount = parseInt(document.getElementById('new-grow-bed-count').value) || 2;
                 this.updateGrowBedFields(bedCount);
-            } else if (this.currentSystemStep === 4) {
-                this.initializePlantAllocation();
             }
         }
     }
@@ -6986,16 +10061,7 @@ class AquaponicsApp {
             const tankVolume = (existingTank && existingTank.volume !== null) ? existingTank.volume : 1000;
             const defaultFishType = existingTank?.fishType || 'tilapia';
             const fishDefaults = this.fishData[defaultFishType];
-            
-            console.log(`🐟 Tank ${i} field generation:`, {
-                count,
-                existingTank,
-                tankVolume,
-                tankVolumeType: typeof tankVolume,
-                defaultCalculation: 1000,
-                templateValue: `value="${tankVolume}"`
-            });
-            
+
             const tankHtml = `
                 <div class="detail-card">
                     <div class="detail-card-header">
@@ -7052,16 +10118,7 @@ class AquaponicsApp {
                 const volumeEl = document.getElementById(`tank-volume-${i}`);
                 const stockingEl = document.getElementById(`tank-stocking-${i}`);
                 const harvestEl = document.getElementById(`tank-harvest-${i}`);
-                
-                console.log(`🔧 Setting field values for tank ${i}:`, {
-                    volumeEl: !!volumeEl,
-                    stockingEl: !!stockingEl,
-                    harvestEl: !!harvestEl,
-                    tankVolume,
-                    stockingDensity: (existingTank && existingTank.stockingDensity !== null) ? existingTank.stockingDensity : fishDefaults.defaultDensity,
-                    harvestWeight: (existingTank && existingTank.harvestWeight !== null) ? existingTank.harvestWeight : fishDefaults.harvestWeight
-                });
-                
+
                 if (volumeEl) volumeEl.value = tankVolume;
                 if (stockingEl) stockingEl.value = (existingTank && existingTank.stockingDensity !== null) ? existingTank.stockingDensity : fishDefaults.defaultDensity;
                 if (harvestEl) harvestEl.value = (existingTank && existingTank.harvestWeight !== null) ? existingTank.harvestWeight : fishDefaults.harvestWeight;
@@ -7099,7 +10156,7 @@ class AquaponicsApp {
             const bedHtml = `
                 <div class="detail-card">
                     <div class="detail-card-header">
-                        <span>🌱</span>
+                        <img src="/icons/bed-types/Flow-Through.svg" alt="Grow Bed" class="bed-config-icon" />
                         <span>Grow Bed ${i}</span>
                     </div>
                     <div class="detail-fields" style="grid-template-columns: 1fr 1fr; margin-bottom: 1rem;">
@@ -7517,9 +10574,76 @@ class AquaponicsApp {
         
         if (volumeSpan) volumeSpan.textContent = Math.round(volume);
         if (areaSpan) areaSpan.textContent = area.toFixed(1);
+        
+        // Update any existing plant allocation total plants calculations for this bed
+        this.refreshTotalPlantsCalculations(bedIndex);
     }
     
-    async initializePlantAllocation() {
+    refreshTotalPlantsCalculations(bedIndex) {
+        // This function updates total plants calculations when bed configuration changes
+        // It handles both system setup (where bed configs are being modified) and 
+        // existing system allocation views
+        
+        try {
+            // For vertical beds, update the total plants calculation if it exists in allocations
+            const typeSelect = document.getElementById(`bed-type-${bedIndex}`);
+            if (!typeSelect || typeSelect.value !== 'vertical') return;
+            
+            const verticals = parseFloat(document.getElementById(`bed-verticals-${bedIndex}`)?.value) || 0;
+            const plantsPerVertical = parseFloat(document.getElementById(`bed-plants-per-vertical-${bedIndex}`)?.value) || 0;
+            
+            if (verticals > 0 && plantsPerVertical > 0) {
+                // Try to find and update any existing allocation displays for this bed
+                // The bed ID in allocations might be different from bedIndex, so we need to check all beds
+                const totalPlantsSpans = document.querySelectorAll('[id^="total-plants-"]');
+                
+                totalPlantsSpans.forEach(span => {
+                    // Extract bed ID from the span ID
+                    const bedId = span.id.replace('total-plants-', '');
+                    
+                    // Check if this bed matches our configuration (this is imperfect but the best we can do)
+                    // In a more robust implementation, we'd have better bed tracking
+                    const plantsInput = document.getElementById(`plants-${bedId}`);
+                    if (plantsInput) {
+                        // Get the plants per vertical from the input (this might be the updated value)
+                        const currentPlantsPerVertical = parseInt(plantsInput.value) || plantsPerVertical;
+                        const totalPlants = verticals * currentPlantsPerVertical;
+                        span.textContent = `Total: ${totalPlants} plants`;
+
+                    }
+                });
+                
+                // Also check if we're in the crop allocation settings and update accordingly
+                // This will refresh the allocation display if it's currently visible
+                if (document.getElementById('grow-bed-allocation-container')) {
+                    // Debounce the refresh to avoid too many rapid updates
+                    clearTimeout(this._refreshTimeout);
+                    this._refreshTimeout = setTimeout(() => {
+                        this.refreshAllocationDisplay();
+                    }, 500);
+                }
+            }
+        } catch (error) {
+            console.error('Error refreshing total plants calculations:', error);
+        }
+    }
+    
+    async refreshAllocationDisplay() {
+        // Helper function to refresh the allocation display
+        try {
+            if (this.activeSystemId && document.getElementById('grow-bed-allocation-container')) {
+                const allocations = await this.makeApiCall(`/plants/allocations/${this.activeSystemId}`);
+                const utilization = await this.makeApiCall(`/plants/utilization/${this.activeSystemId}`);
+                await this.displayPlantAllocations(allocations, utilization);
+
+            }
+        } catch (error) {
+            console.error('Error refreshing allocation display:', error);
+        }
+    }
+    
+    // Removed - plant allocation is now done in the main app
+    async initializePlantAllocation_removed() {
         const container = document.getElementById('plant-allocation-container');
         const bedCount = parseInt(document.getElementById('new-grow-bed-count').value);
         
@@ -7528,7 +10652,7 @@ class AquaponicsApp {
         try {
             const response = await this.makeApiCall('/plants/custom-crops');
             customCrops = response || [];
-            console.log('Loaded custom crops for allocation:', customCrops);
+
         } catch (error) {
             console.error('Failed to load custom crops:', error);
         }
@@ -7540,7 +10664,7 @@ class AquaponicsApp {
             const allocationHtml = `
                 <div class="allocation-bed">
                     <div class="allocation-bed-header">
-                        <span>🌱</span>
+                        <img src="/icons/bed-types/Flow-Through.svg" alt="Grow Bed" class="bed-config-icon" />
                         <span>${bedName} - Plant Allocation</span>
                     </div>
                     <div class="allocation-crops-wrapper" style="max-height: 300px; overflow-y: auto; border: 1px solid rgba(69, 231, 221, 0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
@@ -7550,15 +10674,37 @@ class AquaponicsApp {
                                     <option value="">No crop allocated</option>
                                     <optgroup label="Leafy Greens">
                                         <option value="lettuce">Lettuce</option>
+                                        <option value="lettuce_batavian">Lettuce - Batavian</option>
+                                        <option value="lettuce_butter">Lettuce - Butter</option>
+                                        <option value="lettuce_cos">Lettuce - Cos</option>
+                                        <option value="lettuce_icty">Lettuce - Icty</option>
+                                        <option value="lettuce_datem">Lettuce - Datem</option>
+                                        <option value="lettuce_oak">Lettuce - Oak</option>
                                         <option value="spinach">Spinach</option>
                                         <option value="kale">Kale</option>
                                         <option value="swiss_chard">Swiss Chard</option>
+                                        <option value="arugula">Arugula</option>
+                                        <option value="pac_choi">Pac Choi</option>
+                                        <option value="celery">Celery</option>
                                     </optgroup>
                                     <optgroup label="Herbs">
                                         <option value="basil">Basil</option>
                                         <option value="mint">Mint</option>
                                         <option value="parsley">Parsley</option>
                                         <option value="cilantro">Cilantro</option>
+                                        <option value="chives">Chives</option>
+                                        <option value="oregano">Oregano</option>
+                                        <option value="thyme">Thyme</option>
+                                    </optgroup>
+                                    <optgroup label="Onions & Leeks">
+                                        <option value="spring_onion">Spring Onion</option>
+                                        <option value="leeks">Leeks</option>
+                                    </optgroup>
+                                    <optgroup label="Fruiting Vegetables">
+                                        <option value="tomatoes">Tomatoes</option>
+                                        <option value="peppers">Peppers</option>
+                                        <option value="cucumbers">Cucumbers</option>
+                                        <option value="eggplant">Eggplant</option>
                                     </optgroup>
                                     ${customCrops.length > 0 ? `
                                         <optgroup label="Custom Crops">
@@ -7567,9 +10713,20 @@ class AquaponicsApp {
                                             ).join('')}
                                         </optgroup>
                                     ` : ''}
+                                    <optgroup label="Fruiting Crops">
+                                        <option value="tomatoes">Tomatoes</option>
+                                        <option value="peppers">Peppers</option>
+                                        <option value="cucumbers">Cucumbers</option>
+                                    </optgroup>
                                 </select>
                                 <input type="number" class="modern-input" placeholder="%" min="0" max="100" id="bed-${i}-alloc-1">
                             </div>
+                        </div>
+                    </div>
+                    <div class="allocation-summary" style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(52, 152, 219, 0.1); border-radius: 8px; font-size: 0.9rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>Total Allocated: <strong id="bed-${i}-total">0%</strong></span>
+                            <span id="bed-${i}-remaining" style="color: #27ae60;">100% remaining</span>
                         </div>
                     </div>
                     <div class="allocation-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
@@ -7584,9 +10741,46 @@ class AquaponicsApp {
             `;
             container.innerHTML += allocationHtml;
         }
+        
+        // Add event listeners to update allocation percentages
+        for (let i = 1; i <= bedCount; i++) {
+            this.updateAllocationSummary(i);
+            
+            // Add listeners to the first input
+            const firstInput = document.getElementById(`bed-${i}-alloc-1`);
+            if (firstInput) {
+                firstInput.addEventListener('input', () => this.updateAllocationSummary(i));
+            }
+        }
     }
     
-    addAllocationRow(bedNum) {
+    // Removed - plant allocation is now done in the main app
+    updateAllocationSummary_removed(bedNum) {
+        const allocationInputs = document.querySelectorAll(`[id^="bed-${bedNum}-alloc-"]`);
+        let total = 0;
+        
+        allocationInputs.forEach(input => {
+            const value = parseFloat(input.value) || 0;
+            total += value;
+        });
+        
+        const totalElement = document.getElementById(`bed-${bedNum}-total`);
+        const remainingElement = document.getElementById(`bed-${bedNum}-remaining`);
+        
+        if (totalElement) {
+            totalElement.textContent = `${total}%`;
+            totalElement.style.color = total > 100 ? '#e74c3c' : '#2c3e50';
+        }
+        
+        if (remainingElement) {
+            const remaining = 100 - total;
+            remainingElement.textContent = remaining >= 0 ? `${remaining}% remaining` : `${Math.abs(remaining)}% over`;
+            remainingElement.style.color = remaining >= 0 ? '#27ae60' : '#e74c3c';
+        }
+    }
+    
+    // Removed - plant allocation is now done in the main app
+    addAllocationRow_removed(bedNum) {
         const container = document.querySelector(`#plant-allocation-container .allocation-bed:nth-child(${bedNum}) .allocation-crops`);
         const rowCount = container.querySelectorAll('.allocation-row').length + 1;
         
@@ -7599,8 +10793,38 @@ class AquaponicsApp {
                 ${firstSelect.innerHTML}
             </select>
             <input type="number" class="modern-input" placeholder="%" min="0" max="100" id="bed-${bedNum}-alloc-${rowCount}">
+            <button type="button" class="btn-danger-small" onclick="app.removeAllocationRow(${bedNum}, ${rowCount})" style="padding: 0.5rem; border-radius: 4px; background: #e74c3c; color: white; border: none; cursor: pointer;">✕</button>
         `;
         container.appendChild(newRow);
+        
+        // Add event listener to the new input
+        const newInput = document.getElementById(`bed-${bedNum}-alloc-${rowCount}`);
+        if (newInput) {
+            newInput.addEventListener('input', () => this.updateAllocationSummary(bedNum));
+        }
+    }
+    
+    // Removed - plant allocation is now done in the main app
+    removeAllocationRow_removed(bedNum, rowNum) {
+        const container = document.querySelector(`#plant-allocation-container .allocation-bed:nth-child(${bedNum}) .allocation-crops`);
+        const rows = container.querySelectorAll('.allocation-row');
+        
+        // Don't remove if it's the only row
+        if (rows.length <= 1) {
+            this.showNotification('Cannot remove the last allocation row', 'warning');
+            return;
+        }
+        
+        // Find and remove the specific row
+        rows.forEach((row, index) => {
+            const rowNumber = index + 1;
+            if (rowNumber === rowNum) {
+                row.remove();
+            }
+        });
+        
+        // Update the summary
+        this.updateAllocationSummary(bedNum);
     }
     
     async showAddCustomCropDialog(bedNum) {
@@ -7690,13 +10914,12 @@ class AquaponicsApp {
             closeBtn.addEventListener('click', () => this.closeNewSystemModal());
         }
         
-        // Click outside modal to close
+        // Prevent closing when clicking outside modal (force use of X button)
         const modal = document.getElementById('new-system-modal');
         if (modal) {
             modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    this.closeNewSystemModal();
-                }
+                // Prevent modal from closing when clicking outside
+                e.stopPropagation();
             });
         }
         
@@ -7732,50 +10955,74 @@ class AquaponicsApp {
                 }
                 systemData.total_fish_volume = totalFishVolume;
                 
-                // Collect grow bed details
+                // Collect grow bed details - get data directly from form since wizard data might be empty
+
                 systemData.grow_beds = [];
                 let totalGrowArea = 0;
+                
                 for (let i = 1; i <= systemData.grow_bed_count; i++) {
                     const bedType = document.getElementById(`bed-type-${i}`)?.value;
-                    const savedBed = this.systemWizardData.growBeds?.[i-1] || {};
+                    const bedName = document.getElementById(`bed-name-${i}`)?.value || `Bed ${i}`;
                     
-                    // Calculate area based on bed type and saved dimensions
+                    // Try to get saved data first, then collect directly from form fields
+                    let savedBed = this.systemWizardData.growBeds?.[i-1] || {};
+                    
+                    // If no saved data, collect directly from current form fields
+                    if (!savedBed || Object.keys(savedBed).length === 0) {
+
+                        savedBed = this.collectBedDataFromForm(i, bedType);
+                    }
+
+                    // Calculate area based on bed type and dimensions
                     let bedArea = 0;
+                    let bedVolume = 0;
                     if (bedType && savedBed) {
                         const metrics = this.calculateBedMetricsForSaving(bedType, savedBed);
                         bedArea = metrics.area;
+                        bedVolume = metrics.volume;
+
                     }
                     
                     totalGrowArea += bedArea;
-                    systemData.grow_beds.push({
-                        name: document.getElementById(`bed-name-${i}`)?.value || `Bed ${i}`,
+                    const bedData = {
+                        name: bedName,
                         type: bedType,
                         area: bedArea,
+                        volume: bedVolume,
                         ...savedBed // Include all the dimensional data
-                    });
+                    };
+
+                    systemData.grow_beds.push(bedData);
                 }
                 systemData.total_grow_area = totalGrowArea;
                 
-                // Collect plant allocations
+                // Skip allocations - will redirect to allocation tab
                 systemData.allocations = [];
-                for (let i = 1; i <= systemData.grow_bed_count; i++) {
-                    const allocationRows = document.querySelectorAll(`#plant-allocation-container .allocation-bed:nth-child(${i}) .allocation-row`);
-                    allocationRows.forEach((row, index) => {
-                        const crop = document.getElementById(`bed-${i}-crop-${index + 1}`)?.value;
-                        const percentage = document.getElementById(`bed-${i}-alloc-${index + 1}`)?.value;
-                        if (crop && percentage) {
-                            systemData.allocations.push({
-                                grow_bed_id: i,
-                                grow_bed_name: systemData.grow_beds[i-1].name,
-                                crop_type: crop,
-                                allocation_percentage: parseFloat(percentage)
-                            });
-                        }
-                    });
-                }
                 
                 await this.createNewSystem(systemData);
                 this.closeNewSystemModal();
+                
+                // Show notification and redirect to allocation tab
+                this.showNotification('✅ System created successfully! Now let\'s set up your crop allocations.', 'success');
+                
+                // Switch to settings tab and then to allocation sub-tab
+                setTimeout(() => {
+                    // Switch to settings view
+                    this.currentView = 'settings';
+                    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                    document.getElementById('settings').classList.add('active');
+                    const settingsBtn = document.querySelector('[data-view="settings"]');
+                    if (settingsBtn) {
+                        settingsBtn.classList.add('active');
+                    }
+                    
+                    // Trigger click on allocation tab
+                    const allocationTab = document.querySelector('[data-setting="plant-allocations"]');
+                    if (allocationTab) {
+                        allocationTab.click();
+                    }
+                }, 500);
             });
         }
     }
@@ -7833,6 +11080,7 @@ class AquaponicsApp {
             // Save grow bed configuration
             if (grow_beds && grow_beds.length > 0) {
                 try {
+
                     // Transform grow beds data for API
                     const growBedsData = grow_beds.map((bed, index) => {
                         // Calculate volume if not already set
@@ -7842,7 +11090,7 @@ class AquaponicsApp {
                             volume = metrics.volume;
                         }
                         
-                        return {
+                        const transformedBed = {
                             bed_number: index + 1,
                             bed_type: bed.type,
                             bed_name: bed.name || `Bed ${index + 1}`,
@@ -7861,17 +11109,24 @@ class AquaponicsApp {
                             plant_spacing: bed.plantSpacing || null,
                             reservoir_volume_liters: bed.reservoirVolume || null
                         };
+
+                        return transformedBed;
                     });
-                    
-                    await this.makeApiCall(`/grow-beds/system/${systemId}`, {
+
+                    const result = await this.makeApiCall(`/grow-beds/system/${systemId}`, {
                         method: 'POST',
                         body: JSON.stringify({
                             growBeds: growBedsData
                         })
                     });
+
+                    this.showNotification('✅ Grow bed configuration saved successfully', 'success');
                 } catch (error) {
                     console.error('Failed to save grow bed configuration:', error);
+                    this.showNotification('❌ Failed to save grow bed configuration: ' + (error.message || 'Unknown error'), 'error');
                 }
+            } else {
+
             }
             
             // Get the created grow bed IDs first
@@ -7915,8 +11170,7 @@ class AquaponicsApp {
             }
             
             // Skip creating default spray programmes - let users add their own as needed
-            console.log('System created without default spray programmes - users can add their own');
-            
+
             // Redirect to settings to review/modify configuration
             this.goToSettings();
             this.showNotification(`System "${systemData.system_name}" created successfully!`, 'success');
@@ -8010,7 +11264,32 @@ class AquaponicsApp {
             // Save fish tank configuration
             await this.saveFishTankConfiguration();
             
-            this.systems[this.activeSystemId] = updatedSystem;
+            // Recalculate and update the system's total fish volume after individual tanks are saved
+            const tankItems = document.querySelectorAll('.fish-tank-item');
+            let actualTotalFishVolumeL = 0;
+            tankItems.forEach(item => {
+                const sizeInput = item.querySelector('.tank-size');
+                if (sizeInput && sizeInput.value) {
+                    const sizeM3 = parseFloat(sizeInput.value) || 0;
+                    actualTotalFishVolumeL += sizeM3 * 1000; // Convert m³ to liters
+                }
+            });
+            
+            // Update the system data with the recalculated total
+            if (actualTotalFishVolumeL !== updatedSystem.total_fish_volume) {
+                updatedSystem.total_fish_volume = actualTotalFishVolumeL;
+                // Save the updated total back to the API
+                const finalSystemUpdate = await this.makeApiCall(`/systems/${this.activeSystemId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        ...config,
+                        total_fish_volume: actualTotalFishVolumeL
+                    })
+                });
+                this.systems[this.activeSystemId] = finalSystemUpdate;
+            } else {
+                this.systems[this.activeSystemId] = updatedSystem;
+            }
             this.updateSystemSelector(); // Update dropdown with new name
             this.updateCurrentSystemDisplay(); // Update system name on all tabs
             
@@ -8019,6 +11298,20 @@ class AquaponicsApp {
             
             // Reload the fish tank configuration to show saved values
             await this.loadFishTankConfiguration();
+            
+            // Refresh fish management data to reflect tank changes
+            await this.loadDataRecords();
+            
+            // Refresh fish management views
+            if (document.getElementById('tank-information-tab').classList.contains('active')) {
+                this.loadTankInformation();
+            }
+            if (document.getElementById('fish-overview-tab').classList.contains('active')) {
+                this.loadFishOverview();
+            }
+            
+            // Always update the fish tank summary to reflect volume changes
+            await this.updateFishTankSummary();
             
             this.showNotification('⚙️ System configuration saved successfully!', 'success');
             
@@ -8111,7 +11404,7 @@ class AquaponicsApp {
                                         <h4>${system.system_name} ${isActive ? '(Active)' : ''}</h4>
                                         <p>Type: ${system.system_type} | Fish: ${this.fishData[system.fish_type]?.icon || '🐟'} ${this.fishData[system.fish_type]?.name || system.fish_type}</p>
                                         <p>Tanks: ${(system.total_fish_volume / 1000).toFixed(1)}m³ | Grow Beds: ${system.total_grow_volume}L</p>
-                                        <small>Created: ${new Date(system.created_at).toLocaleDateString()}</small>
+                                        <small>Created: ${this.formatDateDDMMYYYY(new Date(system.created_at))}</small>
                                     </div>
                                     <div class="system-actions">
                                         ${!isActive ? `<button class="form-btn" onclick="app.switchToSystem('${systemId}')">Switch To</button>` : ''}
@@ -8130,6 +11423,8 @@ class AquaponicsApp {
         // Just initialize the hydroponic dosing calculator - the HTML is already in place
         setTimeout(() => {
             this.initializeHydroponicDosingCalculator();
+            // Update reservoir volume when calculator initializes
+            this.updateReservoirVolumeFromSystem();
         }, 100);
     }
 
@@ -8324,14 +11619,132 @@ class AquaponicsApp {
         this.loadAvailableNutrients();
         this.displayMaintenanceSchedule();
         this.loadCurrentNutrientLevels();
+        
+        // Set reservoir volume from system configuration
+        this.updateReservoirVolumeFromSystem();
     }
 
+    async updateReservoirVolumeFromSystem() {
+        const systemConfig = this.loadSystemConfig();
+        let tankVolume = systemConfig.total_fish_volume || 0;
+        console.log('Initial tank volume from system config:', tankVolume, 'L');
+        
+        // Check if we need to fetch actual tank configurations for correct volume
+        if (systemConfig.id) {
+            try {
+                // Get actual fish tank volumes
+                console.log('Fetching tanks for system:', systemConfig.id);
+                const tankResponse = await fetch(`/api/fish-tanks/system/${systemConfig.id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    }
+                });
+                
+                console.log('Tank response status:', tankResponse.status);
+                if (tankResponse.ok) {
+                    const tanksResponse = await tankResponse.json();
+                    console.log('Tanks data:', tanksResponse);
+                    // Extract tanks array from response object
+                    const tanks = tanksResponse.tanks || tanksResponse;
+                    if (tanks && tanks.length > 0) {
+                        // Calculate actual total volume from individual tanks
+                        tankVolume = tanks.reduce((sum, tank) => {
+                            // Use volume_liters directly, or convert size_m3 to liters
+                            if (tank.volume_liters) {
+                                return sum + parseFloat(tank.volume_liters);
+                            } else if (tank.size_m3) {
+                                return sum + (parseFloat(tank.size_m3) * 1000);
+                            }
+                            return sum;
+                        }, 0);
+                        console.log('Calculated tank volume from individual tanks:', tankVolume, 'L');
+                    } else {
+                        console.log('No individual tanks found, using system total_fish_volume');
+                        // If no individual tanks, check if total_fish_volume needs conversion
+                        // 7 tanks × 7m³ = 49m³ = 49000L
+                        // If total_fish_volume is 7000, it might be a data entry error
+                        if (systemConfig.fish_tank_count === 7 && tankVolume === 7000) {
+                            console.log('Detected possible volume error: 7 tanks with only 7000L total');
+                            // Assume 7m³ per tank if we have 7 tanks
+                            tankVolume = 7 * 7 * 1000; // 7 tanks × 7m³ × 1000L/m³
+                            console.log('Corrected tank volume to:', tankVolume, 'L');
+                        }
+                    }
+                } else {
+                    console.error('Failed to fetch tanks:', tankResponse.statusText);
+                }
+            } catch (error) {
+                console.error('Error loading tank configurations:', error);
+            }
+        }
+        
+        // Load grow bed configuration if we have an active system
+        let growBedVolume = 0;
+        
+        if (systemConfig.id) {
+            try {
+                const response = await fetch(`/api/grow-beds/system/${systemConfig.id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const growBedData = await response.json();
+                    console.log('Grow bed data received:', growBedData);
+                    
+                    // growBedData is directly an array
+                    if (Array.isArray(growBedData)) {
+                        // First try to use explicit reservoir volumes
+                        growBedData.forEach(bed => {
+                            if (bed.reservoir_volume_liters) {
+                                growBedVolume += parseFloat(bed.reservoir_volume_liters);
+                            }
+                        });
+                        
+                        // If no reservoir volumes are set, estimate based on grow bed area
+                        // Typical grow bed depth is 30cm with 60% water space after media = ~180L per m²
+                        if (growBedVolume === 0) {
+                            growBedData.forEach(bed => {
+                                if (bed.equivalent_m2) {
+                                    // More conservative estimate: 150L per m² (30cm depth * 0.5 water factor)
+                                    // This accounts for media displacement
+                                    const bedWaterVolume = parseFloat(bed.equivalent_m2) * 150;
+                                    growBedVolume += bedWaterVolume;
+                                    console.log(`Bed ${bed.bed_number}: ${bed.equivalent_m2}m² = ${bedWaterVolume}L water`);
+                                }
+                            });
+                        }
+                        console.log('Calculated grow bed volume:', growBedVolume, 'L');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading grow bed configuration:', error);
+            }
+        }
+        
+        // Total reservoir volume = tank volume + grow bed water volume
+        const totalReservoirVolume = tankVolume + growBedVolume;
+        
+        // Update the reservoir volume field
+        const reservoirField = document.getElementById('reservoir-volume');
+        if (reservoirField) {
+            reservoirField.value = Math.round(totalReservoirVolume);
+            
+            // Update the help text to show breakdown
+            const helpText = reservoirField.nextElementSibling;
+            if (helpText && helpText.tagName === 'SMALL') {
+                helpText.innerHTML = `Tank: ${tankVolume}L + Grow Beds: ${Math.round(growBedVolume)}L = Total: ${Math.round(totalReservoirVolume)}L`;
+            }
+        }
+    }
+    
     setupDosingTabs() {
         const tabs = document.querySelectorAll('.dosing-tab');
         const contents = document.querySelectorAll('.dosing-content');
 
         if (tabs.length === 0) {
-            console.log('No dosing tabs found, skipping tab setup');
+
             return;
         }
 
@@ -8364,6 +11777,7 @@ class AquaponicsApp {
         if (calcTab) {
             calcTab.addEventListener('click', () => {
                 setTimeout(() => {
+                    this.updateReservoirVolumeFromSystem();
                     this.loadCurrentNutrientLevels();
                 }, 100);
             });
@@ -8470,6 +11884,9 @@ class AquaponicsApp {
         const dosingPlan = this.optimizeNutrientMix(needed, reservoirVolume, allNutrients);
         
         this.displayDosingResults(dosingPlan, targets, reservoirVolume, currentLevels);
+        
+        // Switch to mixing schedule tab after calculation
+        this.switchToMixingScheduleTab();
     }
 
     optimizeNutrientMix(targets, volume, availableNutrients) {
@@ -8512,7 +11929,8 @@ class AquaponicsApp {
     }
 
     displayDosingResults(dosingPlan, targets, volume, currentLevels = null) {
-        const resultsDiv = document.getElementById('dosing-results');
+        // Display results in the mixing schedule tab instead of quick calculator
+        const resultsDiv = document.getElementById('dosing-results-display');
         
         if (dosingPlan.length === 0) {
             const hasCurrentLevels = currentLevels && Object.values(currentLevels).some(val => val > 0);
@@ -8521,10 +11939,9 @@ class AquaponicsApp {
             } else {
                 resultsDiv.innerHTML = '<p style="text-align: center; color: #999;">No suitable nutrient combination found.</p>';
             }
+            resultsDiv.style.display = 'block';
             return;
         }
-
-        const totalCost = dosingPlan.reduce((sum, item) => sum + item.cost, 0);
 
         let html = `
             <h4>Recommended Dosing Plan for Aquaponics</h4>
@@ -8562,7 +11979,6 @@ class AquaponicsApp {
         html += `
             </div>
             <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-top: 12px;">
-                <p><strong>Total Cost:</strong> $${totalCost.toFixed(2)}</p>
                 <p><strong>Reservoir Volume:</strong> ${volume}L</p>
                 <p style="font-size: 0.9rem; color: #666; margin-top: 8px;">
                     <em>Dosing calculated for aquaponic system. Mix each nutrient separately to avoid precipitation.</em>
@@ -8571,12 +11987,32 @@ class AquaponicsApp {
         `;
 
         resultsDiv.innerHTML = html;
+        resultsDiv.style.display = 'block';
         this.generateMixingSchedule(dosingPlan);
+    }
+    
+    switchToMixingScheduleTab() {
+        const mixingTab = document.getElementById('mixing-schedule-tab');
+        const tabs = document.querySelectorAll('.dosing-tab');
+        const contents = document.querySelectorAll('.dosing-content');
         
-        // Show action buttons when results are available
-        const actionsDiv = document.getElementById('dosing-actions');
-        if (actionsDiv) {
-            actionsDiv.style.display = 'block';
+        if (mixingTab) {
+            // Remove active class from all tabs and contents
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+            
+            // Activate mixing schedule tab
+            mixingTab.classList.add('active');
+            const content = document.getElementById('mixing-schedule-content');
+            if (content) {
+                content.classList.add('active');
+            }
+            
+            // Auto-scroll to the top of the page
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Show export options after results are displayed
+            this.showExportOptions();
         }
     }
 
@@ -8770,10 +12206,335 @@ class AquaponicsApp {
         }, duration);
     }
 
+    showExportOptions() {
+        // Add export buttons to the mixing schedule tab
+        let exportDiv = document.getElementById('export-options');
+        if (!exportDiv) {
+            exportDiv = document.createElement('div');
+            exportDiv.id = 'export-options';
+            exportDiv.className = 'export-options-container';
+            
+            const mixingContent = document.getElementById('mixing-schedule-content');
+            if (mixingContent) {
+                mixingContent.appendChild(exportDiv);
+            }
+        }
+        
+        exportDiv.innerHTML = `
+            <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin-top: 20px; border: 1px solid #e2e8f0;">
+                <h4 style="margin: 0 0 15px 0; color: #1e293b;">📄 Export Nutrient Plan</h4>
+                <p style="color: #64748b; margin-bottom: 15px; font-size: 0.9rem;">Save or share your complete nutrient dosing and mixing schedule</p>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <button onclick="app.exportToPDF()" class="export-btn pdf-btn">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right: 6px;">
+                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                        </svg>
+                        Save as PDF
+                    </button>
+                    <button onclick="app.emailNutrientPlan()" class="export-btn email-btn">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right: 6px;">
+                            <path d="M20,8L12,13L4,8V6L12,11L20,6M20,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6C22,4.89 21.1,4 20,4Z"/>
+                        </svg>
+                        Email Plan
+                    </button>
+                    <button onclick="app.copyPlanToClipboard()" class="export-btn clipboard-btn">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-right: 6px;">
+                            <path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"/>
+                        </svg>
+                        Copy to Clipboard
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    exportToPDF() {
+        try {
+            // Get the complete nutrient plan content
+            const dosingResults = document.getElementById('dosing-results-display');
+            const mixingSchedule = document.getElementById('mixing-schedule-display');
+            
+            if (!dosingResults || !mixingSchedule) {
+                this.showNotification('❌ No nutrient plan available to export', 'error');
+                return;
+            }
+            
+            // Create a new window for PDF generation
+            const printWindow = window.open('', '_blank');
+            
+            const currentDate = new Date().toLocaleDateString();
+            const systemConfig = this.loadSystemConfig();
+            const systemName = systemConfig.name || 'Aquaponics System';
+            
+            const htmlContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Nutrient Dosing Plan - ${systemName}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+                        h1, h2, h3, h4, h5 { color: #2d3748; margin-top: 20px; }
+                        h1 { border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+                        .header { text-align: center; margin-bottom: 30px; }
+                        .system-info { background: #f7fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+                        .dosing-results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+                        .dosing-result-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; text-align: center; }
+                        .dosing-result-nutrient { font-weight: bold; color: #2d3748; margin-bottom: 8px; }
+                        .dosing-result-amount { font-size: 1.5rem; font-weight: bold; color: #667eea; }
+                        .dosing-result-unit { color: #64748b; font-size: 0.9rem; }
+                        .mixing-step { background: #f8fafc; border-left: 4px solid #667eea; padding: 15px; margin: 10px 0; border-radius: 0 8px 8px 0; }
+                        .mixing-step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+                        .mixing-step-title { font-weight: bold; color: #2d3748; }
+                        .mixing-step-time { color: #667eea; font-weight: bold; }
+                        .mixing-step-content { color: #4a5568; }
+                        .mixing-week-section { margin: 20px 0; }
+                        .warning-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin: 15px 0; }
+                        .success-box { background: #e8f5e8; border-left: 4px solid #28a745; padding: 12px; margin: 15px 0; }
+                        .page-break { page-break-before: always; }
+                        @media print { 
+                            body { margin: 0; font-size: 12px; }
+                            .no-print { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>🌱 Nutrient Dosing & Mixing Plan</h1>
+                        <div class="system-info">
+                            <p><strong>System:</strong> ${systemName}</p>
+                            <p><strong>Generated:</strong> ${currentDate}</p>
+                            <p><strong>Generated by:</strong> Afraponix Go - Aquaponics Management System</p>
+                        </div>
+                    </div>
+                    
+                    <div class="dosing-plan">
+                        ${dosingResults.innerHTML}
+                    </div>
+                    
+                    <div class="mixing-schedule page-break">
+                        ${mixingSchedule.innerHTML}
+                    </div>
+                    
+                    <div class="footer page-break" style="margin-top: 40px; text-align: center; color: #64748b; font-size: 0.9rem;">
+                        <p>This nutrient plan was generated by Afraponix Go on ${currentDate}</p>
+                        <p>Always monitor your system's pH, EC levels, and fish behavior when adding nutrients</p>
+                        <p>For questions or support, consult your aquaponics system documentation</p>
+                    </div>
+                </body>
+                </html>
+            `;
+            
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+            
+            // Wait for content to load, then trigger print dialog
+            setTimeout(() => {
+                printWindow.focus();
+                printWindow.print();
+            }, 500);
+            
+            this.showNotification('📄 PDF export initiated - use your browser\'s print dialog to save', 'success');
+            
+        } catch (error) {
+            console.error('Error exporting to PDF:', error);
+            this.showNotification('❌ Error exporting to PDF. Please try again.', 'error');
+        }
+    }
+
+    async emailNutrientPlan() {
+        try {
+            // Get the nutrient plan content
+            const dosingResults = document.getElementById('dosing-results-display');
+            const mixingSchedule = document.getElementById('mixing-schedule-display');
+            
+            if (!dosingResults || !mixingSchedule || dosingResults.style.display === 'none') {
+                this.showNotification('❌ No nutrient plan available to email. Calculate dosing first.', 'error');
+                return;
+            }
+            
+            this.showNotification('📧 Sending nutrient plan via email...', 'info');
+            
+            const currentDate = new Date().toLocaleDateString();
+            const systemConfig = this.loadSystemConfig();
+            const systemName = systemConfig.name || 'Aquaponics System';
+            
+            // Get form data
+            const cropType = document.getElementById('crop-type').value;
+            const reservoirVolume = document.getElementById('reservoir-volume').value;
+            
+            // Get dosing results
+            const dosingCards = dosingResults.querySelectorAll('.dosing-result-card');
+            let nutrientList = '';
+            dosingCards.forEach(card => {
+                const nutrientName = card.querySelector('.dosing-result-nutrient')?.textContent || 'Unknown';
+                const amount = card.querySelector('.dosing-result-amount')?.textContent || '0';
+                nutrientList += `• ${nutrientName}: ${amount}g\n`;
+            });
+            
+            // Get mixing schedule content (simplified)
+            const mixingSteps = mixingSchedule.querySelectorAll('.mixing-step-title');
+            let scheduleText = '';
+            mixingSteps.forEach((step, index) => {
+                scheduleText += `${index + 1}. ${step.textContent}\n`;
+            });
+            
+            // Create email content
+            const emailSubject = `Nutrient Dosing Plan - ${systemName} (${currentDate})`;
+            const emailBody = `
+<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 800px; margin: 0 auto; padding: 20px;">
+        <header style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #2d3748; border-bottom: 3px solid #667eea; padding-bottom: 10px;">
+                🌱 Nutrient Dosing & Mixing Plan
+            </h1>
+            <div style="background: #f7fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p><strong>System:</strong> ${systemName}</p>
+                <p><strong>Crop:</strong> ${cropType}</p>
+                <p><strong>Reservoir Volume:</strong> ${reservoirVolume}L</p>
+                <p><strong>Generated:</strong> ${currentDate}</p>
+            </div>
+        </header>
+        
+        <section style="margin: 30px 0;">
+            <h2 style="color: #2d3748;">📊 Nutrients to Add</h2>
+            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea;">
+                <pre style="font-family: Arial; font-size: 14px; line-height: 1.8;">${nutrientList}</pre>
+            </div>
+        </section>
+        
+        <section style="margin: 30px 0;">
+            <h2 style="color: #2d3748;">📅 Mixing Schedule</h2>
+            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #ffc107;">
+                <h3 style="color: #856404; margin-top: 0;">⚠️ Important: Why Split Into Two Weeks?</h3>
+                <p>Some nutrients can cause precipitation when mixed together. This schedule separates incompatible nutrients to ensure maximum availability.</p>
+            </div>
+            <pre style="background: #f8fafc; padding: 20px; border-radius: 8px; font-family: Arial; font-size: 14px; line-height: 1.8;">${scheduleText}</pre>
+        </section>
+        
+        <section style="margin: 30px 0;">
+            <h2 style="color: #2d3748;">⚠️ Important Instructions</h2>
+            <ul style="background: #e8f5e8; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745;">
+                <li>Mix each nutrient separately to avoid precipitation</li>
+                <li>Add nutrients over 2 weeks to prevent compatibility issues</li>
+                <li>Week 1: Primary nutrients (NPK, Magnesium)</li>
+                <li>Week 2: Secondary nutrients (Calcium, Iron)</li>
+                <li>Monitor pH levels (keep between 6.0-7.0)</li>
+                <li>Watch fish behavior after each addition</li>
+                <li>Test water quality regularly</li>
+            </ul>
+        </section>
+        
+        <footer style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #64748b;">
+            <p>This nutrient plan was generated by Afraponix Go on ${currentDate}</p>
+            <p>Always monitor your system's pH, EC levels, and fish behavior when adding nutrients</p>
+        </footer>
+    </div>
+</body>
+</html>`;
+            
+            // Send email via API
+            const response = await fetch('/api/config/send-email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    subject: emailSubject,
+                    html: emailBody,
+                    type: 'nutrient_plan'
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to send email');
+            }
+            
+            this.showNotification('✅ Nutrient plan sent successfully to your email!', 'success');
+            
+        } catch (error) {
+            console.error('Error sending email:', error);
+            this.showNotification('❌ Failed to send email. Falling back to clipboard copy...', 'warning');
+            // Fallback to clipboard copy
+            await this.copyPlanToClipboard();
+        }
+    }
+
+    async copyPlanToClipboard(subject = '', body = '') {
+        try {
+            const currentDate = new Date().toLocaleDateString();
+            const systemConfig = this.loadSystemConfig();
+            const systemName = systemConfig.name || 'Aquaponics System';
+            
+            // Get current form values
+            const cropType = document.getElementById('crop-type').value;
+            const reservoirVolume = document.getElementById('reservoir-volume').value;
+            
+            // Get dosing results
+            const dosingResults = document.getElementById('dosing-results-display');
+            const dosingCards = dosingResults.querySelectorAll('.dosing-result-card');
+            let nutrientList = '';
+            dosingCards.forEach(card => {
+                const nutrientName = card.querySelector('.dosing-result-nutrient')?.textContent || 'Unknown';
+                const amount = card.querySelector('.dosing-result-amount')?.textContent || '0';
+                nutrientList += `- ${nutrientName}: ${amount}g\n`;
+            });
+            
+            const planText = `NUTRIENT DOSING PLAN
+
+System: ${systemName}
+Crop: ${cropType}
+Reservoir Volume: ${reservoirVolume}L
+Generated: ${currentDate}
+
+NUTRIENTS TO ADD:
+${nutrientList}
+
+IMPORTANT INSTRUCTIONS:
+- Mix each nutrient separately to avoid precipitation
+- Add nutrients over 2 weeks to prevent compatibility issues
+- Week 1: Add primary nutrients (NPK, Magnesium)
+- Week 2: Add secondary nutrients (Calcium, Iron)
+- Monitor pH levels (keep between 6.0-7.0)
+- Watch fish behavior after each addition
+- Test water quality regularly
+
+Generated by Afraponix Go - Aquaponics Management System`;
+
+            await navigator.clipboard.writeText(planText);
+            this.showNotification('📋 Nutrient plan copied to clipboard! You can paste it into any email.', 'success');
+            
+        } catch (error) {
+            console.error('Clipboard copy failed:', error);
+            this.showNotification('❌ Unable to copy to clipboard. Please manually copy the plan from the screen.', 'error');
+        }
+    }
+
+    extractTextFromHTML(html) {
+        // Create a temporary div to parse HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        
+        // Remove script and style elements
+        const scripts = tempDiv.querySelectorAll('script, style');
+        scripts.forEach(el => el.remove());
+        
+        // Get text content and clean it up
+        let text = tempDiv.textContent || tempDiv.innerText || '';
+        
+        // Clean up extra whitespace and line breaks
+        text = text.replace(/\\s+/g, ' ').trim();
+        text = text.replace(/\\n\\s*\\n/g, '\\n\\n');
+        
+        return text;
+    }
+
     loadAvailableNutrients() {
         const listDiv = document.getElementById('available-nutrients-list');
         if (!listDiv) {
-            console.log('available-nutrients-list element not found');
+
             return;
         }
         const allNutrients = [...this.preloadedNutrients, ...this.customNutrients];
@@ -8909,7 +12670,7 @@ class AquaponicsApp {
     displayMaintenanceSchedule() {
         const scheduleDiv = document.getElementById('maintenance-schedule-display');
         if (!scheduleDiv) {
-            console.log('maintenance-schedule-display element not found');
+
             return;
         }
         
@@ -8967,19 +12728,19 @@ class AquaponicsApp {
     }
 
     async loadCurrentNutrientLevels() {
-        if (!this.activeSystemId) {
+        const systemConfig = this.loadSystemConfig();
+        if (!systemConfig.id) {
             this.showNotification('⚠️ No active system selected', 'warning');
             return;
         }
 
-        console.log('🔄 Loading current nutrient levels...');
         this.showNotification('🔄 Loading latest nutrient data...', 'info', 2000);
 
         // First try to get the latest values from water quality data
         await this.loadNutrientsFromWaterQualityData();
 
         // Then load any manually saved values (these will override if they exist and are more recent)
-        const storageKey = `current_nutrients_${this.activeSystemId}`;
+        const storageKey = `current_nutrients_${systemConfig.id}`;
         const savedLevels = localStorage.getItem(storageKey);
         
         if (savedLevels) {
@@ -8991,7 +12752,7 @@ class AquaponicsApp {
             const waterQualityDate = latestWaterQuality ? new Date(latestWaterQuality.date) : new Date(0);
             
             if (savedDate > waterQualityDate) {
-                console.log('💾 Using manually saved nutrient levels (more recent)');
+
                 document.getElementById('current-n').value = levels.n || '';
                 document.getElementById('current-p').value = levels.p || '';
                 document.getElementById('current-k').value = levels.k || '';
@@ -8999,24 +12760,27 @@ class AquaponicsApp {
                 document.getElementById('current-mg').value = levels.mg || '';
                 document.getElementById('current-fe').value = levels.fe || '';
                 
-                this.showNotification(`📊 Loaded manually saved nutrient levels from ${savedDate.toLocaleDateString()}`, 'success', 3000);
+                this.showNotification(`📊 Loaded manually saved nutrient levels from ${this.formatDateDDMMYYYY(savedDate)}`, 'success', 3000);
             }
         }
     }
 
     async loadNutrientsFromWaterQualityData() {
-        if (!this.activeSystemId) return;
+        const systemConfig = this.loadSystemConfig();
+        if (!systemConfig.id) return;
         
         const token = localStorage.getItem('auth_token');
         if (!token) {
-            console.log('❌ No authentication token found');
+
             this.showNotification('⚠️ Please log in to load nutrient data', 'warning');
             return;
         }
         
         try {
-            console.log('🌐 Fetching latest water quality data...');
-            const response = await fetch(`${this.API_BASE}/data/latest/${this.activeSystemId}`, {
+
+            console.log('Loading nutrients for system:', systemConfig.id);
+            // Use the same endpoint that charts use for nutrient data
+            const response = await fetch(`${this.API_BASE}/data/nutrients/latest/${systemConfig.id}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -9024,57 +12788,132 @@ class AquaponicsApp {
                 }
             });
             
+            console.log('Nutrient data response status:', response.status);
             if (!response.ok) {
-                throw new Error('Failed to fetch latest data');
+                throw new Error('Failed to fetch latest nutrient data');
             }
             
-            const latestData = await response.json();
-            const waterQuality = latestData.waterQuality;
+            const nutrientData = await response.json();
+            console.log('Latest nutrient data received:', nutrientData);
             
-            if (waterQuality) {
+            // Check structure of all nutrient data
+            if (nutrientData.nitrate) {
+                console.log('Nitrate data structure:', nutrientData.nitrate);
+            }
+            if (nutrientData.potassium) {
+                console.log('Potassium data structure:', nutrientData.potassium);
+            }
+            if (nutrientData.phosphorus) {
+                console.log('Phosphorus data structure:', nutrientData.phosphorus);
+            }
+            
+            let waterQuality = nutrientData;
+            
+            // The nutrient endpoint returns an object with nutrient properties directly
+            // No need to extract from array format
+            if (waterQuality && typeof waterQuality === 'object') {
+                console.log('Using nutrient data directly from API');
                 let loadedCount = 0;
                 
-                // Nitrate (NO₃) - Convert to nitrogen equivalent for calculator (NO3-N conversion factor ~0.225)
-                if (waterQuality.nitrate !== null && waterQuality.nitrate !== undefined) {
-                    document.getElementById('current-n').value = (waterQuality.nitrate * 0.225).toFixed(1);
+                // Nitrate/Nitrogen - Use the value directly (assuming it's already in correct form)
+                // Check if nitrate is an object with a value property
+                let nitrateValue = null;
+                if (waterQuality.nitrate) {
+                    if (typeof waterQuality.nitrate === 'object' && waterQuality.nitrate.value !== undefined) {
+                        nitrateValue = parseFloat(waterQuality.nitrate.value);
+                    } else if (typeof waterQuality.nitrate === 'number' || typeof waterQuality.nitrate === 'string') {
+                        nitrateValue = parseFloat(waterQuality.nitrate);
+                    }
+                }
+                
+                if (nitrateValue !== null && !isNaN(nitrateValue)) {
+                    // Use the nitrate value directly - no conversion needed
+                    const nValue = nitrateValue.toFixed(1);
+                    const nInput = document.getElementById('current-n');
+                    if (nInput) {
+                        nInput.value = nValue;
+                        console.log('Set nitrogen input to:', nValue, '(from nitrate value:', nitrateValue, ')');
+                    } else {
+                        console.error('Could not find current-n input field');
+                    }
                     loadedCount++;
                 }
                 
                 // Phosphorus (P) - Direct from database
-                if (waterQuality.phosphorus !== null && waterQuality.phosphorus !== undefined) {
-                    document.getElementById('current-p').value = waterQuality.phosphorus.toFixed(1);
+                let phosphorusValue = null;
+                if (waterQuality.phosphorus) {
+                    if (typeof waterQuality.phosphorus === 'object' && waterQuality.phosphorus.value !== undefined) {
+                        phosphorusValue = parseFloat(waterQuality.phosphorus.value);
+                    } else if (typeof waterQuality.phosphorus === 'number' || typeof waterQuality.phosphorus === 'string') {
+                        phosphorusValue = parseFloat(waterQuality.phosphorus);
+                    }
+                }
+                if (phosphorusValue !== null && !isNaN(phosphorusValue)) {
+                    document.getElementById('current-p').value = phosphorusValue.toFixed(1);
                     loadedCount++;
                 }
                 
                 // Potassium (K) - Direct from database
-                if (waterQuality.potassium !== null && waterQuality.potassium !== undefined) {
-                    document.getElementById('current-k').value = waterQuality.potassium.toFixed(0);
+                let potassiumValue = null;
+                if (waterQuality.potassium) {
+                    if (typeof waterQuality.potassium === 'object' && waterQuality.potassium.value !== undefined) {
+                        potassiumValue = parseFloat(waterQuality.potassium.value);
+                    } else if (typeof waterQuality.potassium === 'number' || typeof waterQuality.potassium === 'string') {
+                        potassiumValue = parseFloat(waterQuality.potassium);
+                    }
+                }
+                if (potassiumValue !== null && !isNaN(potassiumValue)) {
+                    document.getElementById('current-k').value = potassiumValue.toFixed(0);
                     loadedCount++;
                 }
                 
                 // Calcium (Ca) - Direct from database
-                if (waterQuality.calcium !== null && waterQuality.calcium !== undefined) {
-                    document.getElementById('current-ca').value = waterQuality.calcium.toFixed(0);
+                let calciumValue = null;
+                if (waterQuality.calcium) {
+                    if (typeof waterQuality.calcium === 'object' && waterQuality.calcium.value !== undefined) {
+                        calciumValue = parseFloat(waterQuality.calcium.value);
+                    } else if (typeof waterQuality.calcium === 'number' || typeof waterQuality.calcium === 'string') {
+                        calciumValue = parseFloat(waterQuality.calcium);
+                    }
+                }
+                if (calciumValue !== null && !isNaN(calciumValue)) {
+                    document.getElementById('current-ca').value = calciumValue.toFixed(0);
                     loadedCount++;
                 }
                 
                 // Magnesium (Mg) - Direct from database
-                if (waterQuality.magnesium !== null && waterQuality.magnesium !== undefined) {
-                    document.getElementById('current-mg').value = waterQuality.magnesium.toFixed(1);
+                let magnesiumValue = null;
+                if (waterQuality.magnesium) {
+                    if (typeof waterQuality.magnesium === 'object' && waterQuality.magnesium.value !== undefined) {
+                        magnesiumValue = parseFloat(waterQuality.magnesium.value);
+                    } else if (typeof waterQuality.magnesium === 'number' || typeof waterQuality.magnesium === 'string') {
+                        magnesiumValue = parseFloat(waterQuality.magnesium);
+                    }
+                }
+                if (magnesiumValue !== null && !isNaN(magnesiumValue)) {
+                    document.getElementById('current-mg').value = magnesiumValue.toFixed(1);
                     loadedCount++;
                 }
                 
                 // Iron (Fe) - Direct from database
-                if (waterQuality.iron !== null && waterQuality.iron !== undefined) {
-                    document.getElementById('current-fe').value = waterQuality.iron.toFixed(1);
+                let ironValue = null;
+                if (waterQuality.iron) {
+                    if (typeof waterQuality.iron === 'object' && waterQuality.iron.value !== undefined) {
+                        ironValue = parseFloat(waterQuality.iron.value);
+                    } else if (typeof waterQuality.iron === 'number' || typeof waterQuality.iron === 'string') {
+                        ironValue = parseFloat(waterQuality.iron);
+                    }
+                }
+                if (ironValue !== null && !isNaN(ironValue)) {
+                    document.getElementById('current-fe').value = ironValue.toFixed(1);
                     loadedCount++;
                 }
-                
-                console.log('✅ Nutrient levels loaded from database:', waterQuality);
-                
+
+                console.log('Total nutrients loaded:', loadedCount);
                 if (loadedCount > 0) {
-                    this.showNotification(`🔄 Loaded ${loadedCount} nutrient values from water quality data (${new Date(waterQuality.date).toLocaleDateString()})`, 'success', 3000);
+                    this.showNotification(`🔄 Loaded ${loadedCount} nutrient values from water quality data (${this.formatDateDDMMYYYY(new Date(waterQuality.date))})`, 'success', 3000);
                 } else {
+                    console.log('No nutrients loaded - water quality data:', waterQuality);
                     this.showNotification('📊 No nutrient values found in latest water quality data. Enter values manually as needed.', 'info', 4000);
                 }
             } else {
@@ -9084,16 +12923,6 @@ class AquaponicsApp {
             console.error('Error loading nutrient data from database:', error);
             this.showNotification('⚠️ Could not load nutrient data from database. Please enter values manually.', 'warning', 4000);
         }
-    }
-
-    getLatestWaterQualityData() {
-        if (!this.dataRecords || !this.dataRecords.waterQuality || this.dataRecords.waterQuality.length === 0) {
-            return null;
-        }
-        
-        // Sort by date and get the most recent entry
-        const sortedData = this.dataRecords.waterQuality.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
-        return sortedData[0];
     }
 
     showDataSourceInfo(waterQualityDate) {
@@ -9106,7 +12935,7 @@ class AquaponicsApp {
             currentSection.querySelector('.current-values-grid').parentNode.insertBefore(infoDiv, currentSection.querySelector('.current-values-grid').nextSibling);
         }
         
-        const date = new Date(waterQualityDate).toLocaleDateString();
+        const date = this.formatDateDDMMYYYY(new Date(waterQualityDate));
         infoDiv.innerHTML = `
             <div style="background: #e8f4fd; padding: 8px 12px; border-radius: 4px; margin: 8px 0; font-size: 0.8rem; color: #334e9d; border-left: 3px solid #7baaee;">
                 📊 Values auto-loaded from latest water quality data (${date}). You can override any values by typing new numbers and clicking "Save Current Levels".
@@ -9149,7 +12978,7 @@ class AquaponicsApp {
             // Update display fields
             this.updateSettingsDisplayFields();
             
-            this.showNotification('🌱 Grow bed configuration updated successfully!', 'success');
+            this.showNotification('Grow bed configuration updated successfully!', 'success');
         } catch (error) {
             console.error('Failed to update grow bed configuration:', error);
             this.showNotification('❌ Failed to update grow bed configuration. Please try again.', 'error');
@@ -9254,7 +13083,7 @@ class AquaponicsApp {
                         <span id="tank-volume-${tankNumber}">0 L</span>
                     </div>
                 </div>
-                <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.5rem;">
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.5rem; flex-wrap: wrap;">
                     <button type="button" class="form-btn secondary" onclick="app.saveTankConfiguration(${tankNumber})" 
                             style="font-size: 0.8rem; padding: 0.3rem 0.6rem;">Save Tank Config</button>
                     <button type="button" class="form-btn" onclick="app.deleteTankConfiguration(${tankNumber})" 
@@ -9333,10 +13162,116 @@ class AquaponicsApp {
                 body: JSON.stringify(tankData)
             });
             
+            // Refresh tank configuration display after successful save
+            await this.loadFishTankConfiguration();
+            
             this.showNotification(`🐟 Fish Tank ${tankNumber} configuration saved successfully!`, 'success');
         } catch (error) {
             console.error('Failed to save tank configuration:', error);
             this.showNotification(`❌ Failed to save Fish Tank ${tankNumber} configuration.`, 'error');
+        }
+    }
+
+    showHarvestFishModal(tankNumber) {
+        // Set current date as default
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('harvest-date').value = today;
+        
+        // Set tank number
+        document.getElementById('harvest-tank-number').textContent = tankNumber;
+        document.getElementById('harvest-tank-id').value = tankNumber;
+        
+        // Clear form
+        document.getElementById('harvest-fish-form').reset();
+        document.getElementById('harvest-date').value = today; // Reset clears this, so set again
+        
+        // Clear average weight calculation
+        document.getElementById('harvest-average-weight').value = '';
+        
+        // Show modal
+        document.getElementById('harvest-fish-modal').style.display = 'flex';
+        
+        // Add event listeners for automatic calculation
+        this.setupHarvestCalculation();
+    }
+
+    setupHarvestCalculation() {
+        const fishCountInput = document.getElementById('harvest-fish-count');
+        const totalWeightInput = document.getElementById('harvest-total-weight');
+        const averageWeightInput = document.getElementById('harvest-average-weight');
+        
+        const calculateAverage = () => {
+            const fishCount = parseFloat(fishCountInput.value) || 0;
+            const totalWeight = parseFloat(totalWeightInput.value) || 0;
+            
+            if (fishCount > 0 && totalWeight > 0) {
+                const averageWeight = (totalWeight / fishCount).toFixed(2);
+                averageWeightInput.value = `${averageWeight} kg`;
+            } else {
+                averageWeightInput.value = '';
+            }
+        };
+        
+        // Remove existing listeners to avoid duplicates
+        fishCountInput.removeEventListener('input', calculateAverage);
+        totalWeightInput.removeEventListener('input', calculateAverage);
+        
+        // Add new listeners
+        fishCountInput.addEventListener('input', calculateAverage);
+        totalWeightInput.addEventListener('input', calculateAverage);
+    }
+
+    async submitFishHarvest(event) {
+        event.preventDefault();
+        
+        if (!this.activeSystemId) {
+            this.showNotification('❌ Please select a system first.', 'error');
+            return;
+        }
+        
+        const formData = new FormData(event.target);
+        const harvestData = {
+            system_id: this.activeSystemId,
+            tank_number: parseInt(formData.get('tank_number')),
+            harvest_date: formData.get('harvest_date'),
+            fish_count: parseInt(formData.get('fish_count')),
+            total_weight_kg: parseFloat(formData.get('total_weight')),
+            average_weight_kg: parseFloat(formData.get('total_weight')) / parseInt(formData.get('fish_count')),
+            notes: formData.get('notes') || ''
+        };
+        
+        try {
+            // Record fish harvest via the fish API
+            await this.makeApiCall('/fish/harvest', {
+                method: 'POST',
+                body: JSON.stringify(harvestData)
+            });
+            
+            // Close modal
+            this.closeModal('harvest-fish-modal');
+            
+            // Show success notification
+            this.showNotification(
+                `🐟 Fish harvest recorded successfully! ${harvestData.fish_count} fish (${harvestData.total_weight_kg}kg) from Tank ${harvestData.tank_number}`, 
+                'success'
+            );
+            
+            // Refresh any displays that might show harvest data
+            await this.loadDataRecords();
+            
+            // Refresh fish tank information to show updated fish counts
+            if (typeof this.loadTankInformation === 'function') {
+                await this.loadTankInformation();
+            }
+            
+            // Refresh fish inventory display if available
+            if (typeof this.loadFishInventory === 'function') {
+                await this.loadFishInventory();
+            }
+            
+        } catch (error) {
+            console.error('Failed to record fish harvest:', error);
+            this.showNotification('❌ Failed to record fish harvest. Please try again.', 'error');
         }
     }
 
@@ -9421,8 +13356,7 @@ class AquaponicsApp {
 
         try {
             const growBeds = await this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`);
-            console.log('Loaded grow beds:', growBeds);
-            
+
             // Generate the configuration UI first
             const bedCountElement = document.getElementById('grow-bed-count');
             const systemConfig = this.loadSystemConfig();
@@ -9433,31 +13367,29 @@ class AquaponicsApp {
             } else if (systemConfig && systemConfig.grow_bed_count) {
                 bedCount = parseInt(systemConfig.grow_bed_count);
             }
-            
-            console.log('Generating grow bed configuration for', bedCount, 'beds');
+
             window.growBedManager.generateGrowBedConfiguration(bedCount);
             
             // Also generate initial empty configuration if no existing beds
             if (!growBeds || growBeds.length === 0) {
-                console.log('No existing beds found, form ready for new configuration');
+
             }
             
             // Load existing data with a small delay to ensure DOM is ready
             if (growBeds && growBeds.length > 0) {
-                console.log('Loading data for', growBeds.length, 'grow beds');
+
                 setTimeout(() => {
                     growBeds.forEach(bed => {
-                        console.log('Processing bed:', bed);
+
                         const bedItem = document.querySelector(`[data-bed="${bed.bed_number}"]`);
-                        console.log('Found bedItem:', bedItem);
+
                         if (bedItem) {
                             // First set the bed type
-                            console.log('Setting bed type to:', bed.bed_type);
+
                             const bedTypeSelect = bedItem.querySelector('.bed-type');
                             if (bedTypeSelect) {
                                 bedTypeSelect.value = bed.bed_type;
-                                console.log('Bed type select value after setting:', bedTypeSelect.value);
-                                
+
                                 // Update the fields based on bed type
                                 window.growBedManager.updateBedFields(bed.bed_number);
                             } else {
@@ -9537,8 +13469,7 @@ class AquaponicsApp {
         if (!this.activeSystemId) return;
 
         const configuration = window.growBedManager.getGrowBedConfiguration();
-        console.log('Saving configuration:', configuration);
-        
+
         try {
             await this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`, {
                 method: 'POST',
@@ -9614,7 +13545,8 @@ class AquaponicsApp {
             const statusHtml = growBeds.map(bed => {
                 let configDetails = '';
                 if (bed.bed_type === 'vertical' && bed.vertical_count && bed.plants_per_vertical) {
-                    configDetails = `${bed.vertical_count} verticals × ${bed.plants_per_vertical} plants = ${bed.plant_capacity} total plants`;
+                    const totalPlants = bed.vertical_count * bed.plants_per_vertical;
+                    configDetails = `${bed.vertical_count} verticals × ${bed.plants_per_vertical} plants = ${totalPlants} total plants`;
                 } else if (bed.area_m2) {
                     configDetails = `${bed.area_m2} m² area`;
                 } else if (bed.length_meters) {
@@ -9712,6 +13644,8 @@ class AquaponicsApp {
         // nitrate field already handled above
         if (latest.phosphorus !== null) document.getElementById('wq-phosphorus').value = latest.phosphorus;
         if (latest.magnesium !== null) document.getElementById('wq-magnesium').value = latest.magnesium;
+        if (latest.humidity !== null) document.getElementById('wq-humidity').value = latest.humidity;
+        if (latest.salinity !== null) document.getElementById('wq-salinity').value = latest.salinity;
     }
 
     preloadPlantGrowthData() {
@@ -9871,7 +13805,7 @@ class AquaponicsApp {
         const resultsDiv = document.getElementById('dosing-results');
         
         const systemName = activeSystem ? activeSystem.system_name : 'Unknown System';
-        const currentDate = new Date().toLocaleDateString();
+        const currentDate = this.formatDateDDMMYYYY(new Date());
         
         return `
             <div class="header">
@@ -9948,7 +13882,7 @@ class AquaponicsApp {
                         <div><strong>Username:</strong> ${user.username}</div>
                         <div><strong>Email:</strong> ${user.email}</div>
                         <div><strong>Subscription:</strong> ${user.subscription_status}</div>
-                        <div><strong>Created:</strong> ${new Date(user.created_at).toLocaleDateString()}</div>
+                        <div><strong>Created:</strong> ${this.formatDateDDMMYYYY(new Date(user.created_at))}</div>
                     </div>
                     <div class="user-actions">
                         <select onchange="app.updateUserRole(${user.id}, this.value)" class="role-select">
@@ -10087,20 +14021,34 @@ class AquaponicsApp {
         const container = document.getElementById('grow-bed-allocation-container');
         if (!container) return;
 
+        // Get full grow bed data for complete configuration details
+        let fullBedData = [];
+        try {
+            fullBedData = await this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`);
+        } catch (error) {
+            console.error('Failed to fetch full bed data:', error);
+        }
+
         // Get crop options including custom crops
         const cropOptionsHtml = await this.generateCropOptionsHtml();
         
         let html = '<div class="allocation-list">';
         
-        utilization.forEach(bed => {
+        utilization.forEach(bed => {            
+            // Find the full bed data for this bed
+            const fullBed = fullBedData.find(fb => fb.bed_number === bed.id || fb.id === bed.id);
+            
+            // Merge utilization data with full bed data
+            const mergedBed = { ...bed, ...fullBed };
+            
             const bedAllocations = allocations.filter(a => a.grow_bed_id === bed.id);
             
             html += `
                 <div class="grow-bed-allocation-card">
                     <div class="bed-header">
                         <div class="bed-title">
-                            <h4>🌱 ${bed.bed_name || `Bed ${bed.bed_number} - ${this.getBedTypeDisplayName(bed.bed_type)}`}</h4>
-                            <div class="bed-type-badge ${bed.bed_type}">${this.getBedTypeDisplayName(bed.bed_type)}</div>
+                            <h4>${this.getBedTypeIcon(mergedBed.bed_type)} ${mergedBed.bed_name || `Bed ${mergedBed.bed_number} - ${this.getBedTypeDisplayName(mergedBed.bed_type)}`}</h4>
+                            <div class="bed-type-badge ${mergedBed.bed_type}">${this.getBedTypeDisplayName(mergedBed.bed_type)}</div>
                         </div>
                         <div class="bed-stats">
                             <div class="stat-item">
@@ -10109,11 +14057,19 @@ class AquaponicsApp {
                             </div>
                             <div class="stat-item">
                                 <span class="stat-label">Used:</span>
-                                <span class="stat-value utilization ${bed.total_allocated >= 100 ? 'full' : bed.total_allocated >= 80 ? 'high' : ''}">${bed.total_allocated.toFixed(1)}%</span>
+                                ${mergedBed.bed_type === 'vertical' ? `
+                                    <span class="stat-value utilization ${mergedBed.total_allocated >= 100 ? 'full' : mergedBed.total_allocated >= 80 ? 'high' : ''}">${Math.round((parseFloat(mergedBed.total_allocated) || 0) * (mergedBed.vertical_count || 1) / 100)} verticals</span>
+                                ` : `
+                                    <span class="stat-value utilization ${mergedBed.total_allocated >= 100 ? 'full' : mergedBed.total_allocated >= 80 ? 'high' : ''}">${(((parseFloat(mergedBed.total_allocated) || 0) * (parseFloat(mergedBed.equivalent_m2) || 0)) / 100).toFixed(1)}m²</span>
+                                `}
                             </div>
                             <div class="stat-item">
                                 <span class="stat-label">Available:</span>
-                                <span class="stat-value available">${bed.available_percentage.toFixed(1)}%</span>
+                                ${mergedBed.bed_type === 'vertical' ? `
+                                    <span class="stat-value available">${Math.max(0, (mergedBed.vertical_count || 1) - Math.round((parseFloat(mergedBed.total_allocated) || 0) * (mergedBed.vertical_count || 1) / 100))} verticals</span>
+                                ` : `
+                                    <span class="stat-value available">${(((parseFloat(mergedBed.available_percentage) || 0) * (parseFloat(mergedBed.equivalent_m2) || 0)) / 100).toFixed(1)}m²</span>
+                                `}
                             </div>
                         </div>
                     </div>
@@ -10134,9 +14090,14 @@ class AquaponicsApp {
                                         <span class="crop-name">${displayName}</span>
                                     </div>
                                     <div class="allocation-details">
-                                        <div class="allocation-percentage">
-                                            <span class="percentage-value">${allocation.percentage_allocated}%</span>
-                                            <span class="percentage-label">allocation</span>
+                                        <div class="allocation-area">
+                                            ${mergedBed.bed_type === 'vertical' ? `
+                                                <span class="area-value">${Math.round((parseFloat(allocation.percentage_allocated) || 0) * (mergedBed.vertical_count || 1) / 100)}</span>
+                                                <span class="area-label">verticals</span>
+                                            ` : `
+                                                <span class="area-value">${((parseFloat(allocation.percentage_allocated) || 0) * (parseFloat(mergedBed.equivalent_m2) || 0) / 100).toFixed(1)}m²</span>
+                                                <span class="area-label">allocated</span>
+                                            `}
                                         </div>
                                         <div class="allocation-plants">
                                             <span class="plants-count">${allocation.plants_planted || 0}</span>
@@ -10145,7 +14106,7 @@ class AquaponicsApp {
                                     </div>
                                 </div>
                                 <div class="allocation-actions">
-                                    <button onclick="app.editAllocation(${allocation.id}, ${bed.id}, '${allocation.crop_type}', ${allocation.percentage_allocated}, ${allocation.plants_planted || 0}).catch(console.error)" 
+                                    <button onclick="app.editAllocation(${allocation.id}, ${mergedBed.id}, '${allocation.crop_type}', ${mergedBed.bed_type === 'vertical' ? Math.round((parseFloat(allocation.percentage_allocated) || 0) * (mergedBed.vertical_count || 1) / 100) : ((parseFloat(allocation.percentage_allocated) || 0) * (parseFloat(mergedBed.equivalent_m2) || 0) / 100).toFixed(1)}, ${allocation.plants_planted || 0}).catch(console.error)" 
                                             class="edit-allocation-btn" title="Edit allocation">
                                         ${SVGIcons.getIcon('edit', 'btn-icon-svg')}
                                     </button>
@@ -10158,35 +14119,90 @@ class AquaponicsApp {
                         }).join('')}
                     </div>
                     
-                    ${bed.available_percentage > 0 ? `
+                    ${mergedBed.available_percentage > 0 ? `
                         <div class="add-allocation">
                             <div class="allocation-form">
                                 <div class="form-row">
                                     <label class="allocation-label">Crop Type:</label>
-                                    <select class="crop-select" id="crop-${bed.id}">
+                                    <select class="crop-select" id="crop-${mergedBed.id}">
                                         ${cropOptionsHtml}
                                     </select>
                                 </div>
                                 
                                 <div class="form-row">
-                                    <label class="allocation-label">Allocation:</label>
-                                    <div class="slider-container">
-                                        <input type="range" class="percentage-slider" id="percentage-${bed.id}" 
-                                               min="1" max="${bed.available_percentage}" value="25" 
-                                               oninput="app.updateSliderValue(${bed.id}, this.value)" />
-                                        <div class="slider-value">
-                                            <span id="slider-value-${bed.id}">25</span>%
+                                    ${mergedBed.bed_type === 'vertical' ? `
+                                        <label class="allocation-label">Verticals:</label>
+                                        <div class="area-input-container">
+                                            <div class="area-slider-container">
+                                                <input type="range" class="area-slider" id="area-slider-${mergedBed.id}" 
+                                                       min="1" max="${Math.max(1, (mergedBed.vertical_count || 1) - Math.round((parseFloat(mergedBed.total_allocated) || 0) * (mergedBed.vertical_count || 1) / 100))}" 
+                                                       step="1" value="1" 
+                                                       oninput="app.updateAreaValue(${mergedBed.id}, this.value)" />
+                                                <div class="area-value-display">
+                                                    <input type="number" class="area-input" id="area-${mergedBed.id}" 
+                                                           min="1" max="${Math.max(1, (mergedBed.vertical_count || 1) - Math.round((parseFloat(mergedBed.total_allocated) || 0) * (mergedBed.vertical_count || 1) / 100))}" 
+                                                           step="1" value="1" 
+                                                           oninput="app.updateAreaSlider(${mergedBed.id}, this.value)"
+                                                           placeholder="Number of verticals" />
+                                                    <span class="area-unit">verticals</span>
+                                                </div>
+                                            </div>
+                                            <div class="area-info">
+                                                <span class="area-range">1 - ${Math.max(1, (mergedBed.vertical_count || 1) - Math.round((parseFloat(mergedBed.total_allocated) || 0) * (mergedBed.vertical_count || 1) / 100))} verticals</span>
+                                                <span class="available-area">Available: ${Math.max(0, (mergedBed.vertical_count || 1) - Math.round((parseFloat(mergedBed.total_allocated) || 0) * (mergedBed.vertical_count || 1) / 100))} verticals</span>
+                                            </div>
+                                        </div>
+                                    ` : `
+                                        <label class="allocation-label">Area (m²):</label>
+                                        <div class="area-input-container">
+                                            <div class="area-slider-container">
+                                                <input type="range" class="area-slider" id="area-slider-${mergedBed.id}" 
+                                                       min="0.1" max="${Math.max(0.1, (((parseFloat(mergedBed.available_percentage) || 0) * (parseFloat(mergedBed.equivalent_m2) || 0)) / 100)).toFixed(1)}" 
+                                                       step="0.1" value="${Math.min(1.0, Math.max(0.1, (((parseFloat(mergedBed.available_percentage) || 0) * (parseFloat(mergedBed.equivalent_m2) || 0)) / 100)).toFixed(1))}" 
+                                                       oninput="app.updateAreaValue(${mergedBed.id}, this.value)" />
+                                                <div class="area-value-display">
+                                                    <input type="number" class="area-input" id="area-${mergedBed.id}" 
+                                                           min="0.1" max="${Math.max(0.1, (((parseFloat(mergedBed.available_percentage) || 0) * (parseFloat(mergedBed.equivalent_m2) || 0)) / 100)).toFixed(1)}" 
+                                                           step="0.1" value="${Math.min(1.0, Math.max(0.1, (((parseFloat(mergedBed.available_percentage) || 0) * (parseFloat(mergedBed.equivalent_m2) || 0)) / 100)).toFixed(1))}" 
+                                                           oninput="app.updateAreaSlider(${mergedBed.id}, this.value)"
+                                                           placeholder="Area in m²" />
+                                                    <span class="area-unit">m²</span>
+                                                </div>
+                                            </div>
+                                            <div class="area-info">
+                                                <span class="area-range">0.1m² - ${Math.max(0.1, (((parseFloat(mergedBed.available_percentage) || 0) * (parseFloat(mergedBed.equivalent_m2) || 0)) / 100)).toFixed(1)}m²</span>
+                                                <span class="available-area">Available: ${Math.max(0, (((parseFloat(mergedBed.available_percentage) || 0) * (parseFloat(mergedBed.equivalent_m2) || 0)) / 100)).toFixed(1)}m²</span>
+                                            </div>
+                                        </div>
+                                    `}
+                                </div>
+                                
+                                ${mergedBed.bed_type === 'vertical' ? `
+                                    <div class="form-row">
+                                        <label class="allocation-label">Plants per Vertical:</label>
+                                        <div class="plants-input-group">
+                                            <input type="number" class="plants-input" id="plants-${mergedBed.id}" 
+                                                   min="1" placeholder="Number of plants per vertical" 
+                                                   value="${mergedBed.plants_per_vertical || mergedBed.plant_capacity || ''}"
+                                                   oninput="app.updateTotalPlants(${mergedBed.id})" />
+                                            <span class="total-plants" id="total-plants-${mergedBed.id}">
+                                                Total: ${(mergedBed.plants_per_vertical || mergedBed.plant_capacity || 0) * (mergedBed.vertical_count || 1)} plants
+                                            </span>
                                         </div>
                                     </div>
-                                </div>
+                                ` : `
+                                    <div class="form-row">
+                                        <label class="allocation-label">Plant Spacing (cm):</label>
+                                        <input type="number" class="spacing-input" id="spacing-${mergedBed.id}" 
+                                               min="10" max="100" value="30" placeholder="Spacing in cm" 
+                                               oninput="app.calculatePlantCount(${mergedBed.id})" />
+                                        <div class="calculated-plants" id="calculated-plants-${mergedBed.id}">
+                                            Estimated plants: <span class="plant-count-value">0</span>
+                                        </div>
+                                    </div>
+                                `}
                                 
-                                <div class="form-row">
-                                    <label class="allocation-label">Plant Count:</label>
-                                    <input type="number" class="plants-input" id="plants-${bed.id}" 
-                                           min="0" placeholder="Number of plants" />
-                                </div>
-                                
-                                <button onclick="app.addAllocation(${bed.id})" class="add-allocation-btn">
+                                <button onclick="app.addAllocation(${mergedBed.id})" class="add-allocation-btn">
                                     <span class="btn-icon">🌱</span>
                                     Add Crop Allocation
                                 </button>
@@ -10208,11 +14224,18 @@ class AquaponicsApp {
         html += `
             <optgroup label="Leafy Greens">
                 <option value="lettuce">Lettuce</option>
+                <option value="lettuce_batavian">Lettuce - Batavian</option>
+                <option value="lettuce_butter">Lettuce - Butter</option>
+                <option value="lettuce_cos">Lettuce - Cos</option>
+                <option value="lettuce_icty">Lettuce - Icty</option>
+                <option value="lettuce_datem">Lettuce - Datem</option>
+                <option value="lettuce_oak">Lettuce - Oak</option>
                 <option value="spinach">Spinach</option>
                 <option value="kale">Kale</option>
                 <option value="swiss_chard">Swiss Chard</option>
                 <option value="arugula">Arugula</option>
                 <option value="pac_choi">Pac Choi</option>
+                <option value="celery">Celery</option>
             </optgroup>
             <optgroup label="Herbs">
                 <option value="basil">Basil</option>
@@ -10222,6 +14245,10 @@ class AquaponicsApp {
                 <option value="chives">Chives</option>
                 <option value="oregano">Oregano</option>
                 <option value="thyme">Thyme</option>
+            </optgroup>
+            <optgroup label="Onions & Leeks">
+                <option value="spring_onion">Spring Onion</option>
+                <option value="leeks">Leeks</option>
             </optgroup>
             <optgroup label="Fruiting Vegetables">
                 <option value="tomatoes">Tomatoes</option>
@@ -10258,8 +14285,9 @@ class AquaponicsApp {
         
         // Add standard crop options with selection
         const standardCrops = {
-            'Leafy Greens': ['lettuce', 'spinach', 'kale', 'swiss_chard', 'arugula', 'pac_choi'],
+            'Leafy Greens': ['lettuce', 'lettuce_batavian', 'lettuce_butter', 'lettuce_cos', 'lettuce_icty', 'lettuce_datem', 'lettuce_oak', 'spinach', 'kale', 'swiss_chard', 'arugula', 'pac_choi', 'celery'],
             'Herbs': ['basil', 'mint', 'parsley', 'cilantro', 'chives', 'oregano', 'thyme'],
+            'Onions & Leeks': ['spring_onion', 'leeks'],
             'Fruiting Vegetables': ['tomatoes', 'peppers', 'cucumbers', 'eggplant']
         };
         
@@ -10309,6 +14337,72 @@ class AquaponicsApp {
         return bedTypeNames[bedType] || bedType.toUpperCase();
     }
 
+    getBedTypeIcon(bedType) {
+        const iconPath = `/icons/bed-types/`;
+        const iconMap = {
+            'dwc': 'DWC.svg',
+            'nft': 'NFT.svg', 
+            'flood-drain': 'flood-drain.svg',
+            'vertical': 'vertical.svg',
+            'mft': 'Flow-Through.svg'
+        };
+        
+        const iconFile = iconMap[bedType] || 'Flow-Through.svg';
+        return `<img src="${iconPath}${iconFile}" alt="${this.getBedTypeDisplayName(bedType)}" class="bed-type-icon" />`;
+    }
+
+    calculatePlantCount(bedId) {
+        const spacingInput = document.getElementById(`spacing-${bedId}`);
+        const areaInput = document.getElementById(`area-${bedId}`);
+        const calculatedPlantsDiv = document.getElementById(`calculated-plants-${bedId}`);
+        
+        if (!spacingInput || !areaInput || !calculatedPlantsDiv) return;
+        
+        const spacing = parseFloat(spacingInput.value) || 30; // Default 30cm
+        const area = parseFloat(areaInput.value) || 0;
+        
+        if (area > 0 && spacing > 0) {
+            // Convert area from m² to cm²
+            const areaCm2 = area * 10000;
+            
+            // Calculate using square grid pattern
+            // Each plant needs spacing x spacing cm²
+            const spacePerPlant = spacing * spacing;
+            const plantCount = Math.floor(areaCm2 / spacePerPlant);
+            
+            const plantCountSpan = calculatedPlantsDiv.querySelector('.plant-count-value');
+            if (plantCountSpan) {
+                plantCountSpan.textContent = plantCount;
+            }
+        }
+    }
+
+    updateTotalPlants(bedId) {
+        const plantsInput = document.getElementById(`plants-${bedId}`);
+        const totalPlantsSpan = document.getElementById(`total-plants-${bedId}`);
+        
+        if (!plantsInput || !totalPlantsSpan) return;
+        
+        const plantsPerVertical = parseInt(plantsInput.value) || 0;
+        
+        // Get the number of verticals from the grow bed data
+        // We need to find the bed data to get vertical count
+        let verticalCount = 1;
+        try {
+            // Look for the bed data in the current system
+            const bedElement = document.querySelector(`[data-bed-id="${bedId}"]`);
+            if (bedElement) {
+                const bedData = JSON.parse(bedElement.getAttribute('data-bed-info') || '{}');
+                verticalCount = bedData.vertical_count || 1;
+            }
+        } catch (error) {
+            console.error('Error getting vertical count:', error);
+        }
+        
+        const totalPlants = plantsPerVertical * verticalCount;
+        totalPlantsSpan.textContent = `Total: ${totalPlants} plants`;
+    }
+
     cleanCustomCropName(cropName) {
         if (!cropName) return '';
         
@@ -10335,46 +14429,140 @@ class AquaponicsApp {
         return cleanName;
     }
 
-    updateSliderValue(bedId, value) {
-        const sliderValueElement = document.getElementById(`slider-value-${bedId}`);
-        if (sliderValueElement) {
-            sliderValueElement.textContent = value;
+    getCropIcon(cropType) {
+        if (!cropType) return '🌱';
+        
+        const cropLower = cropType.toLowerCase();
+        
+        // Map crop types to appropriate icons
+        if (cropLower.includes('lettuce')) return '🥬';
+        if (cropLower.includes('tomato')) return '🍅';
+        if (cropLower.includes('carrot')) return '🥕';
+        if (cropLower.includes('pepper')) return '🌶️';
+        if (cropLower.includes('herb') || cropLower.includes('basil') || cropLower.includes('mint')) return '🌿';
+        if (cropLower.includes('spinach')) return '🥬';
+        if (cropLower.includes('cucumber')) return '🥒';
+        if (cropLower.includes('onion') || cropLower.includes('spring_onion')) return '🧅';
+        if (cropLower.includes('leeks')) return '🧅';
+        if (cropLower.includes('celery')) return '🥬';
+        if (cropLower.includes('radish')) return '🥬';
+        if (cropLower.includes('beet')) return '🟣';
+        if (cropLower.includes('kale')) return '🥬';
+        if (cropLower.includes('chard')) return '🥬';
+        
+        // Default plant icon
+        return '🌱';
+    }
+
+    cleanCropName(cropType) {
+        // Use the existing cleanCustomCropName function and capitalize
+        const cleanName = this.cleanCustomCropName(cropType);
+        return cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+    }
+
+    // Area slider synchronization functions
+    updateAreaValue(bedId, value) {
+        const areaInput = document.getElementById(`area-${bedId}`);
+        if (areaInput) {
+            // Check if this is a vertical bed (integer values) or regular bed (decimal values)
+            const isVertical = areaInput.getAttribute('step') === '1';
+            const newValue = isVertical ? parseInt(value) : parseFloat(value).toFixed(1);
+            areaInput.value = newValue;
+            
+            // For vertical beds, don't call calculatePlantCount as it's not relevant
+            if (!isVertical) {
+                this.calculatePlantCount(bedId);
+            }
+        }
+    }
+
+    updateAreaSlider(bedId, value) {
+        const areaSlider = document.getElementById(`area-slider-${bedId}`);
+        if (areaSlider) {
+            areaSlider.value = value;
         }
     }
 
     async addAllocation(bedId) {
-        console.log('🌱 addAllocation called with bedId:', bedId);
-        
+
         const cropSelect = document.getElementById(`crop-${bedId}`);
-        const percentageSlider = document.getElementById(`percentage-${bedId}`);
+        const areaInput = document.getElementById(`area-${bedId}`);
         const plantsInput = document.getElementById(`plants-${bedId}`);
-        
-        console.log('🔍 Elements found:', {
-            cropSelect: !!cropSelect,
-            percentageSlider: !!percentageSlider,
-            plantsInput: !!plantsInput
-        });
-        
-        if (!cropSelect || !percentageSlider || !plantsInput) {
+        const spacingInput = document.getElementById(`spacing-${bedId}`);
+
+        if (!cropSelect || !areaInput) {
             console.error('❌ Missing form elements');
             this.showNotification('❌ Form elements not found. Please refresh the page.', 'error');
             return;
         }
         
         const cropType = cropSelect.value;
-        const percentage = parseFloat(percentageSlider.value);
-        const plants = parseInt(plantsInput.value) || 0;
+        const inputValue = parseFloat(areaInput.value);
+        let plants = 0;
         
-        console.log('📊 Form values:', { cropType, percentage, plants });
+        // Get bed data for calculations
+        const bedData = await this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`);
+        const bed = bedData.find(b => b.id == bedId);
         
+        if (bed?.bed_type === 'vertical') {
+            // For vertical beds, use direct plant count input
+            plants = parseInt(plantsInput?.value) || 0;
+            if (!plants || plants <= 0) {
+                this.showNotification('Please enter number of plants per vertical', 'warning');
+                return;
+            }
+            // Total plants = plants per vertical * number of verticals
+            plants = plants * inputValue;
+        } else {
+            // For regular beds, calculate from spacing
+            const spacing = parseFloat(spacingInput?.value) || 30;
+            const areaCm2 = inputValue * 10000;
+            const spacePerPlant = spacing * spacing;
+            plants = Math.floor(areaCm2 / spacePerPlant);
+
+        }
+        
+        let percentage;
+        let displayValue;
+        let displayUnit;
+        
+        if (bed?.bed_type === 'vertical') {
+            // For vertical beds, input is number of verticals
+            const totalVerticals = bed.vertical_count || 10;
+            percentage = totalVerticals > 0 ? (inputValue / totalVerticals) * 100 : 0;
+            displayValue = inputValue;
+            displayUnit = 'verticals';
+        } else {
+            // For other beds, input is area in m²
+            const bedAreaM2 = parseFloat(bed?.equivalent_m2) || 0;
+            percentage = bedAreaM2 > 0 ? (inputValue / bedAreaM2) * 100 : 0;
+            displayValue = inputValue;
+            displayUnit = 'm²';
+        }
+
         if (!cropType) {
             this.showNotification('🌱 Please select a crop type', 'warning');
             return;
         }
         
-        if (!percentage || percentage <= 0) {
-            this.showNotification('📊 Please set allocation percentage using the slider', 'warning');
+        if (!inputValue || inputValue <= 0) {
+            this.showNotification(`📐 Please enter a valid ${displayUnit === 'verticals' ? 'number of verticals' : 'area (m²)'}`, 'warning');
             return;
+        }
+        
+        if (bed?.bed_type === 'vertical') {
+            const maxVerticals = bed.vertical_count || 10;
+            if (inputValue > maxVerticals) {
+                this.showNotification(`📐 Cannot exceed ${maxVerticals} verticals`, 'warning');
+                return;
+            }
+        } else {
+            const bedAreaM2 = parseFloat(bed?.equivalent_m2) || 0;
+
+            if (inputValue > bedAreaM2) {
+                this.showNotification(`📐 Area cannot exceed bed size (${bedAreaM2.toFixed(1)}m²)`, 'warning');
+                return;
+            }
         }
 
         if (!this.activeSystemId) {
@@ -10382,15 +14570,13 @@ class AquaponicsApp {
             this.showNotification('❌ No active system selected', 'error');
             return;
         }
-        
-        console.log('🚀 Making API call with:', {
-            systemId: this.activeSystemId,
-            growBedId: bedId,
-            cropType,
-            percentageAllocated: percentage,
-            plantsPlanted: plants
-        });
-        
+
+        // Get plant spacing for non-vertical beds
+        let plantSpacing = 30; // default
+        if (bed?.bed_type !== 'vertical' && spacingInput) {
+            plantSpacing = parseInt(spacingInput.value) || 30;
+        }
+
         try {
             const response = await this.makeApiCall('/plants/allocations', {
                 method: 'POST',
@@ -10400,18 +14586,31 @@ class AquaponicsApp {
                     cropType,
                     percentageAllocated: percentage,
                     plantsPlanted: plants,
-                    datePlanted: new Date().toISOString().split('T')[0]
+                    datePlanted: new Date().toISOString().split('T')[0],
+                    plantSpacing: plantSpacing
                 })
             });
-            
-            console.log('✅ API response:', response);
-            this.showNotification(`🌱 ${cropType} allocation (${percentage}%) added successfully!`, 'success');
+
+            this.showNotification(`🌱 ${cropType} allocation (${displayValue} ${displayUnit}) added successfully!`, 'success');
             
             // Reset form
             cropSelect.value = '';
-            percentageSlider.value = 25;
-            this.updateSliderValue(bedId, 25);
-            plantsInput.value = '';
+            const areaInput = document.getElementById(`area-${bedId}`);
+            const areaSlider = document.getElementById(`area-slider-${bedId}`);
+            const defaultValue = bed?.bed_type === 'vertical' ? '1' : '1.0';
+            if (areaInput) areaInput.value = defaultValue;
+            if (areaSlider) areaSlider.value = defaultValue;
+            if (plantsInput) plantsInput.value = '';
+            if (spacingInput) spacingInput.value = '30';
+            
+            // Reset calculated plants display
+            const calculatedPlantsDiv = document.getElementById(`calculated-plants-${bedId}`);
+            if (calculatedPlantsDiv) {
+                const plantCountSpan = calculatedPlantsDiv.querySelector('.plant-count-value');
+                if (plantCountSpan) {
+                    plantCountSpan.textContent = '0';
+                }
+            }
             
             this.loadPlantAllocations();
             // Update harvest crop dropdown with new allocation
@@ -10422,10 +14621,65 @@ class AquaponicsApp {
         }
     }
 
-    async editAllocation(allocationId, bedId, cropType, currentPercentage, currentPlants) {
+    async editAllocation(allocationId, bedId, cropType, currentAreaM2, currentPlants) {
         // Find the allocation item
         const allocationItem = document.getElementById(`allocation-${allocationId}`);
         if (!allocationItem) return;
+
+        // Get bed information to determine if it's vertical
+        let bedData = null;
+        try {
+            const fullBedData = await this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`);
+            bedData = fullBedData.find(bed => bed.id === bedId || bed.bed_number === bedId);
+        } catch (error) {
+            console.error('Failed to fetch bed data for edit:', error);
+        }
+
+        // Get current allocation data to calculate percentage - fetch fresh data
+        let allocations = [];
+        try {
+            allocations = await this.makeApiCall(`/plants/allocations/${this.activeSystemId}`);
+        } catch (error) {
+            console.error('Failed to fetch allocations for edit:', error);
+            allocations = this.dataRecords.plantAllocations || [];
+        }
+        
+        const currentAllocation = allocations.find(alloc => parseInt(alloc.id) === parseInt(allocationId));
+        const currentPercentage = currentAllocation ? Math.round(parseFloat(currentAllocation.percentage_allocated) || 0) : 50;
+
+        // Calculate current verticals if it's a vertical bed
+        const isVertical = bedData && bedData.bed_type === 'vertical';
+        const currentVerticals = isVertical && bedData ? Math.round(currentPercentage * (bedData.vertical_count || 1) / 100) : 0;
+        
+        // Calculate available area/verticals for editing (current allocation + remaining available)
+        let maxEditVerticals = bedData ? bedData.vertical_count || 1 : 1;
+        let minEditVerticals = 1;
+        let maxEditArea = bedData ? bedData.equivalent_m2 || 2 : 2;
+        let currentEditArea = ((currentPercentage / 100) * maxEditArea);
+        
+        if (isVertical && bedData) {
+            // Get all allocations for this bed except the current one being edited
+            const otherAllocations = allocations.filter(alloc => parseInt(alloc.grow_bed_id) === parseInt(bedId) && parseInt(alloc.id) !== parseInt(allocationId));
+            const otherAllocatedPercentage = otherAllocations.reduce((sum, alloc) => sum + (parseFloat(alloc.percentage_allocated) || 0), 0);
+            const availablePercentage = 100 - otherAllocatedPercentage;
+            maxEditVerticals = Math.round(availablePercentage * (bedData.vertical_count || 1) / 100);
+            
+            // If there are no available verticals beyond current allocation, only allow editing within current range
+            if (maxEditVerticals <= 0) {
+                maxEditVerticals = currentVerticals;
+                minEditVerticals = Math.min(1, currentVerticals);
+            } else {
+                minEditVerticals = 1;
+            }
+        } else {
+            // For regular beds, calculate available area
+            const otherAllocations = allocations.filter(alloc => parseInt(alloc.grow_bed_id) === parseInt(bedId) && parseInt(alloc.id) !== parseInt(allocationId));
+            const otherAllocatedPercentage = otherAllocations.reduce((sum, alloc) => sum + (parseFloat(alloc.percentage_allocated) || 0), 0);
+            const availablePercentage = 100 - otherAllocatedPercentage;
+            const availableArea = (availablePercentage / 100) * (bedData ? bedData.equivalent_m2 || 2 : 2);
+            maxEditArea = Math.max(0.1, availableArea);
+            currentEditArea = Math.min(currentEditArea, maxEditArea);
+        }
 
         // Generate crop options including custom crops with current selection
         const cropOptionsHtml = await this.generateEditCropOptionsHtml(cropType);
@@ -10434,11 +14688,11 @@ class AquaponicsApp {
         const cleanCropName = this.cleanCustomCropName(cropType);
         const displayName = cleanCropName.charAt(0).toUpperCase() + cleanCropName.slice(1);
 
-        // Create edit form HTML
+        // Create edit form HTML based on bed type
         const editFormHtml = `
             <div class="edit-allocation-form">
                 <div class="edit-form-header">
-                    <h5>${SVGIcons.getIcon('edit', 'icon-svg')} Edit ${displayName} Allocation</h5>
+                    <h5>${SVGIcons.getIcon('edit', 'icon-svg small')} Edit ${displayName} Allocation</h5>
                 </div>
                 
                 <div class="edit-form-body">
@@ -10449,23 +14703,59 @@ class AquaponicsApp {
                         </select>
                     </div>
                     
-                    <div class="edit-form-row">
-                        <label class="edit-label">Allocation:</label>
-                        <div class="edit-slider-container">
-                            <input type="range" class="edit-percentage-slider" id="edit-percentage-${allocationId}" 
-                                   min="1" max="100" value="${currentPercentage}" 
-                                   oninput="app.updateEditSliderValue(${allocationId}, this.value)" />
-                            <div class="edit-slider-value">
-                                <span id="edit-slider-value-${allocationId}">${currentPercentage}</span>%
+                    ${isVertical ? `
+                        <div class="edit-form-row">
+                            <label class="edit-label">Verticals:</label>
+                            <div class="edit-slider-container">
+                                <input type="range" class="edit-vertical-slider" id="edit-verticals-${allocationId}" 
+                                       min="${minEditVerticals}" max="${maxEditVerticals}" value="${Math.max(minEditVerticals, currentVerticals)}" step="1"
+                                       oninput="app.updateEditVerticalValue(${allocationId}, this.value)" />
+                                <div class="edit-slider-value">
+                                    <span id="edit-vertical-value-${allocationId}">${Math.max(minEditVerticals, currentVerticals)}</span> verticals
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="edit-form-row">
-                        <label class="edit-label">Plant Count:</label>
-                        <input type="number" class="edit-plants-input" id="edit-plants-${allocationId}" 
-                               min="0" value="${currentPlants}" placeholder="Number of plants" />
-                    </div>
+                        
+                        <div class="edit-form-row">
+                            <label class="edit-label">Plants per Vertical:</label>
+                            <input type="number" class="edit-plants-per-vertical-input" id="edit-plants-per-vertical-${allocationId}" 
+                                   min="1" value="${bedData ? bedData.plants_per_vertical || 48 : 48}" placeholder="Plants per vertical" />
+                        </div>
+                    ` : `
+                        <div class="edit-form-row">
+                            <label class="edit-label">Area (m²):</label>
+                            <div class="edit-area-container">
+                                <div class="edit-area-slider-container">
+                                    <input type="range" class="edit-area-slider" id="edit-area-slider-${allocationId}" 
+                                           min="0.1" max="${maxEditArea.toFixed(1)}" 
+                                           step="0.1" value="${currentEditArea.toFixed(1)}" 
+                                           oninput="app.updateEditAreaValue(${allocationId}, this.value)" />
+                                    <div class="edit-area-controls-row">
+                                        <div class="edit-area-value-display">
+                                            <input type="number" class="edit-area-input" id="edit-area-${allocationId}" 
+                                                   min="0.1" max="${maxEditArea.toFixed(1)}" 
+                                                   step="0.1" value="${currentEditArea.toFixed(1)}" 
+                                                   oninput="app.updateEditAreaSlider(${allocationId}, this.value)"
+                                                   placeholder="Area in m²" />
+                                            <span class="edit-area-unit">m²</span>
+                                        </div>
+                                        <div class="edit-spacing-display">
+                                            <label class="edit-inline-label">Spacing:</label>
+                                            <input type="number" class="edit-spacing-input" id="edit-spacing-${allocationId}" 
+                                                   min="10" max="100" step="1" value="${currentAllocation ? currentAllocation.plant_spacing || 30 : 30}" 
+                                                   placeholder="30" oninput="app.updateEditPlantCountFromSpacing(${allocationId})" />
+                                            <span class="edit-spacing-unit">cm</span>
+                                        </div>
+                                        <div class="edit-plants-display">
+                                            <label class="edit-inline-label">Plants:</label>
+                                            <input type="number" class="edit-plants-input" id="edit-plants-${allocationId}" 
+                                                   min="0" value="${currentPlants}" placeholder="0" readonly />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `}
                 </div>
                 
                 <div class="edit-form-actions">
@@ -10485,27 +14775,161 @@ class AquaponicsApp {
         allocationItem.dataset.originalContent = allocationItem.innerHTML;
         allocationItem.innerHTML = editFormHtml;
         allocationItem.classList.add('editing');
+        
+        // Calculate initial plant count based on current area for non-vertical beds
+        if (!isVertical) {
+            await this.updateEditPlantCountFromArea(allocationId, currentEditArea);
+        }
     }
 
-    updateEditSliderValue(allocationId, value) {
-        const sliderValueElement = document.getElementById(`edit-slider-value-${allocationId}`);
-        if (sliderValueElement) {
-            sliderValueElement.textContent = value;
+    updateEditAreaValue(allocationId, areaValue) {
+        const areaInput = document.getElementById(`edit-area-${allocationId}`);
+        if (areaInput) {
+            areaInput.value = parseFloat(areaValue).toFixed(1);
+        }
+        
+        // Recalculate plant count based on new area
+        this.updateEditPlantCountFromArea(allocationId, parseFloat(areaValue));
+    }
+    
+    updateEditAreaSlider(allocationId, areaValue) {
+        const areaSlider = document.getElementById(`edit-area-slider-${allocationId}`);
+        if (areaSlider) {
+            areaSlider.value = parseFloat(areaValue).toFixed(1);
+        }
+        
+        // Recalculate plant count based on new area
+        this.updateEditPlantCountFromArea(allocationId, parseFloat(areaValue));
+    }
+    
+    async updateEditPlantCountFromArea(allocationId, allocatedArea) {
+        const plantsInput = document.getElementById(`edit-plants-${allocationId}`);
+        const spacingInput = document.getElementById(`edit-spacing-${allocationId}`);
+        if (!plantsInput) return;
+        
+        const plantSpacing = spacingInput ? parseFloat(spacingInput.value) || 30 : 30;
+        
+        if (allocatedArea > 0 && plantSpacing > 0) {
+            // Convert area from m² to cm²
+            const areaCm2 = allocatedArea * 10000;
+            
+            // Calculate using square grid pattern
+            const spacePerPlant = plantSpacing * plantSpacing;
+            const plantCount = Math.floor(areaCm2 / spacePerPlant);
+            
+            plantsInput.value = plantCount;
+        }
+    }
+    
+    updateEditPlantCountFromSpacing(allocationId) {
+        const areaInput = document.getElementById(`edit-area-${allocationId}`);
+        const spacingInput = document.getElementById(`edit-spacing-${allocationId}`);
+        const plantsInput = document.getElementById(`edit-plants-${allocationId}`);
+        
+        if (!areaInput || !spacingInput || !plantsInput) return;
+        
+        const allocatedArea = parseFloat(areaInput.value) || 0;
+        const plantSpacing = parseFloat(spacingInput.value) || 30;
+        
+        if (allocatedArea > 0 && plantSpacing > 0) {
+            // Convert area from m² to cm²
+            const areaCm2 = allocatedArea * 10000;
+            
+            // Calculate using square grid pattern
+            const spacePerPlant = plantSpacing * plantSpacing;
+            const plantCount = Math.floor(areaCm2 / spacePerPlant);
+            
+            plantsInput.value = plantCount;
+        }
+    }
+
+    updateEditVerticalValue(allocationId, value) {
+        const verticalValueElement = document.getElementById(`edit-vertical-value-${allocationId}`);
+        const plantsInput = document.getElementById(`edit-plants-${allocationId}`);
+        const plantsPerVerticalInput = document.getElementById(`edit-plants-per-vertical-${allocationId}`);
+        
+        if (verticalValueElement) {
+            verticalValueElement.textContent = value;
+        }
+        
+        // Update plant count calculation for vertical beds
+        if (plantsInput && plantsPerVerticalInput) {
+            const plantsPerVertical = parseInt(plantsPerVerticalInput.value) || 48;
+            const totalPlants = parseInt(value) * plantsPerVertical;
+            plantsInput.value = totalPlants;
         }
     }
 
     async saveAllocationEdit(allocationId, bedId) {
         const cropSelect = document.getElementById(`edit-crop-${allocationId}`);
-        const percentageSlider = document.getElementById(`edit-percentage-${allocationId}`);
         const plantsInput = document.getElementById(`edit-plants-${allocationId}`);
-
+        
+        // Check if this is a vertical bed edit (has vertical slider) or regular bed (has area slider)
+        const verticalSlider = document.getElementById(`edit-verticals-${allocationId}`);
+        const areaInput = document.getElementById(`edit-area-${allocationId}`);
+        
         const cropType = cropSelect.value;
-        const percentage = parseFloat(percentageSlider.value);
+        let percentage;
+        
+        if (verticalSlider) {
+            // For vertical beds, calculate percentage from verticals
+            const verticals = parseInt(verticalSlider.value) || 1;
+            // Get bed data to calculate percentage
+            try {
+                const fullBedData = await this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`);
+                const bedData = fullBedData.find(bed => bed.id === bedId || bed.bed_number === bedId);
+                const totalVerticals = bedData ? bedData.vertical_count || 1 : 1;
+                percentage = (verticals / totalVerticals) * 100;
+            } catch (error) {
+                console.error('Failed to calculate percentage for vertical bed:', error);
+                percentage = 50; // fallback
+            }
+        } else if (areaInput) {
+            // For regular beds, calculate percentage from area
+            const area = parseFloat(areaInput.value) || 0;
+            try {
+                const fullBedData = await this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`);
+                const bedData = fullBedData.find(bed => bed.id === bedId || bed.bed_number === bedId);
+                const totalArea = bedData ? bedData.equivalent_m2 || 2 : 2;
+                percentage = (area / totalArea) * 100;
+            } catch (error) {
+                console.error('Failed to calculate percentage from area:', error);
+                percentage = 50; // fallback
+            }
+        } else {
+            this.showNotification('🌱 Unable to determine allocation method', 'error');
+            return;
+        }
+        
         const plants = parseInt(plantsInput.value) || 0;
+        const spacingInput = document.getElementById(`edit-spacing-${allocationId}`);
+        const plantSpacing = spacingInput ? parseInt(spacingInput.value) || 30 : 30;
 
         if (!cropType) {
             this.showNotification('🌱 Please select a crop type', 'warning');
             return;
+        }
+
+        // Validate plant count against bed capacity
+        try {
+            const fullBedData = await this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`);
+            const bedData = fullBedData.find(bed => bed.id === bedId || bed.bed_number === bedId);
+            
+            if (bedData && bedData.bed_type !== 'vertical') {
+                // For non-vertical beds, calculate expected plants based on area and spacing
+                const bedAreaM2 = parseFloat(bedData.equivalent_m2) || 0;
+                const areaCm2 = bedAreaM2 * 10000;
+                const spacePerPlant = plantSpacing * plantSpacing;
+                const maxPlants = Math.floor(areaCm2 / spacePerPlant);
+
+                if (plants > maxPlants * 1.2) { // Allow 20% buffer for flexibility
+                    this.showNotification(`🌱 ${plants} plants seems too many for ${bedAreaM2.toFixed(1)}m² bed. Maximum recommended: ${maxPlants} plants with ${plantSpacing}cm spacing.`, 'warning');
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error('Failed to validate plant count:', error);
+            // Continue with saving if validation fails
         }
 
         try {
@@ -10514,7 +14938,8 @@ class AquaponicsApp {
                 body: JSON.stringify({
                     cropType,
                     percentageAllocated: percentage,
-                    plantsPlanted: plants
+                    plantsPlanted: plants,
+                    plantSpacing: plantSpacing
                 })
             });
 
@@ -10574,7 +14999,7 @@ class AquaponicsApp {
         
         // Show modal
         const modal = document.getElementById('delete-system-modal');
-        modal.style.display = 'flex';
+        modal.classList.add('show');
         
         // Focus on input
         setTimeout(() => confirmInput.focus(), 100);
@@ -10608,7 +15033,7 @@ class AquaponicsApp {
 
     cancelDeleteSystem() {
         const modal = document.getElementById('delete-system-modal');
-        modal.style.display = 'none';
+        modal.classList.remove('show');
         
         // Clear input
         const confirmInput = document.getElementById('delete-confirmation');
@@ -11072,20 +15497,33 @@ class AquaponicsApp {
         return `${day}/${month}/${year}`;
     }
 
+    // Helper function to parse numeric values, returning null only for empty/invalid inputs
+    parseNumericValue(value) {
+        // If the input is empty or whitespace-only, return null
+        if (value === '' || value === null || value === undefined || (typeof value === 'string' && value.trim() === '')) {
+            return null;
+        }
+        
+        // Parse the value and check if it's a valid number
+        const parsed = parseFloat(value);
+        
+        // Return null if parsing resulted in NaN, otherwise return the number (including 0)
+        return isNaN(parsed) ? null : parsed;
+    }
+
     // Ensure system has default spray programmes
     async ensureDefaultSprayProgrammes() {
         if (!this.activeSystemId) return;
         
         try {
             // Check if system has any programmes
-            console.log('Checking for existing programmes for system:', this.activeSystemId);
+
             const response = await this.makeApiCall(`/spray-programmes?system_id=${this.activeSystemId}`);
-            console.log('Spray programmes response:', response);
+
             const programmes = response.programmes || [];
-            console.log('Found programmes:', programmes.length);
-            
+
             // No auto-creation of default programmes - let users add their own
-            console.log(`Found ${programmes.length} existing spray programmes - no defaults created automatically`);
+
         } catch (error) {
             console.error('Error ensuring default spray programmes:', error);
             // Don't show error to user - this is a background operation
@@ -11094,8 +15532,7 @@ class AquaponicsApp {
 
     // Spray Programmes functionality
     async setupSprayProgrammes() {
-        console.log('Setting up spray programmes...');
-        
+
         // Check if system has any spray programmes, if not create defaults
         await this.ensureDefaultSprayProgrammes();
         this.setupSprayTabs();
@@ -11103,7 +15540,7 @@ class AquaponicsApp {
         
         // Ensure calendar is updated after setup
         setTimeout(() => {
-            console.log('Force updating spray calendar...');
+
             this.updateSprayCalendar();
         }, 1000);
     }
@@ -11135,21 +15572,29 @@ class AquaponicsApp {
         
         try {
             // Try to load from API first
-            console.log('Loading spray applications for category:', category, 'system:', this.activeSystemId);
+
             // Add cache-busting parameter to ensure fresh data
             const cacheBuster = Date.now();
             const response = await this.makeApiCall(`/spray-programmes?system_id=${this.activeSystemId}&_cb=${cacheBuster}`);
-            console.log('API response for spray applications:', response);
+
             const allApplications = response.programmes || [];
-            console.log('All applications before filtering:', allApplications);
+
+            // If no applications exist, use mock data to show available default sprays
+            if (allApplications.length === 0) {
+
+                const mockApplications = this.getMockSprayApplications(category);
+                this.displaySprayApplications(mockApplications, category);
+                this.updateSprayCalendarMock();
+                return;
+            }
             
             // Filter applications by category based on programme type or products
             const applications = this.filterApplicationsByCategory(allApplications, category);
-            console.log('Filtered applications for category', category, ':', applications);
+
             this.displaySprayApplications(applications, category);
             this.updateSprayCalendar();
         } catch (error) {
-            console.log('API endpoint not ready, using mock data for spray programmes');
+
             // Use mock data until backend endpoints are implemented
             const mockApplications = this.getMockSprayApplications(category);
             this.displaySprayApplications(mockApplications, category);
@@ -11178,58 +15623,18 @@ class AquaponicsApp {
             // Inactive = has status 'inactive' OR doesn't have schedule data
             return app.status === 'inactive' || (!app.frequency_days && !app.frequency && !app.start_date && !app.end_date);
         });
-
-        // Debug: Log all applications with their status and data
-        console.log(`🔍 All applications for ${category}:`, applications.map(app => ({
-            id: app.id,
-            product_name: app.product_name,
-            status: app.status,
-            rawStatus: typeof app.status,
-            frequency_days: app.frequency_days,
-            frequency: app.frequency,
-            start_date: app.start_date,
-            end_date: app.end_date,
-            hasScheduleData: !!(app.frequency_days || app.frequency || app.start_date || app.end_date),
-            allFields: Object.keys(app)
-        })));
-
-        // Enhanced debugging for inactive applications
         const inactiveApps = applications.filter(app => app.status === 'inactive');
         if (inactiveApps.length > 0) {
-            console.log(`🚨 FOUND INACTIVE APPLICATIONS:`, inactiveApps.map(app => ({
-                id: app.id,
-                name: app.product_name,
-                status: app.status,
-                category: app.category
-            })));
+
         } else {
-            console.log(`ℹ️ No inactive applications found for ${category}. All statuses:`, applications.map(app => `${app.product_name}: ${app.status}`));
+
         }
 
         // Specific debugging for Metarhizium 62
         const metarhizium = applications.find(app => app.product_name.includes('Metarhizium'));
         if (metarhizium) {
-            console.log(`🔬 METARHIZIUM 62 DEBUG:`, {
-                id: metarhizium.id,
-                status: metarhizium.status,
-                frequency: metarhizium.frequency,
-                frequency_days: metarhizium.frequency_days,
-                start_date: metarhizium.start_date,
-                end_date: metarhizium.end_date,
-                hasActiveStatus: !metarhizium.status || metarhizium.status === 'active',
-                hasScheduleData: !!(metarhizium.frequency_days || metarhizium.frequency || metarhizium.start_date || metarhizium.end_date),
-                shouldBeActive: (!metarhizium.status || metarhizium.status === 'active') && !!(metarhizium.frequency_days || metarhizium.frequency || metarhizium.start_date || metarhizium.end_date),
-                shouldBeInactive: metarhizium.status === 'inactive' || (!metarhizium.frequency_days && !metarhizium.frequency && !metarhizium.start_date && !metarhizium.end_date)
-            });
-        }
 
-        console.log(`📊 Section breakdown for ${category}:`, {
-            total: applications.length,
-            active: activeApplications.length,
-            inactive: inactiveApplications.length,
-            activeItems: activeApplications.map(a => `${a.product_name} (${a.status})`),
-            inactiveItems: inactiveApplications.map(a => `${a.product_name} (${a.status})`)
-        });
+        }
 
         let html = '';
 
@@ -11336,16 +15741,7 @@ class AquaponicsApp {
         const hasScheduleData = app.frequency_days || app.frequency || app.start_date || app.end_date;
         const isActive = !app.status || app.status === 'active'; // Default to active if no status
         const isInProgramme = hasScheduleData && isActive && app.status !== 'inactive';
-        
-        console.log(`🔍 Programme check for ${app.product_name}:`, {
-            hasScheduleData,
-            isActive,
-            isInProgramme,
-            frequency_days: app.frequency_days,
-            frequency: app.frequency,
-            status: app.status
-        });
-        
+
         if (isInProgramme) {
             // Item is in an active programme - show edit/remove options
             return `
@@ -11378,29 +15774,22 @@ class AquaponicsApp {
     }
 
     calculateNextApplication(application) {
-        console.log('calculateNextApplication called for:', application.product_name);
-        console.log('Application data:', {
-            last_application: application.last_application,
-            start_date: application.start_date,
-            frequency: application.frequency,
-            frequency_days: application.frequency_days
-        });
-        
+
         let baseDate;
         
         if (application.last_application) {
             // If there's a last application, calculate next from that date
             baseDate = new Date(application.last_application);
-            console.log('Using last application date:', baseDate);
+
         } else {
             // For new programmes without applications, use start date or today
             if (application.start_date) {
                 baseDate = new Date(application.start_date);
-                console.log('Using start date:', baseDate);
+
             } else {
                 // For programmes without start date, start from today
                 baseDate = new Date();
-                console.log('Using today as base date:', baseDate);
+
             }
         }
         
@@ -11408,8 +15797,7 @@ class AquaponicsApp {
         
         // Get frequency in days from either frequency_days or frequency string
         const frequencyDays = application.frequency_days || this.parseFrequencyDays(application.frequency);
-        console.log('Frequency days:', frequencyDays);
-        
+
         // If we're using last application date, add frequency to get next date
         if (application.last_application) {
             nextDate.setDate(baseDate.getDate() + frequencyDays);
@@ -11417,15 +15805,14 @@ class AquaponicsApp {
             // For new programmes, if start date is in the future, use start date
             // Otherwise, schedule for frequency days from now
             if (application.start_date && new Date(application.start_date) > new Date()) {
-                console.log('Start date is in future, using start date');
+
                 return new Date(application.start_date);
             } else {
                 nextDate.setDate(baseDate.getDate() + frequencyDays);
-                console.log('Adding frequency to base date');
+
             }
         }
-        
-        console.log('Calculated next date:', nextDate);
+
         return nextDate;
     }
 
@@ -11437,12 +15824,12 @@ class AquaponicsApp {
             const cacheBuster = Date.now();
             const response = await this.makeApiCall(`/spray-programmes?system_id=${this.activeSystemId}&_cb=${cacheBuster}`);
             if (response && response.programmes && response.programmes.length > 0) {
-                console.log('Using real spray programmes for calendar:', response.programmes);
+
                 this.displaySprayCalendar(response.programmes);
                 return;
             }
         } catch (error) {
-            console.log('Real spray programmes API not ready or empty, trying calendar endpoint');
+
         }
         
         try {
@@ -11450,7 +15837,7 @@ class AquaponicsApp {
             const allApplications = await this.makeApiCall(`/spray-programmes/calendar?system_id=${this.activeSystemId}`);
             this.displaySprayCalendar(allApplications.schedules || allApplications);
         } catch (error) {
-            console.log('Calendar API endpoint not ready, using mock calendar data');
+
             this.updateSprayCalendarMock();
         }
     }
@@ -11462,8 +15849,6 @@ class AquaponicsApp {
             return;
         }
 
-        console.log('displaySprayCalendar called with applications:', applications);
-
         if (!applications || !Array.isArray(applications)) {
             console.error('Invalid applications data:', applications);
             container.innerHTML = '<p style="color: #666; text-align: center;">Error loading applications.</p>';
@@ -11474,12 +15859,12 @@ class AquaponicsApp {
             .filter(app => {
                 // Only include active programmes in upcoming applications
                 const isActive = !app.status || app.status === 'active';
-                console.log(`App ${app.product_name}: status = ${app.status}, isActive = ${isActive}`);
+
                 return isActive;
             })
             .map(app => {
                 const nextDate = this.calculateNextApplication(app);
-                console.log(`App ${app.product_name}: nextDate = ${nextDate}`);
+
                 return {
                     ...app,
                     nextDate: nextDate
@@ -11487,13 +15872,11 @@ class AquaponicsApp {
             })
             .filter(app => {
                 const hasDate = app.nextDate !== null && app.nextDate !== undefined;
-                console.log(`App ${app.product_name}: hasDate = ${hasDate}`);
+
                 return hasDate;
             })
             .sort((a, b) => a.nextDate - b.nextDate)
             .slice(0, 5);
-
-        console.log('Upcoming applications after processing:', upcoming);
 
         if (upcoming.length === 0) {
             container.innerHTML = '<p style="color: #666; text-align: center;">No upcoming spray applications scheduled.</p>';
@@ -11555,12 +15938,12 @@ class AquaponicsApp {
         this.updateAddSprayForm();
         
         // Show modal
-        modal.style.display = 'flex';
+        modal.classList.add('show');
     }
 
     closeAddSprayModal() {
         const modal = document.getElementById('add-spray-modal');
-        modal.style.display = 'none';
+        modal.classList.remove('show');
         
         // Clear editing state
         delete modal.dataset.editingId;
@@ -11754,7 +16137,7 @@ class AquaponicsApp {
         // Show informational message that fields can be edited
         this.showNotification('💡 All fields can be edited before adding to programme', 'info');
         
-        modal.style.display = 'flex';
+        modal.classList.add('show');
         
         // Focus on product name field to indicate it's editable
         setTimeout(() => {
@@ -11793,7 +16176,7 @@ class AquaponicsApp {
         // Store the ID for updating
         modal.dataset.editingId = applicationId;
         
-        modal.style.display = 'flex';
+        modal.classList.add('show');
     }
 
     async removeFromProgramme(applicationId) {
@@ -11888,7 +16271,7 @@ class AquaponicsApp {
             }, 500);
             
         } catch (error) {
-            console.log('API endpoint not ready, simulating update operation');
+
             this.showNotification('❌ Update failed - API not available', 'error');
             throw error;
         }
@@ -11918,7 +16301,7 @@ class AquaponicsApp {
                 this.updateSprayCalendar();
             }, 500);
         } catch (error) {
-            console.log('API endpoint not ready, simulating add operation');
+
             this.showNotification('Spray application added to demo data!', 'success');
             // Refresh the current category to show mock data
             this.loadSprayApplications(data.category);
@@ -11926,8 +16309,7 @@ class AquaponicsApp {
     }
 
     recordSprayApplication(applicationId) {
-        console.log('Recording spray application:', applicationId);
-        
+
         // Find the application data
         const allCategories = ['insecticides', 'fungicides', 'foliar-feeds'];
         let application = null;
@@ -11954,11 +16336,11 @@ class AquaponicsApp {
         document.getElementById('record-rate-unit').value = application.rate_unit;
         
         // Show the modal
-        document.getElementById('record-spray-modal').style.display = 'flex';
+        document.getElementById('record-spray-modal').classList.add('show');
     }
 
     closeRecordSprayModal() {
-        document.getElementById('record-spray-modal').style.display = 'none';
+        document.getElementById('record-spray-modal').classList.remove('show');
         this.currentSprayApplication = null;
         
         // Clear form
@@ -11999,8 +16381,7 @@ class AquaponicsApp {
             this.setupSprayProgrammes(); // Reload data
             
         } catch (error) {
-            console.log('API endpoint not ready, simulating record operation');
-            
+
             // Update the last_application date in mock data
             this.updateMockSprayLastApplication(this.currentSprayApplication.id, formData.date);
             
@@ -12013,7 +16394,7 @@ class AquaponicsApp {
     updateMockSprayLastApplication(applicationId, newDate) {
         // This would update the mock data to reflect the new last application date
         // In a real implementation, this would be handled by the API
-        console.log(`Updated application ${applicationId} last applied date to ${newDate}`);
+
     }
 
     async toggleApplicationHistory(applicationId) {
@@ -12040,7 +16421,7 @@ class AquaponicsApp {
             const history = await this.makeApiCall(`/spray-programmes/${applicationId}/history`);
             this.displayApplicationHistory(history, historyDiv);
         } catch (error) {
-            console.log('API endpoint not ready, using mock history data');
+
             // Show mock history data
             const mockHistory = this.getMockApplicationHistory(applicationId);
             this.displayApplicationHistory(mockHistory, historyDiv);
@@ -12130,7 +16511,7 @@ class AquaponicsApp {
     async editSprayApplication(applicationId) {
         // This would show an edit modal
         // For now, we'll implement basic edit functionality
-        console.log('Editing spray application:', applicationId);
+
         this.showNotification('Edit functionality coming soon!', 'info');
     }
 
@@ -12183,33 +16564,26 @@ class AquaponicsApp {
                 });
             }, 500);
         } catch (error) {
-            console.log('API endpoint not ready, simulating delete operation');
+
             this.showNotification('Delete operation simulated (demo mode)', 'info');
             // In demo mode, we don't actually delete from mock data
         }
     }
 
     filterApplicationsByCategory(applications, category) {
-        console.log('Filtering applications:', applications, 'for category:', category);
-        
+
         // Log each application to see the data structure
         applications.forEach((app, index) => {
-            console.log(`App ${index}:`, {
-                id: app.id,
-                product_name: app.product_name,
-                category: app.category,
-                programme: app.programme,
-                products: app.products
-            });
+
         });
         
         // Map backend programme data to frontend categories
         // Use the category field from the database directly
         return applications.filter(app => {
             // First try direct category match
-            console.log(`Checking app ${app.id}: category="${app.category}" vs target="${category}"`);
+
             if (app.category === category) {
-                console.log(`✅ Direct category match for app ${app.id}`);
+
                 return true;
             }
             
@@ -12282,7 +16656,8 @@ class AquaponicsApp {
                     rate_unit: 'ml per 10L',
                     frequency_days: 7,
                     last_application: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Preventative Foliar - Combine with Foliar feeds'
+                    notes: 'Preventative Foliar - Combine with Foliar feeds',
+                    status: 'inactive'
                 },
                 {
                     id: 2,
@@ -12293,7 +16668,8 @@ class AquaponicsApp {
                     rate_unit: 'ml per 10L',
                     frequency_days: 7,
                     last_application: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Reactive Foliar - Combine with Foliar feeds'
+                    notes: 'Reactive Foliar - Combine with Foliar feeds',
+                    status: 'inactive'
                 },
                 {
                     id: 3,
@@ -12304,7 +16680,8 @@ class AquaponicsApp {
                     rate_unit: 'ml per 10L',
                     frequency_days: 10,
                     last_application: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Always Foliar - Combine with Foliar feeds'
+                    notes: 'Always Foliar - Combine with Foliar feeds',
+                    status: 'inactive'
                 },
                 {
                     id: 4,
@@ -12315,7 +16692,8 @@ class AquaponicsApp {
                     rate_unit: 'ml per 10L',
                     frequency_days: 7,
                     last_application: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Reactive Foliar - Combine with Foliar feeds'
+                    notes: 'Reactive Foliar - Combine with Foliar feeds',
+                    status: 'inactive'
                 }
             ],
             'fungicides': [
@@ -12328,7 +16706,8 @@ class AquaponicsApp {
                     rate_unit: 'ml per 10L',
                     frequency_days: 7,
                     last_application: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Preventative Foliar - Combine with Foliar feeds'
+                    notes: 'Preventative Foliar - Combine with Foliar feeds',
+                    status: 'inactive'
                 },
                 {
                     id: 6,
@@ -12339,7 +16718,8 @@ class AquaponicsApp {
                     rate_unit: 'ml per 10L',
                     frequency_days: 10,
                     last_application: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Preventative Foliar - Combine with ORGANIC Foliar feeds'
+                    notes: 'Preventative Foliar - Combine with ORGANIC Foliar feeds',
+                    status: 'inactive'
                 },
                 {
                     id: 7,
@@ -12350,7 +16730,8 @@ class AquaponicsApp {
                     rate_unit: 'g per 10L',
                     frequency_days: 10,
                     last_application: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Reactive - Combine with ORGANIC Foliar feeds'
+                    notes: 'Reactive - Combine with ORGANIC Foliar feeds',
+                    status: 'inactive'
                 },
                 {
                     id: 8,
@@ -12361,7 +16742,8 @@ class AquaponicsApp {
                     rate_unit: 'ml per 10L',
                     frequency_days: 14,
                     last_application: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Reactive - Combine with ORGANIC Foliar feeds'
+                    notes: 'Reactive - Combine with ORGANIC Foliar feeds',
+                    status: 'inactive'
                 },
                 {
                     id: 9,
@@ -12372,7 +16754,8 @@ class AquaponicsApp {
                     rate_unit: 'ratio',
                     frequency_days: 7,
                     last_application: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Reactive - Combine with ORGANIC Foliar feeds'
+                    notes: 'Reactive - Combine with ORGANIC Foliar feeds',
+                    status: 'inactive'
                 },
                 {
                     id: 10,
@@ -12383,7 +16766,8 @@ class AquaponicsApp {
                     rate_unit: 'ml per 10L',
                     frequency_days: 14,
                     last_application: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Reactive - Combine with ORGANIC Foliar feeds'
+                    notes: 'Reactive - Combine with ORGANIC Foliar feeds',
+                    status: 'inactive'
                 }
             ],
             'foliar-feeds': [
@@ -12395,7 +16779,8 @@ class AquaponicsApp {
                     rate_unit: 'ml per 10L',
                     frequency_days: 7,
                     last_application: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Foliar Feed leaves - Complete nutrient solution'
+                    notes: 'Foliar Feed leaves - Complete nutrient solution',
+                    status: 'inactive'
                 },
                 {
                     id: 12,
@@ -12405,7 +16790,8 @@ class AquaponicsApp {
                     rate_unit: 'ml per 10L',
                     frequency_days: 14,
                     last_application: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Foliar Feed leaves - Silicon and micronutrients'
+                    notes: 'Foliar Feed leaves - Silicon and micronutrients',
+                    status: 'inactive'
                 },
                 {
                     id: 13,
@@ -12415,7 +16801,8 @@ class AquaponicsApp {
                     rate_unit: 'ml per 10L',
                     frequency_days: 7,
                     last_application: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Foliar Feed leaves - Seaweed extract with complete nutrition'
+                    notes: 'Foliar Feed leaves - Seaweed extract with complete nutrition',
+                    status: 'inactive'
                 },
                 {
                     id: 14,
@@ -12425,7 +16812,8 @@ class AquaponicsApp {
                     rate_unit: 'g per 10L',
                     frequency_days: 14,
                     last_application: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Foliar Feed leaves - Nutrient uptake enhancer'
+                    notes: 'Foliar Feed leaves - Nutrient uptake enhancer',
+                    status: 'inactive'
                 },
                 {
                     id: 15,
@@ -12435,7 +16823,8 @@ class AquaponicsApp {
                     rate_unit: 'g per 10L',
                     frequency_days: 7,
                     last_application: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Foliar Feed leaves - Iron deficiency correction'
+                    notes: 'Foliar Feed leaves - Iron deficiency correction',
+                    status: 'inactive'
                 },
                 {
                     id: 16,
@@ -12445,7 +16834,8 @@ class AquaponicsApp {
                     rate_unit: 'g/0.5% per 10L with Nitrosol/Seaweed extract',
                     frequency_days: 7,
                     last_application: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Foliar Feed leaves - Potassium and nitrogen boost'
+                    notes: 'Foliar Feed leaves - Potassium and nitrogen boost',
+                    status: 'inactive'
                 },
                 {
                     id: 17,
@@ -12455,7 +16845,8 @@ class AquaponicsApp {
                     rate_unit: 'g/0.5% per 10L with Nitrosol/Seaweed extract',
                     frequency_days: 7,
                     last_application: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Foliar Feed leaves - Calcium deficiency prevention'
+                    notes: 'Foliar Feed leaves - Calcium deficiency prevention',
+                    status: 'inactive'
                 },
                 {
                     id: 18,
@@ -12465,7 +16856,8 @@ class AquaponicsApp {
                     rate_unit: 'g/0.5% per 10L with Nitrosol/Seaweed extract',
                     frequency_days: 10,
                     last_application: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Foliar Feed leaves - Promotes green growth, spray on leafy plants'
+                    notes: 'Foliar Feed leaves - Promotes green growth, spray on leafy plants',
+                    status: 'inactive'
                 },
                 {
                     id: 19,
@@ -12475,7 +16867,8 @@ class AquaponicsApp {
                     rate_unit: 'ml/1% per 10L with Fulvic acid',
                     frequency_days: 7,
                     last_application: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Use when Calcium Deficiency detected'
+                    notes: 'Use when Calcium Deficiency detected',
+                    status: 'inactive'
                 },
                 {
                     id: 20,
@@ -12485,7 +16878,8 @@ class AquaponicsApp {
                     rate_unit: 'ml per 10L',
                     frequency_days: 14,
                     last_application: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Foliar Feed leaves - 10-14 day interval'
+                    notes: 'Foliar Feed leaves - 10-14 day interval',
+                    status: 'inactive'
                 },
                 {
                     id: 21,
@@ -12495,7 +16889,8 @@ class AquaponicsApp {
                     rate_unit: 'g per 10L',
                     frequency_days: 14,
                     last_application: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
-                    notes: 'Do not use with Lime Sulphur, Bordeaux mixture or Copper containing products'
+                    notes: 'Do not use with Lime Sulphur, Bordeaux mixture or Copper containing products',
+                    status: 'inactive'
                 }
             ]
         };
@@ -12622,34 +17017,19 @@ class AquaponicsApp {
 
     // Fish Management Tab Methods
     loadFishOverview() {
-        console.log('Loading fish overview...');
+
         const container = document.getElementById('tank-summary-container');
         if (!container) return;
 
-        // Move the fish calculator to the overview tab if it's not already there
-        if (!container.querySelector('.fish-calculator')) {
-            const existingCalculator = document.querySelector('.fish-calculator');
-            if (existingCalculator) {
-                container.appendChild(existingCalculator);
-                console.log('Moved fish calculator to overview tab');
-            } else {
-                // If fish calculator doesn't exist, initialize it
-                console.log('Fish calculator not found, initializing...');
-                this.initializeFishCalculator();
-            }
-        }
+        // Fish calculator should remain in the Calculators tab, not be moved here
+        // Remove any existing calculator from overview to prevent duplication
 
         // Load tank summary data
         this.displayFishTankSummary();
-        
-        // Update system info in calculator after moving it
-        setTimeout(() => {
-            this.updateFishCalculatorSystemInfo();
-        }, 100);
     }
 
     async displayFishTankSummary() {
-        console.log('Loading fish tank summary...');
+
         const container = document.getElementById('tank-summary-container');
         if (!container) return;
 
@@ -12659,6 +17039,27 @@ class AquaponicsApp {
             if (!systemData) {
                 container.innerHTML = '<p class="no-data">No system data available. Please configure your system in Settings.</p>';
                 return;
+            }
+
+            // Fetch actual fish tank configurations to get real total volume
+            let actualTotalVolumeL = systemData.total_fish_volume || 1000;
+            try {
+                const tankResponse = await this.makeApiCall(`/fish-tanks/system/${this.activeSystemId}`);
+                const fishTanks = tankResponse.tanks || [];
+
+                if (fishTanks.length > 0) {
+                    actualTotalVolumeL = 0;
+                    fishTanks.forEach((tank, index) => {
+                        const volumeL = parseFloat(tank.volume_liters) || 0;
+
+                        actualTotalVolumeL += volumeL;
+                    });
+
+                } else {
+
+                }
+            } catch (error) {
+
             }
 
             // Create a simple tank summary display above the calculator
@@ -12672,7 +17073,7 @@ class AquaponicsApp {
                         </div>
                         <div class="summary-card" style="background: white; padding: 1rem; border-radius: 8px; border: 1px solid #e0e6ed;">
                             <h4 style="margin: 0 0 0.5rem 0; color: #2c3e50;">Fish Tanks</h4>
-                            <p style="margin: 0; color: #666;">${systemData.fish_tank_count || 1} tanks • ${((systemData.total_fish_volume || 1000) / 1000).toFixed(1)}m³ total</p>
+                            <p style="margin: 0; color: #666;">${systemData.fish_tank_count || 1} tanks • ${isNaN(actualTotalVolumeL) ? '0.0' : (actualTotalVolumeL / 1000).toFixed(1)}m³ total</p>
                         </div>
                     </div>
                 </div>
@@ -12691,41 +17092,20 @@ class AquaponicsApp {
         }
     }
 
-    loadFishHealthEntry() {
-        console.log('Loading fish health entry form...');
+    async loadFishHealthEntry() {
+
         const container = document.querySelector('#fish-health-entry-content .data-entry-section');
         if (!container) return;
 
-        // Create fish health form
-        const formHtml = this.generateFishHealthForm();
+        // Create new streamlined fish tank monitoring interface
+        const formHtml = await this.generateTankMonitoringForm();
         container.innerHTML = formHtml;
 
-        // Load recent fish health data
-        this.loadFishHealthHistory();
+        // Load recent tank data
+        this.loadTankMonitoringHistory();
 
-        // Setup form submission handler and tank selection
-        setTimeout(() => {
-            const form = document.getElementById('fish-health-entry-form');
-            if (form) {
-                form.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    await this.submitFishHealthData();
-                });
-                
-                // Handle tank selection to populate current fish count
-                const tankSelect = document.getElementById('fish-tank');
-                if (tankSelect) {
-                    tankSelect.addEventListener('change', () => {
-                        this.updateCurrentFishCount();
-                    });
-                    
-                    // Initialize with first tank if available
-                    if (tankSelect.value) {
-                        this.updateCurrentFishCount();
-                    }
-                }
-            }
-        }, 100);
+        // Setup form submission handlers
+        this.setupTankMonitoringHandlers();
     }
 
     generateFishHealthForm() {
@@ -12813,6 +17193,409 @@ class AquaponicsApp {
         `;
     }
 
+    async generateTankMonitoringForm() {
+        // Get tank information for the current system
+        let tanks = [];
+        try {
+            if (this.activeSystemId) {
+                const response = await this.makeApiCall(`/fish-tanks/system/${this.activeSystemId}`);
+                tanks = response.tanks || []; // Extract tanks array from response
+            }
+        } catch (error) {
+            console.error('Failed to load tanks:', error);
+            tanks = []; // Fallback to empty array
+        }
+
+        // If no tanks configured, show message
+        if (tanks.length === 0) {
+            return `
+                <div class="tank-monitoring-interface">
+                    <div class="monitoring-header">
+                        <h3>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 20px; height: 20px; vertical-align: text-bottom; margin-right: 8px;">
+                                <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,6A6,6 0 0,1 18,12C18,13.5 17.35,14.75 16.24,15.56L15.5,14A4.5,4.5 0 0,0 12,7.5A4.5,4.5 0 0,0 7.5,12C7.5,13.25 8.09,14.42 9,15.19L8.26,16.75C6.88,15.71 6,13.95 6,12A6,6 0 0,1 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z" fill="#0051b1"/>
+                            </svg>
+                            Tank Monitoring & Data Entry
+                        </h3>
+                        <p style="color: #666; margin-bottom: 1.5rem;">Quick entry for daily fish tank monitoring data</p>
+                    </div>
+
+                    <div style="text-align: center; padding: 2rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                        <p style="color: #6c757d; margin-bottom: 1rem;">No fish tanks configured for this system.</p>
+                        <p style="color: #6c757d; font-size: 0.9rem;">Please configure your fish tanks in the System Settings to enable monitoring.</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Get fish inventory data to show current counts and recommended feeding
+        let fishInventoryData = {};
+        try {
+            if (this.activeSystemId) {
+                const fishData = await this.makeApiCall(`/fish-inventory/system/${this.activeSystemId}`);
+                // Handle the API response structure which has a tanks property
+                const tanks = fishData.tanks || [];
+                // Create lookup by tank for quick access
+                tanks.forEach(tank => {
+                    fishInventoryData[tank.tank_number] = tank;
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load fish inventory:', error);
+        }
+
+        // Generate tank rows
+        let tankRows = '';
+        tanks.forEach(tank => {
+            const fishData = fishInventoryData[tank.tank_number] || {};
+            const currentFishCount = fishData.current_count || 0;
+            const avgWeight = fishData.average_weight || 0;
+            
+            // Calculate recommended daily feed (3% of biomass, split across 2-3 feedings)
+            const totalBiomass = currentFishCount * avgWeight; // grams
+            const dailyFeedAmount = Math.round(totalBiomass * 0.03); // 3% of biomass
+            const perFeedingAmount = Math.round(dailyFeedAmount / 2.5); // Assuming 2.5 feedings per day
+            
+            tankRows += `
+                <tr data-tank-id="${tank.id}">
+                    <td class="tank-info">
+                        <div class="tank-name">Tank ${tank.tank_number}</div>
+                        <div class="tank-details">${tank.fish_type} • ${tank.volume_liters}L</div>
+                        <div class="tank-fish-info">
+                            <span class="fish-count">🐟 ${currentFishCount} fish</span>
+                            ${dailyFeedAmount > 0 ? `<span class="recommended-feed">📊 ${perFeedingAmount}g/feeding (${dailyFeedAmount}g/day)</span>` : '<span class="no-fish">No fish - no feeding needed</span>'}
+                        </div>
+                    </td>
+                    <td class="feed-inputs">
+                        <input type="number" id="feed-amount-${tank.id}" step="0.1" min="0" placeholder="g" class="compact-input">
+                        <input type="text" id="feed-type-${tank.id}" placeholder="Feed type" class="compact-input">
+                    </td>
+                    <td class="behavior-input">
+                        <select id="behavior-${tank.id}" class="compact-select">
+                            <option value="">--</option>
+                            <option value="active_healthy">🟢 Active & Healthy</option>
+                            <option value="feeding_well">🟢 Feeding Well</option>
+                            <option value="normal_schooling">🟢 Normal Schooling</option>
+                            <option value="sluggish">🟡 Sluggish Movement</option>
+                            <option value="poor_appetite">🟡 Poor Appetite</option>
+                            <option value="scattered">🟡 Scattered/Not Schooling</option>
+                            <option value="gasping">🔴 Gasping at Surface</option>
+                            <option value="stressed">🔴 Signs of Stress</option>
+                            <option value="aggressive">🔴 Aggressive Behavior</option>
+                        </select>
+                    </td>
+                    <td class="mortality-input">
+                        <input type="number" id="mortality-${tank.id}" min="0" max="999" placeholder="0" class="compact-input">
+                    </td>
+                    <td class="notes-input">
+                        <textarea id="notes-${tank.id}" placeholder="Observations, issues, etc." class="compact-textarea"></textarea>
+                    </td>
+                </tr>
+            `;
+        });
+
+        return `
+            <div class="tank-monitoring-interface">
+                <div class="monitoring-header">
+                    <h3>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 20px; height: 20px; vertical-align: text-bottom; margin-right: 8px;">
+                            <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,6A6,6 0 0,1 18,12C18,13.5 17.35,14.75 16.24,15.56L15.5,14A4.5,4.5 0 0,0 12,7.5A4.5,4.5 0 0,0 7.5,12C7.5,13.25 8.09,14.42 9,15.19L8.26,16.75C6.88,15.71 6,13.95 6,12A6,6 0 0,1 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z" fill="#0051b1"/>
+                        </svg>
+                        Tank Monitoring & Data Entry
+                    </h3>
+                    <p style="color: #666; margin-bottom: 1.5rem;">Quick entry for all tanks at once</p>
+                </div>
+
+                <form id="bulk-tank-monitoring-form" class="bulk-monitoring-form">
+                    <!-- Global Time Selection -->
+                    <div class="time-selection-section">
+                        <div class="form-field">
+                            <label for="monitoring-time">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; vertical-align: text-bottom; margin-right: 4px;">
+                                    <path d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C6.47,22 2,17.5 2,12A10,10 0 0,1 12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z" fill="#0051b1"/>
+                                </svg>
+                                Entry Time:
+                            </label>
+                            <input type="time" id="monitoring-time" value="${new Date().toTimeString().slice(0, 5)}" required class="time-input">
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; margin-right: 6px;">
+                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="white"/>
+                                </svg>
+                                Record All Data
+                            </button>
+                            <button type="button" id="clear-all-btn" class="btn btn-secondary">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 16px; height: 16px; margin-right: 6px;">
+                                    <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" fill="currentColor"/>
+                                </svg>
+                                Clear All
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tank Monitoring Table -->
+                    <div class="monitoring-table-container">
+                        <table class="monitoring-table">
+                            <thead>
+                                <tr>
+                                    <th class="tank-col">Tank</th>
+                                    <th class="feed-col">
+                                        <div class="header-icon">🍽️</div>
+                                        <div class="header-text">Feed Amount & Type</div>
+                                    </th>
+                                    <th class="behavior-col">
+                                        <div class="header-icon">🐟</div>
+                                        <div class="header-text">Behavior</div>
+                                    </th>
+                                    <th class="mortality-col">
+                                        <div class="header-icon">💀</div>
+                                        <div class="header-text">Mortality</div>
+                                    </th>
+                                    <th class="notes-col">
+                                        <div class="header-icon">📝</div>
+                                        <div class="header-text">Notes</div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tankRows}
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
+
+                <!-- Today's Entry Summary -->
+                <div class="today-summary">
+                    <h4>Today's Entries</h4>
+                    <div id="today-entries-list" class="entries-list">
+                        <p style="color: #666; text-align: center; padding: 1rem;">Loading today's entries...</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    setupTankMonitoringHandlers() {
+        // Setup bulk form submission handler
+        setTimeout(() => {
+            const bulkForm = document.getElementById('bulk-tank-monitoring-form');
+            const clearAllBtn = document.getElementById('clear-all-btn');
+            
+            if (bulkForm) {
+                bulkForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.submitBulkTankData();
+                });
+            }
+            
+            if (clearAllBtn) {
+                clearAllBtn.addEventListener('click', () => {
+                    this.clearAllTankInputs();
+                });
+            }
+
+            // Load today's entries
+            this.loadTodaysTankEntries();
+        }, 100);
+    }
+
+    loadTankMonitoringHistory() {
+        // Load today's tank entries
+        this.loadTodaysTankEntries();
+    }
+
+    async submitBulkTankData() {
+        const monitoringTime = document.getElementById('monitoring-time').value;
+        
+        if (!monitoringTime) {
+            this.showNotification('Please select a time for the entries', 'warning');
+            return;
+        }
+
+        try {
+            const currentDate = new Date().toISOString().split('T')[0];
+            const dateTime = `${currentDate} ${monitoringTime}`;
+            
+            // Get all tank rows
+            const tankRows = document.querySelectorAll('[data-tank-id]');
+            const entries = [];
+            let totalEntries = 0;
+
+            // Collect data from each tank row
+            tankRows.forEach(row => {
+                const tankId = row.getAttribute('data-tank-id');
+                const feedAmount = document.getElementById(`feed-amount-${tankId}`)?.value;
+                const feedType = document.getElementById(`feed-type-${tankId}`)?.value;
+                const behavior = document.getElementById(`behavior-${tankId}`)?.value;
+                const mortality = document.getElementById(`mortality-${tankId}`)?.value;
+                const notes = document.getElementById(`notes-${tankId}`)?.value;
+
+                // Only create entries if there's data to record
+                if (feedAmount || feedType || behavior || mortality || notes) {
+                    const entry = {
+                        tankId: parseInt(tankId),
+                        date: dateTime,
+                        feedConsumption: feedAmount ? parseFloat(feedAmount) : null,
+                        behavior: null,
+                        mortality: mortality ? parseInt(mortality) : null,
+                        notes: notes || null
+                    };
+
+                    // Handle behavior and feeding together
+                    if (behavior && feedAmount && feedType) {
+                        entry.behavior = `${behavior.replace(/_/g, ' ').replace(/^./, str => str.toUpperCase())} - Fed: ${feedType}`;
+                    } else if (behavior) {
+                        entry.behavior = behavior.replace(/_/g, ' ').replace(/^./, str => str.toUpperCase());
+                    } else if (feedAmount && feedType) {
+                        entry.behavior = `Fed: ${feedType}`;
+                    } else if (feedAmount) {
+                        entry.behavior = 'Feeding recorded';
+                    } else if (mortality && mortality > 0) {
+                        entry.behavior = 'Mortality event';
+                    } else if (notes) {
+                        entry.behavior = 'General observation';
+                    }
+
+                    entries.push(entry);
+                    totalEntries++;
+                }
+            });
+
+            if (entries.length === 0) {
+                this.showNotification('No data entered to record', 'warning');
+                return;
+            }
+
+            // Show progress
+            const submitBtn = document.querySelector('#bulk-tank-monitoring-form button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span>Recording...</span>';
+            submitBtn.disabled = true;
+
+            // Submit all entries
+            const promises = entries.map(entry => 
+                this.makeApiCall('/data/entries/fish-health', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        system_id: this.activeSystemId,
+                        fish_tank_id: entry.tankId,
+                        date: entry.date,
+                        feed_consumption: entry.feedConsumption,
+                        behavior: entry.behavior,
+                        mortality: entry.mortality,
+                        notes: entry.notes
+                    })
+                })
+            );
+
+            await Promise.all(promises);
+
+            // Show success
+            this.showNotification(`📊 Successfully recorded ${totalEntries} tank monitoring entries`, 'success');
+            
+            // Clear form and refresh
+            this.clearAllTankInputs();
+            this.loadTodaysTankEntries();
+            
+            // Reset button
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+
+        } catch (error) {
+            console.error('Failed to record tank data:', error);
+            this.showNotification('❌ Failed to record some entries. Please try again.', 'error');
+            
+            // Reset button
+            const submitBtn = document.querySelector('#bulk-tank-monitoring-form button[type="submit"]');
+            submitBtn.innerHTML = submitBtn.innerHTML.replace('Recording...', 'Record All Data');
+            submitBtn.disabled = false;
+        }
+    }
+
+    clearAllTankInputs() {
+        // Clear all input fields in the tank monitoring table
+        const tankRows = document.querySelectorAll('[data-tank-id]');
+        
+        tankRows.forEach(row => {
+            const tankId = row.getAttribute('data-tank-id');
+            const feedAmountInput = document.getElementById(`feed-amount-${tankId}`);
+            const feedTypeInput = document.getElementById(`feed-type-${tankId}`);
+            const behaviorSelect = document.getElementById(`behavior-${tankId}`);
+            const mortalityInput = document.getElementById(`mortality-${tankId}`);
+            const notesTextarea = document.getElementById(`notes-${tankId}`);
+            
+            if (feedAmountInput) feedAmountInput.value = '';
+            if (feedTypeInput) feedTypeInput.value = '';
+            if (behaviorSelect) behaviorSelect.value = '';
+            if (mortalityInput) mortalityInput.value = '';
+            if (notesTextarea) notesTextarea.value = '';
+        });
+
+        this.showNotification('All inputs cleared', 'info');
+    }
+
+    async loadTodaysTankEntries() {
+        if (!this.activeSystemId) return;
+
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const entries = await this.makeApiCall(`/data/entries/fish-health?system_id=${this.activeSystemId}`);
+            
+            // Filter for today's entries
+            const todaysEntries = entries.filter(entry => 
+                entry.date && entry.date.includes(today)
+            ).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const entriesList = document.getElementById('today-entries-list');
+            if (!entriesList) return;
+
+            if (todaysEntries.length === 0) {
+                entriesList.innerHTML = '<p style="color: #666; text-align: center; padding: 1rem;">No entries recorded today</p>';
+                return;
+            }
+
+            let html = '';
+            todaysEntries.forEach(entry => {
+                const time = entry.date ? new Date(entry.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Unknown';
+                const tankId = entry.fish_tank_id || entry.tankId || 'Unknown';
+                
+                let entryType = '📝';
+                let description = 'General entry';
+                
+                if (entry.feed_consumption && entry.feed_consumption > 0) {
+                    entryType = '🍽️';
+                    description = `Fed ${entry.feed_consumption}g`;
+                } else if (entry.mortality && entry.mortality > 0) {
+                    entryType = '💀';
+                    description = `${entry.mortality} mortality`;
+                } else if (entry.behavior && entry.behavior !== 'Mortality event') {
+                    entryType = '🐟';
+                    description = entry.behavior;
+                }
+
+                html += `
+                    <div class="entry-item">
+                        <span class="entry-icon">${entryType}</span>
+                        <div class="entry-details">
+                            <div class="entry-main">Tank ${tankId} - ${description}</div>
+                            <div class="entry-time">${time}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            entriesList.innerHTML = html;
+
+        } catch (error) {
+            console.error('Failed to load today\'s entries:', error);
+            const entriesList = document.getElementById('today-entries-list');
+            if (entriesList) {
+                entriesList.innerHTML = '<p style="color: #ef4444; text-align: center; padding: 1rem;">Failed to load entries</p>';
+            }
+        }
+    }
+
     getFishSvgIcon(fishType) {
         const fishIcons = {
             'tilapia': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" style="width: 24px; height: 24px;"><path d="m54.988 41.94366a70.19837 70.19837 0 0 1 -.81409-8.09222 70.18137 70.18137 0 0 1 .81415-8.09235.82984.82984 0 0 0 -1.13495-.88818l-8.77484 3.69257c-3.42117-3.79948-9.97561-6.22548-16.93307-6.22548-9.77 0-18.39685 4.90967-19.1452 10.6911h2.40961a.82254.82254 0 0 1 -.00006 1.64478h-2.40955c.74835 5.78137 9.37524 10.691 19.1452 10.691 6.95746 0 13.5119-2.426 16.933-6.23371l8.7749 3.70075a.82975.82975 0 0 0 1.1349-.88826zm-37.82168-10.14819a1.2337 1.2337 0 0 1 .00006-2.46716 1.2337 1.2337 0 0 1 -.00006 2.46716zm12.33588 6.34882a3.30529 3.30529 0 0 1 -3.28144 3.28949c-.36651.053-4.22149-.81372-4.67108-.88806a.82114.82114 0 0 1 -1.53784-.3866 27.35956 27.35956 0 0 0 .02454-12.418.82327.82327 0 1 1 1.612-.329 27.93369 27.93369 0 0 1 .65789 8.47882 46.883 46.883 0 0 1 4.334-1.89154c.0965-1.40936-.68182-1.23773-.329-2.17932a2.45171 2.45171 0 0 0 .04944-2.43421.82209.82209 0 0 1 -.04938-.85534 2.4518 2.4518 0 0 0 .04938-2.43421.82142.82142 0 0 1 1.34869-.9375 4.00913 4.00913 0 0 1 .2467 3.74182 4.12593 4.12593 0 0 1 0 3.28956 4.0171 4.0171 0 0 1 .31257 2.0971 2.45534 2.45534 0 0 1 1.23358 2.13825zm3.38824-4.30929a4.12652 4.12652 0 0 1 0 3.28955 4.13961 4.13961 0 0 1 -.19739 3.69251.82046.82046 0 1 1 -1.44744-.773 2.45173 2.45173 0 0 0 .04937-2.43427.822.822 0 0 1 -.04937-.85528 2.45173 2.45173 0 0 0 .04937-2.43427.822.822 0 0 1 -.04937-.85529 2.45168 2.45168 0 0 0 .04937-2.43426.82211.82211 0 0 1 -.04937-.85535 2.45158 2.45158 0 0 0 .04937-2.4342.82062.82062 0 0 1 .20557-1.14313c1.09613-.79718 2.34338 1.5622 1.38989 3.94745a4.1265 4.1265 0 0 1 0 3.28954zm4.73694 3.69251a.82058.82058 0 0 1 -1.44738-.77312 2.45169 2.45169 0 0 0 .04932-2.4342.82187.82187 0 0 1 -.04932-.85529 2.45175 2.45175 0 0 0 .04932-2.43426.82059.82059 0 0 1 .20563-1.14313c1.09332-.79889 2.3446 1.5647 1.38989 3.94745a4.13966 4.13966 0 0 1 -.19746 3.69251zm4.72052-1.64478a.82427.82427 0 0 1 -1.45563-.77307 2.45165 2.45165 0 0 0 .04932-2.4342.82809.82809 0 0 1 .20563-1.14313c1.12921-.84806 2.51056 1.82552 1.20068 4.35036zm8.02655 2.90308a21.66 21.66 0 0 1 -2.24512-.78949.82119.82119 0 0 1 .57563-1.53791l1.95727.73194a.82646.82646 0 0 1 -.28778 1.59542zm0-4.11194h-1.135a.82252.82252 0 0 1 0-1.64478h1.135a.82252.82252 0 0 1 0 1.64474zm.28778-4.4903a21.6413 21.6413 0 0 1 -2.24512.78955.82646.82646 0 0 1 -.28778-1.59546l1.95728-.73193a.82116.82116 0 0 1 .57562 1.5378z" fill="#0051b1"/><path d="m26.68964 35.67712-4.58075 2.12177c-.05756.38647-.11512.76483-.181 1.14313l3.95575.81408a1.65689 1.65689 0 0 0 1.97375-1.61181v-1.71875a.82791.82791 0 0 0 -1.16775-.74842z" fill="#0051b1"/><path d="m39.89722 23.037c-6.78473-5.46887-16.81794-6.35706-17.30316-6.3982a.80749.80749 0 0 0 -.87171.68256l-.72369 4.21887a30.11141 30.11141 0 0 1 7.14654-.847 29.66566 29.66566 0 0 1 11.75202 2.34377z" fill="#0051b1"/><path d="m32 2a30 30 0 1 0 30 30 30.03414 30.03414 0 0 0 -30-30zm0 58.29218a28.29221 28.29221 0 1 1 28.29224-28.29218 28.32516 28.32516 0 0 1 -28.29224 28.29218z" fill="#0051b1"/></svg>',
@@ -12848,7 +17631,7 @@ class AquaponicsApp {
             const currentCount = latestTankEntry ? latestTankEntry.count || 0 : 0;
             
             fishCountInput.value = currentCount;
-            console.log(`Tank ${selectedTankId} current fish count: ${currentCount}`);
+
         } catch (error) {
             console.error('Error fetching current fish count:', error);
             fishCountInput.value = 0;
@@ -12920,7 +17703,7 @@ class AquaponicsApp {
     }
 
     loadTankInformation() {
-        console.log('Loading tank information...');
+
         const container = document.querySelector('#tank-information-content .tank-info-grid');
         if (!container) return;
 
@@ -12928,19 +17711,243 @@ class AquaponicsApp {
         this.displayTankCards(container);
     }
 
+    // Fish Management Modal Functions
+    showAddFishModal(preselectedTank = null) {
+        this.populateTankSelects();
+        document.getElementById('add-fish-date').value = new Date().toISOString().split('T')[0];
+        
+        // Pre-select tank if specified
+        if (preselectedTank) {
+            const tankSelect = document.getElementById('add-fish-tank');
+            if (tankSelect) {
+                tankSelect.value = preselectedTank;
+            }
+        }
+        
+        document.getElementById('add-fish-modal').classList.add('show');
+        
+        // Setup form submission
+        const form = document.getElementById('add-fish-form');
+        form.onsubmit = (e) => this.handleAddFish(e);
+    }
+
+    showMortalityModal(preselectedTank = null) {
+        this.populateTankSelects();
+        document.getElementById('mortality-date').value = new Date().toISOString().split('T')[0];
+        
+        // Pre-select tank if specified
+        if (preselectedTank) {
+            const tankSelect = document.getElementById('mortality-tank');
+            if (tankSelect) {
+                tankSelect.value = preselectedTank;
+            }
+        }
+        
+        document.getElementById('mortality-modal').classList.add('show');
+        
+        // Setup form submission
+        const form = document.getElementById('mortality-form');
+        form.onsubmit = (e) => this.handleMortality(e);
+    }
+
+    showFeedingModal(preselectedTank = null) {
+        this.populateTankSelects();
+        document.getElementById('feeding-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('feeding-time').value = new Date().toTimeString().slice(0, 5);
+        
+        // Pre-select tank if specified
+        if (preselectedTank) {
+            const tankSelect = document.getElementById('feeding-tank');
+            if (tankSelect) {
+                tankSelect.value = preselectedTank;
+            }
+        }
+        
+        document.getElementById('feeding-modal').classList.add('show');
+        
+        // Setup form submission
+        const form = document.getElementById('feeding-form');
+        form.onsubmit = (e) => this.handleFeeding(e);
+    }
+
+    populateTankSelects() {
+        const systemData = this.getActiveSystem();
+        if (!systemData || !systemData.fish_tanks) return;
+        
+        const tankSelects = ['add-fish-tank', 'mortality-tank'];
+        tankSelects.forEach(selectId => {
+            const select = document.getElementById(selectId);
+            if (select) {
+                select.innerHTML = systemData.fish_tanks.map(tank => 
+                    `<option value="${tank.tank_number}">Tank ${tank.tank_number} (${(tank.volume_liters/1000).toFixed(1)}m³)</option>`
+                ).join('');
+            }
+        });
+        
+        // Special handling for feeding select (includes "All Tanks" option)
+        const feedingSelect = document.getElementById('feeding-tank');
+        if (feedingSelect) {
+            feedingSelect.innerHTML = '<option value="all">All Tanks</option>' + 
+                systemData.fish_tanks.map(tank => 
+                    `<option value="${tank.tank_number}">Tank ${tank.tank_number} (${(tank.volume_liters/1000).toFixed(1)}m³)</option>`
+                ).join('');
+        }
+    }
+
+    async handleAddFish(e) {
+        e.preventDefault();
+        
+        const formData = {
+            system_id: this.activeSystemId,
+            fish_tank_id: parseInt(document.getElementById('add-fish-tank').value),
+            count: parseInt(document.getElementById('add-fish-count').value),
+            average_weight: parseFloat(document.getElementById('add-fish-avg-weight').value) || null,
+            notes: document.getElementById('add-fish-notes').value || ''
+        };
+        
+        try {
+            await this.makeApiCall('/fish-inventory/add-fish', {
+                method: 'POST',
+                body: JSON.stringify(formData)
+            });
+            
+            this.showNotification('✅ Fish added successfully!', 'success');
+            this.closeModal('add-fish-modal');
+            
+            // Reload tank display with new inventory data
+            this.loadTankInformation();
+            
+        } catch (error) {
+            console.error('Error adding fish:', error);
+            this.showNotification('❌ Failed to add fish', 'error');
+        }
+    }
+
+    async handleMortality(e) {
+        e.preventDefault();
+        
+        const formData = {
+            system_id: this.activeSystemId,
+            fish_tank_id: parseInt(document.getElementById('mortality-tank').value),
+            count: parseInt(document.getElementById('mortality-count').value),
+            cause: document.getElementById('mortality-cause').value || 'Unknown',
+            notes: document.getElementById('mortality-notes').value || ''
+        };
+        
+        try {
+            await this.makeApiCall('/fish-inventory/mortality', {
+                method: 'POST',
+                body: JSON.stringify(formData)
+            });
+            
+            this.showNotification(`⚠️ Mortality recorded: ${formData.count} fish removed`, 'warning');
+            this.closeModal('mortality-modal');
+            
+            // Reload tank display with new inventory data
+            this.loadTankInformation();
+            
+        } catch (error) {
+            console.error('Error recording mortality:', error);
+            this.showNotification(`❌ Failed to record mortality: ${error.message || 'Unknown error'}`, 'error');
+        }
+    }
+
+    async handleFeeding(e) {
+        e.preventDefault();
+        
+        const tankValue = document.getElementById('feeding-tank').value;
+        const feedAmount = parseFloat(document.getElementById('feeding-amount').value);
+        const feedType = document.getElementById('feeding-type').value;
+        const feedingDate = document.getElementById('feeding-date').value;
+        const feedingTime = document.getElementById('feeding-time').value;
+        
+        try {
+            if (tankValue === 'all') {
+                // Record feeding for all tanks
+                const systemData = this.getActiveSystem();
+                const amountPerTank = feedAmount / systemData.fish_tanks.length;
+                
+                for (const tank of systemData.fish_tanks) {
+                    // Get latest fish data for this tank
+                    const currentData = await this.makeApiCall(`/data/entries/fish-health?system_id=${this.activeSystemId}&limit=50`);
+                    const tankData = currentData.find(entry => entry.fish_tank_id === tank.tank_number) || {};
+                    
+                    const formData = {
+                        system_id: this.activeSystemId,
+                        fish_tank_id: tank.tank_number,
+                        date: feedingDate,
+                        count: tankData.count || 0,
+                        average_weight: tankData.average_weight || 0,
+                        feed_consumption: amountPerTank,
+                        behavior: 'feeding',
+                        notes: `Feed type: ${feedType}. Time: ${feedingTime}. ${document.getElementById('feeding-notes').value || ''}`
+                    };
+                    
+                    await this.makeApiCall('/data/entries/fish-health', {
+                        method: 'POST',
+                        body: JSON.stringify(formData)
+                    });
+                }
+            } else {
+                // Record feeding for specific tank
+                const tankNumber = parseInt(tankValue);
+                const currentData = await this.makeApiCall(`/data/entries/fish-health?system_id=${this.activeSystemId}&limit=50`);
+                const tankData = currentData.find(entry => entry.fish_tank_id === tankNumber) || {};
+                
+                const formData = {
+                    system_id: this.activeSystemId,
+                    fish_tank_id: tankNumber,
+                    date: feedingDate,
+                    count: tankData.count || 0,
+                    average_weight: tankData.average_weight || 0,
+                    feed_consumption: feedAmount,
+                    behavior: 'feeding',
+                    notes: `Feed type: ${feedType}. Time: ${feedingTime}. ${document.getElementById('feeding-notes').value || ''}`
+                };
+                
+                await this.makeApiCall('/data/entries/fish-health', {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                });
+            }
+            
+            this.showNotification(`✅ Feeding recorded: ${feedAmount}g of ${feedType}`, 'success');
+            this.closeModal('feeding-modal');
+            
+            // Reload fish data
+            await this.loadDataRecords();
+            await this.updateFishTankSummary();
+            
+        } catch (error) {
+            console.error('Error recording feeding:', error);
+            this.showNotification('❌ Failed to record feeding', 'error');
+        }
+    }
+
+    closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('show');
+            modal.style.display = 'none';
+            // Reset form
+            const form = modal.querySelector('form');
+            if (form) form.reset();
+        }
+    }
+
     async displayTankCards(container) {
         try {
             // Get system data and recent fish health entries
             const systemData = this.getActiveSystem();
-            console.log('System data:', systemData);
-            
-            // Use .catch() to gracefully handle API endpoints that don't exist yet
-            const fishHealthData = await this.makeApiCall(`/data/entries/fish-health?system_id=${this.activeSystemId}&limit=50`).catch((error) => {
-                console.log('Fish health API not available, using empty data:', error.message);
-                return [];
+
+            // Get fish inventory data from the new API
+            const fishInventoryData = await this.makeApiCall(`/fish-inventory/system/${this.activeSystemId}`).catch((error) => {
+
+                return { tanks: [] };
             });
+
             const waterQualityData = await this.makeApiCall(`/data/entries/water-quality?system_id=${this.activeSystemId}&limit=10`).catch((error) => {
-                console.log('Water quality API not available, using default temperature:', error.message);
+
                 return [];
             });
             
@@ -12949,27 +17956,38 @@ class AquaponicsApp {
                 return;
             }
 
-            if (!systemData.fish_tanks || systemData.fish_tanks.length === 0) {
+            // Try to fetch latest fish tank configuration from API
+            let fishTanks = [];
+            try {
+                const tankResponse = await this.makeApiCall(`/fish-tanks/system/${this.activeSystemId}`);
+                fishTanks = tankResponse.tanks || [];
+
+            } catch (error) {
+
+                fishTanks = systemData.fish_tanks || [];
+            }
+
+            if (!fishTanks || fishTanks.length === 0) {
                 // Create mock tanks based on system configuration
                 const tankCount = systemData.fish_tank_count || 1;
                 const tankVolume = systemData.total_fish_volume || 1000;
                 const volumePerTank = Math.floor(tankVolume / tankCount);
                 
-                const mockTanks = [];
+                fishTanks = [];
                 for (let i = 1; i <= tankCount; i++) {
-                    mockTanks.push({
+                    fishTanks.push({
                         id: i,
                         tank_number: i,
-                        volume: volumePerTank
+                        volume_liters: volumePerTank,  // Use correct property name
+                        size_m3: volumePerTank / 1000,  // Add size in m³
+                        fish_type: systemData.fish_type || 'tilapia'
                     });
                 }
-                // Ensure systemData exists before setting fish_tanks
-                if (!systemData.fish_tanks) {
-                    systemData.fish_tanks = [];
-                }
-                systemData.fish_tanks = mockTanks;
-                console.log('Created mock tanks:', mockTanks);
+
             }
+
+            // Update system data with latest fish tanks
+            systemData.fish_tanks = fishTanks;
 
             const currentTemp = this.getCurrentWaterTemperature(waterQualityData);
 
@@ -12978,45 +17996,38 @@ class AquaponicsApp {
             const totalSystemVolumeM3 = totalSystemVolume / 1000; // convert to cubic meters
             let totalSystemFishWeight = 0;
             
-            // Calculate total fish weight across all tanks
-            systemData.fish_tanks.forEach(tank => {
-                const recentHealthData = fishHealthData.filter(entry => entry.fish_tank_id === tank.tank_number).slice(0, 5);
-                
-                // Find the most recent record with valid weight data
-                const latestHealthWithWeight = recentHealthData.find(record => 
-                    record.average_weight !== null && record.average_weight > 0
-                );
-                const latestHealth = latestHealthWithWeight || recentHealthData[0];
-                
-                const fishCount = latestHealth?.count || 0;
-                const avgWeight = latestHealth?.average_weight || 50; // default 50g
+            // Merge tank configuration with inventory data
+            const inventoryTanks = fishInventoryData.tanks || [];
+            fishTanks = fishTanks.map(tank => {
+                const inventory = inventoryTanks.find(inv => inv.fish_tank_id === tank.tank_number) || {};
+                return { ...tank, inventory };
+            });
+            
+            // Calculate total fish weight across all tanks using inventory data
+            fishTanks.forEach(tank => {
+                const inventory = tank.inventory || {};
+                const fishCount = inventory.current_count || 0;
+                const avgWeight = inventory.average_weight || 0;
                 totalSystemFishWeight += (fishCount * avgWeight); // in grams
             });
             
             const totalSystemFishWeightKg = totalSystemFishWeight / 1000; // convert to kg
             const systemDensityKgM3 = totalSystemVolumeM3 > 0 ? (totalSystemFishWeightKg / totalSystemVolumeM3).toFixed(1) : '0.0';
 
-            const tankCards = systemData.fish_tanks.map(tank => {
-                const recentHealthData = fishHealthData.filter(entry => entry.fish_tank_id === tank.tank_number).slice(0, 5);
-                
-                // Find the most recent record with valid weight data, similar to Overview tab fix
-                const latestHealthWithWeight = recentHealthData.find(record => 
-                    record.average_weight !== null && record.average_weight > 0
-                );
-                const latestHealth = latestHealthWithWeight || recentHealthData[0];
-                
-                // Get fish count for this tank
-                const fishCount = latestHealth?.count || 0;
-                
+            const tankCards = fishTanks.map(tank => {
+                const inventory = tank.inventory || {};
+
+                // Get fish data from inventory
+                const fishCount = parseInt(inventory.current_count) || 0;
+                const avgWeight = parseFloat(inventory.average_weight) || 0;
+                const biomassKg = parseFloat(inventory.biomass_kg) || 0;
+                const densityKgM3 = parseFloat(inventory.density_kg_m3) || 0;
+
                 // Calculate feeding amount (2-3% of total fish weight per day)
-                const avgWeight = latestHealth?.average_weight || 50; // default 50g
                 const totalFishWeight = fishCount * avgWeight;
                 const dailyFeedAmount = (totalFishWeight * 0.025).toFixed(0); // 2.5% of body weight
                 
-                // Calculate tank-specific density (kg/m³)
-                const tankVolumeM3 = tank.volume_liters / 1000; // Convert liters to cubic meters
-                const tankBiomassKg = (fishCount * avgWeight) / 1000; // Convert grams to kg
-                const tankDensity = tankVolumeM3 > 0 && tankBiomassKg > 0 ? (tankBiomassKg / tankVolumeM3).toFixed(1) : '0.0';
+                const tankDensity = (isNaN(densityKgM3) || !isFinite(densityKgM3)) ? '0.0' : densityKgM3.toFixed(1);
                 
                 return `
                     <div class="tank-card">
@@ -13043,15 +18054,19 @@ class AquaponicsApp {
                             </div>
                             <div class="tank-stat">
                                 <div class="tank-stat-label">Avg Weight</div>
-                                <div class="tank-stat-value">${avgWeight}g</div>
+                                <div class="tank-stat-value">${fishCount > 0 ? avgWeight + 'g' : '-'}</div>
                             </div>
                         </div>
                         
                         <div class="feeding-schedule">
                             <h4>🍽️ Feeding Schedule</h4>
-                            <p><strong>Daily Amount:</strong> ${dailyFeedAmount}g</p>
-                            <p><strong>Frequency:</strong> 2-3 times per day</p>
-                            <p><strong>Per Feeding:</strong> ${Math.round(dailyFeedAmount / 2.5)}g</p>
+                            ${fishCount > 0 ? `
+                                <p><strong>Daily Amount:</strong> ${dailyFeedAmount}g</p>
+                                <p><strong>Frequency:</strong> 2-3 times per day</p>
+                                <p><strong>Per Feeding:</strong> ${Math.round(dailyFeedAmount / 2.5)}g</p>
+                            ` : `
+                                <p style="color: #666; font-style: italic;">No fish in this tank</p>
+                            `}
                         </div>
                         
                         <div class="growth-chart-container">
@@ -13063,15 +18078,50 @@ class AquaponicsApp {
                                 Growth chart based on ${currentTemp}°C water temperature
                             </div>
                         </div>
+                        
+                        <div class="tank-actions">
+                            <button class="tank-action-btn primary" onclick="app.showAddFishModal(${tank.tank_number})">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                                </svg>
+                                Add Fish
+                            </button>
+                            <button class="tank-action-btn warning" onclick="app.showMortalityModal(${tank.tank_number})">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                                </svg>
+                                Mortality
+                            </button>
+                            <button class="tank-action-btn success" onclick="app.showFeedingModal(${tank.tank_number})">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                    <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7z"/>
+                                </svg>
+                                Feed
+                            </button>
+                            <button class="tank-action-btn harvest" onclick="app.showHarvestFishModal(${tank.tank_number})" 
+                                    style="background: #28a745; border-color: #28a745;">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                    <path d="M19 7h-3V6a4 4 0 0 0-8 0v1H5a1 1 0 0 0-1 1v11a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V8a1 1 0 0 0-1-1zM10 6a2 2 0 0 1 4 0v1h-4V6zm8 13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9h2v1a1 1 0 0 0 2 0V9h4v1a1 1 0 0 0 2 0V9h2v10z"/>
+                                </svg>
+                                🐟 Harvest
+                            </button>
+                        </div>
                     </div>
                 `;
             }).join('');
 
             container.innerHTML = tankCards;
 
-            // Initialize growth charts
-            systemData.fish_tanks.forEach(tank => {
-                this.initializeGrowthChart(tank.id, currentTemp, fishHealthData.filter(entry => entry.fish_tank_id === tank.tank_number));
+            // Initialize growth charts with actual fish data
+            fishTanks.forEach(tank => {
+                const inventory = tank.inventory || {};
+                const fishData = {
+                    fishCount: parseInt(inventory.current_count) || 0,
+                    avgWeight: parseFloat(inventory.average_weight) || 0,
+                    fishType: systemData.fish_type || 'tilapia',
+                    density: parseFloat(inventory.density_kg_m3) || 0
+                };
+                this.initializeGrowthChart(tank.id, currentTemp, fishData);
             });
 
         } catch (error) {
@@ -13085,31 +18135,97 @@ class AquaponicsApp {
         return recentEntry?.temperature || 25; // Default to 25°C
     }
 
-    initializeGrowthChart(tankId, temperature, healthData) {
+    initializeGrowthChart(tankId, temperature, fishData) {
         const chartElement = document.getElementById(`growth-chart-${tankId}`);
         if (!chartElement) return;
 
-        // Simple growth projection based on temperature
-        const tempFactor = Math.max(0.5, Math.min(1.5, (temperature - 15) / 15)); // Optimal around 25-30°C
-        const growthRate = tempFactor * 2; // grams per week base rate
+        // Calculate realistic growth projection based on fish data and environmental conditions
+        const fishCount = fishData.fishCount || 0;
+        const avgWeight = fishData.avgWeight || 0;
+        const fishType = fishData.fishType || 'tilapia';
+        const density = fishData.density || 0;
+
+        if (fishCount === 0) {
+            chartElement.innerHTML = `
+                <div style="padding: 20px; text-align: center; color: #7f8c8d;">
+                    <p style="margin: 10px 0;">
+                        <strong>Expected Weekly Growth:</strong> No fish in tank
+                    </p>
+                    <p style="font-size: 0.9em;">Add fish to see growth projections</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Species-specific growth parameters (grams per week at optimal conditions)
+        const speciesGrowthRates = {
+            tilapia: { baseRate: 15, optimalTempMin: 26, optimalTempMax: 30, maxTemp: 35 },
+            trout: { baseRate: 12, optimalTempMin: 15, optimalTempMax: 18, maxTemp: 22 },
+            catfish: { baseRate: 10, optimalTempMin: 24, optimalTempMax: 29, maxTemp: 32 },
+            bass: { baseRate: 8, optimalTempMin: 20, optimalTempMax: 25, maxTemp: 30 }
+        };
+        
+        const speciesData = speciesGrowthRates[fishType.toLowerCase()] || speciesGrowthRates.tilapia;
+
+        // Temperature factor based on species-specific optimal ranges
+        let tempFactor;
+        if (temperature < speciesData.optimalTempMin - 5) {
+            tempFactor = 0.3; // Very slow growth in cold water
+        } else if (temperature < speciesData.optimalTempMin) {
+            tempFactor = 0.6; // Slow growth below optimal
+        } else if (temperature <= speciesData.optimalTempMax) {
+            tempFactor = 1.0; // Optimal growth rate
+        } else if (temperature <= speciesData.maxTemp) {
+            tempFactor = 0.7; // Reduced growth in warm water
+        } else {
+            tempFactor = 0.2; // Stress conditions, very slow growth
+        }
+
+        // Size factor - smaller fish grow faster (relative to body weight)
+        const sizeFactor = avgWeight < 100 ? 1.2 : avgWeight < 300 ? 1.0 : 0.8;
+        
+        // Density factor - overcrowding reduces growth
+        const densityFactor = density > 50 ? 0.6 : density > 30 ? 0.8 : 1.0;
+
+        // Calculate final growth rate per fish
+        const baseGrowthRate = speciesData.baseRate;
+        const growthRate = baseGrowthRate * tempFactor * sizeFactor * densityFactor;
+
+        // Temperature impact description
+        let tempImpact;
+        if (temperature < speciesData.optimalTempMin - 5) {
+            tempImpact = 'Too cold - very slow growth';
+        } else if (temperature < speciesData.optimalTempMin) {
+            tempImpact = 'Below optimal - slow growth';
+        } else if (temperature <= speciesData.optimalTempMax) {
+            tempImpact = 'Optimal range - good growth';
+        } else if (temperature <= speciesData.maxTemp) {
+            tempImpact = 'Warm - reduced growth';
+        } else {
+            tempImpact = 'Too hot - stress conditions';
+        }
 
         chartElement.innerHTML = `
             <div style="padding: 20px; text-align: center;">
                 <p style="margin: 10px 0; color: #2c3e50;">
-                    <strong>Expected Weekly Growth:</strong> ${growthRate.toFixed(1)}g/week
+                    <strong>Expected Weekly Growth:</strong> ${growthRate.toFixed(1)}g/week per fish
                 </p>
                 <p style="margin: 10px 0; color: #7f8c8d; font-size: 0.9em;">
-                    Growth rate varies with temperature, feeding, and water quality
+                    Based on ${fishType} at ${avgWeight}g avg weight (${fishCount} fish)
                 </p>
                 <div style="background: #ecf0f1; border-radius: 4px; padding: 10px; margin-top: 10px;">
-                    <strong>Temperature Impact:</strong> ${temperature < 20 ? 'Slow growth' : temperature > 30 ? 'Stress conditions' : 'Optimal range'}
+                    <strong>Temperature Impact:</strong> ${tempImpact}
                 </div>
+                ${density > 30 ? `
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 8px; margin-top: 8px; font-size: 0.9em;">
+                    <strong>Density Alert:</strong> High density (${density.toFixed(1)} kg/m³) may reduce growth
+                </div>` : ''}
             </div>
         `;
     }
 
     loadFishHealthMonitoring() {
-        console.log('Loading fish health monitoring dashboard...');
+
         const container = document.querySelector('#fish-health-monitoring-content .fish-health-dashboard');
         if (!container) return;
 
@@ -13118,31 +18234,35 @@ class AquaponicsApp {
 
     async displayFishHealthDashboard(container) {
         try {
-            const fishHealthData = await this.makeApiCall(`/data-entries/fish-health?system_id=${this.activeSystemId}&limit=100`).catch((error) => {
-                console.log('Fish health API not available for dashboard:', error.message);
-                return [];
+            const fishInventoryData = await this.makeApiCall(`/fish-inventory/system/${this.activeSystemId}`).catch((error) => {
+
+                return { tanks: [] };
             });
-            const waterQualityData = await this.makeApiCall(`/data-entries/water-quality?system_id=${this.activeSystemId}&limit=50`).catch((error) => {
-                console.log('Water quality API not available for dashboard:', error.message);
+            
+            // Convert inventory data to a format similar to health data for compatibility
+            const inventoryTanks = fishInventoryData.tanks || [];
+            const waterQualityData = await this.makeApiCall(`/data/entries/water-quality?system_id=${this.activeSystemId}&limit=50`).catch((error) => {
+
                 return [];
             });
 
-            // Calculate health metrics
-            const totalFish = fishHealthData.reduce((sum, entry) => sum + (entry.count || 0), 0);
-            const totalMortality = fishHealthData.reduce((sum, entry) => sum + (entry.mortality || 0), 0);
-            const mortalityRate = totalFish > 0 ? ((totalMortality / totalFish) * 100).toFixed(1) : 0;
+            // Calculate health metrics from inventory data
+            const totalFish = inventoryTanks.reduce((sum, tank) => sum + (tank.current_count || 0), 0);
             
-            const recentEntries = fishHealthData.slice(0, 10);
-            const avgWeight = recentEntries.reduce((sum, entry) => sum + (entry.average_weight || 0), 0) / Math.max(recentEntries.length, 1);
+            // Calculate weighted average weight
+            let totalWeight = 0;
+            let totalCount = 0;
+            inventoryTanks.forEach(tank => {
+                const count = tank.current_count || 0;
+                const weight = tank.average_weight || 0;
+                totalWeight += count * weight;
+                totalCount += count;
+            });
+            const avgWeight = totalCount > 0 ? totalWeight / totalCount : 0;
             
-            const behaviorCounts = fishHealthData.reduce((counts, entry) => {
-                const behavior = entry.behavior || 'normal';
-                counts[behavior] = (counts[behavior] || 0) + 1;
-                return counts;
-            }, {});
-            
-            const normalBehaviorPercentage = behaviorCounts.normal ? 
-                ((behaviorCounts.normal / fishHealthData.length) * 100).toFixed(1) : 0;
+            // Mortality rate and behavior are not available in inventory - will be added with events later
+            const mortalityRate = 0; // TODO: Calculate from fish events
+            const normalBehaviorPercentage = 100; // TODO: Calculate from fish events
 
             // Get latest water quality
             const latestWaterQuality = waterQualityData[0];
@@ -13227,8 +18347,6 @@ class AquaponicsApp {
         
         // Calculate updated fish count (current + new additions - mortalities)
         const updatedCount = Math.max(0, currentCount + newFishAdded - newMortalities);
-        
-        console.log(`Fish count calculation: ${currentCount} + ${newFishAdded} - ${newMortalities} = ${updatedCount}`);
 
         const formData = {
             system_id: this.activeSystemId,
@@ -13284,7 +18402,7 @@ class AquaponicsApp {
 
     // System Sharing Methods
     loadSystemSharing() {
-        console.log('Loading system sharing...');
+
         this.setupSystemSharingEventListeners();
         this.loadSharedUsers();
         this.loadPendingInvitations();
@@ -13433,7 +18551,7 @@ class AquaponicsApp {
 
             const html = pendingInvitations.map(invitation => {
                 const initials = this.getUserInitials(invitation.email);
-                const sentDate = new Date(invitation.created_at).toLocaleDateString();
+                const sentDate = this.formatDateDDMMYYYY(new Date(invitation.created_at));
                 
                 return `
                     <div class="invitation-item">
@@ -13636,9 +18754,922 @@ class AquaponicsApp {
             return name.substring(0, 2).toUpperCase();
         }
     }
+
+    // Sensor Configuration Methods
+    async loadSensorConfiguration() {
+        // Check if credentials exist first
+        await this.checkThingsBoardCredentials();
+        this.setupSensorEventListeners();
+        await this.loadSensorsList();
+        // Load available devices and telemetry keys if credentials are valid
+        if (this.tbCredentialsValid) {
+            await this.loadThingsBoardDevices();
+        }
+    }
+    
+    async checkThingsBoardCredentials() {
+        try {
+            const response = await this.makeApiCall(`/credentials/thingsboard/status/${this.activeSystemId}`);
+            this.tbCredentialsValid = response.configured && response.connected;
+            
+            // Update status indicator
+            const statusIndicator = document.getElementById('tb-credential-status');
+            if (statusIndicator) {
+                statusIndicator.innerHTML = `
+                    <div class="credential-status ${response.connected ? 'connected' : 'disconnected'}">
+                        <span class="status-icon">${response.connected ? '✅' : '❌'}</span>
+                        <span class="status-text">${response.message}</span>
+                    </div>
+                `;
+            }
+            
+            if (!this.tbCredentialsValid) {
+                const sensorFormContainer = document.querySelector('.sensor-form-container');
+                if (sensorFormContainer) {
+                    sensorFormContainer.innerHTML = `
+                        <div class="alert alert-warning">
+                            <h4>⚠️ ThingsBoard Credentials Required</h4>
+                            <p>${response.message}</p>
+                            <button class="btn btn-primary" onclick="document.getElementById('credentials-tab').click()">
+                                Configure Credentials
+                            </button>
+                        </div>
+                    `;
+                }
+            } else {
+                // Restore sensor form if credentials are valid
+                this.restoreSensorForm();
+            }
+            return this.tbCredentialsValid;
+        } catch (error) {
+            console.error('Error checking ThingsBoard credentials:', error);
+            this.tbCredentialsValid = false;
+            return false;
+        }
+    }
+    
+    async loadThingsBoardDevices() {
+        try {
+            // Fetch available devices from ThingsBoard
+            const response = await this.makeApiCall(`/credentials/thingsboard/devices/${this.activeSystemId}`);
+            const devices = response.devices || [];
+            
+            const deviceSelect = document.getElementById('device-id');
+            if (deviceSelect && devices.length > 0) {
+                // Convert to dropdown if it's an input
+                let selectElement = deviceSelect;
+                if (deviceSelect.tagName === 'INPUT') {
+                    const newSelect = document.createElement('select');
+                    newSelect.id = 'device-id';
+                    newSelect.name = 'device_id';
+                    newSelect.required = true;
+                    newSelect.className = deviceSelect.className;
+                    
+                    // Replace input with select
+                    deviceSelect.parentNode.replaceChild(newSelect, deviceSelect);
+                    selectElement = newSelect;
+                }
+                
+                // Add options
+                selectElement.innerHTML = '<option value="">Select a device...</option>';
+                devices.forEach(device => {
+                    const option = document.createElement('option');
+                    option.value = device.id;
+                    option.textContent = `${device.name} (${device.type})`;
+                    option.dataset.deviceName = device.name;
+                    option.dataset.deviceType = device.type;
+                    selectElement.appendChild(option);
+                });
+                
+                // Add change listener to load telemetry keys
+                selectElement.addEventListener('change', async (e) => {
+                    if (e.target.value) {
+                        await this.loadTelemetryKeys(e.target.value);
+                    } else {
+                        // Clear telemetry keys if no device selected
+                        const telemetrySelect = document.getElementById('telemetry-key');
+                        if (telemetrySelect) {
+                            telemetrySelect.innerHTML = '<option value="">Select device first...</option>';
+                            telemetrySelect.disabled = true;
+                        }
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error loading ThingsBoard devices:', error);
+            this.showNotification('Failed to load devices. Please check your credentials.', 'error');
+        }
+    }
+    
+    async loadTelemetryKeys(deviceId) {
+        try {
+            // Fetch available telemetry keys for the selected device
+            const response = await this.makeApiCall(`/credentials/thingsboard/devices/${this.activeSystemId}/${deviceId}/telemetry-keys`);
+            const telemetryKeys = response.telemetryKeys || [];
+            
+            const telemetrySelect = document.getElementById('telemetry-key');
+            if (telemetrySelect) {
+                // Convert to dropdown if it's still an input
+                let selectElement = telemetrySelect;
+                if (telemetrySelect.tagName === 'INPUT') {
+                    const newSelect = document.createElement('select');
+                    newSelect.id = 'telemetry-key';
+                    newSelect.name = 'telemetry_key';
+                    newSelect.required = true;
+                    newSelect.className = telemetrySelect.className;
+                    
+                    telemetrySelect.parentNode.replaceChild(newSelect, telemetrySelect);
+                    selectElement = newSelect;
+                }
+                
+                selectElement.innerHTML = '<option value="">Select telemetry key...</option>';
+                
+                if (telemetryKeys.length > 0) {
+                    telemetryKeys.forEach(key => {
+                        const option = document.createElement('option');
+                        option.value = key;
+                        option.textContent = key;
+                        selectElement.appendChild(option);
+                    });
+                    selectElement.disabled = false;
+                } else {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No telemetry keys found';
+                    selectElement.appendChild(option);
+                    selectElement.disabled = true;
+                }
+            }
+        } catch (error) {
+            console.error('Error loading telemetry keys:', error);
+            const telemetrySelect = document.getElementById('telemetry-key');
+            if (telemetrySelect) {
+                telemetrySelect.innerHTML = '<option value="">Error loading keys</option>';
+                telemetrySelect.disabled = true;
+            }
+        }
+    }
+
+    restoreSensorForm() {
+        const sensorFormContainer = document.querySelector('.sensor-form-container');
+        if (sensorFormContainer && sensorFormContainer.innerHTML.includes('ThingsBoard Credentials Required')) {
+            // Reload the entire sensor configuration to restore the form
+            this.loadSensorConfiguration();
+        }
+    }
+
+    setupSensorEventListeners() {
+        // Add sensor form submission
+        const addSensorForm = document.getElementById('add-sensor-form');
+        if (addSensorForm) {
+            addSensorForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await this.saveSensorConfiguration();
+            });
+        }
+
+        // Test sensor connection button
+        const testConnectionBtn = document.getElementById('test-sensor-connection');
+        if (testConnectionBtn) {
+            testConnectionBtn.addEventListener('click', async () => {
+                await this.testSensorConnection();
+            });
+        }
+
+        // Table mapping change handler
+        const mappedTableSelect = document.getElementById('mapped-table');
+        if (mappedTableSelect) {
+            mappedTableSelect.addEventListener('change', (e) => {
+                this.updateFieldMappingOptions(e.target.value);
+            });
+        }
+
+        // Field mapping change handler
+        const mappedFieldSelect = document.getElementById('mapped-field');
+        if (mappedFieldSelect) {
+            mappedFieldSelect.addEventListener('change', () => {
+                this.updateMappingPreview();
+            });
+        }
+
+        // Transform change handler
+        const dataTransformSelect = document.getElementById('data-transform');
+        if (dataTransformSelect) {
+            dataTransformSelect.addEventListener('change', () => {
+                this.updateMappingPreview();
+            });
+        }
+    }
+
+    async loadSensorsList() {
+        if (!this.activeSystemId) return;
+
+        try {
+
+            const data = await this.makeApiCall(`/sensors/system/${this.activeSystemId}`);
+
+            const sensorsList = document.getElementById('sensors-list');
+            if (!sensorsList) {
+                console.error('🔧 sensors-list element not found!');
+                return;
+            }
+
+            if (!data.sensors || data.sensors.length === 0) {
+
+                sensorsList.innerHTML = '<div class="empty-sensors">No sensors configured yet. Add your first sensor above.</div>';
+                return;
+            }
+
+            // Generate sensor HTML with proper escaping and debugging
+            const sensorHtml = data.sensors.map(sensor => {
+                // Calculate online/offline status based on last reading
+                const isOnline = this.isSensorOnline(sensor.last_reading, sensor.update_interval, sensor.sensor_name);
+                const lastReadingTime = sensor.last_reading ? new Date(sensor.last_reading) : null;
+                const lastReadingDisplay = lastReadingTime ? 
+                    `${lastReadingTime.toLocaleDateString()} ${lastReadingTime.toLocaleTimeString()}` : 
+                    'Never';
+                
+                const html = `
+                <div class="sensor-item" data-sensor-id="${sensor.id}">
+                    <div class="sensor-info">
+                        <h5>${sensor.sensor_name || 'Unnamed Sensor'}</h5>
+                        <div class="sensor-details">
+                            <span><strong>Update Interval:</strong> ${sensor.update_interval || 300}s</span>
+                            <span><strong>Last Reading:</strong> ${lastReadingDisplay}</span>
+                        </div>
+                    </div>
+                    <div class="sensor-status">
+                        <div class="status-row">
+                            <label class="toggle-switch">
+                                <input type="checkbox" ${sensor.active ? 'checked' : ''} onchange="window.app.toggleSensorStatus(${sensor.id}, this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span>${sensor.active ? 'Sensor Data' : 'Manual Data'}</span>
+                        </div>
+                        <div class="status-row">
+                            <span class="status-indicator ${isOnline ? 'online' : 'offline'}"></span>
+                            <span>${isOnline ? 'Online' : 'Offline'}</span>
+                        </div>
+                    </div>
+                    <div class="sensor-actions">
+                        ${!sensor.active ? `
+                        <button type="button" class="btn btn-info" onclick="window.app.switchToTab('data-tab')" style="margin-right: 8px;">
+                            📝 Enter Data
+                        </button>
+                        ` : ''}
+                        <button type="button" class="btn btn-secondary" onclick="window.app.fetchSensorData(${sensor.id})" style="margin-right: 8px;">
+                            View Data
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="window.app.editSensor(${sensor.id})" style="margin-right: 8px;">
+                            Edit
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="window.app.deleteSensor(${sensor.id})">
+                            Delete
+                        </button>
+                    </div>
+                </div>`;
+
+                return html;
+            }).join('');
+
+            sensorsList.innerHTML = sensorHtml;
+            setTimeout(() => {
+                const viewButtons = sensorsList.querySelectorAll('button.btn-secondary');
+                const deleteButtons = sensorsList.querySelectorAll('button.btn-danger');
+
+                viewButtons.forEach((btn, idx) => {
+
+                });
+            }, 100);
+
+        } catch (error) {
+            console.error('Error loading sensors:', error);
+            this.showNotification('Failed to load sensors', 'error');
+        }
+    }
+
+    async saveSensorConfiguration() {
+        const form = document.getElementById('add-sensor-form');
+        const formData = new FormData(form);
+        
+        const sensorData = {
+            system_id: this.activeSystemId,
+            sensor_name: formData.get('sensor_name'),
+            sensor_type: formData.get('sensor_type'),
+            device_id: formData.get('device_id'),
+            telemetry_key: formData.get('telemetry_key'),
+            update_interval: parseInt(formData.get('update_interval')) || 300,
+            api_url: formData.get('api_url'),
+            mapped_table: formData.get('mapped_table') || null,
+            mapped_field: formData.get('mapped_field') || null,
+            data_transform: formData.get('data_transform') || null
+        };
+
+        if (!sensorData.sensor_name || !sensorData.sensor_type || !sensorData.device_id) {
+            this.showNotification('Please fill in all required fields', 'error');
+            return;
+        }
+
+        try {
+            let data;
+            let successMessage;
+            
+            if (this.editingSensorId) {
+                // Update existing sensor
+                data = await this.makeApiCall(`/sensors/${this.editingSensorId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(sensorData)
+                });
+                successMessage = 'Sensor configuration updated successfully';
+            } else {
+                // Create new sensor
+                data = await this.makeApiCall('/sensors', {
+                    method: 'POST',
+                    body: JSON.stringify(sensorData)
+                });
+                successMessage = 'Sensor configuration saved successfully';
+            }
+            
+            this.showNotification(successMessage, 'success');
+            
+            // Reset form and edit state
+            form.reset();
+            this.editingSensorId = null;
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.textContent = 'Add Sensor';
+            }
+            
+            await this.loadSensorsList();
+
+        } catch (error) {
+            console.error('Error saving sensor configuration:', error);
+            // Extract error message from the enhanced error object
+            const errorMessage = error.response?.error || error.message || 'Failed to save sensor configuration';
+            this.showNotification(errorMessage, 'error');
+        }
+    }
+
+    async testSensorConnection() {
+        const form = document.getElementById('add-sensor-form');
+        const formData = new FormData(form);
+        
+        const testData = {
+            system_id: this.activeSystemId,
+            api_url: formData.get('api_url') || 'https://tb.datascapeindustrial.com',
+            device_id: formData.get('device_id')
+        };
+
+        if (!testData.device_id) {
+            this.showNotification('Please enter a device ID to test connection', 'error');
+            return;
+        }
+
+        const testBtn = document.getElementById('test-sensor-connection');
+        const originalText = testBtn.textContent;
+        testBtn.textContent = 'Testing...';
+        testBtn.disabled = true;
+
+        try {
+            const result = await this.makeApiCall('/sensors/test', {
+                method: 'POST',
+                body: JSON.stringify(testData)
+            });
+            
+            if (result.success) {
+                this.showNotification('Connection test successful!', 'success');
+            } else {
+                this.showNotification(`Connection failed: ${result.error}`, 'error');
+            }
+
+        } catch (error) {
+            console.error('Error testing sensor connection:', error);
+            const errorMessage = error.response?.error || error.message || 'Connection test failed';
+            this.showNotification(errorMessage, 'error');
+        } finally {
+            testBtn.textContent = originalText;
+            testBtn.disabled = false;
+        }
+    }
+
+    async fetchSensorData(sensorId) {
+        try {
+            const data = await this.makeApiCall(`/sensors/data/${sensorId}`);
+            
+            // Show sensor data in a modal or alert for now
+            // In a real implementation, you'd create a proper modal or dashboard
+            alert(`Latest data for ${data.sensor_name}:\n\n${JSON.stringify(data.data, null, 2)}`);
+            
+        } catch (error) {
+            console.error('Error fetching sensor data:', error);
+            const errorMessage = error.response?.error || error.message || 'Failed to fetch sensor data';
+            this.showNotification(errorMessage, 'error');
+        }
+    }
+
+    async toggleSensorStatus(sensorId, isActive) {
+        try {
+            const response = await this.makeApiCall(`/sensors/${sensorId}/toggle`, {
+                method: 'PATCH'
+            });
+
+            // Show appropriate notification with guidance
+            if (isActive) {
+                this.showNotification('Sensor switched to automatic data collection', 'success');
+            } else {
+                this.showNotification('Sensor switched to manual data entry. Use the Data tab to input readings manually.', 'info');
+            }
+            
+            // Refresh the sensor list to show updated status
+            await this.loadSensorsList();
+
+        } catch (error) {
+            console.error('Error toggling sensor status:', error);
+            const errorMessage = error.response?.error || error.message || 'Failed to toggle sensor status';
+            this.showNotification(errorMessage, 'error');
+            
+            // Refresh the list to revert toggle state on error
+            await this.loadSensorsList();
+        }
+    }
+
+    switchToTab(tabId) {
+        const tabElement = document.getElementById(tabId);
+        if (tabElement) {
+            tabElement.click();
+        }
+    }
+
+    async deleteSensor(sensorId) {
+        if (!confirm('Are you sure you want to delete this sensor configuration?')) {
+            return;
+        }
+
+        try {
+            await this.makeApiCall(`/sensors/${sensorId}`, {
+                method: 'DELETE'
+            });
+
+            this.showNotification('Sensor deleted successfully', 'success');
+            await this.loadSensorsList();
+
+        } catch (error) {
+            console.error('Error deleting sensor:', error);
+            const errorMessage = error.response?.error || error.message || 'Failed to delete sensor';
+            this.showNotification(errorMessage, 'error');
+        }
+    }
+
+    async editSensor(sensorId) {
+        try {
+            // Get sensor data from the sensor list
+            const sensorsResponse = await this.makeApiCall(`/sensors/system/${this.activeSystemId}`);
+            const sensor = sensorsResponse.sensors.find(s => s.id == sensorId);
+            
+            if (!sensor) {
+                this.showNotification('Sensor not found', 'error');
+                return;
+            }
+            
+            // Populate the form with sensor data
+            const form = document.getElementById('add-sensor-form');
+            if (!form) {
+                this.showNotification('Edit form not found', 'error');
+                return;
+            }
+            
+            // Fill in the form fields
+            document.getElementById('sensor-name').value = sensor.sensor_name || '';
+            document.getElementById('sensor-type').value = sensor.sensor_type || '';
+            document.getElementById('device-id').value = sensor.device_id || '';
+            document.getElementById('telemetry-key').value = sensor.telemetry_key || '';
+            document.getElementById('update-interval').value = sensor.update_interval || 300;
+            document.getElementById('api-url').value = sensor.api_url || '';
+            
+            // Handle mapping fields
+            const mappedTableSelect = document.getElementById('mapped-table');
+            const mappedFieldSelect = document.getElementById('mapped-field');
+            
+            if (sensor.mapped_table) {
+                mappedTableSelect.value = sensor.mapped_table;
+                this.updateFieldMappingOptions(sensor.mapped_table);
+                
+                // Wait a moment for field options to populate, then set the field
+                setTimeout(() => {
+                    if (sensor.mapped_field) {
+                        mappedFieldSelect.value = sensor.mapped_field;
+                    }
+                }, 100);
+            }
+            
+            if (sensor.data_transform) {
+                document.getElementById('data-transform').value = sensor.data_transform;
+            }
+            
+            // Change the form to edit mode
+            this.editingSensorId = sensorId;
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.textContent = 'Update Sensor';
+            }
+            
+            // Scroll to form
+            form.scrollIntoView({ behavior: 'smooth' });
+            
+            this.showNotification('Editing sensor configuration', 'info');
+            
+        } catch (error) {
+            console.error('Error loading sensor for edit:', error);
+            this.showNotification('Failed to load sensor for editing', 'error');
+        }
+    }
+
+    updateFieldMappingOptions(selectedTable) {
+        const fieldSelect = document.getElementById('mapped-field');
+        if (!fieldSelect) return;
+
+        // Clear existing options
+        fieldSelect.innerHTML = '<option value="">Select field</option>';
+        
+        if (!selectedTable) {
+            fieldSelect.disabled = true;
+            return;
+        }
+
+        fieldSelect.disabled = false;
+
+        // Define available fields for each table
+        const fieldMappings = {
+            nutrient_readings: {
+                'ph': 'pH Level',
+                'ec': 'Electrical Conductivity (mS/cm)',
+                'dissolved_oxygen': 'Dissolved Oxygen (mg/L)',
+                'temperature': 'Water Temperature (°C)',
+                'ammonia': 'Ammonia (mg/L)',
+                'nitrite': 'Nitrite (mg/L)',
+                'nitrate': 'Nitrate (mg/L)',
+                'iron': 'Iron (mg/L)',
+                'potassium': 'Potassium (mg/L)',
+                'calcium': 'Calcium (mg/L)',
+                'phosphorus': 'Phosphorus (mg/L)',
+                'magnesium': 'Magnesium (mg/L)',
+                'humidity': 'Humidity (%)',
+                'salinity': 'Salinity (ppt)'
+            },
+            fish_health: {
+                'count': 'Fish Count',
+                'mortality': 'Fish Mortality',
+                'average_weight': 'Average Weight (g)',
+                'feed_consumption': 'Feed Consumption (g)'
+            }
+        };
+
+        const fields = fieldMappings[selectedTable];
+        if (fields) {
+            Object.entries(fields).forEach(([value, label]) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = label;
+                fieldSelect.appendChild(option);
+            });
+        }
+
+        this.updateMappingPreview();
+    }
+
+    updateMappingPreview() {
+        const tableSelect = document.getElementById('mapped-table');
+        const fieldSelect = document.getElementById('mapped-field');
+        const transformSelect = document.getElementById('data-transform');
+        const preview = document.getElementById('mapping-preview');
+        const description = document.getElementById('mapping-description');
+
+        if (!tableSelect || !fieldSelect || !transformSelect || !preview || !description) return;
+
+        const table = tableSelect.value;
+        const field = fieldSelect.value;
+        const transform = transformSelect.value;
+
+        if (!table || !field) {
+            preview.style.display = 'none';
+            return;
+        }
+
+        let text = `Sensor data will be automatically saved to "${tableSelect.options[tableSelect.selectedIndex].text}" → "${fieldSelect.options[fieldSelect.selectedIndex].text}"`;
+        
+        if (transform) {
+            const transformLabels = {
+                'celsius_to_fahrenheit': '(converted from °C to °F)',
+                'fahrenheit_to_celsius': '(converted from °F to °C)',
+                'multiply_100': '(multiplied by 100)',
+                'divide_100': '(divided by 100)'
+            };
+            text += ` ${transformLabels[transform] || `(${transform})`}`;
+        }
+
+        description.textContent = text;
+        preview.style.display = 'block';
+    }
+
+    // Credentials Management Methods
+    async loadCredentialsStatus() {
+        this.setupCredentialsEventListeners();
+        await this.checkCredentialsStatus();
+    }
+
+    setupCredentialsEventListeners() {
+        // ThingsBoard credentials form submission
+        const tbCredentialsForm = document.getElementById('thingsboard-credentials-form');
+        if (tbCredentialsForm) {
+            tbCredentialsForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await this.saveThingsBoardCredentials();
+            });
+        }
+
+        // Test credentials button
+        const testCredentialsBtn = document.getElementById('test-tb-credentials');
+        if (testCredentialsBtn) {
+            testCredentialsBtn.addEventListener('click', async () => {
+                await this.testThingsBoardCredentials();
+            });
+        }
+    }
+
+    async checkCredentialsStatus() {
+        if (!this.activeSystemId) return;
+
+        try {
+            const data = await this.makeApiCall(`/credentials/system/${this.activeSystemId}`);
+            const tbCredentials = data.credentials.find(cred => cred.service_name === 'thingsboard');
+            
+            const statusElement = document.getElementById('tb-status');
+            const lastUpdatedElement = document.getElementById('tb-last-updated');
+            
+            if (tbCredentials) {
+                statusElement.textContent = 'Configured';
+                statusElement.style.color = '#28a745';
+                lastUpdatedElement.textContent = new Date(tbCredentials.updated_at || tbCredentials.created_at).toLocaleString();
+                
+                // Pre-populate the API URL if available
+                const apiUrlField = document.getElementById('tb-api-url');
+                if (apiUrlField && tbCredentials.api_url) {
+                    apiUrlField.value = tbCredentials.api_url;
+                }
+            } else {
+                statusElement.textContent = 'Not configured';
+                statusElement.style.color = '#dc3545';
+                lastUpdatedElement.textContent = 'Never';
+            }
+            
+        } catch (error) {
+            console.error('Error checking credentials status:', error);
+            const statusElement = document.getElementById('tb-status');
+            if (statusElement) {
+                statusElement.textContent = 'Error loading status';
+                statusElement.style.color = '#dc3545';
+            }
+        }
+    }
+
+    async saveThingsBoardCredentials() {
+        const form = document.getElementById('thingsboard-credentials-form');
+        const formData = new FormData(form);
+        
+        const credentialsData = {
+            system_id: this.activeSystemId,
+            service_name: 'thingsboard',
+            api_url: formData.get('api_url'),
+            username: formData.get('username'),
+            password: formData.get('password')
+        };
+
+        if (!credentialsData.username || !credentialsData.password) {
+            this.showNotification('Please enter both username and password', 'error');
+            return;
+        }
+
+        const saveBtn = form.querySelector('button[type="submit"]');
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = 'Saving...';
+        saveBtn.disabled = true;
+
+        try {
+            await this.makeApiCall('/credentials', {
+                method: 'POST',
+                body: JSON.stringify(credentialsData)
+            });
+            
+            this.showNotification('ThingsBoard credentials saved successfully!', 'success');
+            
+            // Clear password field for security
+            document.getElementById('tb-password').value = '';
+            
+            // Refresh status
+            await this.checkCredentialsStatus();
+            
+        } catch (error) {
+            console.error('Error saving credentials:', error);
+            const errorMessage = error.response?.error || error.message || 'Failed to save credentials';
+            this.showNotification(errorMessage, 'error');
+        } finally {
+            saveBtn.textContent = originalText;
+            saveBtn.disabled = false;
+        }
+    }
+
+    async testThingsBoardCredentials() {
+        const form = document.getElementById('thingsboard-credentials-form');
+        const formData = new FormData(form);
+        
+        const testData = {
+            system_id: this.activeSystemId,
+            api_url: formData.get('api_url'),
+            username: formData.get('username'),
+            password: formData.get('password')
+        };
+
+        if (!testData.username || !testData.password) {
+            this.showNotification('Please enter credentials to test', 'error');
+            return;
+        }
+
+        const testBtn = document.getElementById('test-tb-credentials');
+        const originalText = testBtn.textContent;
+        testBtn.textContent = 'Testing...';
+        testBtn.disabled = true;
+
+        try {
+            // For testing, we can create a temporary credential and test with a dummy device
+            const result = await this.makeApiCall('/sensors/test', {
+                method: 'POST',
+                body: JSON.stringify({
+                    ...testData,
+                    device_id: 'test-device-id' // Dummy device ID for testing auth
+                })
+            });
+            
+            if (result.success) {
+                this.showNotification('ThingsBoard authentication successful!', 'success');
+            } else {
+                this.showNotification(`Authentication failed: ${result.error}`, 'error');
+            }
+
+        } catch (error) {
+            console.error('Error testing credentials:', error);
+            const errorMessage = error.response?.error || error.message || 'Authentication test failed';
+            this.showNotification(errorMessage, 'error');
+        } finally {
+            testBtn.textContent = originalText;
+            testBtn.disabled = false;
+        }
+    }
+
+    // Dashboard metrics configuration functions
+    openMetricsConfig() {
+
+        const modal = document.getElementById('metrics-config-modal');
+
+        if (modal) {
+            modal.style.display = 'block';
+            this.loadMetricPreferences();
+        } else {
+            console.error('Metrics config modal not found in DOM');
+        }
+    }
+
+    closeMetricsConfig() {
+        const modal = document.getElementById('metrics-config-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    loadMetricPreferences() {
+        const preferences = this.getMetricPreferences();
+        
+        // Update checkboxes based on saved preferences
+        const checkboxes = document.querySelectorAll('#metrics-config-modal input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            const metric = checkbox.value;
+            checkbox.checked = preferences[metric] !== false; // Default to true if not specified
+        });
+    }
+
+    saveMetricsConfig() {
+        const checkboxes = document.querySelectorAll('#metrics-config-modal input[type="checkbox"]');
+        const preferences = {};
+        
+        checkboxes.forEach(checkbox => {
+            preferences[checkbox.value] = checkbox.checked;
+        });
+        
+        // Save to localStorage
+        localStorage.setItem('dashboardMetricPreferences', JSON.stringify(preferences));
+        
+        // Apply the preferences immediately
+        this.applyMetricPreferences();
+        
+        // Close the modal
+        this.closeMetricsConfig();
+        
+        // Show success notification
+        this.showNotification('Dashboard metrics updated successfully', 'success');
+    }
+
+    getMetricPreferences() {
+        const saved = localStorage.getItem('dashboardMetricPreferences');
+        if (saved) {
+            return JSON.parse(saved);
+        }
+        
+        // Default preferences - all available dashboard metrics visible
+        return {
+            temperature: true,
+            ph: true,
+            dissolved_oxygen: true,
+            ammonia: true,
+            ec: true,
+            humidity: true,
+            salinity: true,
+            nitrate: true,
+            nitrite: true,
+            phosphorus: true,
+            potassium: true,
+            calcium: true,
+            magnesium: true,
+            iron: true
+        };
+    }
+
+    applyMetricPreferences() {
+        const preferences = this.getMetricPreferences();
+
+        // Show/hide chart cards based on preferences
+        Object.keys(preferences).forEach(metric => {
+            const chartCard = document.querySelector(`[data-metric="${metric}"]`);
+
+            if (chartCard) {
+                if (preferences[metric]) {
+                    chartCard.style.display = '';
+                } else {
+                    chartCard.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    initializeMetricPreferences() {
+        // Apply saved preferences on page load
+        this.applyMetricPreferences();
+    }
+
+    initializeSensorConfigTabs() {
+        const sensorTabs = document.querySelectorAll('.sensor-tab');
+        const sensorTabContents = document.querySelectorAll('.sensor-tab-content');
+
+        sensorTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetId = tab.getAttribute('data-target');
+
+                // Remove active class from all tabs and contents
+                sensorTabs.forEach(t => t.classList.remove('active'));
+                sensorTabContents.forEach(content => content.classList.remove('active'));
+
+                // Add active class to clicked tab and corresponding content
+                tab.classList.add('active');
+                const targetContent = document.getElementById(targetId);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                }
+            });
+        });
+    }
 }
 
 let app;
+
+// Global functions for metrics configuration (accessible before app initialization)
+window.openMetricsConfig = function() {
+
+    if (window.app) {
+        window.app.openMetricsConfig();
+    } else {
+        console.error('App not initialized yet');
+    }
+};
+
+window.closeMetricsConfig = function() {
+    if (window.app) {
+        window.app.closeMetricsConfig();
+    }
+};
+
+window.saveMetricsConfig = function() {
+    if (window.app) {
+        window.app.saveMetricsConfig();
+    }
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -13647,6 +19678,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     app = new AquaponicsApp();
     window.app = app;
+    
+    // Initialize dashboard metric preferences
+    app.initializeMetricPreferences();
+    
+    // Initialize sensor config tabs
+    app.initializeSensorConfigTabs();
     
     // Set up add spray programme form event listeners
     const addSprayForm = document.getElementById('add-spray-form');
@@ -13661,7 +19698,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             const addSprayModal = document.getElementById('add-spray-modal');
-            if (addSprayModal && addSprayModal.style.display === 'flex') {
+            if (addSprayModal && addSprayModal.classList.contains('show')) {
                 app.closeAddSprayModal();
             }
         }
@@ -13677,7 +19714,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 });
-
 
 // Grow bed management functionality
 class GrowBedManager {
@@ -14020,8 +20056,6 @@ class GrowBedManager {
         const volume = parseFloat(bedItem.querySelector('.calculated-volume')?.textContent.replace(' m³', '')) || 0;
         const area = parseFloat(bedItem.querySelector('.calculated-area')?.textContent.replace(' m²', '')) || 0;
 
-        console.log(`Saving bed ${bedNumber}: type=${bedType}, volume=${volume}, area=${area}`);
-
         // Check if required dimensions are filled based on bed type
         let isValid = false;
         let missingFields = [];
@@ -14118,16 +20152,15 @@ class GrowBedManager {
             }
             
             // Save all beds together
-            console.log('About to save grow beds...');
+
             const response = await window.app.makeApiCall(`/grow-beds/system/${window.app.activeSystemId}`, {
                 method: 'POST',
                 body: JSON.stringify({ growBeds: allBedConfigs })
             });
-            console.log('API response received:', response);
 
             if (window.app && window.app.showNotification) {
                 window.app.showNotification(`✅ Bed ${bedNumber} configuration saved`, 'success');
-                console.log('Notification sent for bed save success');
+
             } else {
                 console.error('window.app.showNotification not available');
                 alert(`✅ Bed ${bedNumber} configuration saved`);
@@ -14183,23 +20216,17 @@ class GrowBedManager {
         const bedItems = document.querySelectorAll('.grow-bed-item');
         const configuration = [];
 
-        console.log('Getting grow bed configuration for', bedItems.length, 'beds');
-
         bedItems.forEach((item, index) => {
             const bedNumber = index + 1;
             const bedType = item.querySelector('.bed-type').value;
-            
-            console.log(`Bed ${bedNumber}: type = "${bedType}"`);
-            
+
             if (!bedType) {
-                console.log(`Bed ${bedNumber}: No bed type selected, skipping`);
+
                 return;
             }
 
             const volume = parseFloat(item.querySelector('.calculated-volume')?.textContent.replace(' m³', '')) || 0;
             const area = parseFloat(item.querySelector('.calculated-area')?.textContent.replace(' m²', '')) || 0;
-
-            console.log(`Bed ${bedNumber}: volume = ${volume}m³, area = ${area}m²`);
 
             // Save bed configuration if bed type is selected, even if calculations are incomplete
             if (bedType) {
@@ -14239,11 +20266,10 @@ class GrowBedManager {
                 }
 
                 configuration.push(config);
-                console.log(`Bed ${bedNumber}: Added to configuration`, config);
+
             }
         });
 
-        console.log('Final grow bed configuration:', configuration);
         return configuration;
     }
 }
@@ -14321,8 +20347,7 @@ const SVGIcons = {
     async preloadIcons() {
         const icons = ['add', 'edit', 'delete'];
         await Promise.all(icons.map(icon => this.loadSVG(icon)));
-        console.log('SVG icons preloaded:', Object.keys(this.cache));
-        
+
         // Replace icon placeholders after preloading
         this.replaceIconPlaceholders();
         
@@ -14347,7 +20372,7 @@ const SVGIcons = {
             svg.removeAttribute('width');
             svg.removeAttribute('height');
         });
-        console.log('Fixed', svgElements.length, 'existing SVG icons');
+
     }
 };
 

@@ -12,11 +12,16 @@ const growBedRoutes = require('./routes/grow-beds');
 const plantsRoutes = require('./routes/plants');
 const fishRoutes = require('./routes/fish');
 const fishTankRoutes = require('./routes/fish-tanks');
+const fishInventoryRoutes = require('./routes/fish-inventory');
 const adminRoutes = require('./routes/admin');
 const configRoutes = require('./routes/config');
 const systemSharingRoutes = require('./routes/system-sharing');
 const sprayProgrammeRoutes = require('./routes/spray-programmes');
-const { initializeDatabase } = require('./database/init');
+const sensorRoutes = require('./routes/sensors');
+const credentialsRoutes = require('./routes/credentials');
+const seedVarietiesRoutes = require('./routes/seed-varieties');
+const { initializeDatabase } = require('./database/init-mariadb');
+const sensorCollector = require('./services/sensor-collector');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -62,10 +67,14 @@ app.use('/api/grow-beds', growBedRoutes);
 app.use('/api/plants', plantsRoutes);
 app.use('/api/fish', fishRoutes);
 app.use('/api/fish-tanks', fishTankRoutes);
+app.use('/api/fish-inventory', fishInventoryRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/system-sharing', systemSharingRoutes);
 app.use('/api/spray-programmes', sprayProgrammeRoutes);
+app.use('/api/sensors', sensorRoutes);
+app.use('/api/credentials', credentialsRoutes);
+app.use('/api/seed-varieties', seedVarietiesRoutes);
 
 // Email verification route - serve main page with token parameter
 app.get('/verify-email', (req, res) => {
@@ -88,11 +97,21 @@ app.use((req, res) => {
     res.status(404).json({ error: 'Endpoint not found' });
 });
 
+// Global sensor collector instance is imported above
+
 // Initialize database and start server
 initializeDatabase().then(() => {
     app.listen(PORT, '127.0.0.1', () => {
         console.log(`🌿 Afraponix Go server running on http://127.0.0.1:${PORT}`);
         console.log(`📊 Health check: http://127.0.0.1:${PORT}/api/health`);
+        
+        // Initialize sensor data collection service
+        // SensorCollector is already instantiated
+        sensorCollector.start().then(() => {
+            console.log('📊 Sensor data collection service started');
+        }).catch(err => {
+            console.error('Failed to start sensor data collection:', err);
+        });
     }).on('error', (err) => {
         console.error('Server failed to start:', err);
         process.exit(1);
@@ -101,5 +120,25 @@ initializeDatabase().then(() => {
     console.error('Failed to initialize database:', err);
     process.exit(1);
 });
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully...');
+    if (sensorCollector) {
+        sensorCollector.stop();
+    }
+    process.exit(0);
+});
+
+process.on('SIGINT', () => {
+    console.log('SIGINT received, shutting down gracefully...');
+    if (sensorCollector) {
+        sensorCollector.stop();
+    }
+    process.exit(0);
+});
+
+// Make sensor collector available globally for routes
+global.sensorCollector = sensorCollector;
 
 module.exports = app;

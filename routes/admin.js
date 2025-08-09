@@ -1,5 +1,5 @@
 const express = require('express');
-const { getDatabase } = require('../database/init');
+const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
 
 const router = express.Router();
@@ -10,27 +10,24 @@ router.use(isAdmin);
 
 // Get all users (admin only)
 router.get('/users', async (req, res) => {
-    const db = getDatabase();
+    let connection;
 
     try {
-        const users = await new Promise((resolve, reject) => {
-            db.all(`
-                SELECT 
-                    id, username, email, first_name, last_name, 
-                    user_role, subscription_status, created_at
-                FROM users 
-                ORDER BY created_at DESC
-            `, (err, rows) => {
-                if (err) reject(err);
-                else resolve(rows);
-            });
-        });
+        connection = await getDatabase();
+        
+        const [users] = await connection.execute(`
+            SELECT 
+                id, username, email, first_name, last_name, 
+                user_role, subscription_status, created_at
+            FROM users 
+            ORDER BY created_at DESC
+        `);
 
-        db.close();
+        await connection.end();
         res.json(users);
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Error fetching users:', error);
         res.status(500).json({ error: 'Failed to fetch users' });
     }
@@ -56,9 +53,11 @@ router.put('/users/:userId', async (req, res) => {
         return res.status(400).json({ error: 'Invalid subscription status' });
     }
 
-    const db = getDatabase();
+    let connection;
 
     try {
+        connection = await getDatabase();
+        
         let updateFields = [];
         let updateValues = [];
 
@@ -74,30 +73,19 @@ router.put('/users/:userId', async (req, res) => {
 
         updateValues.push(userId);
 
-        await new Promise((resolve, reject) => {
-            db.run(
-                `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`,
-                updateValues,
-                (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                }
-            );
-        });
+        await connection.execute(
+            `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`,
+            updateValues
+        );
 
         // Get updated user info
-        const updatedUser = await new Promise((resolve, reject) => {
-            db.get(
-                'SELECT id, username, email, first_name, last_name, user_role, subscription_status FROM users WHERE id = ?',
-                [userId],
-                (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row);
-                }
-            );
-        });
+        const [userRows] = await connection.execute(
+            'SELECT id, username, email, first_name, last_name, user_role, subscription_status FROM users WHERE id = ?',
+            [userId]
+        );
+        const updatedUser = userRows[0];
 
-        db.close();
+        await connection.end();
         res.json({ 
             success: true, 
             message: 'User updated successfully',
@@ -105,7 +93,7 @@ router.put('/users/:userId', async (req, res) => {
         });
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Error updating user:', error);
         res.status(500).json({ error: 'Failed to update user' });
     }
@@ -121,32 +109,28 @@ router.post('/users/:userId/reset-password', async (req, res) => {
     }
 
     const bcrypt = require('bcryptjs');
-    const db = getDatabase();
+    let connection;
 
     try {
+        connection = await getDatabase();
+        
         // Hash new password
         const saltRounds = 10;
         const passwordHash = await bcrypt.hash(newPassword, saltRounds);
 
-        await new Promise((resolve, reject) => {
-            db.run(
-                'UPDATE users SET password_hash = ? WHERE id = ?',
-                [passwordHash, userId],
-                (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                }
-            );
-        });
+        await connection.execute(
+            'UPDATE users SET password_hash = ? WHERE id = ?',
+            [passwordHash, userId]
+        );
 
-        db.close();
+        await connection.end();
         res.json({ 
             success: true, 
             message: 'Password reset successfully' 
         });
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Error resetting password:', error);
         res.status(500).json({ error: 'Failed to reset password' });
     }
@@ -155,25 +139,21 @@ router.post('/users/:userId/reset-password', async (req, res) => {
 // Get user's systems (admin can view any user's systems)
 router.get('/users/:userId/systems', async (req, res) => {
     const { userId } = req.params;
-    const db = getDatabase();
+    let connection;
 
     try {
-        const systems = await new Promise((resolve, reject) => {
-            db.all(
-                'SELECT * FROM systems WHERE user_id = ? ORDER BY created_at DESC',
-                [userId],
-                (err, rows) => {
-                    if (err) reject(err);
-                    else resolve(rows);
-                }
-            );
-        });
+        connection = await getDatabase();
+        
+        const [systems] = await connection.execute(
+            'SELECT * FROM systems WHERE user_id = ? ORDER BY created_at DESC',
+            [userId]
+        );
 
-        db.close();
+        await connection.end();
         res.json(systems);
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Error fetching user systems:', error);
         res.status(500).json({ error: 'Failed to fetch user systems' });
     }
@@ -188,28 +168,24 @@ router.delete('/users/:userId', async (req, res) => {
         return res.status(400).json({ error: 'Cannot delete your own account' });
     }
 
-    const db = getDatabase();
+    let connection;
 
     try {
-        await new Promise((resolve, reject) => {
-            db.run(
-                'DELETE FROM users WHERE id = ?',
-                [userId],
-                (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                }
-            );
-        });
+        connection = await getDatabase();
+        
+        await connection.execute(
+            'DELETE FROM users WHERE id = ?',
+            [userId]
+        );
 
-        db.close();
+        await connection.end();
         res.json({ 
             success: true, 
             message: 'User deleted successfully' 
         });
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Error deleting user:', error);
         res.status(500).json({ error: 'Failed to delete user' });
     }
@@ -217,55 +193,44 @@ router.delete('/users/:userId', async (req, res) => {
 
 // Get system statistics (admin dashboard)
 router.get('/stats', async (req, res) => {
-    const db = getDatabase();
+    let connection;
 
     try {
+        connection = await getDatabase();
+        
         const stats = {};
 
         // User counts by role
-        const userStats = await new Promise((resolve, reject) => {
-            db.all(`
-                SELECT 
-                    user_role,
-                    subscription_status,
-                    COUNT(*) as count
-                FROM users 
-                GROUP BY user_role, subscription_status
-            `, (err, rows) => {
-                if (err) reject(err);
-                else resolve(rows);
-            });
-        });
+        const [userStats] = await connection.execute(`
+            SELECT 
+                user_role,
+                subscription_status,
+                COUNT(*) as count
+            FROM users 
+            GROUP BY user_role, subscription_status
+        `);
 
         // Total systems
-        const systemCount = await new Promise((resolve, reject) => {
-            db.get('SELECT COUNT(*) as count FROM systems', (err, row) => {
-                if (err) reject(err);
-                else resolve(row.count);
-            });
-        });
+        const [systemRows] = await connection.execute('SELECT COUNT(*) as count FROM systems');
+        const systemCount = systemRows[0].count;
 
-        // Recent registrations (last 30 days)
-        const recentUsers = await new Promise((resolve, reject) => {
-            db.get(`
-                SELECT COUNT(*) as count 
-                FROM users 
-                WHERE created_at > datetime('now', '-30 days')
-            `, (err, row) => {
-                if (err) reject(err);
-                else resolve(row.count);
-            });
-        });
+        // Recent registrations (last 30 days) - Convert SQLite datetime to MariaDB DATE_SUB
+        const [recentRows] = await connection.execute(`
+            SELECT COUNT(*) as count 
+            FROM users 
+            WHERE created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)
+        `);
+        const recentUsers = recentRows[0].count;
 
         stats.users = userStats;
         stats.totalSystems = systemCount;
         stats.recentRegistrations = recentUsers;
 
-        db.close();
+        await connection.end();
         res.json(stats);
 
     } catch (error) {
-        db.close();
+        if (connection) await connection.end();
         console.error('Error fetching admin stats:', error);
         res.status(500).json({ error: 'Failed to fetch statistics' });
     }
