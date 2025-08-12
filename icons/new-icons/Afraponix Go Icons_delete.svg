@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #0051b1;
+      }
+    </style>
+  </defs>
+  <!-- PLACEHOLDER - Delete/Trash Icon -->
+  <rect class="cls-1" x="80" y="120" width="140" height="150" rx="10"/>
+  <rect class="cls-1" x="70" y="100" width="160" height="30" rx="15"/>
+  <rect class="cls-1" x="120" y="80" width="60" height="30" rx="15"/>
+  <line class="cls-1" x1="110" y1="140" x2="110" y2="240" stroke="#fff" stroke-width="8"/>
+  <line class="cls-1" x1="150" y1="140" x2="150" y2="240" stroke="#fff" stroke-width="8"/>
+  <line class="cls-1" x1="190" y1="140" x2="190" y2="240" stroke="#fff" stroke-width="8"/>
+</svg>

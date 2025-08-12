@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #0051b1;
+      }
+    </style>
+  </defs>
+  <!-- PLACEHOLDER - Labels/Tag Icon -->
+  <path class="cls-1" d="M50,50 L200,50 L250,100 L200,150 L50,150 Z"/>
+  <circle class="cls-1" cx="80" cy="100" r="15"/>
+</svg>

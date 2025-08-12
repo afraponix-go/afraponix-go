@@ -8,6 +8,7 @@
     <meta name="apple-mobile-web-app-title" content="Afraponix Go">
     <title>Afraponix Go - Aquaponics Monitor</title>
     <link rel="icon" href="logo.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="app-styles.css">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="enhanced-calculator.css">
     <link rel="stylesheet" href="fish-calc-clean.css">
@@ -170,90 +171,113 @@
                     Metrics
                 </button>
             </div>
+            
+            <!-- Dashboard Sub-tabs -->
+            <div class="dashboard-tabs">
+                <button id="dashboard-overview-tab" class="dashboard-tab active">Overview</button>
+                <button id="dashboard-farm-layout-tab" class="dashboard-tab">Farm Layout</button>
+            </div>
+            
+            <!-- Dashboard Overview Content -->
+            <div id="dashboard-overview-content" class="dashboard-content active">
             <div class="charts-grid">
-                <div class="chart-card" data-metric="temperature">
-                    <h3>Water Temperature</h3>
-                    <div class="stat-value" id="water-temp">Loading...</div>
+                <div class="chart-card metric-card" data-metric="temperature">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_parameters.svg" alt="Temperature" class="metric-icon-svg"></div>
+                    <div class="metric-value" id="water-temp">Loading...</div>
+                    <div class="metric-label">Water Temperature</div>
                     <canvas id="temp-chart" width="200" height="100"></canvas>
                     <div class="chart-timestamp" id="temp-chart-timestamp">Last updated: Loading...</div>
                 </div>
-                <div class="chart-card" data-metric="ph">
-                    <h3>pH Level</h3>
-                    <div class="stat-value" id="ph-level">Loading...</div>
+                <div class="chart-card metric-card" data-metric="ph">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_hydro.svg" alt="Water" class="metric-icon-svg"></div>
+                    <div class="metric-value" id="ph-level">Loading...</div>
+                    <div class="metric-label">pH Level</div>
                     <canvas id="ph-chart" width="200" height="100"></canvas>
                     <div class="chart-timestamp" id="ph-chart-timestamp">Last updated: Loading...</div>
                 </div>
-                <div class="chart-card" data-metric="dissolved_oxygen">
-                    <h3>Dissolved Oxygen</h3>
-                    <div class="stat-value" id="dissolved-oxygen">Loading...</div>
+                <div class="chart-card metric-card" data-metric="dissolved_oxygen">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_oxygen.svg" alt="Oxygen" class="metric-icon-svg"></div>
+                    <div class="metric-value" id="dissolved-oxygen">Loading...</div>
+                    <div class="metric-label">Dissolved Oxygen</div>
                     <canvas id="oxygen-chart" width="200" height="100"></canvas>
                     <div class="chart-timestamp" id="oxygen-chart-timestamp">Last updated: Loading...</div>
                 </div>
-                <div class="chart-card" data-metric="ammonia">
-                    <h3>Ammonia</h3>
-                    <div class="stat-value" id="ammonia">Loading...</div>
+                <div class="chart-card metric-card" data-metric="ammonia">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_warning.svg" alt="Alert" class="metric-icon-svg"></div>
+                    <div class="metric-value" id="ammonia">Loading...</div>
+                    <div class="metric-label">Ammonia</div>
                     <canvas id="ammonia-chart" width="200" height="100"></canvas>
                     <div class="chart-timestamp" id="ammonia-chart-timestamp">Last updated: Loading...</div>
                 </div>
-                <div class="chart-card" data-metric="humidity">
-                    <h3>Humidity</h3>
-                    <div class="stat-value" id="humidity">Loading...</div>
+                <div class="chart-card metric-card" data-metric="humidity">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_humidity.svg" alt="Humidity" class="metric-icon-svg"></div>
+                    <div class="metric-value" id="humidity">Loading...</div>
+                    <div class="metric-label">Humidity</div>
                     <canvas id="humidity-chart" width="200" height="100"></canvas>
                     <div class="chart-timestamp" id="humidity-chart-timestamp">Last updated: Loading...</div>
                 </div>
-                <div class="chart-card" data-metric="salinity">
-                    <h3>Salinity</h3>
-                    <div class="stat-value" id="salinity">Loading...</div>
+                <div class="chart-card metric-card" data-metric="salinity">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_salinity.svg" alt="Salinity" class="metric-icon-svg"></div>
+                    <div class="metric-value" id="salinity">Loading...</div>
+                    <div class="metric-label">Salinity</div>
                     <canvas id="salinity-chart" width="200" height="100"></canvas>
                     <div class="chart-timestamp" id="salinity-chart-timestamp">Last updated: Loading...</div>
                 </div>
                 
                 <!-- Additional Nutrient Metrics -->
-                <div class="chart-card" data-metric="ec">
-                    <h3>EC (Conductivity)</h3>
-                    <div class="stat-value" id="ec">Loading...</div>
+                <div class="chart-card metric-card" data-metric="ec">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_conductivity.svg" alt="Conductivity" class="metric-icon-svg"></div>
+                    <div class="metric-value" id="ec">Loading...</div>
+                    <div class="metric-label">EC (Conductivity)</div>
                     <canvas id="ec-chart" width="200" height="100"></canvas>
                     <div class="chart-timestamp" id="ec-chart-timestamp">Last updated: Loading...</div>
                 </div>
-                <div class="chart-card" data-metric="nitrate">
-                    <h3>Nitrate</h3>
-                    <div class="stat-value" id="nitrate">Loading...</div>
+                <div class="chart-card metric-card" data-metric="nitrate">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant" class="metric-icon-svg"></div>
+                    <div class="metric-value" id="nitrate">Loading...</div>
+                    <div class="metric-label">Nitrate</div>
                     <canvas id="nitrate-chart" width="200" height="100"></canvas>
                     <div class="chart-timestamp" id="nitrate-chart-timestamp">Last updated: Loading...</div>
                 </div>
-                <div class="chart-card" data-metric="nitrite">
-                    <h3>Nitrite</h3>
-                    <div class="stat-value" id="nitrite">Loading...</div>
+                <div class="chart-card metric-card" data-metric="nitrite">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Lab" class="metric-icon-svg"></div>
+                    <div class="metric-value" id="nitrite">Loading...</div>
+                    <div class="metric-label">Nitrite</div>
                     <canvas id="nitrite-chart" width="200" height="100"></canvas>
                     <div class="chart-timestamp" id="nitrite-chart-timestamp">Last updated: Loading...</div>
                 </div>
-                <div class="chart-card" data-metric="phosphorus">
-                    <h3>Phosphorus</h3>
-                    <div class="stat-value" id="phosphorus">Loading...</div>
+                <div class="chart-card metric-card" data-metric="phosphorus">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Data" class="metric-icon-svg"></div>
+                    <div class="metric-value" id="phosphorus">Loading...</div>
+                    <div class="metric-label">Phosphorus</div>
                     <canvas id="phosphorus-chart" width="200" height="100"></canvas>
                     <div class="chart-timestamp" id="phosphorus-chart-timestamp">Last updated: Loading...</div>
                 </div>
-                <div class="chart-card" data-metric="potassium">
-                    <h3>Potassium</h3>
-                    <div class="stat-value" id="potassium">Loading...</div>
+                <div class="chart-card metric-card" data-metric="potassium">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Potassium" class="metric-icon-svg"></div>
+                    <div class="metric-value" id="potassium">Loading...</div>
+                    <div class="metric-label">Potassium</div>
                     <canvas id="potassium-chart" width="200" height="100"></canvas>
                     <div class="chart-timestamp" id="potassium-chart-timestamp">Last updated: Loading...</div>
                 </div>
-                <div class="chart-card" data-metric="calcium">
-                    <h3>Calcium</h3>
-                    <div class="stat-value" id="calcium">Loading...</div>
+                <div class="chart-card metric-card" data-metric="calcium">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Calcium" class="metric-icon-svg"></div>
+                    <div class="metric-value" id="calcium">Loading...</div>
+                    <div class="metric-label">Calcium</div>
                     <canvas id="calcium-chart" width="200" height="100"></canvas>
                     <div class="chart-timestamp" id="calcium-chart-timestamp">Last updated: Loading...</div>
                 </div>
-                <div class="chart-card" data-metric="magnesium">
-                    <h3>Magnesium</h3>
-                    <div class="stat-value" id="magnesium">Loading...</div>
+                <div class="chart-card metric-card" data-metric="magnesium">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_parameters.svg" alt="Parameters" class="metric-icon-svg"></div>
+                    <div class="metric-value" id="magnesium">Loading...</div>
+                    <div class="metric-label">Magnesium</div>
                     <canvas id="magnesium-chart" width="200" height="100"></canvas>
                     <div class="chart-timestamp" id="magnesium-chart-timestamp">Last updated: Loading...</div>
                 </div>
-                <div class="chart-card" data-metric="iron">
-                    <h3>Iron</h3>
-                    <div class="stat-value" id="iron">Loading...</div>
+                <div class="chart-card metric-card" data-metric="iron">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_settings.svg" alt="Settings" class="metric-icon-svg"></div>
+                    <div class="metric-value" id="iron">Loading...</div>
+                    <div class="metric-label">Iron</div>
                     <canvas id="iron-chart" width="200" height="100"></canvas>
                     <div class="chart-timestamp" id="iron-chart-timestamp">Last updated: Loading...</div>
                 </div>
@@ -261,8 +285,8 @@
             
             <!-- Live Sensor Data Section -->
             <div class="sensor-data-overview">
-                <h2>📡 Live Sensor Data</h2>
-                <p style="text-align: center; color: #666; font-style: italic; margin-bottom: 1rem;">
+                <h2 class="heading-2"><img src="icons/new-icons/Afraponix Go Icons_data entry.svg" alt="Sensor" class="heading-icon"> Live Sensor Data</h2>
+                <p class="text-muted" style="text-align: center; font-style: italic; margin-bottom: 1rem;">
                     Real-time data from your connected IoT sensors. Configure sensors in Settings → Sensor Config.
                 </p>
                 <div id="sensor-data-container" class="sensor-grid">
@@ -270,27 +294,121 @@
                 </div>
             </div>
             
+            <!-- Latest Data Entries -->
             <div class="latest-data-overview">
-                <h2>Latest Data Entries</h2>
-                <p style="text-align: center; color: #666; font-style: italic; margin-bottom: 1rem;">
+                <h2 class="heading-2">Latest Data Entries</h2>
+                <p class="text-muted" style="text-align: center; font-style: italic; margin-bottom: 1rem;">
                     Most recent data entries across all categories. Use Data Entry tab to add new measurements.
                 </p>
                 <div id="latest-entries-container">
                     <!-- Latest data entries will be populated here -->
                 </div>
                 
+                <!-- Water Quality Status Summary -->
+                <div class="water-quality-summary" style="margin-top: 2rem;">
+                    <h3 class="heading-3">System Health Status</h3>
+                    <div class="quality-badges-grid">
+                        <span class="water-quality water-excellent" id="overall-water-status">Checking...</span>
+                        <span class="badge badge-info" id="ph-status">pH: Loading...</span>
+                        <span class="badge badge-success" id="temperature-status">Temp: Loading...</span>
+                        <span class="badge badge-info" id="oxygen-status">O₂: Loading...</span>
+                    </div>
+                </div>
+                
                 <!-- Recent Water Quality Entry with Edit/Delete -->
                 <div class="recent-water-quality-section" style="margin-top: 2rem;">
-                    <h3>Recent Water Quality Entry</h3>
+                    <h3 class="heading-3">Recent Water Quality Entry</h3>
                     <div id="recent-water-quality-entry" class="data-entry-card">
                         <!-- Recent water quality entry with edit/delete buttons will be displayed here -->
                     </div>
                 </div>
             </div>
+            </div> <!-- End dashboard-overview-content -->
+            
+            <!-- Dashboard Farm Layout Content -->
+            <div id="dashboard-farm-layout-content" class="dashboard-content">
+            <!-- Farm Layout Dashboard -->
+            <div class="farm-layout-dashboard">
+                <h2 class="heading-2"><img src="icons/new-icons/Afraponix Go Icons_aquaponics.svg" alt="Farm" class="heading-icon"> Farm Layout Overview</h2>
+                <p class="text-muted" style="text-align: center; font-style: italic; margin-bottom: 1rem;">
+                    Visual representation of your aquaponics system layout showing tanks, grow beds, and their current status.
+                </p>
+                <div class="farm-layout-container" id="main-farm-layout-container">
+                    <div class="layout-controls">
+                        <button class="layout-control-btn" id="main-zoom-in-btn" title="Zoom In"><img src="icons/new-icons/Afraponix Go Icons_search.svg" alt="Zoom In" class="control-icon">+</button>
+                        <button class="layout-control-btn" id="main-zoom-out-btn" title="Zoom Out"><img src="icons/new-icons/Afraponix Go Icons_search.svg" alt="Zoom Out" class="control-icon">-</button>
+                        <button class="layout-control-btn" id="main-reset-view-btn" title="Reset View"><img src="icons/new-icons/Afraponix Go Icons_reset.svg" alt="Reset" class="control-icon"></button>
+                        <button class="layout-control-btn" id="main-toggle-labels-btn" title="Toggle Labels"><img src="icons/new-icons/Afraponix Go Icons_labels.svg" alt="Labels" class="control-icon"></button>
+                    </div>
+                    <div class="farm-layout-viewport" id="main-farm-layout-viewport">
+                        <svg id="main-farm-layout-svg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
+                            <!-- Grid background -->
+                            <defs>
+                                <pattern id="main-grid" width="50" height="50" patternUnits="userSpaceOnUse">
+                                    <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#e0e0e0" stroke-width="1" opacity="0.3"/>
+                                </pattern>
+                                
+                                <!-- Grow bed patterns -->
+                                <pattern id="main-media-pattern" width="8" height="8" patternUnits="userSpaceOnUse">
+                                    <rect width="8" height="8" fill="#10B981"/>
+                                </pattern>
+                                
+                                <pattern id="main-nft-pattern" width="8" height="8" patternUnits="userSpaceOnUse">
+                                    <rect width="8" height="8" fill="#10B981"/>
+                                    <rect width="8" height="2" fill="#059669" y="3"/>
+                                </pattern>
+                                
+                                <pattern id="main-dwc-pattern" width="12" height="12" patternUnits="userSpaceOnUse">
+                                    <rect width="12" height="12" fill="#10B981"/>
+                                    <circle cx="6" cy="6" r="2" fill="#059669" opacity="0.5"/>
+                                </pattern>
+                            </defs>
+                            
+                            <!-- Grid background -->
+                            <rect width="100%" height="100%" fill="url(#main-grid)"/>
+                            
+                            <!-- Farm components will be rendered here -->
+                            <g id="main-farm-components">
+                                <text x="400" y="300" text-anchor="middle" fill="#666" font-size="16">
+                                    Loading farm layout...
+                                </text>
+                            </g>
+                            
+                            <!-- Scale indicator positioned dynamically -->
+                            <g id="main-scale-indicator">
+                                <line x1="0" y1="0" x2="50" y2="0" stroke="#666" stroke-width="2"/>
+                                <line x1="0" y1="-5" x2="0" y2="5" stroke="#666" stroke-width="2"/>
+                                <line x1="50" y1="-5" x2="50" y2="5" stroke="#666" stroke-width="2"/>
+                                <text x="25" y="20" text-anchor="middle" fill="#666" font-size="12" id="main-scale-text">Scale: Loading...</text>
+                            </g>
+                        </svg>
+                    </div>
+                    <div class="layout-info">
+                        <div class="layout-stats" id="main-layout-stats">
+                            <span>Loading layout information...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Farm Layout Legend -->
+                <div class="layout-legend">
+                    <div class="legend-item">
+                        <div class="tank-indicator"><img src="icons/new-icons/Afraponix Go Icons_fish.svg" alt="Fish" class="indicator-icon"> Fish Tanks</div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="bed-status bed-status-active"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant" class="indicator-icon"> Planted Beds</div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="bed-status bed-status-empty"><img src="icons/new-icons/Afraponix Go Icons_location.svg" alt="Location" class="indicator-icon"> Empty Beds</div>
+                    </div>
+                </div>
+            </div>
+            </div> <!-- End dashboard-farm-layout-content -->
+            
         </section>
 
         <section id="calculators" class="view">
-            <h2>Aquaponics Calculators</h2>
+            <h2 class="heading-2">Aquaponics Calculators</h2>
             <div class="current-system-display" id="current-system-calculators">
                 <!-- Current system name will be displayed here -->
             </div>
@@ -305,8 +423,8 @@
             
             <div id="nutrient-calc" class="calculator-content">
                 <div class="calculator-section">
-                    <h3>Hydroponic Nutrient Dosing Calculator</h3>
-                    <p style="color: #666; margin-bottom: 1rem;">Calculate precise nutrient dosing for optimal plant growth in your aquaponics system.</p>
+                    <h3 class="heading-3">Hydroponic Nutrient Dosing Calculator</h3>
+                    <p class="text-muted" style="margin-bottom: 1rem;">Calculate precise nutrient dosing for optimal plant growth in your aquaponics system.</p>
                     
                     <div class="dosing-tabs">
                         <button id="quick-calc-tab" class="dosing-tab active">Quick Calculator</button>
@@ -317,9 +435,9 @@
                     <!-- Quick Calculator Tab -->
                     <div id="quick-calc-content" class="dosing-content active">
                         <div class="form-grid">
-                            <div class="form-field">
-                                <label for="crop-type">Crop Type:</label>
-                                <select id="crop-type">
+                            <div class="form-group">
+                                <label class="form-label" for="crop-type">Crop Type:</label>
+                                <select id="crop-type" class="form-input">
                                     <option value="">Select Crop</option>
                                     <optgroup label="Leafy Greens">
                                         <option value="lettuce">Lettuce</option>
@@ -357,14 +475,14 @@
                                     </optgroup>
                                 </select>
                             </div>
-                            <div class="form-field">
-                                <label for="reservoir-volume">Reservoir Volume (L):</label>
-                                <input type="number" id="reservoir-volume" min="10" step="10" placeholder="100" readonly>
-                                <small style="color: #666;">Automatically calculated from system configuration</small>
+                            <div class="form-group">
+                                <label class="form-label" for="reservoir-volume">Reservoir Volume (L):</label>
+                                <input type="number" id="reservoir-volume" class="form-input" min="10" step="10" placeholder="100" readonly>
+                                <small class="text-muted text-small">Automatically calculated from system configuration</small>
                             </div>
-                            <div class="form-field">
-                                <label for="target-ec">Target EC (mS/cm):</label>
-                                <input type="number" id="target-ec" min="0.5" max="3.0" step="0.1" placeholder="1.8" readonly>
+                            <div class="form-group">
+                                <label class="form-label" for="target-ec">Target EC (mS/cm):</label>
+                                <input type="number" id="target-ec" class="form-input" min="0.5" max="3.0" step="0.1" placeholder="1.8" readonly>
                             </div>
                         </div>
                         
@@ -373,51 +491,46 @@
                         </div>
                         
                         <div class="current-values-section">
-                            <h4>🧪 Current Nutrient Levels (Optional - if known)</h4>
-                            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
+                            <h4 class="heading-4"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Test" class="heading-icon"> Current Nutrient Levels (Optional - if known)</h4>
+                            <p class="text-muted text-small" style="margin-bottom: 1rem;">
                                 Enter your current nutrient levels if you have recent test results. Leave blank if unknown.
                             </p>
                             <div class="current-values-grid">
                                 <div class="current-value-item">
                                     <div class="current-value-label">N</div>
-                                    <input type="number" id="current-n" min="0" step="0.1" placeholder="0" class="current-value-input">
+                                    <input type="number" id="current-n" min="0" step="0.1" placeholder="0" class="form-input">
                                     <div class="current-value-unit">ppm</div>
                                 </div>
                                 <div class="current-value-item">
                                     <div class="current-value-label">P</div>
-                                    <input type="number" id="current-p" min="0" step="0.1" placeholder="0" class="current-value-input">
+                                    <input type="number" id="current-p" min="0" step="0.1" placeholder="0" class="form-input">
                                     <div class="current-value-unit">ppm</div>
                                 </div>
                                 <div class="current-value-item">
                                     <div class="current-value-label">K</div>
-                                    <input type="number" id="current-k" min="0" step="0.1" placeholder="0" class="current-value-input">
+                                    <input type="number" id="current-k" min="0" step="0.1" placeholder="0" class="form-input">
                                     <div class="current-value-unit">ppm</div>
                                 </div>
                                 <div class="current-value-item">
                                     <div class="current-value-label">Ca</div>
-                                    <input type="number" id="current-ca" min="0" step="0.1" placeholder="0" class="current-value-input">
+                                    <input type="number" id="current-ca" min="0" step="0.1" placeholder="0" class="form-input">
                                     <div class="current-value-unit">ppm</div>
                                 </div>
                                 <div class="current-value-item">
                                     <div class="current-value-label">Mg</div>
-                                    <input type="number" id="current-mg" min="0" step="0.1" placeholder="0" class="current-value-input">
+                                    <input type="number" id="current-mg" min="0" step="0.1" placeholder="0" class="form-input">
                                     <div class="current-value-unit">ppm</div>
                                 </div>
                                 <div class="current-value-item">
                                     <div class="current-value-label">Fe</div>
-                                    <input type="number" id="current-fe" min="0" step="0.1" placeholder="0" class="current-value-input">
+                                    <input type="number" id="current-fe" min="0" step="0.1" placeholder="0" class="form-input">
                                     <div class="current-value-unit">ppm</div>
                                 </div>
                             </div>
                             <div style="margin-top: 1rem;">
-                                <button class="form-btn secondary" onclick="app.loadCurrentNutrientLevels()">🔄 Refresh from Data</button>
-                                <button class="form-btn secondary" onclick="app.saveCurrentNutrientLevels()">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 14px; height: 14px; vertical-align: text-bottom; margin-right: 3px;">
-                                        <path d="M17,22c-0.3,0-0.5,0-0.8,0H7.8c-0.3,0-0.5,0-0.8,0c0,0,0,0-0.1,0c-1.3,0-2-0.1-2.7-0.4c-0.8-0.4-1.4-1-1.7-1.7   C2,19,2,18,2,16.2V7.8C2,6,2,5,2.4,4.2c0.4-0.8,1-1.4,1.7-1.7C4.9,2.1,5.6,2,6.9,2C7,2,7,2,7.1,2c0.2,0,0.5,0,0.7,0h6.9   c0.5,0,0.9,0,1.2,0.1c0.3,0.1,0.6,0.2,0.9,0.4c0.3,0.2,0.5,0.4,0.9,0.8l3.1,3.1c0.4,0.4,0.6,0.6,0.8,0.9c0.2,0.3,0.3,0.6,0.4,0.9   C22,8.5,22,8.8,22,9.3v6.9c0,1.8,0,2.8-0.4,3.6c-0.4,0.8-1,1.4-1.7,1.7C19.1,21.9,18.4,22,17,22C17,22,17,22,17,22z M8,20h8v-5.4   c0-0.3,0-0.6,0-0.6c0,0-0.3,0-0.6,0H8.6C8.3,14,8,14,8,14c0,0,0,0.3,0,0.6V20z M8.6,12h6.8c0.7,0,1.1,0,1.5,0.2   c0.4,0.2,0.7,0.5,0.9,0.9c0.2,0.4,0.2,0.9,0.2,1.5V20c0.4,0,0.7-0.1,0.9-0.2c0.4-0.2,0.7-0.5,0.9-0.9c0.2-0.4,0.2-1.2,0.2-2.7V9.3   c0-0.4,0-0.6,0-0.7c0-0.1-0.1-0.2-0.1-0.3c-0.1-0.1-0.2-0.3-0.5-0.5L18,6.4c0,0.6,0,1.1-0.2,1.5c-0.2,0.4-0.5,0.7-0.9,0.9   C16.5,9,16.1,9,15.4,9H8.6C7.9,9,7.5,9,7.1,8.8C6.7,8.6,6.4,8.3,6.2,7.9C6,7.5,6,7.1,6,6.4V4c-0.4,0-0.7,0.1-0.9,0.2   C4.7,4.4,4.4,4.7,4.2,5.1C4,5.5,4,6.3,4,7.8v8.4c0,1.5,0,2.3,0.2,2.7c0.2,0.4,0.5,0.7,0.9,0.9C5.3,19.9,5.6,19.9,6,20v-5.4   c0-0.7,0-1.1,0.2-1.5c0.2-0.4,0.5-0.7,0.9-0.9C7.5,12,7.9,12,8.6,12z M8,4v2.4C8,6.7,8,7,8,7c0,0,0.3,0,0.6,0h6.8C15.7,7,16,7,16,7   c0,0,0-0.3,0-0.6v-2c-0.1-0.1-0.2-0.2-0.3-0.3c-0.1-0.1-0.2-0.1-0.3-0.1c-0.1,0-0.3,0-0.7,0H8z" fill="#0051b1"/>
-                                    </svg>
-                                    Save Current Levels
-                                </button>
-                                <button class="form-btn secondary" onclick="app.clearCurrentNutrientLevels()">🗑️ Clear All</button>
+                                <button class="form-btn secondary" onclick="app.loadCurrentNutrientLevels()"><img src="icons/new-icons/Afraponix Go Icons_reset.svg" alt="Refresh" class="btn-icon-svg"> Refresh from Data</button>
+                                <button class="form-btn secondary" onclick="app.saveCurrentNutrientLevels()"><img src="icons/new-icons/Afraponix Go Icons_save.svg" alt="Save" class="btn-icon-svg"> Save Current Levels</button>
+                                <button class="form-btn secondary" onclick="app.clearCurrentNutrientLevels()"><img src="icons/new-icons/Afraponix Go Icons_delete.svg" alt="Clear" class="btn-icon-svg"> Clear All</button>
                             </div>
                         </div>
                         
@@ -428,55 +541,55 @@
                         </div>
                         
                         <div id="dosing-actions" class="dosing-actions" style="display: none; margin-top: 1rem;">
-                            <button class="form-btn secondary" onclick="app.downloadDosingSchedulePDF()">📄 Download as PDF</button>
-                            <button class="form-btn secondary" onclick="app.emailDosingSchedule()">📧 Email Schedule</button>
+                            <button class="form-btn secondary" onclick="app.downloadDosingSchedulePDF()"><img src="icons/new-icons/Afraponix Go Icons_copy.svg" alt="Download" class="btn-icon-svg"> Download as PDF</button>
+                            <button class="form-btn secondary" onclick="app.emailDosingSchedule()"><img src="icons/new-icons/Afraponix Go Icons_copy.svg" alt="Email" class="btn-icon-svg"> Email Schedule</button>
                         </div>
                     </div>
                     
                     <!-- Custom Nutrients Tab -->
                     <div id="custom-nutrients-content" class="dosing-content">
                         <div class="custom-nutrients-section">
-                            <h4>Available Nutrients</h4>
+                            <h4 class="heading-4">Available Nutrients</h4>
                             <div id="available-nutrients-list" class="nutrients-list">
                                 <!-- Available nutrients will be displayed here -->
                             </div>
                             
-                            <h4>Add Custom Nutrient</h4>
+                            <h4 class="heading-4">Add Custom Nutrient</h4>
                             <div class="form-grid">
-                                <div class="form-field">
-                                    <label for="nutrient-name">Nutrient Name:</label>
-                                    <input type="text" id="nutrient-name" placeholder="e.g., Custom NPK Mix">
+                                <div class="form-group">
+                                    <label class="form-label" for="nutrient-name">Nutrient Name:</label>
+                                    <input type="text" id="nutrient-name" class="form-input" placeholder="e.g., Custom NPK Mix">
                                 </div>
-                                <div class="form-field">
-                                    <label for="nutrient-n">Nitrogen (N) %:</label>
-                                    <input type="number" id="nutrient-n" min="0" max="50" step="0.1" placeholder="0">
+                                <div class="form-group">
+                                    <label class="form-label" for="nutrient-n">Nitrogen (N) %:</label>
+                                    <input type="number" id="nutrient-n" class="form-input" min="0" max="50" step="0.1" placeholder="0">
                                 </div>
-                                <div class="form-field">
-                                    <label for="nutrient-p">Phosphorus (P) %:</label>
-                                    <input type="number" id="nutrient-p" min="0" max="50" step="0.1" placeholder="0">
+                                <div class="form-group">
+                                    <label class="form-label" for="nutrient-p">Phosphorus (P) %:</label>
+                                    <input type="number" id="nutrient-p" class="form-input" min="0" max="50" step="0.1" placeholder="0">
                                 </div>
-                                <div class="form-field">
-                                    <label for="nutrient-k">Potassium (K) %:</label>
-                                    <input type="number" id="nutrient-k" min="0" max="50" step="0.1" placeholder="0">
+                                <div class="form-group">
+                                    <label class="form-label" for="nutrient-k">Potassium (K) %:</label>
+                                    <input type="number" id="nutrient-k" class="form-input" min="0" max="50" step="0.1" placeholder="0">
                                 </div>
-                                <div class="form-field">
-                                    <label for="nutrient-ca">Calcium (Ca) %:</label>
-                                    <input type="number" id="nutrient-ca" min="0" max="30" step="0.1" placeholder="0">
+                                <div class="form-group">
+                                    <label class="form-label" for="nutrient-ca">Calcium (Ca) %:</label>
+                                    <input type="number" id="nutrient-ca" class="form-input" min="0" max="30" step="0.1" placeholder="0">
                                 </div>
-                                <div class="form-field">
-                                    <label for="nutrient-mg">Magnesium (Mg) %:</label>
-                                    <input type="number" id="nutrient-mg" min="0" max="20" step="0.1" placeholder="0">
+                                <div class="form-group">
+                                    <label class="form-label" for="nutrient-mg">Magnesium (Mg) %:</label>
+                                    <input type="number" id="nutrient-mg" class="form-input" min="0" max="20" step="0.1" placeholder="0">
                                 </div>
-                                <div class="form-field">
-                                    <label for="nutrient-fe">Iron (Fe) %:</label>
-                                    <input type="number" id="nutrient-fe" min="0" max="15" step="0.1" placeholder="0">
+                                <div class="form-group">
+                                    <label class="form-label" for="nutrient-fe">Iron (Fe) %:</label>
+                                    <input type="number" id="nutrient-fe" class="form-input" min="0" max="15" step="0.1" placeholder="0">
                                 </div>
-                                <div class="form-field">
-                                    <label for="nutrient-price">Price per kg ($):</label>
-                                    <input type="number" id="nutrient-price" min="0" step="0.01" placeholder="25.00">
+                                <div class="form-group">
+                                    <label class="form-label" for="nutrient-price">Price per kg ($):</label>
+                                    <input type="number" id="nutrient-price" class="form-input" min="0" step="0.01" placeholder="25.00">
                                 </div>
                             </div>
-                            <button class="form-btn secondary" onclick="app.addCustomNutrient()">Add Nutrient</button>
+                            <button class="btn btn-success" onclick="app.addCustomNutrient()">Add Nutrient</button>
                         </div>
                     </div>
                     
@@ -489,15 +602,15 @@
                         </div>
                         
                         <div class="mixing-schedule-section">
-                            <h4>Mixing Schedule & Maintenance</h4>
-                            <p style="color: #666; margin-bottom: 1rem;">Follow this schedule for optimal nutrient mixing and system maintenance.</p>
+                            <h4 class="heading-4">Mixing Schedule & Maintenance</h4>
+                            <p class="text-muted" style="margin-bottom: 1rem;">Follow this schedule for optimal nutrient mixing and system maintenance.</p>
                             
                             <div id="mixing-schedule-display" class="mixing-schedule">
                                 <!-- Mixing schedule will be displayed here -->
                             </div>
                             
                             <div class="maintenance-schedule">
-                                <h4>Maintenance Schedule</h4>
+                                <h4 class="heading-4">Maintenance Schedule</h4>
                                 <div id="maintenance-schedule-display">
                                     <!-- Maintenance schedule will be displayed here -->
                                 </div>
@@ -509,7 +622,7 @@
         </section>
 
         <section id="data-entry" class="view">
-            <h2>System Data Entry</h2>
+            <h2 class="heading-2">System Data Entry</h2>
             <div class="current-system-display" id="current-system-data-entry">
                 <!-- Current system name will be displayed here -->
             </div>
@@ -523,7 +636,7 @@
                     <!-- Water quality form will be inserted here -->
                 </div>
                 <div class="data-history-section">
-                    <h3>Recent Water Quality Data</h3>
+                    <h3 class="heading-3">Recent Water Quality Data</h3>
                     <div id="water-quality-history" class="data-history-list">
                         <!-- Water quality history will be displayed here -->
                     </div>
@@ -537,7 +650,7 @@
                     <!-- Operations form will be inserted here -->
                 </div>
                 <div class="data-history-section">
-                    <h3>Recent Operations Data</h3>
+                    <h3 class="heading-3">Recent Operations Data</h3>
                     <div id="operations-history" class="data-history-list">
                         <!-- Operations history will be displayed here -->
                     </div>
@@ -546,7 +659,7 @@
         </section>
 
         <section id="fish-tank" class="view">
-            <h2>Fish Tank Management</h2>
+            <h2 class="heading-2">Fish Tank Management</h2>
             <div class="current-system-display" id="current-system-fish-tank">
                 <!-- Current system name will be displayed here -->
             </div>
@@ -569,7 +682,7 @@
                     <!-- Fish health form will be inserted here -->
                 </div>
                 <div class="data-history-section">
-                    <h3>Recent Fish Health Data</h3>
+                    <h3 class="heading-3">Recent Fish Health Data</h3>
                     <div id="fish-health-history" class="data-history-list">
                         <!-- Fish health history will be displayed here -->
                     </div>
@@ -583,7 +696,7 @@
                 
                 <!-- Fish Management Actions -->
                 <div class="fish-actions-container">
-                    <h3>Quick Actions</h3>
+                    <h3 class="heading-3">Quick Actions</h3>
                     <div class="fish-action-buttons">
                         <button class="action-btn primary" onclick="app.showAddFishModal()">
                             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
@@ -615,52 +728,148 @@
         </section>
 
         <section id="plants" class="view">
-            <h2>Plant Management</h2>
+            <h2 class="heading-2">Plant Management</h2>
             <div class="current-system-display" id="current-system-plants">
                 <!-- Current system name will be displayed here -->
             </div>
             
             <div class="plant-management-tabs">
                 <button id="plant-overview-tab" class="plant-mgmt-tab active">Overview</button>
-                <button id="allocation-management-tab" class="plant-mgmt-tab">Crop Allocation</button>
+                <button id="grow-beds-tab" class="plant-mgmt-tab">Plant Management</button>
                 <button id="planting-harvesting-tab" class="plant-mgmt-tab">Plant & Harvest</button>
                 <button id="spray-programmes-tab" class="plant-mgmt-tab">Spray Programmes</button>
                 <button id="custom-crops-tab" class="plant-mgmt-tab">Custom Crops</button>
             </div>
             
             <div id="plant-overview-content" class="plant-mgmt-content active">
+                <!-- Plant Metrics Summary -->
+                <div class="plant-metrics-summary">
+                    <div class="metric-card">
+                        <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plants Growing" class="metric-icon-svg"></div>
+                        <div class="metric-value" id="total-plants-growing">Loading...</div>
+                        <div class="metric-label">Plants Growing</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_harvest.svg" alt="Harvest" class="metric-icon-svg"></div>
+                        <div class="metric-value" id="total-harvested">Loading...</div>
+                        <div class="metric-label">Total Harvested</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_growbed.svg" alt="Grow Bed" class="metric-icon-svg"></div>
+                        <div class="metric-value" id="active-grow-beds">Loading...</div>
+                        <div class="metric-label">Active Grow Beds</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Total Harvested" class="metric-icon-svg"></div>
+                        <div class="metric-value" id="growing-varieties">Loading...</div>
+                        <div class="metric-label">Crop Varieties</div>
+                    </div>
+                </div>
+                
                 <div id="plant-overview-container">
                     <!-- Plant overview will be populated here -->
                 </div>
                 
             </div>
             
-            <div id="allocation-management-content" class="plant-mgmt-content">
-                <div class="plant-allocation-section">
-                        <h3>Grow Bed Crop Allocation</h3>
-                        <p style="color: #666; margin-bottom: 1rem;">Manage what crops are allocated to each grow bed and track allocation percentages.</p>
-                        
-                        <div id="grow-bed-allocation-container">
-                            <!-- Grow bed allocation interface will be populated here -->
+            <div id="grow-beds-content" class="plant-mgmt-content">
+                <!-- Subtabs for Grow Beds section -->
+                <div class="grow-beds-subtabs">
+                    <button id="beds-overview-subtab" class="grow-beds-subtab active">Beds Overview</button>
+                    <button id="plants-management-subtab" class="grow-beds-subtab">Plants</button>
+                </div>
+                
+                <!-- Beds Overview Content -->
+                <div id="beds-overview-content" class="grow-beds-subcontent active">
+                    <div id="grow-beds-container">
+                        <!-- Grow beds management will be populated here -->
+                    </div>
+                </div>
+                
+                <!-- Plants Management Content -->
+                <div id="plants-management-content" class="grow-beds-subcontent">
+                    <!-- Summary Statistics -->
+                    <div class="plants-summary-stats">
+                        <div class="stat-card">
+                            <div class="stat-value" id="total-plants-count">0</div>
+                            <div class="stat-label">Total Plants</div>
                         </div>
-                        
-                        <div class="allocation-summary">
-                            <h4>System Plant Summary</h4>
-                            <div id="plant-count-summary">
-                                <!-- Plant count summary will be displayed here -->
-                            </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="total-batches-count">0</div>
+                            <div class="stat-label">Active Batches</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="harvest-ready-count">0</div>
+                            <div class="stat-label">Harvest Ready</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="plant-types-count">0</div>
+                            <div class="stat-label">Plant Types</div>
                         </div>
                     </div>
+                    
+                    <!-- Main Action Bar -->
+                    <div class="plants-main-actions">
+                        <div class="main-action-buttons">
+                            <button id="new-planting-btn" class="main-action-btn plant">
+                                <span class="action-icon"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant" class="action-icon-svg"></span>
+                                <div class="action-content">
+                                    <div class="action-title">New Planting</div>
+                                    <div class="action-subtitle">Add plants to system</div>
+                                </div>
+                            </button>
+                            <button id="harvest-ready-btn" class="main-action-btn harvest">
+                                <span class="action-icon"><img src="icons/new-icons/Afraponix Go Icons_harvest.svg" alt="Harvest" class="action-icon-svg"></span>
+                                <div class="action-content">
+                                    <div class="action-title">Harvest Ready</div>
+                                    <div class="action-subtitle">Process ready crops</div>
+                                </div>
+                            </button>
+                            <button id="batch-management-btn" class="main-action-btn manage">
+                                <span class="action-icon"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Data" class="action-icon-svg"></span>
+                                <div class="action-content">
+                                    <div class="action-title">Batch Management</div>
+                                    <div class="action-subtitle">View all batches</div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Search and Filter Bar -->
+                    <div class="plants-toolbar">
+                        <div class="search-wrapper">
+                            <input type="text" id="plants-search" placeholder="Search plants..." class="form-input">
+                        </div>
+                        <div class="filter-wrapper">
+                            <select id="plants-filter" class="form-input">
+                                <option value="all">All Plants</option>
+                                <option value="harvest-ready">Harvest Ready</option>
+                                <option value="vegetative">Vegetative</option>
+                                <option value="seedling">Seedlings</option>
+                            </select>
+                        </div>
+                        <div class="action-buttons">
+                            <button id="export-plants-btn" class="action-btn secondary">
+                                <img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Export" class="btn-icon-svg"> Export Data
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Plants Container -->
+                    <div id="plants-container">
+                        <!-- Plant groups will be populated here -->
+                    </div>
+                </div>
             </div>
             
             <div id="planting-harvesting-content" class="plant-mgmt-content">
-                        <h3>Plant & Harvest Management</h3>
-                        <p style="color: #666; margin-bottom: 1rem;">Record new plantings, transplants, and harvests for your grow beds.</p>
+                        <h3 class="heading-3">Plant & Harvest Management</h3>
+                        <p class="text-muted" style="margin-bottom: 1rem;">Record new plantings, transplants, and harvests for your grow beds.</p>
                         
                         <div class="plant-action-tabs">
                             <button id="planting-tab" class="plant-action-tab active">
                                 <div class="tab-icon">
-                                    <img src="icons/plant-icon.svg" alt="Plant" class="tab-icon-svg">
+                                    <img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant" class="tab-icon-svg">
                                 </div>
                                 <div class="tab-content">
                                     <div class="tab-title">Plant & Transplant</div>
@@ -669,7 +878,7 @@
                             </button>
                             <button id="harvesting-tab" class="plant-action-tab">
                                 <div class="tab-icon">
-                                    <img src="icons/harvest-icon.svg" alt="Harvest" class="tab-icon-svg">
+                                    <img src="icons/new-icons/Afraponix Go Icons_harvest.svg" alt="Harvest" class="tab-icon-svg">
                                 </div>
                                 <div class="tab-content">
                                     <div class="tab-title">Harvest</div>
@@ -682,38 +891,38 @@
                             <div class="modern-form-card">
                                 <div class="form-header">
                                     <div class="form-header-icon">
-                                        <img src="icons/plant-icon.svg" alt="Plant" class="header-icon-svg">
+                                        <img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant" class="header-icon-svg">
                                     </div>
                                     <div class="form-header-text">
-                                        <h3>Record New Planting</h3>
+                                        <h3 class="heading-3">Record New Planting</h3>
                                     </div>
                                 </div>
                                 
                                 <div class="modern-form-grid">
                                     <div class="form-field-group">
-                                        <label for="plant-date" class="modern-label">
-                                            <span class="label-icon">📅</span>
+                                        <label for="plant-date" class="form-label">
+                                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_time.svg" alt="Date" class="label-icon-svg"></span>
                                             <span class="label-text">Date & Time</span>
                                         </label>
-                                        <input type="datetime-local" id="plant-date" class="modern-input" value="">
+                                        <input type="datetime-local" id="plant-date" class="form-input" value="">
                                     </div>
                                     
                                     <div class="form-field-group">
-                                        <label for="plant-grow-bed" class="modern-label">
-                                            <span class="label-icon">🏗️</span>
+                                        <label for="plant-grow-bed" class="form-label">
+                                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_growbed.svg" alt="Grow Bed" class="label-icon-svg"></span>
                                             <span class="label-text">Grow Bed</span>
                                         </label>
-                                        <select id="plant-grow-bed" class="modern-select" required>
+                                        <select id="plant-grow-bed" class="form-input" required>
                                             <option value="">Choose your grow bed...</option>
                                         </select>
                                     </div>
                                     
                                     <div class="form-field-group">
-                                        <label for="plant-crop-type" class="modern-label">
-                                            <span class="label-icon">🥬</span>
+                                        <label for="plant-crop-type" class="form-label">
+                                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Crop" class="label-icon-svg"></span>
                                             <span class="label-text">Crop Type</span>
                                         </label>
-                                        <select id="plant-crop-type" class="modern-select" required>
+                                        <select id="plant-crop-type" class="form-input" required>
                                             <option value="">Choose your crop...</option>
                                             <optgroup label="Leafy Greens">
                                                 <option value="lettuce">Lettuce</option>
@@ -754,26 +963,26 @@
                                     </div>
                                     
                                     <div class="form-field-group">
-                                        <label for="plant-count" class="modern-label">
-                                            <span class="label-icon">🔢</span>
+                                        <label for="plant-count" class="form-label">
+                                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Number" class="label-icon-svg"></span>
                                             <span class="label-text">Number of Plants</span>
                                         </label>
-                                        <input type="number" id="plant-count" class="modern-input" min="1" step="1" placeholder="How many plants?" required>
+                                        <input type="number" id="plant-count" class="form-input" min="1" step="1" placeholder="How many plants?" required>
                                     </div>
                                     
                                     <div id="remaining-plants-display" class="remaining-plants-info" style="display: none;">
-                                        <h5 class="remaining-header">📊 Current Batches in Selected Bed</h5>
+                                        <h5 class="heading-4 remaining-header"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Data" class="heading-icon"> Current Batches in Selected Bed</h5>
                                         <div id="remaining-plants-container" class="remaining-plants-container">
                                             <!-- Crop remaining plants will be displayed here -->
                                         </div>
                                     </div>
                                     
                                     <div class="form-field-group">
-                                        <label for="plant-stage" class="modern-label">
-                                            <span class="label-icon">🌿</span>
+                                        <label for="plant-stage" class="form-label">
+                                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant" class="label-icon-svg"></span>
                                             <span class="label-text">Growth Stage</span>
                                         </label>
-                                        <select id="plant-stage" class="modern-select">
+                                        <select id="plant-stage" class="form-input">
                                             <option value="seedling">Seedling</option>
                                             <option value="transplant">Transplant</option>
                                             <option value="vegetative">Vegetative growth</option>
@@ -781,50 +990,50 @@
                                     </div>
                                     
                                     <div class="form-field-group">
-                                        <label for="plant-batch-id" class="modern-label">
-                                            <span class="label-icon">🏷️</span>
+                                        <label for="plant-batch-id" class="form-label">
+                                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_tag.svg" alt="Tag" class="label-icon-svg"></span>
                                             <span class="label-text">Batch ID</span>
                                         </label>
-                                        <input type="text" id="plant-batch-id" class="modern-input" readonly placeholder="Auto-generated when saved">
+                                        <input type="text" id="plant-batch-id" class="form-input" readonly placeholder="Auto-generated when saved">
                                         <small class="field-help">Unique identifier for tracking this plant batch</small>
                                     </div>
                                     
                                     <div class="form-field-group">
-                                        <label for="plant-seed-variety" class="modern-label">
-                                            <span class="label-icon">🌰</span>
+                                        <label for="plant-seed-variety" class="form-label">
+                                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Variety" class="label-icon-svg"></span>
                                             <span class="label-text">Seed Variety (Optional)</span>
                                         </label>
                                         <div class="seed-variety-container">
-                                            <select id="plant-seed-variety" class="modern-select">
+                                            <select id="plant-seed-variety" class="form-input">
                                                 <option value="">Select variety...</option>
-                                                <option value="__add_new__">➕ Add New Variety</option>
+                                                <option value="__add_new__"><img src="icons/new-icons/Afraponix Go Icons_add.svg" alt="Add" class="option-icon-svg"> Add New Variety</option>
                                             </select>
                                         </div>
-                                        <input type="text" id="plant-seed-variety-custom" class="modern-input" placeholder="Enter new variety name" style="display: none; margin-top: 8px;">
+                                        <input type="text" id="plant-seed-variety-custom" class="form-input" placeholder="Enter new variety name" style="display: none; margin-top: 8px;">
                                         <small class="field-help">Specific variety or cultivar of the seed</small>
                                     </div>
                                     
                                     <div class="form-field-group">
-                                        <label for="plant-days-to-harvest" class="modern-label">
-                                            <span class="label-icon">⏱️</span>
+                                        <label for="plant-days-to-harvest" class="form-label">
+                                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_time.svg" alt="Time" class="label-icon-svg"></span>
                                             <span class="label-text">Days to Harvest (Optional)</span>
                                         </label>
-                                        <input type="number" id="plant-days-to-harvest" class="modern-input" min="1" max="365" placeholder="e.g., 45">
+                                        <input type="number" id="plant-days-to-harvest" class="form-input" min="1" max="365" placeholder="e.g., 45">
                                         <small class="field-help">Expected days from planting to harvest</small>
                                     </div>
                                     
                                     <div class="form-field-group full-width">
-                                        <label for="plant-notes" class="modern-label">
-                                            <span class="label-icon">📝</span>
+                                        <label for="plant-notes" class="form-label">
+                                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_copy.svg" alt="Notes" class="label-icon-svg"></span>
                                             <span class="label-text">Notes (Optional)</span>
                                         </label>
-                                        <textarea id="plant-notes" class="modern-textarea" rows="3" placeholder="Additional notes about this planting..."></textarea>
+                                        <textarea id="plant-notes" class="form-input" rows="3" placeholder="Additional notes about this planting..."></textarea>
                                     </div>
                                 </div>
                                 
                                 <div class="form-actions">
                                     <button type="button" class="modern-btn primary" onclick="app.recordPlanting()">
-                                        <span class="btn-icon">🌱</span>
+                                        <span class="btn-icon"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant" class="btn-icon-svg"></span>
                                         <span class="btn-text">Record Planting</span>
                                     </button>
                                 </div>
@@ -835,38 +1044,38 @@
                             <div class="modern-form-card">
                                 <div class="form-header">
                                     <div class="form-header-icon">
-                                        <img src="icons/harvest-icon.svg" alt="Harvest" class="header-icon-svg">
+                                        <img src="icons/new-icons/Afraponix Go Icons_harvest.svg" alt="Harvest" class="header-icon-svg">
                                     </div>
                                     <div class="form-header-text">
-                                        <h3>Record Harvest</h3>
+                                        <h3 class="heading-3">Record Harvest</h3>
                                     </div>
                                 </div>
                                 
                                 <div class="modern-form-grid">
                                     <div class="form-field-group">
-                                        <label for="harvest-date" class="modern-label">
-                                            <span class="label-icon">📅</span>
+                                        <label for="harvest-date" class="form-label">
+                                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_time.svg" alt="Date" class="label-icon-svg"></span>
                                             <span class="label-text">Date & Time</span>
                                         </label>
-                                        <input type="datetime-local" id="harvest-date" class="modern-input" value="">
+                                        <input type="datetime-local" id="harvest-date" class="form-input" value="">
                                     </div>
                                     
                                     <div class="form-field-group">
-                                        <label for="harvest-grow-bed" class="modern-label">
-                                            <span class="label-icon">🏗️</span>
+                                        <label for="harvest-grow-bed" class="form-label">
+                                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_growbed.svg" alt="Grow Bed" class="label-icon-svg"></span>
                                             <span class="label-text">Grow Bed</span>
                                         </label>
-                                        <select id="harvest-grow-bed" class="modern-select" required>
+                                        <select id="harvest-grow-bed" class="form-input" required>
                                             <option value="">Choose your grow bed...</option>
                                         </select>
                                     </div>
                                     
                                     <div class="form-field-group">
-                                        <label for="harvest-crop-type" class="modern-label">
-                                            <span class="label-icon">🥬</span>
+                                        <label for="harvest-crop-type" class="form-label">
+                                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Crop" class="label-icon-svg"></span>
                                             <span class="label-text">Crop Type</span>
                                         </label>
-                                        <select id="harvest-crop-type" class="modern-select" required>
+                                        <select id="harvest-crop-type" class="form-input" required>
                                             <option value="">Choose crop to harvest...</option>
                                             <optgroup label="Leafy Greens">
                                                 <option value="lettuce">Lettuce</option>
@@ -909,7 +1118,7 @@
                                     <!-- Batch Summary Display -->
                                     <div id="harvest-batch-summary" class="batch-summary-container" style="display: none;">
                                         <div class="batch-summary-header">
-                                            <span class="batch-summary-icon">📊</span>
+                                            <span class="batch-summary-icon"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Data" class="label-icon-svg"></span>
                                             <span class="batch-summary-title">Available Batches for Harvest</span>
                                         </div>
                                         <div id="harvest-batch-summary-content" class="batch-summary-content">
@@ -920,7 +1129,7 @@
                                     <!-- Batch selection now handled via checkboxes in the summary above -->
                                     <div id="selected-batches-display" class="selected-batches-container full-width" style="display: none;">
                                         <div class="selected-batches-header">
-                                            <span class="label-icon">✅</span>
+                                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_success.svg" alt="Status" class="label-icon-svg"></span>
                                             <span class="label-text">Selected Batches for Harvest</span>
                                         </div>
                                         <div id="selected-batches-list" class="selected-batches-list">
@@ -931,25 +1140,25 @@
                                         <div class="selected-batches-inputs">
                                             <div class="harvest-input-row">
                                                 <div class="harvest-input-field">
-                                                    <label for="harvest-plant-count" class="compact-label">
-                                                        <span class="label-icon">🔢</span>
+                                                    <label for="harvest-plant-count" class="form-label">
+                                                        <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Number" class="label-icon-svg"></span>
                                                         <span class="label-text">Plants Removed</span>
                                                     </label>
-                                                    <input type="number" id="harvest-plant-count" class="compact-input" min="0" step="1" placeholder="0 for fruit only" required>
+                                                    <input type="number" id="harvest-plant-count" class="form-input" min="0" step="1" placeholder="0 for fruit only" required>
                                                 </div>
                                                 <div class="harvest-input-field">
-                                                    <label for="harvest-weight" class="compact-label">
-                                                        <span class="label-icon">⚖️</span>
+                                                    <label for="harvest-weight" class="form-label">
+                                                        <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_weight.svg" alt="Weight" class="label-icon-svg"></span>
                                                         <span class="label-text">Total Weight (kg)</span>
                                                     </label>
-                                                    <input type="number" id="harvest-weight" class="compact-input" min="0" step="0.1" placeholder="0.0" required>
+                                                    <input type="number" id="harvest-weight" class="form-input" min="0" step="0.1" placeholder="0.0" required>
                                                 </div>
                                                 <div class="harvest-input-field">
-                                                    <label for="harvest-quality" class="compact-label">
-                                                        <span class="label-icon">⭐</span>
+                                                    <label for="harvest-quality" class="form-label">
+                                                        <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_success.svg" alt="Quality" class="label-icon-svg"></span>
                                                         <span class="label-text">Quality</span>
                                                     </label>
-                                                    <select id="harvest-quality" class="compact-input">
+                                                    <select id="harvest-quality" class="form-input">
                                                         <option value="excellent">Excellent</option>
                                                         <option value="good">Good</option>
                                                         <option value="fair">Fair</option>
@@ -964,17 +1173,17 @@
                                     </div>
                                     
                                     <div class="form-field-group full-width">
-                                        <label for="harvest-notes" class="modern-label">
-                                            <span class="label-icon">📝</span>
+                                        <label for="harvest-notes" class="form-label">
+                                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_copy.svg" alt="Notes" class="label-icon-svg"></span>
                                             <span class="label-text">Notes (Optional)</span>
                                         </label>
-                                        <textarea id="harvest-notes" class="modern-textarea" rows="3" placeholder="Notes about this harvest..."></textarea>
+                                        <textarea id="harvest-notes" class="form-input" rows="3" placeholder="Notes about this harvest..."></textarea>
                                     </div>
                                 </div>
                                 
                                 <div class="form-actions">
                                     <button type="button" class="modern-btn primary" onclick="app.recordHarvest()">
-                                        <span class="btn-icon">🌾</span>
+                                        <span class="btn-icon"><img src="icons/new-icons/Afraponix Go Icons_harvest.svg" alt="Harvest" class="btn-icon-svg"></span>
                                         <span class="btn-text">Record Harvest</span>
                                     </button>
                                 </div>
@@ -982,14 +1191,14 @@
                         </div>
                         
                         <div class="plant-history-section">
-                            <h4>Recent Plant Activities</h4>
+                            <h4 class="heading-4">Recent Plant Activities</h4>
                             <div id="plant-activity-history">
                                 <!-- Plant activity history will be displayed here -->
                             </div>
                             
                             <!-- Recent Plant Entries with Edit/Delete -->
                             <div class="recent-plant-entries" style="margin-top: 2rem;">
-                                <h4>Recent Plant Entries</h4>
+                                <h4 class="heading-4">Recent Plant Entries</h4>
                                 <div id="recent-plant-entry" class="data-entry-card">
                                     <!-- Recent plant entry with edit/delete buttons will be displayed here -->
                                 </div>
@@ -1007,18 +1216,18 @@
             </div>
             
             <div id="spray-programmes-content" class="plant-mgmt-content">
-                <h3>Spray Programmes</h3>
-                <p style="color: #666; margin-bottom: 1.5rem;">Manage your pest control, disease prevention, and foliar feeding schedules.</p>
+                <h3 class="heading-3">Spray Programmes</h3>
+                <p class="text-muted" style="margin-bottom: 1.5rem;">Manage your pest control, disease prevention, and foliar feeding schedules.</p>
                 
                 <div class="spray-programmes-tabs">
-                    <button id="insecticides-tab" class="spray-tab active">🐛 Insecticides</button>
-                    <button id="fungicides-tab" class="spray-tab">🍄 Fungicides</button>
-                    <button id="foliar-feeds-tab" class="spray-tab">🌿 Foliar Feeds</button>
+                    <button id="insecticides-tab" class="spray-tab active"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Bug" class="tab-icon-svg"> Insecticides</button>
+                    <button id="fungicides-tab" class="spray-tab"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Fungi" class="tab-icon-svg"> Fungicides</button>
+                    <button id="foliar-feeds-tab" class="spray-tab"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant" class="tab-icon-svg"> Foliar Feeds</button>
                 </div>
                 
                 <div id="insecticides-content" class="spray-content active">
                     <div class="spray-category-header">
-                        <h4>Insecticide Applications</h4>
+                        <h4 class="heading-4">Insecticide Applications</h4>
                         <button class="add-spray-btn" onclick="app.showAddSprayModal('insecticide')"><span class="icon-placeholder" data-icon="add"></span>Add New Insecticide</button>
                     </div>
                     <div id="insecticides-list" class="spray-applications-list">
@@ -1028,7 +1237,7 @@
                 
                 <div id="fungicides-content" class="spray-content">
                     <div class="spray-category-header">
-                        <h4>Fungicide Applications</h4>
+                        <h4 class="heading-4">Fungicide Applications</h4>
                         <button class="add-spray-btn" onclick="app.showAddSprayModal('fungicide')"><span class="icon-placeholder" data-icon="add"></span>Add New Fungicide</button>
                     </div>
                     <div id="fungicides-list" class="spray-applications-list">
@@ -1038,7 +1247,7 @@
                 
                 <div id="foliar-feeds-content" class="spray-content">
                     <div class="spray-category-header">
-                        <h4>Foliar Feed Applications</h4>
+                        <h4 class="heading-4">Foliar Feed Applications</h4>
                         <button class="add-spray-btn" onclick="app.showAddSprayModal('foliar')"><span class="icon-placeholder" data-icon="add"></span>Add New Foliar Feed</button>
                     </div>
                     <div id="foliar-feeds-list" class="spray-applications-list">
@@ -1047,7 +1256,7 @@
                 </div>
                 
                 <div class="spray-calendar">
-                    <h4>Upcoming Applications</h4>
+                    <h4 class="heading-4">Upcoming Applications</h4>
                     <div id="spray-calendar-container">
                         <!-- Calendar view will be displayed here -->
                     </div>
@@ -1056,14 +1265,14 @@
             
             <div class="plant-sections">
                 <div class="plant-section">
-                    <h3>Plant Growth History</h3>
+                    <h3 class="heading-3">Plant Growth History</h3>
                     <div id="plant-growth-history">
                         <!-- Recent plant growth data will be displayed here -->
                     </div>
                 </div>
                 
                 <div class="plant-section">
-                    <h3>Growing Recommendations</h3>
+                    <h3 class="heading-3">Growing Recommendations</h3>
                     <div id="plant-recommendations">
                         <!-- Plant growing tips and recommendations will be displayed here -->
                     </div>
@@ -1072,7 +1281,7 @@
         </section>
 
         <section id="settings" class="view">
-            <h2>Afraponix Go - System Settings</h2>
+            <h2 class="heading-2">Afraponix Go - System Settings</h2>
             <div class="current-system-display" id="current-system-settings">
                 <!-- Current system name will be displayed here -->
             </div>
@@ -1161,8 +1370,8 @@
             <!-- System Configuration Content -->
             <div id="system-config-content" class="settings-content active">
                 <div class="form-section">
-                <h3>System Configuration</h3>
-                <p style="color: #666; margin-bottom: 1.5rem;">Configure your aquaponics system components and specifications.</p>
+                <h3 class="heading-3">System Configuration</h3>
+                <p class="text-muted" style="margin-bottom: 1.5rem;">Configure your aquaponics system components and specifications.</p>
                 
                 <!-- System Config Sub-Tabs -->
                 <div class="system-config-tabs">
@@ -1198,7 +1407,7 @@
                 <!-- Overall System Content -->
                 <div id="overall-system-content" class="system-config-content active">
                     <!-- Basic System Information -->
-                    <h4 style="margin-bottom: 1rem; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                    <h4 class="section-header">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 500 500">
                             <g>
                                 <g>
@@ -1216,12 +1425,12 @@
                     </h4>
                     <div class="settings-row">
                         <div class="form-field">
-                            <label for="system-name">System Name:</label>
-                            <input type="text" id="system-name" placeholder="My Aquaponics System">
+                            <label for="system-name" class="form-label">System Name:</label>
+                            <input type="text" id="system-name" class="form-input" placeholder="My Aquaponics System">
                         </div>
                         <div class="form-field">
-                            <label for="system-type-config">System Type:</label>
-                            <select id="system-type-config">
+                            <label for="system-type-config" class="form-label">System Type:</label>
+                            <select id="system-type-config" class="form-input">
                                 <option value="media-bed">Media Bed</option>
                                 <option value="nft">NFT (Nutrient Film Technique)</option>
                                 <option value="dwc">DWC (Deep Water Culture)</option>
@@ -1231,7 +1440,7 @@
                     </div>
                     
                     <!-- System Summary -->
-                    <h4 style="margin: 2rem 0 1rem 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                    <h4 class="section-header">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
                             <g>
                                 <path d="m19.593 1.96h-3.075v-.445c0-.788-.642-1.429-1.43-1.429h-6.175c-.788 0-1.43.641-1.43 1.429v.445h-3.076c-.889 0-1.612.723-1.612 1.612v18.73c0 .889.724 1.612 1.612 1.612h15.186c.889 0 1.612-.723 1.612-1.612v-18.73c0-.889-.724-1.612-1.612-1.612zm-11.309-.445c0-.353.276-.629.629-.629h6.175c.353 0 .629.276.629.629v1.646c0 .353-.276.629-.629.629h-6.175c-.353 0-.629-.276-.629-.629zm12.12 20.787c0 .44-.371.813-.812.813h-15.185c-.44 0-.812-.372-.812-.813v-18.73c0-.44.371-.812.812-.812h3.076v.402c0 .788.642 1.429 1.43 1.429h6.175c.788 0 1.43-.641 1.43-1.429v-.402h3.075c.44 0 .812.372.812.812v18.73z" fill="#0051b1"/>
@@ -1246,27 +1455,27 @@
                     </h4>
                     <div class="settings-row">
                         <div class="form-field">
-                            <label for="fish-tank-count">Number of Fish Tanks:</label>
-                            <input type="number" id="fish-tank-count" min="1" max="10" value="1" onchange="app.updateFishTankCount()">
-                            <small style="color: #666;">Configure individual tanks in the Fish Tanks sub-tab</small>
+                            <label for="fish-tank-count" class="form-label">Number of Fish Tanks:</label>
+                            <input type="number" id="fish-tank-count" class="form-input" min="1" max="10" value="1" onchange="app.updateFishTankCount()">
+                            <small class="text-muted text-small">Configure individual tanks in the Fish Tanks sub-tab</small>
                         </div>
                         <div class="form-field">
-                            <label for="total-fish-volume">Total Fish Tank Volume (L):</label>
-                            <input type="number" id="total-fish-volume" min="50" step="50" placeholder="1000" readonly>
-                            <small style="color: #666;">Automatically calculated from individual tank configurations</small>
+                            <label for="total-fish-volume" class="form-label">Total Fish Tank Volume (L):</label>
+                            <input type="number" id="total-fish-volume" class="form-input" min="50" step="50" placeholder="1000" readonly>
+                            <small class="text-muted text-small">Automatically calculated from individual tank configurations</small>
                         </div>
                     </div>
                     
                     <div class="settings-row">
                         <div class="form-field">
-                            <label for="grow-bed-count">Number of Grow Beds:</label>
-                            <input type="number" id="grow-bed-count" min="1" max="20" value="4" onchange="app.updateGrowBedCount()">
-                            <small style="color: #666;">Configure individual beds in the Grow Beds sub-tab</small>
+                            <label for="grow-bed-count" class="form-label">Number of Grow Beds:</label>
+                            <input type="number" id="grow-bed-count" class="form-input" min="1" max="20" value="4" onchange="app.updateGrowBedCount()">
+                            <small class="text-muted text-small">Configure individual beds in the Grow Beds sub-tab</small>
                         </div>
                         <div class="form-field">
-                            <label for="total-grow-area">Total Equivalent Grow Area (m²):</label>
-                            <input type="number" id="total-grow-area" min="0.1" step="0.1" placeholder="2.0" readonly>
-                            <small style="color: #666;">Calculated from individual grow bed configurations</small>
+                            <label for="total-grow-area" class="form-label">Total Equivalent Grow Area (m²):</label>
+                            <input type="number" id="total-grow-area" class="form-input" min="0.1" step="0.1" placeholder="2.0" readonly>
+                            <small class="text-muted text-small">Calculated from individual grow bed configurations</small>
                         </div>
                     </div>
                     
@@ -1276,7 +1485,7 @@
                             <div id="total-grow-volume-display" style="padding: 0.75rem; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 4px; color: #495057; font-weight: 600;">
                                 Auto-calculated: 0 L
                             </div>
-                            <small style="color: #666;">Auto-calculated from individual grow bed configurations</small>
+                            <small class="text-muted text-small">Auto-calculated from individual grow bed configurations</small>
                         </div>
                     </div>
                     
@@ -1290,7 +1499,7 @@
                 
                 <!-- Fish Tanks Configuration Content -->
                 <div id="fish-tanks-config-content" class="system-config-content">
-                    <h4 style="margin-bottom: 1rem; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                    <h4 class="section-header">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
                             <g>
                                 <path d="M22,7V20a2,2,0,0,1-2,2H4a2,2,0,0,1-2-2V7A2,2,0,0,1,4,5H20A2,2,0,0,1,22,7ZM20,7H4V20H20Z" fill="#0051b1"/>
@@ -1302,7 +1511,7 @@
                         </svg>
                         Fish Tank Configuration
                     </h4>
-                    <p style="color: #666; margin-bottom: 1rem;">Configure each fish tank individually with size and fish type specifications.</p>
+                    <p class="text-muted" style="margin-bottom: 1rem;">Configure each fish tank individually with size and fish type specifications.</p>
                     
                     <!-- Fish Tank Configuration -->
                     <div class="fish-tanks-config" id="fish-tanks-config-detail">
@@ -1310,15 +1519,15 @@
                             <div class="form-field">
                                 <label>Number of Fish Tanks:</label>
                                 <span class="readonly-field" id="fish-tank-count-display">1</span>
-                                <small style="color: #666;">Change this in the Overall System sub-tab</small>
+                                <small class="text-muted text-small">Change this in the Overall System sub-tab</small>
                             </div>
                             <div class="form-field">
                                 <label>Total Fish Tank Volume (L):</label>
                                 <span class="readonly-field" id="total-fish-volume-display">0 L</span>
-                                <small style="color: #666;">Automatically calculated from individual tank configurations</small>
+                                <small class="text-muted text-small">Automatically calculated from individual tank configurations</small>
                             </div>
                         </div>
-                        <p style="color: #666; margin-bottom: 1rem;">Configure each fish tank individually. Specify the size in cubic meters (m³) and fish type for each tank.</p>
+                        <p class="text-muted" style="margin-bottom: 1rem;">Configure each fish tank individually. Specify the size in cubic meters (m³) and fish type for each tank.</p>
                         <div id="fish-tanks-container">
                             <!-- Individual fish tanks will be populated here -->
                         </div>
@@ -1327,34 +1536,34 @@
                 
                 <!-- Grow Beds Configuration Content -->
                 <div id="grow-beds-config-content" class="system-config-content">
-                    <h4 style="margin-bottom: 1rem; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">Grow Bed Configuration</h4>
-                    <p style="color: #666; margin-bottom: 1rem;">Configure each grow bed individually with type-specific dimensions and auto-calculations.</p>
+                    <h4 class="section-header">Grow Bed Configuration</h4>
+                    <p class="text-muted" style="margin-bottom: 1rem;">Configure each grow bed individually with type-specific dimensions and auto-calculations.</p>
                     
                     <!-- Summary Information -->
                     <div class="settings-row" style="margin-bottom: 1.5rem;">
                         <div class="form-field">
                             <label>Number of Grow Beds:</label>
                             <span class="readonly-field" id="grow-bed-count-display">4</span>
-                            <small style="color: #666;">Change this in the Overall System sub-tab</small>
+                            <small class="text-muted text-small">Change this in the Overall System sub-tab</small>
                         </div>
                         <div class="form-field">
                             <label>Total Equivalent Grow Area (m²):</label>
                             <span class="readonly-field" id="total-grow-area-display">0 m²</span>
-                            <small style="color: #666;">Calculated from individual grow bed configurations</small>
+                            <small class="text-muted text-small">Calculated from individual grow bed configurations</small>
                         </div>
                     </div>
                     
                     <!-- Individual Grow Bed Configuration -->
                     <div class="grow-beds-config" id="grow-beds-config">
-                        <p style="color: #666; margin-bottom: 1rem;">Configure each grow bed individually. The total equivalent area will be calculated automatically.</p>
-                        <div id="grow-beds-container">
+                        <p class="text-muted" style="margin-bottom: 1rem;">Configure each grow bed individually. The total equivalent area will be calculated automatically.</p>
+                        <div id="grow-beds-config-container">
                             <!-- Individual grow beds will be populated here -->
                         </div>
                     </div>
                     
                     <!-- Grow Bed Status Section -->
-                    <h4 style="margin: 2rem 0 1rem 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">📊 Grow Bed Status & Management</h4>
-                    <p style="color: #666; margin-bottom: 1rem;">View and manage the status of your configured grow beds.</p>
+                    <h4 class="section-header"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Data" class="heading-icon"> Grow Bed Status & Management</h4>
+                    <p class="text-muted" style="margin-bottom: 1rem;">View and manage the status of your configured grow beds.</p>
                     <div id="grow-bed-status-container">
                         <!-- Grow bed status will be populated here -->
                     </div>
@@ -1365,14 +1574,14 @@
             <!-- System Sharing Content -->
             <div id="system-sharing-content" class="settings-content">
                 <div class="form-section">
-                    <h3>👥 System Sharing & Collaboration</h3>
-                    <p style="color: #666; margin-bottom: 1.5rem;">
+                    <h3 class="heading-3"><img src="icons/new-icons/Afraponix Go Icons_settings.svg" alt="Users" class="heading-icon"> System Sharing & Collaboration</h3>
+                    <p class="text-muted" style="margin-bottom: 1.5rem;">
                         Share your aquaponics system with other users and manage access permissions.
                     </p>
                     
                     <!-- Invite Users Section -->
                     <div class="sharing-section">
-                        <h4>📧 Invite Users</h4>
+                        <h4 class="heading-4"><img src="icons/new-icons/Afraponix Go Icons_copy.svg" alt="Invite" class="heading-icon"> Invite Users</h4>
                         <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
                             Send invitations to other users to collaborate on this system.
                         </p>
@@ -1380,21 +1589,21 @@
                         <form id="invite-user-form" class="invite-form">
                             <div class="form-row">
                                 <div class="form-field" style="flex: 2;">
-                                    <label for="invite-email">Email Address:</label>
-                                    <input type="email" id="invite-email" placeholder="user@example.com" required>
+                                    <label for="invite-email" class="form-label">Email Address:</label>
+                                    <input type="email" id="invite-email" class="form-input" placeholder="user@example.com" required>
                                 </div>
                                 <div class="form-field" style="flex: 1;">
-                                    <label for="invite-permission">Permission Level:</label>
-                                    <select id="invite-permission" required>
-                                        <option value="view">👁️ Viewer (Read-only)</option>
+                                    <label for="invite-permission" class="form-label">Permission Level:</label>
+                                    <select id="invite-permission" class="form-input" required>
+                                        <option value="view"><img src="icons/new-icons/Afraponix Go Icons_view.svg" alt="View" class="option-icon-svg"> Viewer (Read-only)</option>
                                         <option value="collaborator">Collaborator (Can edit data)</option>
-                                        <option value="admin">⚙️ Admin (Full access)</option>
+                                        <option value="admin"><img src="icons/new-icons/Afraponix Go Icons_settings.svg" alt="Admin" class="option-icon-svg"> Admin (Full access)</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="form-field">
-                                <label for="invite-message">Personal Message (Optional):</label>
-                                <textarea id="invite-message" rows="2" placeholder="Hi! I'd like to share my aquaponics system with you..."></textarea>
+                                <label for="invite-message" class="form-label">Personal Message (Optional):</label>
+                                <textarea id="invite-message" class="form-input" rows="2" placeholder="Hi! I'd like to share my aquaponics system with you..."></textarea>
                             </div>
                             <button type="submit" class="form-btn">Send Invitation</button>
                         </form>
@@ -1402,7 +1611,7 @@
                     
                     <!-- Current Shared Users Section -->
                     <div class="sharing-section">
-                        <h4>👥 Current Shared Users</h4>
+                        <h4 class="heading-4"><img src="icons/new-icons/Afraponix Go Icons_settings.svg" alt="Users" class="heading-icon"> Current Shared Users</h4>
                         <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
                             Manage users who currently have access to this system.
                         </p>
@@ -1414,7 +1623,7 @@
                     
                     <!-- Pending Invitations Section -->
                     <div class="sharing-section">
-                        <h4>⏳ Pending Invitations</h4>
+                        <h4 class="heading-4">⏳ Pending Invitations</h4>
                         <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
                             Invitations that have been sent but not yet accepted.
                         </p>
@@ -1426,7 +1635,7 @@
                     
                     <!-- System Access Settings -->
                     <div class="sharing-section">
-                        <h4>🔒 Access Settings</h4>
+                        <h4 class="heading-4"><img src="icons/new-icons/Afraponix Go Icons_settings.svg" alt="Security" class="heading-icon"> Access Settings</h4>
                         <div class="access-settings">
                             <div class="setting-item">
                                 <label class="setting-label">
@@ -1441,8 +1650,8 @@
                                 <div class="public-link-display">
                                     <label>Public Link:</label>
                                     <div class="link-copy-container">
-                                        <input type="text" id="public-link" readonly>
-                                        <button type="button" id="copy-public-link" class="copy-btn">📋 Copy</button>
+                                        <input type="text" id="public-link" class="form-input" readonly>
+                                        <button type="button" id="copy-public-link" class="copy-btn"><img src="icons/new-icons/Afraponix Go Icons_copy.svg" alt="Copy" class="btn-icon-svg"> Copy</button>
                                     </div>
                                 </div>
                             </div>
@@ -1454,25 +1663,25 @@
             <!-- Sensor Config Content -->
             <div id="sensor-config-content" class="settings-content">
                 <div class="form-section">
-                    <h3>🔧 Sensor Configuration</h3>
+                    <h3 class="heading-3"><img src="icons/new-icons/Afraponix Go Icons_settings.svg" alt="Config" class="heading-icon"> Sensor Configuration</h3>
                     <p>Configure sensors to automatically collect data from your aquaponics system.</p>
                     
                     <!-- ThingsBoard Credential Status -->
                     <div id="tb-credential-status" class="credential-status-container">
-                        <div class="credential-status checking">
+                        <span class="badge badge-info">
                             <span class="status-icon">⏳</span>
                             <span class="status-text">Checking ThingsBoard connection...</span>
-                        </div>
+                        </span>
                     </div>
                     
                     <!-- Sensor Config Tabs -->
                     <div class="sensor-config-tabs">
                         <button id="add-sensor-tab" class="sensor-tab active" data-target="add-sensor-content">
-                            <span class="tab-icon">➕</span>
+                            <span class="tab-icon"><img src="icons/new-icons/Afraponix Go Icons_add.svg" alt="Add" class="tab-icon-svg"></span>
                             <span class="tab-label">Add New</span>
                         </button>
                         <button id="existing-sensors-tab" class="sensor-tab" data-target="existing-sensors-content">
-                            <span class="tab-icon">📋</span>
+                            <span class="tab-icon"><img src="icons/new-icons/Afraponix Go Icons_copy.svg" alt="Copy" class="tab-icon-svg"></span>
                             <span class="tab-label">Existing Sensors</span>
                         </button>
                     </div>
@@ -1484,12 +1693,12 @@
                         <form id="add-sensor-form" class="sensor-form">
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="sensor-name">Sensor Name:</label>
-                                    <input type="text" id="sensor-name" name="sensor_name" placeholder="e.g., Water Temperature Sensor" required>
+                                    <label class="form-label" for="sensor-name">Sensor Name:</label>
+                                    <input type="text" id="sensor-name" name="sensor_name" class="form-input" placeholder="e.g., Water Temperature Sensor" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="sensor-type">Sensor Type:</label>
-                                    <select id="sensor-type" name="sensor_type" required>
+                                    <label class="form-label" for="sensor-type">Sensor Type:</label>
+                                    <select id="sensor-type" name="sensor_type" class="form-input" required>
                                         <option value="">Select Type</option>
                                         <option value="temperature">Temperature</option>
                                         <option value="ph">pH Level</option>
@@ -1506,12 +1715,12 @@
                             
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="device-id">Device ID:</label>
-                                    <input type="text" id="device-id" name="device_id" placeholder="ThingsBoard device identifier" required>
+                                    <label for="device-id" class="form-label">Device ID:</label>
+                                    <input type="text" id="device-id" name="device_id" class="form-input" placeholder="ThingsBoard device identifier" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="telemetry-key">Telemetry Key:</label>
-                                    <select id="telemetry-key" name="telemetry_key" required disabled>
+                                    <label for="telemetry-key" class="form-label">Telemetry Key:</label>
+                                    <select id="telemetry-key" name="telemetry_key" class="form-input" required disabled>
                                         <option value="">Select device first...</option>
                                     </select>
                                 </div>
@@ -1519,12 +1728,12 @@
                             
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="update-interval">Update Interval (seconds):</label>
-                                    <input type="number" id="update-interval" name="update_interval" value="300" min="60" max="3600">
+                                    <label for="update-interval" class="form-label">Update Interval (seconds):</label>
+                                    <input type="number" id="update-interval" name="update_interval" class="form-input" value="300" min="60" max="3600">
                                 </div>
                                 <div class="form-group">
-                                    <label for="sensor-active">Sensor Status:</label>
-                                    <select id="sensor-active" name="active">
+                                    <label for="sensor-active" class="form-label">Sensor Status:</label>
+                                    <select id="sensor-active" name="active" class="form-input">
                                         <option value="1">Active</option>
                                         <option value="0">Inactive</option>
                                     </select>
@@ -1533,22 +1742,22 @@
                             
                             <!-- Data Mapping Section -->
                             <div class="form-section-header">
-                                <h5>📊 Data Mapping (Optional)</h5>
+                                <h5 class="heading-4"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Data" class="heading-icon"> Data Mapping (Optional)</h5>
                                 <p class="help-text">Map sensor data to existing database fields for automatic integration.</p>
                             </div>
                             
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="mapped-table">Map to Table:</label>
-                                    <select id="mapped-table" name="mapped_table">
+                                    <label for="mapped-table" class="form-label">Map to Table:</label>
+                                    <select id="mapped-table" name="mapped_table" class="form-input">
                                         <option value="">Don't map to database</option>
                                         <option value="nutrient_readings">Nutrient Readings</option>
                                         <option value="fish_health">Fish Health</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label for="mapped-field">Map to Field:</label>
-                                    <select id="mapped-field" name="mapped_field" disabled>
+                                    <label for="mapped-field" class="form-label">Map to Field:</label>
+                                    <select id="mapped-field" name="mapped_field" class="form-input" disabled>
                                         <option value="">Select table first</option>
                                     </select>
                                 </div>
@@ -1556,8 +1765,8 @@
                             
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="data-transform">Data Transform (Optional):</label>
-                                    <select id="data-transform" name="data_transform">
+                                    <label for="data-transform" class="form-label">Data Transform (Optional):</label>
+                                    <select id="data-transform" name="data_transform" class="form-input">
                                         <option value="">No transformation</option>
                                         <option value="celsius_to_fahrenheit">Celsius to Fahrenheit</option>
                                         <option value="fahrenheit_to_celsius">Fahrenheit to Celsius</option>
@@ -1574,8 +1783,8 @@
                             </div>
                             
                             <div class="form-actions">
-                                <button type="button" id="test-sensor-connection" class="btn btn-secondary">Test Connection</button>
-                                <button type="submit" class="btn btn-primary">Add Sensor</button>
+                                <button type="button" id="test-sensor-connection-new" class="btn btn-secondary">Test Connection</button>
+                                <button type="submit" class="btn btn-success">Add Sensor</button>
                             </div>
                         </form>
                     </div>
@@ -1592,7 +1801,7 @@
                     
                     <!-- API Configuration -->
                     <div class="api-config-container">
-                        <h4>API Configuration</h4>
+                        <h4 class="heading-4">API Configuration</h4>
                         <div class="api-config-info">
                             <p><strong>Current API Endpoint:</strong> <span id="current-api-url">https://tb.datascapeindustrial.com</span></p>
                             <p><strong>Authentication:</strong> Using environment variables for security</p>
@@ -1609,41 +1818,41 @@
             <!-- Credentials Content -->
             <div id="credentials-content" class="settings-content">
                 <div class="form-section">
-                    <h3>🔐 ThingsBoard Credentials</h3>
+                    <h3 class="heading-3"><img src="icons/new-icons/Afraponix Go Icons_settings.svg" alt="Credentials" class="heading-icon"> ThingsBoard Credentials</h3>
                     <p>Manage secure authentication credentials for your ThingsBoard IoT platform integration.</p>
                     
                     <!-- Add/Update ThingsBoard Credentials -->
                     <div class="credentials-form-container">
-                        <h4>ThingsBoard Authentication</h4>
+                        <h4 class="heading-4">ThingsBoard Authentication</h4>
                         <form id="thingsboard-credentials-form" class="credentials-form">
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="tb-api-url">ThingsBoard API URL:</label>
-                                    <input type="url" id="tb-api-url" name="api_url" value="https://tb.datascapeindustrial.com" required>
+                                    <label for="tb-api-url" class="form-label">ThingsBoard API URL:</label>
+                                    <input type="url" id="tb-api-url" name="api_url" class="form-input" value="https://tb.datascapeindustrial.com" required>
                                 </div>
                             </div>
                             
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="tb-username">Username:</label>
-                                    <input type="text" id="tb-username" name="username" placeholder="Your ThingsBoard username" required>
+                                    <label for="tb-username" class="form-label">Username:</label>
+                                    <input type="text" id="tb-username" name="username" class="form-input" placeholder="Your ThingsBoard username" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="tb-password">Password:</label>
-                                    <input type="password" id="tb-password" name="password" placeholder="Your ThingsBoard password" required>
+                                    <label for="tb-password" class="form-label">Password:</label>
+                                    <input type="password" id="tb-password" name="password" class="form-input" placeholder="Your ThingsBoard password" required>
                                 </div>
                             </div>
                             
                             <div class="form-actions">
                                 <button type="button" id="test-tb-credentials" class="btn btn-secondary">Test Credentials</button>
-                                <button type="submit" class="btn btn-primary">Save Credentials</button>
+                                <button type="submit" class="btn btn-success">Save Credentials</button>
                             </div>
                         </form>
                     </div>
                     
                     <!-- Current Credentials Status -->
                     <div class="credentials-status-container">
-                        <h4>Current Status</h4>
+                        <h4 class="heading-4">Current Status</h4>
                         <div id="credentials-status" class="status-indicator">
                             <div class="status-item">
                                 <span class="status-label">ThingsBoard Connection:</span>
@@ -1658,7 +1867,7 @@
                     
                     <!-- Security Information -->
                     <div class="security-info">
-                        <h4>🔒 Security Information</h4>
+                        <h4 class="heading-4"><img src="icons/new-icons/Afraponix Go Icons_settings.svg" alt="Security" class="heading-icon"> Security Information</h4>
                         <ul>
                             <li><strong>Encryption:</strong> All credentials are encrypted using AES-256-CBC before storage</li>
                             <li><strong>Access:</strong> Only your system can decrypt and access these credentials</li>
@@ -1672,7 +1881,7 @@
             <!-- Danger Zone Content -->
             <div id="danger-zone-content" class="settings-content">
                 <div class="form-section danger-zone">
-                    <h3>🚨 Danger Zone</h3>
+                    <h3 class="heading-3"><img src="icons/new-icons/Afraponix Go Icons_warning.svg" alt="Danger" class="heading-icon"> Danger Zone</h3>
                     <p style="color: #dc3545; margin-bottom: 1rem;">
                         <strong>Warning:</strong> The actions in this section are irreversible and will permanently delete your system and all associated data.
                     </p>
@@ -1680,7 +1889,7 @@
                     <div class="danger-actions">
                         <div class="danger-action">
                             <div class="danger-info">
-                                <h4>Delete System</h4>
+                                <h4 class="heading-4">Delete System</h4>
                                 <p>Permanently delete the current system and all its data including grow beds, allocations, water quality records, and plant data.</p>
                             </div>
                             <button onclick="app.confirmDeleteSystem()" class="danger-btn">
@@ -1696,11 +1905,11 @@
                 <!-- Admin Sub-tabs -->
                 <div class="admin-sub-tabs">
                     <button id="admin-users-subtab" class="admin-subtab active" data-target="admin-users-subcontent">
-                        <span class="tab-icon">👥</span>
+                        <span class="tab-icon"><img src="icons/new-icons/Afraponix Go Icons_settings.svg" alt="Users" class="tab-icon-svg"></span>
                         <span class="tab-label">User Management</span>
                     </button>
                     <button id="admin-smtp-subtab" class="admin-subtab" data-target="admin-smtp-subcontent">
-                        <span class="tab-icon">📧</span>
+                        <span class="tab-icon"><img src="icons/new-icons/Afraponix Go Icons_copy.svg" alt="Email" class="tab-icon-svg"></span>
                         <span class="tab-label">SMTP Settings</span>
                     </button>
                     <button id="admin-data-subtab" class="admin-subtab" data-target="admin-data-subcontent">
@@ -1708,7 +1917,7 @@
                         <span class="tab-label">Edit Data</span>
                     </button>
                     <button id="admin-stats-subtab" class="admin-subtab" data-target="admin-stats-subcontent">
-                        <span class="tab-icon">📊</span>
+                        <span class="tab-icon"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Data" class="tab-icon-svg"></span>
                         <span class="tab-label">System Stats</span>
                     </button>
                 </div>
@@ -1716,8 +1925,20 @@
                 <!-- User Management -->
                 <div id="admin-users-subcontent" class="admin-subcontent active">
                     <div class="form-section">
-                        <h3>User Management</h3>
-                        <p style="color: #666; margin-bottom: 1rem;">Manage user accounts, roles, and permissions.</p>
+                        <h3 class="heading-3">User Management</h3>
+                        <p class="text-muted" style="margin-bottom: 1rem;">Manage user accounts, roles, and permissions.</p>
+                        
+                        <!-- User Search Bar -->
+                        <div class="user-search-container">
+                            <input type="text" 
+                                   id="admin-user-search" 
+                                   class="form-input search-input" 
+                                   placeholder="Search users by name, email, or username..."
+                                   onkeyup="app.searchAdminUsers(this.value)">
+                            <div class="search-info">
+                                <span id="user-count-display">Loading users...</span>
+                            </div>
+                        </div>
                         
                         <div id="users-list-container">
                             <!-- Users list will be populated here -->
@@ -1728,51 +1949,51 @@
                 <!-- SMTP Settings -->
                 <div id="admin-smtp-subcontent" class="admin-subcontent">
                     <div class="form-section">
-                        <h3>SMTP Email Configuration</h3>
-                        <p style="color: #666; margin-bottom: 1rem;">Configure email settings for password reset and notification emails.</p>
+                        <h3 class="heading-3">SMTP Email Configuration</h3>
+                        <p class="text-muted" style="margin-bottom: 1rem;">Configure email settings for password reset and notification emails.</p>
                         
                         <!-- SMTP Server Settings -->
-                        <h4 style="margin-bottom: 1rem; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">📧 Server Settings</h4>
+                        <h4 class="section-header"><img src="icons/new-icons/Afraponix Go Icons_copy.svg" alt="Server" class="heading-icon"> Server Settings</h4>
                         <div class="settings-row">
                             <div class="form-field">
-                                <label for="smtp-host">SMTP Host:</label>
-                                <input type="text" id="smtp-host" placeholder="smtp-relay.brevo.com">
+                                <label for="smtp-host" class="form-label">SMTP Host:</label>
+                                <input type="text" id="smtp-host" class="form-input" placeholder="smtp-relay.brevo.com">
                             </div>
                             <div class="form-field">
-                                <label for="smtp-port">SMTP Port:</label>
-                                <input type="number" id="smtp-port" placeholder="587">
+                                <label for="smtp-port" class="form-label">SMTP Port:</label>
+                                <input type="number" id="smtp-port" class="form-input" placeholder="587">
                             </div>
                         </div>
                         
                         <!-- Authentication -->
-                        <h4 style="margin: 2rem 0 1rem 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">🔐 Authentication</h4>
+                        <h4 class="section-header"><img src="icons/new-icons/Afraponix Go Icons_settings.svg" alt="Auth" class="heading-icon"> Authentication</h4>
                         <div class="settings-row">
                             <div class="form-field">
-                                <label for="smtp-user">SMTP Username:</label>
-                                <input type="email" id="smtp-user" placeholder="your-email@domain.com">
+                                <label for="smtp-user" class="form-label">SMTP Username:</label>
+                                <input type="email" id="smtp-user" class="form-input" placeholder="your-email@domain.com">
                             </div>
                             <div class="form-field">
-                                <label for="smtp-pass">SMTP Password:</label>
-                                <input type="password" id="smtp-pass" placeholder="Your SMTP password">
+                                <label for="smtp-pass" class="form-label">SMTP Password:</label>
+                                <input type="password" id="smtp-pass" class="form-input" placeholder="Your SMTP password">
                             </div>
                         </div>
                         
                         <!-- From Address & Reset URL -->
-                        <h4 style="margin: 2rem 0 1rem 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">📬 Email Settings</h4>
+                        <h4 class="section-header"><img src="icons/new-icons/Afraponix Go Icons_copy.svg" alt="Email" class="heading-icon"> Email Settings</h4>
                         <div class="settings-row">
                             <div class="form-field">
-                                <label for="smtp-from-name">From Name:</label>
-                                <input type="text" id="smtp-from-name" placeholder="Afraponix Go">
+                                <label for="smtp-from-name" class="form-label">From Name:</label>
+                                <input type="text" id="smtp-from-name" class="form-input" placeholder="Afraponix Go">
                             </div>
                             <div class="form-field">
-                                <label for="smtp-from-email">From Email:</label>
-                                <input type="email" id="smtp-from-email" placeholder="noreply@yourdomain.com">
+                                <label for="smtp-from-email" class="form-label">From Email:</label>
+                                <input type="email" id="smtp-from-email" class="form-input" placeholder="noreply@yourdomain.com">
                             </div>
                         </div>
                         <div class="settings-row">
                             <div class="form-field">
-                                <label for="smtp-reset-url">Reset URL:</label>
-                                <input type="url" id="smtp-reset-url" placeholder="http://yourserver.com:8000/reset-password">
+                                <label for="smtp-reset-url" class="form-label">Reset URL:</label>
+                                <input type="url" id="smtp-reset-url" class="form-input" placeholder="http://yourserver.com:8000/reset-password">
                             </div>
                         </div>
                         
@@ -1787,8 +2008,8 @@
                 <!-- Edit Data -->
                 <div id="admin-data-subcontent" class="admin-subcontent">
                     <div class="form-section">
-                        <h3>Edit Data Entries</h3>
-                        <p style="color: #666; margin-bottom: 1rem;">View and edit previously entered data for your system.</p>
+                        <h3 class="heading-3">Edit Data Entries</h3>
+                        <p class="text-muted" style="margin-bottom: 1rem;">View and edit previously entered data for your system.</p>
                         
                         <div class="data-edit-tabs">
                             <button id="edit-water-quality-tab" class="edit-tab active" data-category="water-quality">Water Quality</button>
@@ -1805,8 +2026,8 @@
                 <!-- System Stats -->
                 <div id="admin-stats-subcontent" class="admin-subcontent">
                     <div class="form-section">
-                        <h3>System Statistics</h3>
-                        <p style="color: #666; margin-bottom: 1rem;">Overview of system usage and user activity.</p>
+                        <h3 class="heading-3">System Statistics</h3>
+                        <p class="text-muted" style="margin-bottom: 1rem;">Overview of system usage and user activity.</p>
                         
                         <div id="admin-stats-container">
                             <!-- Admin stats will be populated here -->
@@ -1929,7 +2150,7 @@
             
             <!-- Login Form -->
             <div id="login-form" class="auth-form">
-                <h2>Login to Afraponix Go</h2>
+                <h2 class="heading-2">Login to Afraponix Go</h2>
                 <form id="login-form-element">
                     <div class="form-field">
                         <label for="login-username">Username or Email:</label>
@@ -1952,7 +2173,7 @@
 
             <!-- Register Form -->
             <div id="register-form" class="auth-form" style="display: none;">
-                <h2>Create Afraponix Go Account</h2>
+                <h2 class="heading-2">Create Afraponix Go Account</h2>
                 <form id="register-form-element">
                     <div class="form-field">
                         <label for="register-first-name">First Name:</label>
@@ -1988,7 +2209,7 @@
 
             <!-- Forgot Password Form -->
             <div id="forgot-password-form" class="auth-form" style="display: none;">
-                <h2>Reset Your Password</h2>
+                <h2 class="heading-2">Reset Your Password</h2>
                 <p style="color: #666; margin-bottom: 1rem;">Enter your email address and we'll send you a link to reset your password.</p>
                 <form id="forgot-password-form-element">
                     <div class="form-field">
@@ -2009,7 +2230,7 @@
     <div id="delete-system-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content delete-modal">
             <div class="modal-header">
-                <h3>🚨 Delete System</h3>
+                <h3 class="heading-3"><img src="icons/new-icons/Afraponix Go Icons_warning.svg" alt="Delete" class="heading-icon"> Delete System</h3>
             </div>
             <div class="modal-body">
                 <div class="warning-message">
@@ -2023,7 +2244,7 @@
                         <li>All operational records</li>
                     </ul>
                     <div class="warning-box">
-                        <p><strong>⚠️ This action cannot be undone!</strong></p>
+                        <p><strong><img src="icons/new-icons/Afraponix Go Icons_warning.svg" alt="Warning" class="warning-icon-svg"> This action cannot be undone!</strong></p>
                     </div>
                 </div>
                 
@@ -2034,7 +2255,7 @@
             </div>
             <div class="modal-actions">
                 <button onclick="app.cancelDeleteSystem()" class="cancel-btn">
-                    ❌ Cancel
+                    <img src="icons/new-icons/Afraponix Go Icons_close.svg" alt="Cancel" class="btn-icon-svg"> Cancel
                 </button>
                 <button onclick="app.executeDeleteSystem()" class="delete-confirm-btn" id="delete-confirm-btn" disabled>
                     <span class="icon-placeholder" data-icon="delete"></span>Delete System
@@ -2047,7 +2268,7 @@
     <div id="record-spray-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>📝 Record Spray Application</h3>
+                <h3 class="heading-3"><img src="icons/new-icons/Afraponix Go Icons_copy.svg" alt="Record" class="heading-icon"> Record Spray Application</h3>
                 <button class="modal-close" onclick="app.closeRecordSprayModal()">×</button>
             </div>
             <div class="modal-body">
@@ -2123,7 +2344,7 @@
     <div id="add-spray-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="add-spray-title">🌿 Add New Spray Programme</h3>
+                <h3 id="add-spray-title" class="heading-3"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant" class="heading-icon"> Add New Spray Programme</h3>
                 <button class="modal-close" onclick="app.closeAddSprayModal()">×</button>
             </div>
             <div class="modal-body">
@@ -2132,9 +2353,9 @@
                         <label for="add-spray-category">Category:</label>
                         <select id="add-spray-category" required onchange="app.updateAddSprayForm()">
                             <option value="">Select category</option>
-                            <option value="insecticides">🐛 Insecticides</option>
-                            <option value="fungicides">🍄 Fungicides</option>
-                            <option value="foliar-feeds">🌱 Foliar Feeds</option>
+                            <option value="insecticides"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Bug" class="option-icon-svg"> Insecticides</option>
+                            <option value="fungicides"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Fungi" class="option-icon-svg"> Fungicides</option>
+                            <option value="foliar-feeds"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant" class="option-icon-svg"> Foliar Feeds</option>
                         </select>
                     </div>
                     
@@ -2208,13 +2429,13 @@
     <div id="nutrient-detail-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content chart-modal">
             <div class="modal-header">
-                <h3 id="nutrient-modal-title">Nutrient Details</h3>
+                <h3 id="nutrient-modal-title" class="heading-3">Nutrient Details</h3>
                 <button id="close-nutrient-modal" class="close-btn">×</button>
             </div>
             <div class="modal-body">
                 <div class="chart-detail-info">
                     <div class="current-reading">
-                        <h4>Current Reading</h4>
+                        <h4 class="heading-4">Current Reading</h4>
                         <div class="reading-display">
                             <span id="nutrient-modal-current" class="current-value">--</span>
                             <span id="nutrient-modal-status" class="current-status">--</span>
@@ -2225,7 +2446,7 @@
                         </div>
                     </div>
                     <div class="optimal-range">
-                        <h4>Optimal Range</h4>
+                        <h4 class="heading-4">Optimal Range</h4>
                         <div id="nutrient-modal-optimal" class="range-display">--</div>
                     </div>
                 </div>
@@ -2233,7 +2454,7 @@
                     <canvas id="nutrient-modal-chart"></canvas>
                 </div>
                 <div class="chart-history">
-                    <h4>Recent History</h4>
+                    <h4 class="heading-4">Recent History</h4>
                     <table id="nutrient-modal-history">
                         <thead>
                             <tr>
@@ -2249,7 +2470,7 @@
                 </div>
             </div>
             <div class="modal-actions">
-                <button id="export-chart-data" class="form-btn secondary">📊 Export Data</button>
+                <button id="export-chart-data" class="form-btn secondary"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Export" class="btn-icon-svg"> Export Data</button>
                 <button id="close-nutrient-modal-btn" class="form-btn">Close</button>
             </div>
         </div>
@@ -2259,7 +2480,7 @@
     <div id="new-system-modal" class="modal">
         <div class="modal-content system-modal">
             <div class="modal-header">
-                <h2>Create New Aquaponics System</h2>
+                <h2 class="heading-2">Create New Aquaponics System</h2>
                 <span class="close" id="close-new-system-modal">&times;</span>
             </div>
             
@@ -2284,12 +2505,12 @@
             <form id="new-system-form">
                 <!-- Step 1: Basic Information -->
                 <div class="wizard-step active" data-step="1">
-                    <h3 class="step-title">Basic System Information</h3>
-                    <p class="step-description">Let's start with the basics of your aquaponics system</p>
+                    <h3 class="heading-3 step-title">Basic System Information</h3>
+                    <p class="text-muted step-description">Let's start with the basics of your aquaponics system</p>
                     
                     <div class="form-field">
                         <label for="new-system-name" class="modern-label">
-                            <span class="label-icon">🏷️</span>
+                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_tag.svg" alt="Tag" class="label-icon-svg"></span>
                             <span class="label-text">System Name</span>
                         </label>
                         <input type="text" id="new-system-name" class="modern-input" placeholder="e.g., Backyard Aquaponics" required>
@@ -2297,7 +2518,7 @@
                     
                     <div class="form-field">
                         <label for="new-system-type" class="modern-label">
-                            <span class="label-icon">🔧</span>
+                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_settings.svg" alt="Config" class="label-icon-svg"></span>
                             <span class="label-text">System Type</span>
                         </label>
                         <select id="new-system-type" class="modern-select" required>
@@ -2307,7 +2528,7 @@
                     
                     <div class="form-field">
                         <label for="new-fish-tank-count" class="modern-label">
-                            <span class="label-icon">🐟</span>
+                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_fish.svg" alt="Fish" class="label-icon-svg"></span>
                             <span class="label-text">Number of Fish Tanks</span>
                         </label>
                         <input type="number" id="new-fish-tank-count" class="modern-input" value="1" min="1" max="10">
@@ -2315,7 +2536,7 @@
                     
                     <div class="form-field">
                         <label for="new-grow-bed-count" class="modern-label">
-                            <span class="label-icon">🌱</span>
+                            <span class="label-icon"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant" class="label-icon-svg"></span>
                             <span class="label-text">Number of Grow Beds</span>
                         </label>
                         <input type="number" id="new-grow-bed-count" class="modern-input" value="2" min="1" max="20">
@@ -2324,8 +2545,8 @@
                 
                 <!-- Step 2: Fish Tank Configuration -->
                 <div class="wizard-step" data-step="2">
-                    <h3 class="step-title">Fish Tank Configuration</h3>
-                    <p class="step-description">Configure your fish tanks for optimal aquaculture</p>
+                    <h3 class="heading-3 step-title">Fish Tank Configuration</h3>
+                    <p class="text-muted step-description">Configure your fish tanks for optimal aquaculture</p>
                     
                     <div id="fish-tank-details" class="tank-details-container">
                         <!-- Dynamic fish tank fields will be inserted here -->
@@ -2334,8 +2555,8 @@
                 
                 <!-- Step 3: Grow Bed Configuration -->
                 <div class="wizard-step" data-step="3">
-                    <h3 class="step-title">Grow Bed Configuration</h3>
-                    <p class="step-description">Set up your grow beds for plant cultivation</p>
+                    <h3 class="heading-3 step-title">Grow Bed Configuration</h3>
+                    <p class="text-muted step-description">Set up your grow beds for plant cultivation</p>
                     
                     <div id="grow-bed-details" class="bed-details-container">
                         <!-- Dynamic grow bed fields will be inserted here -->
@@ -2353,7 +2574,7 @@
                         <span class="btn-icon">→</span>
                     </button>
                     <button type="submit" class="nav-btn submit-btn">
-                        <span class="btn-icon">✓</span>
+                        <span class="btn-icon"><img src="icons/new-icons/Afraponix Go Icons_success.svg" alt="Success" class="btn-icon-svg"></span>
                         Create System
                     </button>
                 </div>
@@ -2388,7 +2609,7 @@
     <div id="add-fish-modal" class="modal">
         <div class="modal-content fish-modal">
             <div class="modal-header">
-                <h2>🐟 Add New Fish</h2>
+                <h2><img src="icons/new-icons/Afraponix Go Icons_fish.svg" alt="Fish" class="heading-icon"> Add New Fish</h2>
                 <span class="close" onclick="app.closeModal('add-fish-modal')">&times;</span>
             </div>
             <form id="add-fish-form">
@@ -2437,7 +2658,7 @@
     <div id="mortality-modal" class="modal">
         <div class="modal-content fish-modal">
             <div class="modal-header">
-                <h2>⚠️ Record Fish Mortality</h2>
+                <h2><img src="icons/new-icons/Afraponix Go Icons_warning.svg" alt="Warning" class="heading-icon"> Record Fish Mortality</h2>
                 <span class="close" onclick="app.closeModal('mortality-modal')">&times;</span>
             </div>
             <form id="mortality-form">
@@ -2494,7 +2715,7 @@
     <div id="feeding-modal" class="modal">
         <div class="modal-content fish-modal">
             <div class="modal-header">
-                <h2>🍽️ Record Fish Feeding</h2>
+                <h2><img src="icons/new-icons/Afraponix Go Icons_feed.svg" alt="Feed" class="heading-icon"> Record Fish Feeding</h2>
                 <span class="close" onclick="app.closeModal('feeding-modal')">&times;</span>
             </div>
             <form id="feeding-form">
@@ -2548,7 +2769,7 @@
     <div id="harvest-fish-modal" class="modal">
         <div class="modal-content fish-modal">
             <div class="modal-header">
-                <h3>🐟 Harvest Fish - Tank <span id="harvest-tank-number"></span></h3>
+                <h3 class="heading-3"><img src="icons/new-icons/Afraponix Go Icons_fish.svg" alt="Fish" class="heading-icon"> Harvest Fish - Tank <span id="harvest-tank-number"></span></h3>
                 <span class="close" onclick="app.closeModal('harvest-fish-modal')">&times;</span>
             </div>
             <form id="harvest-fish-form" onsubmit="app.submitFishHarvest(event)">
@@ -2590,7 +2811,7 @@
                 
                 <div class="modal-footer">
                     <button type="button" class="form-btn secondary" onclick="app.closeModal('harvest-fish-modal')">Cancel</button>
-                    <button type="submit" class="form-btn">🐟 Record Harvest</button>
+                    <button type="submit" class="form-btn"><img src="icons/new-icons/Afraponix Go Icons_fish.svg" alt="Fish" class="btn-icon-svg"> Record Harvest</button>
                 </div>
             </form>
         </div>
@@ -2600,13 +2821,13 @@
     <div id="metrics-config-modal" class="modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Configure Dashboard Metrics</h3>
+                <h3 class="heading-3">Configure Dashboard Metrics</h3>
                 <button type="button" class="close-btn" onclick="closeMetricsConfig()">×</button>
             </div>
             <div class="modal-body">
                 <p>Select which metrics to display on your dashboard:</p>
                 <div class="metrics-checklist">
-                    <h4>Water Quality Parameters</h4>
+                    <h4 class="heading-4">Water Quality Parameters</h4>
                     <label class="metric-option">
                         <input type="checkbox" data-metric="temperature" value="temperature" checked>
                         <span class="checkmark"></span>
@@ -2643,7 +2864,7 @@
                         Salinity
                     </label>
                     
-                    <h4 style="margin-top: 20px;">Nutrient Parameters</h4>
+                    <h4 class="heading-4" style="margin-top: 20px;">Nutrient Parameters</h4>
                     <label class="metric-option">
                         <input type="checkbox" data-metric="nitrate" value="nitrate" checked>
                         <span class="checkmark"></span>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #0051b1;
+      }
+    </style>
+  </defs>
+  <!-- PLACEHOLDER - Save/Disk Icon -->
+  <rect class="cls-1" x="50" y="50" width="200" height="200" rx="20"/>
+  <rect class="cls-1" x="70" y="50" width="160" height="60" fill="white"/>
+  <rect class="cls-1" x="80" y="60" width="20" height="40"/>
+  <rect class="cls-1" x="70" y="130" width="160" height="100" fill="white"/>
+</svg>

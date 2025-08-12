@@ -1,7 +1,7 @@
 {
-  "name": "aquaponics-app",
-  "version": "1.0.0",
-  "description": "An aquaponics monitoring and management application with user authentication",
+  "name": "afraponix-go",
+  "version": "4.0.0",
+  "description": "Complete aquaponics management system with enhanced plant tracking, water quality monitoring, and comprehensive farm management tools",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

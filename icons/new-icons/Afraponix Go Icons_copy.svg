@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #0051b1;
+      }
+    </style>
+  </defs>
+  <!-- PLACEHOLDER - Copy/Clipboard Icon -->
+  <rect class="cls-1" x="60" y="80" width="140" height="180" rx="10" fill="none" stroke="#0051b1" stroke-width="15"/>
+  <rect class="cls-1" x="100" y="60" width="100" height="40" rx="20" fill="none" stroke="#0051b1" stroke-width="15"/>
+  <line class="cls-1" x1="80" y1="120" x2="180" y2="120" stroke="#0051b1" stroke-width="8"/>
+  <line class="cls-1" x1="80" y1="150" x2="180" y2="150" stroke="#0051b1" stroke-width="8"/>
+  <line class="cls-1" x1="80" y1="180" x2="150" y2="180" stroke="#0051b1" stroke-width="8"/>
+</svg>
