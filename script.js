@@ -16675,7 +16675,7 @@ class AquaponicsApp {
             await this.switchToSystem(demoSystem.id);
             
             // Close modal
-            this.closeSystemModal();
+            this.closeNewSystemModal();
             
             this.showNotification(`🎉 Demo system "${systemName}" created successfully with sample data!`, 'success');
             
