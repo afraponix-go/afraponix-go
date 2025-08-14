@@ -16835,10 +16835,12 @@ class AquaponicsApp {
         try {
             const systemName = document.getElementById('new-system-name').value.trim() || 'Oribi 1 Demo System';
             
-            this.showNotification('🔄 Creating demo system...', 'info');
+            // Close the new system modal and show loading modal
+            this.closeNewSystemModal();
+            this.showDemoLoadingModal();
             
-            // Create the demo system
-            const demoSystem = await this.createDemoSystem(systemName);
+            // Create the demo system with progress tracking
+            const demoSystem = await this.createDemoSystemWithProgress(systemName);
             
             // Validate the demo system response
             if (!demoSystem || !demoSystem.id) {
@@ -16851,26 +16853,29 @@ class AquaponicsApp {
             this.systems[demoSystem.id] = demoSystem;
             this.updateSystemSelector();
             
-            // Switch to the new demo system
+            // Switch to the new demo system and refresh all data
+            this.updateProgress(90, 'Refreshing application data...');
             await this.switchToSystem(demoSystem.id);
+            await this.forceRefreshAllData();
             
-            // Close modal
-            this.closeNewSystemModal();
+            // Complete the process
+            this.updateProgress(100, 'Demo system ready!');
             
-            // Show enhanced success notification with data summary
-            const dataStats = demoSystem.imported_data ? 
-                `\n📊 Imported: ${demoSystem.imported_data.fishTanks || 7} fish tanks, ${demoSystem.imported_data.waterQuality || 45} days of water quality data, ${demoSystem.imported_data.nutrients || 270} nutrient readings, and comprehensive historical data!` : 
-                '';
-            
-            this.showNotification(`🎉 Demo system "${systemName}" created successfully!${dataStats}\n\n🔄 App refreshed with rich sample data - explore all tabs to see the complete aquaponics management experience!`, 'success', 8000);
+            // Wait a moment to show completion, then close modal
+            setTimeout(() => {
+                this.hideDemoLoadingModal();
+                
+                // Show enhanced success notification with data summary
+                const dataStats = demoSystem.imported_data ? 
+                    `\n📊 Imported: ${demoSystem.imported_data.fishTanks || 7} fish tanks, ${demoSystem.imported_data.waterQuality || 45} days of water quality data, ${demoSystem.imported_data.nutrients || 270} nutrient readings, and comprehensive historical data!` : 
+                    '';
+                
+                this.showNotification(`🎉 Demo system "${systemName}" created successfully!${dataStats}\n\n🔄 App refreshed with rich sample data - explore all tabs to see the complete aquaponics management experience!`, 'success', 8000);
+            }, 1500);
             
         } catch (error) {
             console.error('Failed to create demo system:', error);
-            console.error('Error details:', {
-                message: error.message,
-                name: error.name,
-                stack: error.stack
-            });
+            this.hideDemoLoadingModal();
             
             // Check if it's the known server-side API issue
             if (error.message && error.message.includes('Server Error: The demo system API')) {
@@ -16887,6 +16892,123 @@ class AquaponicsApp {
                 this.showNotification(`❌ Failed to create demo system: ${error.message}. Please try creating a custom system instead, or contact support if this persists.`, 'error');
             }
         }
+    }
+
+    // Demo Loading Modal Methods
+    showDemoLoadingModal() {
+        const modal = document.getElementById('demo-loading-modal');
+        if (modal) {
+            modal.classList.add('show');
+            // Reset progress
+            this.updateProgress(0, 'Initializing demo system creation...');
+            this.markStepActive('step-system');
+        }
+    }
+
+    hideDemoLoadingModal() {
+        const modal = document.getElementById('demo-loading-modal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+    }
+
+    updateProgress(percentage, text) {
+        const progressFill = document.getElementById('demo-progress-fill');
+        const progressText = document.getElementById('demo-progress-text');
+        
+        if (progressFill) {
+            progressFill.style.width = `${percentage}%`;
+        }
+        
+        if (progressText) {
+            progressText.textContent = text;
+        }
+    }
+
+    markStepActive(stepId) {
+        // Clear all active/completed states
+        const steps = document.querySelectorAll('.loading-step');
+        steps.forEach(step => {
+            step.classList.remove('active', 'completed');
+        });
+        
+        // Mark current step as active
+        const currentStep = document.getElementById(stepId);
+        if (currentStep) {
+            currentStep.classList.add('active');
+        }
+    }
+
+    markStepCompleted(stepId) {
+        const step = document.getElementById(stepId);
+        if (step) {
+            step.classList.remove('active');
+            step.classList.add('completed');
+        }
+    }
+
+    async createDemoSystemWithProgress(systemName) {
+        // Step 1: Initialize
+        this.updateProgress(10, 'Creating system structure...');
+        this.markStepActive('step-system');
+        await this.delay(300);
+
+        // Step 2: Call the actual API
+        this.updateProgress(20, 'Importing sample data from SQLite...');
+        const demoSystem = await this.createDemoSystem(systemName);
+        
+        // Step 3-8: Simulate progress through the import steps
+        const steps = [
+            { id: 'step-tanks', progress: 30, text: 'Setting up fish tanks...', delay: 400 },
+            { id: 'step-beds', progress: 40, text: 'Configuring grow beds...', delay: 350 },
+            { id: 'step-water', progress: 55, text: 'Importing water quality data...', delay: 600 },
+            { id: 'step-nutrients', progress: 65, text: 'Loading nutrient readings...', delay: 400 },
+            { id: 'step-fish', progress: 72, text: 'Adding fish health records...', delay: 350 },
+            { id: 'step-plants', progress: 78, text: 'Importing plant data...', delay: 300 },
+            { id: 'step-spray', progress: 85, text: 'Setting up spray programmes...', delay: 250 }
+        ];
+
+        for (const step of steps) {
+            this.markStepCompleted(steps[steps.indexOf(step) - 1]?.id || 'step-system');
+            this.markStepActive(step.id);
+            this.updateProgress(step.progress, step.text);
+            await this.delay(step.delay);
+        }
+
+        // Final step
+        this.markStepCompleted('step-spray');
+        this.markStepActive('step-complete');
+
+        return demoSystem;
+    }
+
+    async forceRefreshAllData() {
+        // Force refresh all application data
+        console.log('🔄 Force refreshing all data after demo system creation...');
+        
+        try {
+            // Load all data records
+            await this.loadDataRecords();
+            
+            // Update all overview sections
+            await this.updatePlantOverview();
+            await this.loadFishOverview();
+            
+            // Update growth beds
+            await this.updateGrowBeds();
+            
+            // Refresh dashboard charts
+            this.initializeCharts();
+            
+            console.log('✅ All data refreshed successfully');
+        } catch (error) {
+            console.error('⚠️ Error during data refresh:', error);
+            // Don't throw - just log the error so the demo system creation completes
+        }
+    }
+
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     async createNewSystem(systemData) {
