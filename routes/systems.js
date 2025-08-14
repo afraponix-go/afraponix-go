@@ -195,26 +195,57 @@ router.post('/create-demo', async (req, res) => {
         return res.status(400).json({ error: 'System name is required' });
     }
 
+    // Validate user authentication and get user ID
+    let targetUserId;
+    if (user_id) {
+        targetUserId = user_id;
+    } else if (req.user && req.user.userId) {
+        targetUserId = req.user.userId;
+    } else {
+        console.error('No valid user ID found in request');
+        return res.status(401).json({ error: 'User authentication required' });
+    }
+
+    console.log('Creating demo system for user:', targetUserId);
+    
     let connection;
 
     try {
         connection = await getDatabase();
         
+        // First verify the reference system exists
+        const [referenceSystemRows] = await connection.execute(
+            'SELECT id, user_id FROM systems WHERE id = ?', 
+            [ORIBI_1_SYSTEM_ID]
+        );
+        
+        if (referenceSystemRows.length === 0) {
+            console.error('Reference system not found:', ORIBI_1_SYSTEM_ID);
+            return res.status(404).json({ error: 'Reference demo system not available' });
+        }
+        
+        console.log('Reference system found:', referenceSystemRows[0]);
+        
         // Generate new system ID
         const newSystemId = `system_${Date.now()}`;
-        const targetUserId = user_id || req.user.userId;
+        console.log('Generated new system ID:', newSystemId);
         
-        // Start transaction
+        // Start transaction with proper isolation
         await connection.execute('START TRANSACTION');
+        console.log('Transaction started');
         
-        // 1. Copy main system record
-        await connection.execute(`
-            INSERT INTO systems (id, user_id, system_name, system_type, fish_type, fish_tank_count, 
-                                total_fish_volume, grow_bed_count, total_grow_volume, total_grow_area)
-            SELECT ?, ?, ?, system_type, fish_type, fish_tank_count, 
-                   total_fish_volume, grow_bed_count, total_grow_volume, total_grow_area
-            FROM systems WHERE id = ?
-        `, [newSystemId, targetUserId, system_name, ORIBI_1_SYSTEM_ID]);
+        try {
+            // 1. Copy main system record
+            console.log('Step 1: Copying main system record...');
+            const [systemInsertResult] = await connection.execute(`
+                INSERT INTO systems (id, user_id, system_name, system_type, fish_type, fish_tank_count, 
+                                    total_fish_volume, grow_bed_count, total_grow_volume, total_grow_area)
+                SELECT ?, ?, ?, system_type, fish_type, fish_tank_count, 
+                       total_fish_volume, grow_bed_count, total_grow_volume, total_grow_area
+                FROM systems WHERE id = ?
+            `, [newSystemId, targetUserId, system_name, ORIBI_1_SYSTEM_ID]);
+            
+            console.log('System INSERT result:', { affectedRows: systemInsertResult.affectedRows });
         
         // 2. Copy grow beds and create ID mapping
         const [originalBeds] = await connection.execute(
@@ -324,66 +355,98 @@ router.post('/create-demo', async (req, res) => {
             WHERE system_id = ? AND reading_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
         `, [newSystemId, ORIBI_1_SYSTEM_ID]);
         
-        // Commit transaction
-        await connection.execute('COMMIT');
-        
-        console.log('Transaction committed, waiting 100ms before SELECT...');
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Return the created system
-        const [createdSystemRows] = await connection.execute('SELECT * FROM systems WHERE id = ?', [newSystemId]);
-        const createdSystem = createdSystemRows[0];
-        
-        console.log('Demo system creation debug:');
-        console.log('- New system ID:', newSystemId);
-        console.log('- Query result rows count:', createdSystemRows.length);
-        console.log('- Created system object:', createdSystem);
-        
-        if (!createdSystem) {
-            console.error('CRITICAL: Failed to retrieve created system from database');
-            await connection.end();
-            return res.status(500).json({ 
-                error: 'System was created but could not be retrieved',
-                system_id: newSystemId 
-            });
+            // Commit transaction
+            console.log('Committing transaction...');
+            await connection.execute('COMMIT');
+            console.log('Transaction committed successfully');
+            
+            // Query for the created system using the SAME connection
+            console.log('Querying for created system...');
+            const [createdSystemRows] = await connection.execute(
+                'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
+                [newSystemId, targetUserId]
+            );
+            
+            console.log('Demo system creation debug:');
+            console.log('- New system ID:', newSystemId);
+            console.log('- Target user ID:', targetUserId);
+            console.log('- Query result rows count:', createdSystemRows.length);
+            console.log('- Created system object:', createdSystemRows[0]);
+            
+            if (createdSystemRows.length === 0) {
+                console.error('CRITICAL: System not found after creation');
+                console.error('This indicates a transaction rollback or constraint violation');
+                return res.status(500).json({ 
+                    error: 'System creation failed - transaction may have been rolled back',
+                    system_id: newSystemId,
+                    user_id: targetUserId
+                });
+            }
+            
+            const createdSystem = createdSystemRows[0];
+            
+            const response = {
+                ...createdSystem,
+                message: 'Demo system created successfully with Oribi 1 reference data'
+            };
+            
+            console.log('Final response object keys:', Object.keys(response));
+            console.log('Response has ID:', !!response.id);
+            
+            res.status(201).json(response);
+            
+        } catch (transactionError) {
+            console.error('Transaction error occurred:', transactionError);
+            console.error('Rolling back transaction...');
+            await connection.execute('ROLLBACK');
+            throw transactionError; // Re-throw to outer catch block
         }
-        
-        await connection.end();
-        
-        const response = {
-            ...createdSystem,
-            message: 'Demo system created successfully with Oribi 1 reference data'
-        };
-        
-        console.log('Final response object:', response);
-        console.log('Response has ID:', !!response.id);
-        
-        res.status(201).json(response);
         
     } catch (error) {
-        if (connection) {
-            try {
-                await connection.execute('ROLLBACK');
-                await connection.end();
-            } catch (rollbackError) {
-                console.error('Error during rollback:', rollbackError);
-            }
-        }
-        
         console.error('Failed to create demo system:', error);
         console.error('Error stack:', error.stack);
         console.error('Error details:', {
             message: error.message,
             code: error.code,
             sqlState: error.sqlState,
-            sqlMessage: error.sqlMessage
+            sqlMessage: error.sqlMessage,
+            errno: error.errno
         });
         
-        res.status(500).json({ 
-            error: 'Failed to create demo system',
+        // Determine error type for better user feedback
+        let errorMessage = 'Failed to create demo system';
+        let statusCode = 500;
+        
+        if (error.code === 'ER_DUP_ENTRY') {
+            errorMessage = 'System with this name already exists';
+            statusCode = 409;
+        } else if (error.code === 'ER_NO_REFERENCED_ROW_2' || error.code === 'ER_NO_REFERENCED_ROW') {
+            errorMessage = 'Reference data is missing - demo system template may not be available';
+            statusCode = 404;
+        } else if (error.code === 'ER_ROW_IS_REFERENCED_2' || error.code === 'ER_ROW_IS_REFERENCED') {
+            errorMessage = 'Database constraint error during system creation';
+            statusCode = 409;
+        } else if (error.code === 'ECONNREFUSED' || error.code === 'ER_ACCESS_DENIED_ERROR') {
+            errorMessage = 'Database connection error';
+            statusCode = 503;
+        }
+        
+        res.status(statusCode).json({ 
+            error: errorMessage,
             details: error.message,
-            system_name: system_name || 'unknown'
+            system_name: system_name || 'unknown',
+            error_code: error.code || 'UNKNOWN'
         });
+    } finally {
+        // Ensure connection is always closed
+        if (connection) {
+            try {
+                await connection.end();
+                console.log('Database connection closed');
+            } catch (closeError) {
+                console.error('Error closing database connection:', closeError);
+            }
+        }
     }
 });
 
