@@ -105,6 +105,8 @@ CREATE TABLE IF NOT EXISTS water_quality (
     calcium DECIMAL(8,2),
     phosphorus DECIMAL(8,2),
     magnesium DECIMAL(8,2),
+    humidity DECIMAL(8,2),
+    salinity DECIMAL(8,2),
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
@@ -191,6 +193,7 @@ CREATE TABLE IF NOT EXISTS fish_tanks (
     size_m3 DECIMAL(8,2) NOT NULL,
     volume_liters DECIMAL(10,2) NOT NULL,
     fish_type VARCHAR(100) NOT NULL,
+    current_fish_count INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE,
     UNIQUE(system_id, tank_number)
@@ -252,6 +255,102 @@ CREATE TABLE IF NOT EXISTS sensor_readings (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (sensor_id) REFERENCES sensor_configs (id) ON DELETE CASCADE,
     INDEX idx_sensor_time (sensor_id, reading_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Fish inventory table for tracking current fish counts per tank
+CREATE TABLE IF NOT EXISTS fish_inventory (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    system_id VARCHAR(255) NOT NULL,
+    fish_tank_id INT NOT NULL,
+    current_count INT DEFAULT 0,
+    average_weight DECIMAL(8,2),
+    fish_type VARCHAR(50) DEFAULT 'tilapia',
+    batch_id VARCHAR(100),
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Fish events table for tracking additions/mortalities/moves
+CREATE TABLE IF NOT EXISTS fish_events (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    system_id VARCHAR(255) NOT NULL,
+    fish_tank_id INT NOT NULL,
+    event_type VARCHAR(50) NOT NULL,
+    count_change INT DEFAULT 0,
+    weight DECIMAL(8,2),
+    notes TEXT,
+    event_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    batch_id VARCHAR(100),
+    user_id VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Fish feeding schedules table
+CREATE TABLE IF NOT EXISTS fish_feeding (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    system_id VARCHAR(255) NOT NULL,
+    fish_type VARCHAR(100) NOT NULL,
+    feedings_per_day INT DEFAULT 2,
+    amount_per_feeding DECIMAL(8,2),
+    feeding_times TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Fish harvest tracking table
+CREATE TABLE IF NOT EXISTS fish_harvest (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    system_id VARCHAR(255) NOT NULL,
+    tank_number INT NOT NULL,
+    harvest_date DATE NOT NULL,
+    fish_count INT NOT NULL,
+    total_weight_kg DECIMAL(10,2) NOT NULL,
+    average_weight_kg DECIMAL(6,3),
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE,
+    INDEX idx_system_harvest_date (system_id, harvest_date),
+    INDEX idx_tank_harvest (system_id, tank_number)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Nutrient readings table (migrated from water_quality columns)
+CREATE TABLE IF NOT EXISTS nutrient_readings (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    system_id VARCHAR(255) NOT NULL,
+    nutrient_type VARCHAR(50) NOT NULL,
+    value DECIMAL(8,2) NOT NULL,
+    unit VARCHAR(10) DEFAULT 'mg/L',
+    reading_date DATETIME NOT NULL,
+    source VARCHAR(20) DEFAULT 'manual',
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE,
+    INDEX idx_system_nutrient_date (system_id, nutrient_type, reading_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Seed varieties table for crop management
+CREATE TABLE IF NOT EXISTS seed_varieties (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    crop_type VARCHAR(100) NOT NULL,
+    variety_name VARCHAR(200) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_crop_type (crop_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- System credentials table for encrypted API storage
+CREATE TABLE IF NOT EXISTS system_credentials (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    system_id VARCHAR(255) NOT NULL,
+    service_name VARCHAR(100) NOT NULL,
+    api_url VARCHAR(255),
+    username_encrypted TEXT,
+    password_encrypted TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;

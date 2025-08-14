@@ -4689,6 +4689,109 @@ class AquaponicsApp {
         }
     }
 
+    async displayFishOverviewCards(container, actualTotalVolumeL) {
+        // Load fish inventory data
+        let inventoryTanks = [];
+        let totalFish = 0;
+        
+        try {
+            const fishInventoryData = await this.makeApiCall(`/fish-inventory/system/${this.activeSystemId}`);
+            if (fishInventoryData && fishInventoryData.tanks) {
+                inventoryTanks = fishInventoryData.tanks;
+                totalFish = inventoryTanks.reduce((sum, tank) => sum + (parseInt(tank.current_count) || 0), 0);
+            }
+        } catch (error) {
+            console.error('Error loading fish inventory:', error);
+        }
+        
+        // Fallback to fish health data if inventory is empty
+        if (totalFish === 0) {
+            const latestFishData = this.getLatestFishHealthData();
+            if (latestFishData) {
+                totalFish = latestFishData.count || 0;
+            }
+        }
+        
+        const systemConfig = this.getActiveSystem();
+        const actualTankCount = inventoryTanks.length || systemConfig?.tank_count || 0;
+        
+        // Calculate density metrics
+        const fishType = systemConfig?.fish_type || 'tilapia';
+        const recommendedMaxDensity = this.getRecommendedStockingDensity(fishType);
+        const actualDensity = totalFish > 0 && actualTotalVolumeL > 0 
+            ? (totalFish * 0.25 / (actualTotalVolumeL / 1000)).toFixed(1) 
+            : 'N/A';
+        const stockingDensity = recommendedMaxDensity.toFixed(1);
+        const densityStatus = actualDensity !== 'N/A' && actualDensity > recommendedMaxDensity ? 'warning' : 'good';
+        
+        // Get last feeding time and feed consumption
+        const lastFeedTime = this.getLastFeedingTime();
+        const feedConsumption = this.getCurrentMonthFeedConsumption();
+        
+        container.innerHTML = `
+            <div class="charts-grid">
+                <div class="chart-card metric-card">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_fish.svg" alt="Fish" class="metric-icon-svg"></div>
+                    <div class="metric-value">${totalFish}</div>
+                    <div class="metric-label">Total Fish Count</div>
+                    <div class="summary-detail">Across ${actualTankCount} tank${actualTankCount !== 1 ? 's' : ''}</div>
+                </div>
+                
+                <div class="chart-card metric-card">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_parameters.svg" alt="Density" class="metric-icon-svg"></div>
+                    <div class="metric-value">${actualDensity} kg/m³</div>
+                    <div class="metric-label">Current Density</div>
+                    <div class="density-progress-container">
+                        <div class="density-progress-bar">
+                            <div class="density-progress-fill ${densityStatus}" style="width: ${Math.min((actualDensity !== 'N/A' ? (parseFloat(actualDensity) / recommendedMaxDensity) * 100 : 0), 100)}%"></div>
+                        </div>
+                        <div class="density-progress-label">Max: ${recommendedMaxDensity} kg/m³</div>
+                    </div>
+                </div>
+                
+                <div class="chart-card metric-card">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Feed Consumption" class="metric-icon-svg"></div>
+                    <div class="metric-value">${feedConsumption.current}</div>
+                    <div class="metric-label">Feed This Month</div>
+                    <div class="summary-detail">${feedConsumption.comparison}</div>
+                </div>
+                
+                <div class="chart-card metric-card">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_feed.svg" alt="Feed" class="metric-icon-svg"></div>
+                    <div class="metric-value">${lastFeedTime}</div>
+                    <div class="metric-label">Last Fed</div>
+                    <div class="summary-detail">Feed regularly for optimal health</div>
+                </div>
+                
+                <div class="chart-card metric-card">
+                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_parameters.svg" alt="Stocking Density" class="metric-icon-svg"></div>
+                    <div class="metric-value">${stockingDensity} kg/m³</div>
+                    <div class="metric-label">Stocking Density</div>
+                    <div class="summary-detail">Recommended maximum for ${fishType || 'fish'}</div>
+                </div>
+            </div>
+            
+            ${totalFish > 0 ? `
+                <div class="tank-details">
+                    <h4>Tank Details</h4>
+                    <div class="tank-details-grid">
+                        ${this.generateTankDetails(systemConfig, inventoryTanks, actualTankCount)}
+                    </div>
+                </div>
+                
+                <div class="fish-density-chart-section">
+                    <h4>Fish Density Over Time</h4>
+                    <canvas id="fish-density-chart" width="400" height="200"></canvas>
+                </div>
+            ` : ''}
+        `;
+        
+        // Initialize fish density chart if fish are present
+        if (totalFish > 0) {
+            setTimeout(() => this.initializeFishDensityChart().catch(console.error), 100);
+        }
+    }
+
     getLatestFishHealthData() {
         // Return inventory summary or null
         const inventory = this.dataRecords.fishInventory;
@@ -23657,7 +23760,8 @@ Generated by Afraponix Go - Aquaponics Management System`;
 
             }
 
-            // Tank overview section removed as requested
+            // Generate fish overview cards similar to plant overview
+            await this.displayFishOverviewCards(container, actualTotalVolumeL);
 
         } catch (error) {
             console.error('Failed to display fish tank summary:', error);
