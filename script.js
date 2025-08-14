@@ -15294,7 +15294,9 @@ class AquaponicsApp {
         this.destroyAllCharts();
         
         // Load fresh data for the new system
+        console.log(`🔄 Loading data for system: ${systemId}`);
         await this.loadDataRecords(); // Reload data for new system
+        console.log(`✅ Data loaded for system: ${this.activeSystemId}`);
         
         // Initialize charts first
         this.initializeCharts(); // Reinitialize all charts with new data
@@ -16855,7 +16857,12 @@ class AquaponicsApp {
             // Close modal
             this.closeNewSystemModal();
             
-            this.showNotification(`🎉 Demo system "${systemName}" created successfully with sample data!`, 'success');
+            // Show enhanced success notification with data summary
+            const dataStats = demoSystem.imported_data ? 
+                `\n📊 Imported: ${demoSystem.imported_data.fishTanks || 7} fish tanks, ${demoSystem.imported_data.waterQuality || 45} days of water quality data, ${demoSystem.imported_data.nutrients || 270} nutrient readings, and comprehensive historical data!` : 
+                '';
+            
+            this.showNotification(`🎉 Demo system "${systemName}" created successfully!${dataStats}\n\n🔄 App refreshed with rich sample data - explore all tabs to see the complete aquaponics management experience!`, 'success', 8000);
             
         } catch (error) {
             console.error('Failed to create demo system:', error);
