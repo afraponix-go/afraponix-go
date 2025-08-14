@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 566.93 566.93">
+  <defs>
+    <!-- Clean gradient definitions -->
+    <linearGradient id="gradient-green-cyan" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#49f911"/>
+      <stop offset="100%" stop-color="#45e7dd"/>
+    </linearGradient>
+    <linearGradient id="gradient-blue" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#58dcfd"/>
+      <stop offset="100%" stop-color="#2e3195"/>
+    </linearGradient>
+  </defs>
+  <g>
+    <!-- Bottom right element -->
+    <path fill="url(#gradient-green-cyan)" d="M283.9,415.31l-63.23-63.22c37.66-33.03,94.96-31.64,130.87,4.26l58.87,58.87v.05c-34.95,34.94-91.59,34.96-126.51.04h0Z"/>
+    <path fill="url(#gradient-blue)" d="M156.52,415.92c33.05,33.05,85.49,34.84,120.63,5.4l-63.02-63.01-57.61,57.61Z"/>
+    
+    <!-- Top left element -->
+    <path fill="url(#gradient-green-cyan)" d="M283.03,151.62l63.23,63.22c-37.66,33.03-94.96,31.64-130.87-4.26l-58.87-58.87v-.05c34.95-34.94,91.59-34.96,126.51-.04h0Z"/>
+    <path fill="url(#gradient-blue)" d="M410.41,151.01c-33.05-33.05-85.49-34.84-120.63-5.4l63.02,63.01,57.61-57.61Z"/>
+    
+    <!-- Top right element -->
+    <path fill="url(#gradient-green-cyan)" d="M415.31,283.03l-63.22,63.23c-33.03-37.66-31.64-94.96,4.26-130.87l58.87-58.87h.05c34.94,34.95,34.96,91.59.04,126.51h0Z"/>
+    <path fill="url(#gradient-blue)" d="M415.92,410.41c33.05-33.05,34.84-85.49,5.4-120.63l-63.01,63.02,57.61,57.61Z"/>
+    
+    <!-- Bottom left element -->
+    <path fill="url(#gradient-green-cyan)" d="M151.62,283.9l63.22-63.23c33.03,37.66,31.64,94.96-4.26,130.87l-58.87,58.87h-.05c-34.94-34.95-34.96-91.59-.04-126.51h0Z"/>
+    <path fill="url(#gradient-blue)" d="M151.01,156.52c-33.05,33.05-34.84,85.49-5.4,120.63l63.01-63.02-57.61-57.61Z"/>
+  </g>
+</svg>

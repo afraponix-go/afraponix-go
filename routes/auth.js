@@ -30,11 +30,25 @@ router.post('/register', async (req, res) => {
         connection = await getDatabase();
         
         // Check if user already exists
-        const [existingUserRows] = await connection.execute('SELECT id FROM users WHERE username = ? OR email = ?', [username, email]);
+        const [existingUserRows] = await connection.execute('SELECT username, email FROM users WHERE username = ? OR email = ?', [username, email]);
         
         if (existingUserRows.length > 0) {
             await connection.end();
-            return res.status(400).json({ error: 'Username or email already exists' });
+            const existingUser = existingUserRows[0];
+            
+            if (existingUser.email === email) {
+                return res.status(400).json({ 
+                    error: 'Email already exists',
+                    field: 'email',
+                    message: 'An account with this email address already exists. Please sign in instead.'
+                });
+            } else if (existingUser.username === username) {
+                return res.status(400).json({ 
+                    error: 'Username already exists',
+                    field: 'username',
+                    message: 'This username is already taken. Please choose a different one.'
+                });
+            }
         }
 
         // Hash password
@@ -420,6 +434,44 @@ router.post('/reset-password', async (req, res) => {
         if (connection) await connection.end();
         console.error('Password reset error:', error);
         res.status(500).json({ error: 'Failed to reset password' });
+    }
+});
+
+// Check username availability
+router.post('/check-username', async (req, res) => {
+    const { username } = req.body;
+
+    if (!username) {
+        return res.status(400).json({ error: 'Username is required' });
+    }
+
+    // Validate username format
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    if (!usernameRegex.test(username)) {
+        return res.status(400).json({ error: 'Invalid username format' });
+    }
+
+    let connection;
+
+    try {
+        connection = await getDatabase();
+        
+        // Check if username exists
+        const [userRows] = await connection.execute('SELECT id FROM users WHERE username = ?', [username]);
+        
+        await connection.end();
+        
+        const isAvailable = userRows.length === 0;
+        
+        res.json({ 
+            available: isAvailable,
+            username: username
+        });
+
+    } catch (error) {
+        if (connection) await connection.end();
+        console.error('Username check error:', error);
+        res.status(500).json({ error: 'Failed to check username availability' });
     }
 });
 

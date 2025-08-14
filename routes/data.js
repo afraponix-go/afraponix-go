@@ -4,6 +4,14 @@ const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Helper function to convert empty/undefined values to null for MySQL
+function toSqlValue(value) {
+    if (value === undefined || value === null || value === '' || (typeof value === 'string' && value.trim() === '')) {
+        return null;
+    }
+    return value;
+}
+
 // All routes require authentication
 router.use(authenticateToken);
 
@@ -127,7 +135,8 @@ router.get('/water-quality/:systemId', async (req, res) => {
 
 router.post('/water-quality/:systemId', async (req, res) => {
     const { systemId } = req.params;
-    const { date, ph, ec, dissolved_oxygen, temperature, humidity, salinity, ammonia, notes, nutrients } = req.body;
+    const { date, ph, ec, dissolved_oxygen, temperature, humidity, salinity, ammonia, notes, nutrients, 
+            nitrite, nitrate, iron, potassium, calcium, phosphorus, magnesium } = req.body;
 
     if (!await verifySystemOwnership(systemId, req.user.userId)) {
         return res.status(403).json({ error: 'Access denied to this system' });
@@ -144,7 +153,15 @@ router.post('/water-quality/:systemId', async (req, res) => {
             { type: 'temperature', value: temperature, unit: '°C' },
             { type: 'ammonia', value: ammonia, unit: 'ppm' },
             { type: 'humidity', value: humidity, unit: '%' },
-            { type: 'salinity', value: salinity, unit: 'ppt' }
+            { type: 'salinity', value: salinity, unit: 'ppt' },
+            // Add nutrient parameters from form
+            { type: 'nitrite', value: nitrite, unit: 'mg/L' },
+            { type: 'nitrate', value: nitrate, unit: 'mg/L' },
+            { type: 'iron', value: iron, unit: 'mg/L' },
+            { type: 'potassium', value: potassium, unit: 'mg/L' },
+            { type: 'calcium', value: calcium, unit: 'mg/L' },
+            { type: 'phosphorus', value: phosphorus, unit: 'mg/L' },
+            { type: 'magnesium', value: magnesium, unit: 'mg/L' }
         ];
 
         const insertedIds = [];
@@ -331,8 +348,13 @@ router.get('/fish-health/:systemId', async (req, res) => {
     let connection;
     try {
         connection = await getDatabase();
-        const [data] = await connection.execute('SELECT * FROM fish_health WHERE system_id = ? ORDER BY date DESC, created_at DESC', 
-            [systemId]);
+        const [data] = await connection.execute(`
+            SELECT fh.*, ft.tank_number 
+            FROM fish_health fh 
+            LEFT JOIN fish_tanks ft ON fh.fish_tank_id = ft.id 
+            WHERE fh.system_id = ? 
+            ORDER BY fh.date DESC, fh.created_at DESC
+        `, [systemId]);
         await connection.end();
         res.json(data);
     } catch (error) {
@@ -344,7 +366,7 @@ router.get('/fish-health/:systemId', async (req, res) => {
 
 router.post('/fish-health/:systemId', async (req, res) => {
     const { systemId } = req.params;
-    const { date, fish_tank_id, count, mortality, average_weight, feed_consumption, behavior, notes } = req.body;
+    const { date, fish_tank_id, count, mortality, average_weight, feed_consumption, feed_type, behavior, notes } = req.body;
 
     if (!await verifySystemOwnership(systemId, req.user.userId)) {
         return res.status(403).json({ error: 'Access denied to this system' });
@@ -353,10 +375,19 @@ router.post('/fish-health/:systemId', async (req, res) => {
     let connection;
     try {
         connection = await getDatabase();
+        
+        // Map tank_number to actual tank ID
+        const [tankRows] = await connection.execute(
+            'SELECT id FROM fish_tanks WHERE system_id = ? AND (id = ? OR tank_number = ?)',
+            [systemId, fish_tank_id || 1, fish_tank_id || 1]
+        );
+        
+        const actualTankId = tankRows && tankRows.length > 0 ? tankRows[0].id : fish_tank_id || 1;
+        
         const [result] = await connection.execute(`INSERT INTO fish_health 
-            (system_id, fish_tank_id, date, count, mortality, average_weight, feed_consumption, behavior, notes) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
-            [systemId, fish_tank_id || 1, date, count, mortality, average_weight, feed_consumption, behavior, notes]);
+            (system_id, fish_tank_id, date, count, mortality, average_weight, feed_consumption, feed_type, behavior, notes) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+            [toSqlValue(systemId), toSqlValue(actualTankId), toSqlValue(date), toSqlValue(count), toSqlValue(mortality), toSqlValue(average_weight), toSqlValue(feed_consumption), toSqlValue(feed_type), toSqlValue(behavior), toSqlValue(notes)]);
         await connection.end();
         res.status(201).json({ id: result.insertId, message: 'Fish health data saved' });
     } catch (error) {
@@ -549,7 +580,13 @@ router.get('/entries/fish-health', async (req, res) => {
     let connection;
     try {
         connection = await getDatabase();
-        let query = 'SELECT * FROM fish_health WHERE system_id = ? ORDER BY date DESC, created_at DESC';
+        let query = `
+            SELECT fh.*, ft.tank_number 
+            FROM fish_health fh 
+            LEFT JOIN fish_tanks ft ON fh.fish_tank_id = ft.id 
+            WHERE fh.system_id = ? 
+            ORDER BY fh.date DESC, fh.created_at DESC
+        `;
         const params = [system_id];
         
         if (limit) {
@@ -569,7 +606,7 @@ router.get('/entries/fish-health', async (req, res) => {
 
 // Fish Health - POST with system_id in body
 router.post('/entries/fish-health', async (req, res) => {
-    const { system_id, date, fish_tank_id, count, mortality, average_weight, feed_consumption, behavior, notes } = req.body;
+    const { system_id, date, fish_tank_id, count, mortality, average_weight, feed_consumption, feed_type, behavior, notes } = req.body;
     
     if (!system_id) {
         return res.status(400).json({ error: 'system_id is required in request body' });
@@ -582,10 +619,19 @@ router.post('/entries/fish-health', async (req, res) => {
     let connection;
     try {
         connection = await getDatabase();
+        
+        // Map tank_number to actual tank ID
+        const [tankRows] = await connection.execute(
+            'SELECT id FROM fish_tanks WHERE system_id = ? AND (id = ? OR tank_number = ?)',
+            [system_id, fish_tank_id || 1, fish_tank_id || 1]
+        );
+        
+        const actualTankId = tankRows && tankRows.length > 0 ? tankRows[0].id : fish_tank_id || 1;
+        
         const [result] = await connection.execute(`INSERT INTO fish_health 
-            (system_id, fish_tank_id, date, count, mortality, average_weight, feed_consumption, behavior, notes) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
-            [system_id, fish_tank_id || 1, date, count, mortality, average_weight, feed_consumption, behavior, notes]);
+            (system_id, fish_tank_id, date, count, mortality, average_weight, feed_consumption, feed_type, behavior, notes) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+            [toSqlValue(system_id), toSqlValue(actualTankId), toSqlValue(date), toSqlValue(count), toSqlValue(mortality), toSqlValue(average_weight), toSqlValue(feed_consumption), toSqlValue(feed_type), toSqlValue(behavior), toSqlValue(notes)]);
         await connection.end();
         res.status(201).json({ id: result.insertId, message: 'Fish health data saved' });
     } catch (error) {
@@ -713,6 +759,79 @@ router.post('/entries/water-quality', async (req, res) => {
         if (connection) await connection.end();
         console.error('Error saving water quality data:', error);
         res.status(500).json({ error: 'Failed to save data' });
+    }
+});
+
+// Delete fish health entry
+router.delete('/fish-health/entry/:entryId', async (req, res) => {
+    const { entryId } = req.params;
+    
+    let connection;
+    try {
+        connection = await getDatabase();
+        
+        // First verify the entry exists and belongs to a system owned by the user
+        const [entryRows] = await connection.execute('SELECT system_id FROM fish_health WHERE id = ?', [entryId]);
+        
+        if (entryRows.length === 0) {
+            await connection.end();
+            return res.status(404).json({ error: 'Entry not found' });
+        }
+        
+        const entry = entryRows[0];
+        if (!await verifySystemOwnership(entry.system_id, req.user.userId)) {
+            await connection.end();
+            return res.status(403).json({ error: 'Access denied to this system' });
+        }
+        
+        // Delete the entry
+        const [result] = await connection.execute('DELETE FROM fish_health WHERE id = ?', [entryId]);
+        
+        await connection.end();
+        res.json({ message: 'Entry deleted successfully' });
+    } catch (error) {
+        if (connection) await connection.end();
+        console.error('Error deleting fish health entry:', error);
+        res.status(500).json({ error: 'Failed to delete entry' });
+    }
+});
+
+// Update fish health entry
+router.put('/fish-health/entry/:entryId', async (req, res) => {
+    const { entryId } = req.params;
+    const { feed_consumption, feed_type, mortality, behavior, notes } = req.body;
+    
+    let connection;
+    try {
+        connection = await getDatabase();
+        
+        // First verify the entry exists and belongs to a system owned by the user
+        const [entryRows] = await connection.execute('SELECT system_id FROM fish_health WHERE id = ?', [entryId]);
+        
+        if (entryRows.length === 0) {
+            await connection.end();
+            return res.status(404).json({ error: 'Entry not found' });
+        }
+        
+        const entry = entryRows[0];
+        if (!await verifySystemOwnership(entry.system_id, req.user.userId)) {
+            await connection.end();
+            return res.status(403).json({ error: 'Access denied to this system' });
+        }
+        
+        // Update the entry
+        const [result] = await connection.execute(`
+            UPDATE fish_health 
+            SET feed_consumption = ?, feed_type = ?, mortality = ?, behavior = ?, notes = ?
+            WHERE id = ?
+        `, [toSqlValue(feed_consumption), toSqlValue(feed_type), toSqlValue(mortality), toSqlValue(behavior), toSqlValue(notes), entryId]);
+        
+        await connection.end();
+        res.json({ message: 'Entry updated successfully' });
+    } catch (error) {
+        if (connection) await connection.end();
+        console.error('Error updating fish health entry:', error);
+        res.status(500).json({ error: 'Failed to update entry' });
     }
 });
 

@@ -376,11 +376,237 @@ Afraponix Go is an aquaponics management application built with:
   - `/app-styles.css` - Added `.section-header` class for consistent section styling
 - **Result**: Complete typography standardization with proper hierarchy, consistent spacing, and semantic color usage throughout the entire application
 
-[... rest of existing file remains unchanged ...]
+#### 19. **Fish Density Chart & Card Data Synchronization** 🐟
+- **Issue**: Fish overview card displayed 4.0 kg/m³ density while fish density chart showed 0.23 kg/m³ for the same system (Oribi 1)
+- **Root Cause Analysis**: Two different data sources with inconsistent usage
+  - **Fish Overview Card**: Used fish inventory API (`/fish-inventory/system/${systemId}`) - found 1508 fish across 7 tanks
+  - **Fish Density Chart**: Used fish health API (`/data/fish-health/${systemId}`) - only had 45 fish from Tank 11
+- **Data Investigation**:
+  - Fish inventory table: 1508 total fish (Tank 1: 179, Tank 2: 420, Tank 3: 198, Tank 4: 103, Tank 5: 260, Tank 6: 153, Tank 7: 195)
+  - Fish health table: Only 5 records total, all for Tank 11, latest showing 45 fish @ 250g
+  - System volume: 49,000L (49m³) total fish volume
+  - Expected consistent density: 1508 fish × ~250g = ~377kg ÷ 49m³ = **~7.7 kg/m³**
+- **Solution**: Unified both components to use the same data source priority system
+  - **Primary**: Fish inventory API (comprehensive data across all tanks)  
+  - **Fallback**: Fish health API (when inventory is empty)
+  - Modified `initializeFishDensityChart()` to be async and fetch inventory data first
+  - Enhanced chart to handle both inventory and health data sources seamlessly
+  - Added console logging to track data source usage
+- **Files Modified**: 
+  - `/script.js:4203-4220` - Added fish health fallback system for card calculations
+  - `/script.js:4795-4848` - Made `initializeFishDensityChart()` async with inventory API integration
+  - `/script.js:4372` - Updated chart initialization call to handle async nature
+  - `/script.js:22651-22656` - Enhanced `loadFishOverview()` to ensure data loading before display
+  - `/script.js:1286,2784,16009` - Updated all `loadFishOverview()` calls to be async
+- **Result**: Both fish overview card and density chart now display the same consistent density value using unified fish inventory data
+
+#### 20. **Fish Health vs Fish Inventory Table Analysis** 📊
+- **Investigation**: Analyzed whether `fish_health` table could be archived in favor of `fish_inventory` table
+- **Key Findings**:
+  - **Fish Inventory Table**: Static/semi-static data (current counts, biomass per tank)
+  - **Fish Health Table**: Dynamic operational data (daily feeding, behavior, mortality, sensor readings)
+  - **Different Purposes**: Both tables serve distinct operational needs
+- **Fish Health Table Active Usage**:
+  - **Data Capture Tab**: Daily feeding data entry with auto-population system
+  - **Fish Health Monitoring Tab**: Health dashboard and readings display
+  - **Sensor Integration**: Automatic sensor-to-fish_health data collection (services/sensor-collector.js)
+  - **Feeding Auto-Population**: Uses fish_health for feeding history and form auto-population
+  - **8+ Active API Endpoints**: GET/POST/PUT/DELETE operations across multiple routes
+  - **Today's Entries System**: Edit/delete functionality for recent entries
+- **Recommendation**: **DO NOT ARCHIVE** - fish_health table remains critical for daily operations
+- **Migration Complexity**: Would require rebuilding entire Fish Health monitoring system, 8+ API endpoints, sensor mappings, and feeding workflow
+- **Result**: Confirmed both tables are necessary - fish_inventory for stock management, fish_health for operational tracking
+
+#### 21. **Quick Actions Menu Smart Positioning** 📱
+- **Issue**: Quick Actions dropdown menus were appearing below the viewport when clicked near the bottom of the screen
+- **Root Cause**: Menu always positioned below button (`buttonRect.bottom + 4`) without viewport boundary checks
+- **Solution**: Implemented intelligent positioning system that adapts to available screen space
+  - **Vertical Positioning Logic**:
+    - Default: Below button (when sufficient space: `spaceBelow >= menuHeight + 10`)
+    - Smart: Above button (when insufficient space below: `spaceAbove >= menuHeight + 10`)
+    - Fallback: Top of viewport with padding (when no space either direction)
+  - **Horizontal Positioning Logic**:
+    - Default: Left-aligned to button
+    - Smart: Right-aligned when menu would extend beyond right viewport edge
+    - Protection: Never allows menu to go beyond left viewport edge (minimum 10px padding)
+- **Technical Implementation**:
+  - Uses `getBoundingClientRect()` for precise button and menu measurements
+  - Calculates available viewport space using `window.innerHeight/Width`
+  - Includes safety padding (10px) to prevent edge-touching
+  - Maintains existing z-index and click-outside-to-close functionality
+- **Files Modified**: 
+  - `/script.js:4625-4671` - Enhanced `toggleQuickActions()` with smart positioning algorithm
+- **Result**: Quick Actions menus now auto-position optimally regardless of button location, ensuring menus always remain visible and accessible without manual scrolling
+
+## Database Schema Evolution
+
+### Current Active Tables:
+- **fish_inventory**: Stock management (counts, biomass per tank) - Primary data source for overview displays
+- **fish_health**: Operational tracking (feeding, behavior, mortality) - Essential for daily operations and sensor integration
+- **water_quality**: Core parameters + humidity & salinity columns
+- **nutrient_readings**: Separate nutrient tracking with source attribution
+- **plant_data**: Plant management with batch tracking system
+- **systems**: Multi-system support with user permissions
+
+### Data Source Priorities:
+- **Fish Overview Cards**: fish_inventory → fish_health (fallback)
+- **Fish Density Charts**: fish_inventory → fish_health (fallback)  
+- **Water Quality**: water_quality table (with composite latest value logic)
+- **Nutrients**: nutrient_readings table (with source attribution)
+
+## Technical Architecture Insights
+
+### API Design Patterns:
+- **RESTful Endpoints**: Consistent `/api/data/` and `/api/` URL structure
+- **System Scoping**: All data APIs include `systemId` parameter for multi-tenant support
+- **Error Handling**: Comprehensive try-catch with proper HTTP status codes
+- **Data Validation**: Input sanitization and `toSqlValue()` helper for database safety
+
+### Frontend Data Management:
+- **Centralized Loading**: `loadDataRecords()` function loads all system data
+- **Async/Await Pattern**: Modern promise handling throughout codebase
+- **Data Refresh Strategy**: Immediate refresh after data modifications
+- **Fallback Systems**: Graceful degradation when APIs fail
+
+### UX/UI Design Principles:
+- **Smart Positioning**: Automatic UI element positioning based on viewport constraints
+- **Unified Design System**: CSS custom properties and component library approach
+- **Responsive Design**: Mobile-first design with flexible grid systems
+- **Visual Feedback**: Toast notifications, loading states, and progress indicators
+
+## Session Key Learnings
+
+1. **Data Source Investigation**: Always verify actual database contents vs. expected API behavior
+2. **UI Positioning**: Implement smart positioning for dropdown menus and modals to handle edge cases
+3. **Design System Value**: Standardized CSS variables and component classes dramatically improve maintainability
+4. **Database Table Purposes**: Different tables serve different operational needs - avoid premature consolidation
+5. **Async Function Migration**: When making functions async, update all callers to handle promises properly
+6. **Debug Logging Strategy**: Structured console logging helps identify data flow issues quickly
+
+#### 22. **Comprehensive Icon System Migration** 🎯
+- **Goal**: Replace all emojis throughout the application with professional SVG icons from the new icon library
+- **Scope**: Systematic replacement of emojis in permanent UI elements (headers, buttons, modals, forms)
+- **Key Replacements**:
+  - **Data Source Indicators**: 📡 → `sensor data.svg`, 📝 → `Data entry.svg`, 🧪 → `chemistry.svg`
+  - **Modal Headers**: 🐟 → `fish.svg`, 🌱 → `plant.svg`, 🌿 → `growbed.svg`
+  - **Action Buttons**: 🌾 → `harvest.svg`, 📦 → `copy.svg`, 📊 → `data.svg`
+  - **Section Headers**: 📊 → `chemistry.svg`, 🌿 → `growbed.svg`, 📈 → `growth.svg`
+  - **Command Icons**: 🌱 → `plant.svg`, 💧 → `hydro.svg`, 📊 → `data.svg`
+  - **Chart Indicator**: 📊 → CSS background-image with `data history.svg`
+- **Technical Implementation**:
+  - Created `getDataSourceIcon()` helper function for data source indicators
+  - Updated `formatSensorValue()` to use icons instead of emojis
+  - Applied consistent icon sizing (`1em-1.5em`) with proper alignment
+  - Removed emojis from temporary notifications for cleaner UX
+- **Files Modified**: 
+  - `/app-styles.css:548-566` - Updated chart modal indicator to use SVG background
+  - `/script.js:3255-3262` - Added data source icon helper function
+  - `/script.js:3273-3275` - Updated formatSensorValue to use icons
+  - `/script.js` - 50+ emoji replacements across headers, buttons, modals, forms
+- **Result**: Professional icon system throughout application maintaining brand consistency while removing informal emoji elements
+
+#### 23. **Dashboard Chart System Complete Overhaul** 📊
+- **Issue**: Dashboard charts had multiple critical problems
+  - Charts appearing briefly then disappearing on page load
+  - Charts not displaying with "Loading..." text persisting
+  - Infinite height expansion making cards unusable
+  - Grid layout showing only 2 cards per row instead of 4
+  - Non-brand-aligned colors throughout chart system
+- **Root Cause Analysis**:
+  - **Chart Disappearing**: Timing issue with `initializeCharts()` called in constructor, then `switchToSystem()` destroying and recreating charts
+  - **Loading State**: `updateCharts()` called before charts were initialized
+  - **Height Issues**: Canvas height conflicts between CSS constraints and Chart.js responsive behavior
+  - **Color Inconsistency**: Random colors not aligned with brand palette
+- **Solutions Implemented**:
+  1. **Chart Lifecycle Fix**: Removed constructor chart initialization, ensuring single initialization in `switchToSystem()`
+  2. **Proper Sequencing**: Reordered `switchToSystem()` to initialize charts before calling `updateDashboardFromData()`
+  3. **Canvas Sizing**: Set proper canvas constraints (`height: 70px !important`) with chart card limits (`max-height: 200px`)
+  4. **Grid Layout**: Updated `.charts-grid` to `repeat(4, 1fr)` with responsive breakpoints
+  5. **Brand Color Alignment**: Mapped all chart colors to brand palette with logical associations
+- **Brand Color Mapping Applied**:
+  - **Water Parameters**: Deep Blue family (`#0051b1`, `#7BAAEE`, `#8DFBCC`)
+  - **Plant Nutrients**: Bio Green variations (`#80FB7B`, `#60da5b`, `#40b93b`, `#a0fc9d`)
+  - **System Metrics**: Blue Fish variations (`#5a8fd9`, `#95bcf2`)
+  - **Warning Parameters**: Brand orange (`#f59e0b`) for ammonia
+  - **Core Measurements**: Deep blue darker (`#002a61`) for EC/conductivity
+- **Files Modified**: 
+  - `/script.js:897-899` - Removed redundant chart initialization from constructor
+  - `/script.js:14358-14363` - Fixed `switchToSystem()` sequencing (charts before data update)
+  - `/script.js:3711-3716` - Updated `updateCharts()` to skip when no charts exist
+  - `/script.js:3564-3579` - Applied brand colors to all 14 chart parameters
+  - `/script.js:4855-4908` - Updated fish density charts to use brand colors
+  - `/style.css:889-894` - Updated grid to 4 columns with responsive breakpoints
+  - `/style.css:925-933` - Fixed canvas height constraints for proper rendering
+  - `/style.css:915-925` - Added chart card height limits and overflow handling
+- **Result**: Complete dashboard chart system restoration with professional brand-aligned appearance, 4-column grid layout, and reliable display behavior
+
+#### 24. **Modal Chart Points Optimization** 🔍
+- **Issue**: Chart data points in expanded modal views were excessively large circles that dominated the chart
+- **Solution**: Reduced point sizes from `pointRadius: 6, pointHoverRadius: 8` to `pointRadius: 2, pointHoverRadius: 4`
+- **Files Modified**: `/script.js:7155-7156` - Updated modal chart point sizing
+- **Result**: Clean, professional-looking charts with subtle data points that don't interfere with trend visualization
+
+## Database Schema Evolution
+
+### Current Active Tables:
+- **fish_inventory**: Stock management (counts, biomass per tank) - Primary data source for overview displays
+- **fish_health**: Operational tracking (feeding, behavior, mortality) - Essential for daily operations and sensor integration
+- **water_quality**: Core parameters + humidity & salinity columns
+- **nutrient_readings**: Separate nutrient tracking with source attribution
+- **plant_data**: Plant management with batch tracking system
+- **systems**: Multi-system support with user permissions
+
+### Data Source Priorities:
+- **Fish Overview Cards**: fish_inventory → fish_health (fallback)
+- **Fish Density Charts**: fish_inventory → fish_health (fallback)  
+- **Water Quality**: water_quality table (with composite latest value logic)
+- **Nutrients**: nutrient_readings table (with source attribution)
+
+### Archived Tables:
+- **water_quality_archived**: Successfully migrated to nutrient_readings system
+
+## Technical Architecture Insights
+
+### API Design Patterns:
+- **RESTful Endpoints**: Consistent `/api/data/` and `/api/` URL structure
+- **System Scoping**: All data APIs include `systemId` parameter for multi-tenant support
+- **Error Handling**: Comprehensive try-catch with proper HTTP status codes
+- **Data Validation**: Input sanitization and `toSqlValue()` helper for database safety
+
+### Frontend Data Management:
+- **Centralized Loading**: `loadDataRecords()` function loads all system data
+- **Async/Await Pattern**: Modern promise handling throughout codebase
+- **Data Refresh Strategy**: Immediate refresh after data modifications
+- **Fallback Systems**: Graceful degradation when APIs fail
+
+### Chart.js Integration:
+- **Responsive Configuration**: `maintainAspectRatio: false` with container constraints
+- **Brand Color System**: Systematic color mapping aligned with CSS design system
+- **Performance Optimization**: `update('none')` to disable animations for better performance
+- **Error Handling**: Try-catch blocks around chart initialization with fallback behavior
+
+### UX/UI Design Principles:
+- **Smart Positioning**: Automatic UI element positioning based on viewport constraints
+- **Unified Design System**: CSS custom properties and component library approach
+- **Responsive Design**: Mobile-first design with flexible grid systems (4→3→2→1 columns)
+- **Visual Feedback**: Toast notifications, loading states, and progress indicators
+- **Professional Icon System**: SVG icons with consistent sizing and semantic usage
+
+## Session Key Learnings
+
+1. **Chart Lifecycle Management**: Proper sequencing of chart initialization and data loading prevents display issues
+2. **Brand Consistency**: Systematic color mapping across all UI elements maintains professional appearance
+3. **Icon vs Emoji Strategy**: Professional applications benefit from consistent SVG icons over informal emojis
+4. **CSS Grid Responsive Design**: Strategic breakpoints (1200px→3 cols, 900px→2 cols, 480px→1 col) provide optimal layout
+5. **Canvas Sizing Constraints**: Chart.js requires careful balance between responsive behavior and container limits
+6. **Data Source Investigation**: Always verify actual database contents vs. expected API behavior
+7. **Debug Logging Strategy**: Structured console logging helps identify data flow issues quickly
+8. **Function Lifecycle Debugging**: Adding trace logs to critical functions reveals timing and sequencing issues
 
 ## Memory
 
-- Added comprehensive memory tracking for the Afraponix Go project, documenting key development milestones, system architecture, and resolved issues
-- Implemented a structured approach to recording session work, including completed tasks, file modifications, and result summaries
-- Created a detailed overview of the project's technical evolution, focusing on UI improvements, data synchronization, and error handling
-- claude.md
+- Completed comprehensive icon system migration replacing 50+ emojis with professional SVG icons throughout the application
+- Resolved complex dashboard chart system issues involving timing, sizing, color consistency, and grid layout
+- Implemented brand-aligned color system for all charts with logical parameter-to-color associations
+- Enhanced technical documentation with Chart.js integration patterns and responsive design principles
+- Added debugging strategies for function lifecycle analysis and data flow troubleshooting

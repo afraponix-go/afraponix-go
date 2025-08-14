@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:svgjs="http://svgjs.dev/svgjs" version="1.1" viewBox="0 0 300 300">
+  <!-- Generator: Adobe Illustrator 29.1.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 142)  -->
   <defs>
     <style>
-      .cls-1 {
+      .st0 {
         fill: #0051b1;
       }
     </style>
   </defs>
-  <!-- PLACEHOLDER - Search/Magnifying Glass Icon -->
-  <circle class="cls-1" cx="120" cy="120" r="80" fill="none" stroke="#0051b1" stroke-width="20"/>
-  <line class="cls-1" x1="180" y1="180" x2="250" y2="250" stroke="#0051b1" stroke-width="20"/>
+  <g id="Layer_2">
+    <path class="st0" d="M206.5,253.6h-113c-26,0-47.1-21.1-47.1-47.1v-113c0-26,21.1-47.1,47.1-47.1h113c26,0,47.1,21.1,47.1,47.1v113c0,26-21.1,47.1-47.1,47.1ZM93.5,65.2c-15.6,0-28.2,12.7-28.3,28.3v113c0,15.6,12.7,28.2,28.3,28.3h113c15.6,0,28.2-12.7,28.3-28.3v-113c0-15.6-12.7-28.2-28.3-28.3h-113Z"/>
+    <path class="st0" d="M137.9,191.7c-29.7,0-53.8-24.1-53.8-53.8,0-29.7,24.1-53.8,53.8-53.8,29.7,0,53.8,24.1,53.8,53.8,0,29.7-24.1,53.8-53.8,53.8ZM137.9,102.9c-19.3,0-35,15.7-35,35s15.7,35,35,35c19.3,0,35-15.7,35-35,0-19.3-15.7-35-35-35Z"/>
+    <path class="st0" d="M206.5,215.9c-2.5,0-4.9-1-6.7-2.8l-37.2-37.2c-3.7-3.7-3.7-9.6,0-13.3,3.7-3.7,9.6-3.7,13.3,0l37.2,37.2c3.7,3.7,3.7,9.6,0,13.3-1.8,1.8-4.2,2.8-6.7,2.8Z"/>
+  </g>
 </svg>

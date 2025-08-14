@@ -143,14 +143,24 @@ router.post('/harvest', async (req, res) => {
         // Start transaction to ensure both operations succeed or fail together
         await connection.execute('START TRANSACTION');
         
-        // First, check if tank has enough fish for harvest
-        const [inventoryRows] = await connection.execute(`
-            SELECT current_count FROM fish_inventory 
-            WHERE system_id = ? AND fish_tank_id = ?
-        `, [system_id, tank_number]);
+        // Map tank_number to actual tank ID and check current fish count
+        const [tankRows] = await connection.execute(`
+            SELECT id, current_fish_count FROM fish_tanks 
+            WHERE system_id = ? AND (id = ? OR tank_number = ?)
+        `, [system_id, tank_number, tank_number]);
         
-        if (!inventoryRows || inventoryRows.length === 0 || inventoryRows[0].current_count < fish_count) {
-            const currentCount = inventoryRows && inventoryRows.length > 0 ? inventoryRows[0].current_count : 0;
+        if (!tankRows || tankRows.length === 0) {
+            await connection.execute('ROLLBACK');
+            await connection.end();
+            return res.status(404).json({ 
+                error: `Tank ${tank_number} not found`
+            });
+        }
+        
+        const actualTankId = tankRows[0].id;
+        const currentCount = tankRows[0].current_fish_count;
+        
+        if (currentCount < fish_count) {
             await connection.execute('ROLLBACK');
             await connection.end();
             return res.status(400).json({ 
@@ -158,19 +168,25 @@ router.post('/harvest', async (req, res) => {
             });
         }
         
-        // 1. Insert fish harvest record
+        // 1. Insert fish harvest record (using actual tank ID)
         const [result] = await connection.execute(`
             INSERT INTO fish_harvest 
             (system_id, tank_number, harvest_date, fish_count, total_weight_kg, average_weight_kg, notes, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
-        `, [system_id, tank_number, harvest_date, fish_count, total_weight_kg, average_weight_kg || null, notes || null]);
+        `, [system_id, actualTankId, harvest_date, fish_count, total_weight_kg, average_weight_kg || null, notes || null]);
         
-        // 2. Update fish inventory (decrease count)
+        // 2. Update fish tanks current count (decrease count)
         await connection.execute(`
-            UPDATE fish_inventory 
-            SET current_count = current_count - ?, last_updated = NOW()
-            WHERE system_id = ? AND fish_tank_id = ?
-        `, [fish_count, system_id, tank_number]);
+            UPDATE fish_tanks 
+            SET current_fish_count = current_fish_count - ?
+            WHERE id = ? AND system_id = ?
+        `, [fish_count, actualTankId, system_id]);
+        
+        // 3. Log the harvest event in fish_events
+        await connection.execute(`
+            INSERT INTO fish_events (system_id, fish_tank_id, event_type, count_change, weight, notes, event_date, user_id)
+            VALUES (?, ?, 'harvest', ?, ?, ?, ?, ?)
+        `, [system_id, actualTankId, -fish_count, average_weight_kg, notes, harvest_date, req.user.userId]);
         
         // Commit the transaction
         await connection.execute('COMMIT');
@@ -186,7 +202,7 @@ router.post('/harvest', async (req, res) => {
                 fish_count,
                 total_weight_kg,
                 average_weight_kg,
-                remaining_count: inventoryRows[0].current_count - fish_count
+                remaining_count: currentCount - fish_count
             }
         });
 

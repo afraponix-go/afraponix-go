@@ -40,22 +40,48 @@ router.get('/system/:systemId', async (req, res) => {
         }
 
         // Get current inventory for all tanks in this system
+        // In the new structure, fish count is stored directly in fish_tanks
         const inventory = await executeQuery(connection, `
             SELECT 
-                fi.*,
+                ft.id as fish_tank_id,
+                ft.tank_number,
                 ft.volume_liters,
                 ft.size_m3,
                 ft.fish_type as tank_fish_type,
-                (fi.current_count * COALESCE(fi.average_weight, 0)) / 1000.0 as biomass_kg,
+                ft.current_fish_count as current_count,
+                -- Calculate average weight from recent fish events
+                COALESCE(
+                    (SELECT AVG(weight) 
+                     FROM fish_events 
+                     WHERE system_id = ft.system_id 
+                       AND fish_tank_id = ft.id 
+                       AND weight IS NOT NULL 
+                       AND event_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                     ), 50) as average_weight,
+                (ft.current_fish_count * COALESCE(
+                    (SELECT AVG(weight) 
+                     FROM fish_events 
+                     WHERE system_id = ft.system_id 
+                       AND fish_tank_id = ft.id 
+                       AND weight IS NOT NULL 
+                       AND event_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                     ), 50)) / 1000.0 as biomass_kg,
                 CASE 
                     WHEN ft.volume_liters > 0 THEN 
-                        (fi.current_count * COALESCE(fi.average_weight, 0)) / ft.volume_liters
+                        (ft.current_fish_count * COALESCE(
+                            (SELECT AVG(weight) 
+                             FROM fish_events 
+                             WHERE system_id = ft.system_id 
+                               AND fish_tank_id = ft.id 
+                               AND weight IS NOT NULL 
+                               AND event_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                             ), 50)) / ft.volume_liters
                     ELSE 0 
-                END as density_kg_m3
-            FROM fish_inventory fi
-            LEFT JOIN fish_tanks ft ON fi.system_id = ft.system_id AND fi.fish_tank_id = ft.tank_number
-            WHERE fi.system_id = ?
-            ORDER BY fi.fish_tank_id ASC
+                END as density_kg_m3,
+                NOW() as last_updated
+            FROM fish_tanks ft
+            WHERE ft.system_id = ?
+            ORDER BY ft.tank_number ASC
         `, [systemId]);
 
         await connection.end();
@@ -106,26 +132,34 @@ router.post('/add-fish', async (req, res) => {
                 return res.status(404).json({ error: 'System not found or access denied' });
             }
 
+            // Map tank_number to actual tank ID
+            // First try to get the tank by its ID, if that fails, try by tank_number
+            const tankRows = await executeQuery(connection,
+                'SELECT id FROM fish_tanks WHERE system_id = ? AND (id = ? OR tank_number = ?)',
+                [system_id, fish_tank_id, fish_tank_id]
+            );
+
+            if (!tankRows || tankRows.length === 0) {
+                await executeQuery(connection, 'ROLLBACK');
+                await connection.end();
+                return res.status(404).json({ error: 'Tank not found' });
+            }
+
+            const actualTankId = tankRows[0].id;
             const eventDate = new Date();
 
-            // 1. Update or create fish inventory using MariaDB syntax
+            // 1. Update fish tank current count directly using actual tank ID
             await executeQuery(connection, `
-                INSERT INTO fish_inventory (system_id, fish_tank_id, current_count, average_weight, last_updated)
-                VALUES (?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE 
-                    current_count = current_count + VALUES(current_count),
-                    average_weight = CASE 
-                        WHEN VALUES(average_weight) IS NOT NULL THEN VALUES(average_weight)
-                        ELSE average_weight 
-                    END,
-                    last_updated = VALUES(last_updated)
-            `, [system_id, fish_tank_id, count, safeAverageWeight, eventDate]);
+                UPDATE fish_tanks 
+                SET current_fish_count = current_fish_count + ?
+                WHERE id = ? AND system_id = ?
+            `, [count, actualTankId, system_id]);
 
-            // 2. Log the event
+            // 2. Log the event with actual tank ID
             await executeQuery(connection, `
                 INSERT INTO fish_events (system_id, fish_tank_id, event_type, count_change, weight, batch_id, notes, event_date, user_id)
                 VALUES (?, ?, 'add_fish', ?, ?, ?, ?, ?, ?)
-            `, [system_id, fish_tank_id, count, safeAverageWeight, safeBatchId, safeNotes, eventDate, req.user.userId]);
+            `, [system_id, actualTankId, count, safeAverageWeight, safeBatchId, safeNotes, eventDate, req.user.userId]);
 
             // Commit transaction
             await executeQuery(connection, 'COMMIT');
@@ -183,14 +217,22 @@ router.post('/mortality', async (req, res) => {
                 return res.status(404).json({ error: 'System not found or access denied' });
             }
 
-            // Check current inventory
-            const inventoryRows = await executeQuery(connection,
-                'SELECT * FROM fish_inventory WHERE system_id = ? AND fish_tank_id = ?', 
-                [system_id, fish_tank_id]
+            // Map tank_number to actual tank ID
+            const tankMappingRows = await executeQuery(connection,
+                'SELECT id, current_fish_count FROM fish_tanks WHERE system_id = ? AND (id = ? OR tank_number = ?)',
+                [system_id, fish_tank_id, fish_tank_id]
             );
 
-            if (!inventoryRows || inventoryRows.length === 0 || inventoryRows[0].current_count < count) {
-                const currentCount = inventoryRows && inventoryRows.length > 0 ? inventoryRows[0].current_count : 0;
+            if (!tankMappingRows || tankMappingRows.length === 0) {
+                await executeQuery(connection, 'ROLLBACK');
+                await connection.end();
+                return res.status(404).json({ error: 'Tank not found' });
+            }
+
+            const actualTankId = tankMappingRows[0].id;
+            const currentCount = tankMappingRows[0].current_fish_count;
+
+            if (currentCount < count) {
                 await executeQuery(connection, 'ROLLBACK');
                 await connection.end();
                 return res.status(400).json({ 
@@ -201,18 +243,18 @@ router.post('/mortality', async (req, res) => {
             const eventDate = new Date();
             const mortalityNotes = `Mortality - ${safeCause || 'Unknown cause'}. ${safeNotes || ''}`.trim();
 
-            // 1. Update fish inventory (decrease count)
+            // 1. Update fish tank count (decrease count) using actual tank ID
             await executeQuery(connection, `
-                UPDATE fish_inventory 
-                SET current_count = current_count - ?, last_updated = ?
-                WHERE system_id = ? AND fish_tank_id = ?
-            `, [count, eventDate, system_id, fish_tank_id]);
+                UPDATE fish_tanks 
+                SET current_fish_count = GREATEST(0, current_fish_count - ?)
+                WHERE id = ? AND system_id = ?
+            `, [count, actualTankId, system_id]);
 
-            // 2. Log the mortality event
+            // 2. Log the mortality event with actual tank ID
             await executeQuery(connection, `
                 INSERT INTO fish_events (system_id, fish_tank_id, event_type, count_change, notes, event_date, user_id)
                 VALUES (?, ?, 'mortality', ?, ?, ?, ?)
-            `, [system_id, fish_tank_id, -count, mortalityNotes, eventDate, req.user.userId]);
+            `, [system_id, actualTankId, -count, mortalityNotes, eventDate, req.user.userId]);
 
             // Commit transaction
             await executeQuery(connection, 'COMMIT');
@@ -221,8 +263,8 @@ router.post('/mortality', async (req, res) => {
             res.json({ 
                 message: 'Mortality recorded successfully',
                 removed_count: count,
-                tank_id: fish_tank_id,
-                remaining_count: inventoryRows[0].current_count - count
+                tank_id: actualTankId,
+                remaining_count: currentCount - count
             });
 
         } catch (transactionError) {
@@ -269,22 +311,29 @@ router.post('/update-weight', async (req, res) => {
                 return res.status(404).json({ error: 'System not found or access denied' });
             }
 
+            // Map tank_number to actual tank ID
+            const tankRows = await executeQuery(connection,
+                'SELECT id FROM fish_tanks WHERE system_id = ? AND (id = ? OR tank_number = ?)',
+                [system_id, fish_tank_id, fish_tank_id]
+            );
+
+            if (!tankRows || tankRows.length === 0) {
+                await executeQuery(connection, 'ROLLBACK');
+                await connection.end();
+                return res.status(404).json({ error: 'Tank not found' });
+            }
+
+            const actualTankId = tankRows[0].id;
             const eventDate = new Date();
 
-            // 1. Update fish inventory weight
-            await executeQuery(connection, `
-                INSERT INTO fish_inventory (system_id, fish_tank_id, current_count, average_weight, last_updated)
-                VALUES (?, ?, 0, ?, ?)
-                ON DUPLICATE KEY UPDATE 
-                    average_weight = VALUES(average_weight),
-                    last_updated = VALUES(last_updated)
-            `, [system_id, fish_tank_id, average_weight, eventDate]);
+            // 1. Log weight update event (no direct weight storage in fish_tanks)
+            // Weight is calculated from recent fish_events records
 
-            // 2. Log the weight update event
+            // 2. Log the weight update event with actual tank ID
             await executeQuery(connection, `
                 INSERT INTO fish_events (system_id, fish_tank_id, event_type, count_change, weight, notes, event_date, user_id)
                 VALUES (?, ?, 'weight_update', 0, ?, ?, ?, ?)
-            `, [system_id, fish_tank_id, average_weight, safeNotes, eventDate, req.user.userId]);
+            `, [system_id, actualTankId, average_weight, safeNotes, eventDate, req.user.userId]);
 
             // Commit transaction
             await executeQuery(connection, 'COMMIT');
@@ -293,7 +342,7 @@ router.post('/update-weight', async (req, res) => {
             res.json({ 
                 message: 'Fish weight updated successfully',
                 new_weight: average_weight,
-                tank_id: fish_tank_id
+                tank_id: actualTankId
             });
 
         } catch (transactionError) {

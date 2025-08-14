@@ -1,16 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:svgjs="http://svgjs.dev/svgjs" version="1.1" viewBox="0 0 300 300">
+  <!-- Generator: Adobe Illustrator 29.1.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 142)  -->
   <defs>
     <style>
-      .cls-1 {
+      .st0 {
         fill: #0051b1;
       }
     </style>
   </defs>
-  <!-- PLACEHOLDER - Copy/Clipboard Icon -->
-  <rect class="cls-1" x="60" y="80" width="140" height="180" rx="10" fill="none" stroke="#0051b1" stroke-width="15"/>
-  <rect class="cls-1" x="100" y="60" width="100" height="40" rx="20" fill="none" stroke="#0051b1" stroke-width="15"/>
-  <line class="cls-1" x1="80" y1="120" x2="180" y2="120" stroke="#0051b1" stroke-width="8"/>
-  <line class="cls-1" x1="80" y1="150" x2="180" y2="150" stroke="#0051b1" stroke-width="8"/>
-  <line class="cls-1" x1="80" y1="180" x2="150" y2="180" stroke="#0051b1" stroke-width="8"/>
+  <g id="_x33_">
+    <path class="st0" d="M204.7,25h-93.8c-16.5,0-31.3,15.2-31.3,31.3l-9,.2c-16.5,0-30,15-30,31v156.3c0,16.1,14.7,31.3,31.3,31.3h117.2c16.5,0,31.3-15.2,31.3-31.3h7.8c16.5,0,31.3-15.2,31.3-31.3v-124.8l-54.7-62.7ZM189.1,259.4h-117.2c-8.2,0-15.6-7.7-15.6-15.6V87.5c0-8,6.7-15.4,14.9-15.4l8.6-.3v140.6c0,16.1,14.7,31.3,31.3,31.3h93.8c0,8-7.4,15.6-15.6,15.6ZM243.8,212.5c0,8-7.4,15.6-15.6,15.6h-117.2c-8.2,0-15.6-7.7-15.6-15.6V56.2c0-8,7.4-15.6,15.6-15.6h78.1c-.1,18,0,31.4,0,31.4,0,16.2,14.6,31.1,31.3,31.1h23.4v109.4ZM220.3,87.5c-8.3,0-15.6-15.1-15.6-23.2v-23.4h0s39.1,46.6,39.1,46.6h-23.4ZM204.7,134.5h-70.3c-4.3,0-7.8,3.5-7.8,7.8s3.5,7.8,7.8,7.8h70.3c4.3,0,7.8-3.5,7.8-7.8s-3.5-7.8-7.8-7.8ZM204.7,173.5h-70.3c-4.3,0-7.8,3.5-7.8,7.8s3.5,7.8,7.8,7.8h70.3c4.3,0,7.8-3.5,7.8-7.8s-3.5-7.8-7.8-7.8Z"/>
+  </g>
 </svg>

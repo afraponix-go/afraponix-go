@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:svgjs="http://svgjs.dev/svgjs" version="1.1" viewBox="0 0 300 300">
+  <!-- Generator: Adobe Illustrator 29.1.0, SVG Export Plug-In . SVG Version: 2.1.0 Build 142)  -->
   <defs>
     <style>
-      .cls-1 {
+      .st0 {
         fill: #0051b1;
       }
     </style>
   </defs>
-  <!-- PLACEHOLDER - Save/Disk Icon -->
-  <rect class="cls-1" x="50" y="50" width="200" height="200" rx="20"/>
-  <rect class="cls-1" x="70" y="50" width="160" height="60" fill="white"/>
-  <rect class="cls-1" x="80" y="60" width="20" height="40"/>
-  <rect class="cls-1" x="70" y="130" width="160" height="100" fill="white"/>
+  <g id="Floppy_Disc">
+    <path class="st0" d="M221,266.4H79c-25,0-45.4-20.4-45.4-45.4V79c0-25,20.4-45.4,45.4-45.4h108.7c12.1,0,23.5,4.7,32.1,13.3l33.3,33.3c8.6,8.6,13.3,20,13.3,32.1v108.7c0,25-20.4,45.4-45.4,45.4ZM79,51.6c-15.1,0-27.4,12.3-27.4,27.4v142c0,15.1,12.3,27.4,27.4,27.4h142c15.1,0,27.4-12.3,27.4-27.4v-108.7c0-7.3-2.9-14.2-8-19.4l-33.3-33.3c-5.2-5.2-12.1-8-19.4-8h-108.7Z"/>
+    <path class="st0" d="M157.3,120.8h-34.6c-20,0-36.3-16.3-36.3-36.3v-41.9c0-5,4-9,9-9s9,4,9,9v41.9c0,10.1,8.2,18.3,18.3,18.3h34.6c10.1,0,18.3-8.2,18.3-18.3v-41.9c0-5,4-9,9-9s9,4,9,9v41.9c0,20-16.3,36.3-36.3,36.3Z"/>
+    <path class="st0" d="M148.2,84.3c-5,0-9-4-9-9v-32.8c0-5,4-9,9-9s9,4,9,9v32.8c0,5-4,9-9,9Z"/>
+    <path class="st0" d="M221,230c-5,0-9-4-9-9v-45.5c0-10.1-8.2-18.3-18.3-18.3h-87.4c-10.1,0-18.3,8.2-18.3,18.3v45.5c0,5-4,9-9,9s-9-4-9-9v-45.5c0-20,16.3-36.3,36.3-36.3h87.4c20,0,36.3,16.3,36.3,36.3v45.5c0,5-4,9-9,9Z"/>
+    <path class="st0" d="M184.6,193.6h-69.2c-5,0-9-4-9-9s4-9,9-9h69.2c5,0,9,4,9,9s-4,9-9,9Z"/>
+    <path class="st0" d="M184.6,230h-69.2c-5,0-9-4-9-9s4-9,9-9h69.2c5,0,9,4,9,9s-4,9-9,9Z"/>
+  </g>
 </svg>

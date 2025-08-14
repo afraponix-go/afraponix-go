@@ -148,7 +148,7 @@
 </head>
 <body>
     <div class="verification-container">
-        <div class="logo">🌿</div>
+        <div class="logo"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Afraponix Go" style="width: 48px; height: 48px;"></div>
         <h1 class="heading-1 app-name">Afraponix Go</h1>
         
         <div id="verificationStatus" class="verification-status">
@@ -199,7 +199,7 @@
         function showSuccess(message, authToken) {
             const statusDiv = document.getElementById('verificationStatus');
             statusDiv.innerHTML = `
-                <div class="success-icon">✅</div>
+                <div class="success-icon"><img src="icons/new-icons/Afraponix Go Icons_checkmark.svg" alt="Success" style="width: 64px; height: 64px; color: #34C759;"></div>
                 <div class="success">Email Verified Successfully!</div>
                 <p class="subtitle">${message}</p>
                 <button class="btn" onclick="continueToApp('${authToken}')">
@@ -210,12 +210,35 @@
         
         function showError(message) {
             const statusDiv = document.getElementById('verificationStatus');
+            
+            // Check if the error is related to expiration
+            const isExpired = message.toLowerCase().includes('expired') || message.toLowerCase().includes('invalid');
+            
+            let errorTitle = 'Verification Failed';
+            let actionButton = '<a href="/" class="btn">Back to Login</a>';
+            
+            if (isExpired) {
+                errorTitle = 'Verification Link Expired';
+                message = 'This verification link has expired or is no longer valid. Please log in and request a new verification email.';
+                actionButton = `
+                    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                        <a href="/" class="btn" style="background: linear-gradient(135deg, #0051b1 0%, #7baaee 100%);">Back to Login</a>
+                        <button class="btn" onclick="requestNewVerification()" style="background: linear-gradient(135deg, #60da5b 0%, #80FB7B 100%);">Request New Link</button>
+                    </div>
+                `;
+            }
+            
             statusDiv.innerHTML = `
-                <div class="error-icon">❌</div>
-                <div class="error">Verification Failed</div>
+                <div class="error-icon"><img src="icons/new-icons/Afraponix Go Icons_warning.svg" alt="Error" style="width: 64px; height: 64px; color: #FF3B30;"></div>
+                <div class="error">${errorTitle}</div>
                 <p class="subtitle">${message}</p>
-                <a href="/" class="btn">Back to Login</a>
+                ${actionButton}
             `;
+        }
+        
+        function requestNewVerification() {
+            // Redirect to login with a flag to show verification request
+            window.location.href = '/?request-verification=true';
         }
         
         function continueToApp(authToken) {
