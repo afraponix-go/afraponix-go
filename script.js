@@ -6285,6 +6285,12 @@ class AquaponicsApp {
 
     async getLatestNutrientValues() {
         try {
+            // Early return if no active system selected
+            if (!this.activeSystemId) {
+                console.log('No active system selected, returning default values');
+                return this.getDefaultNutrientValues();
+            }
+            
             // Fetch ALL latest values from nutrient_readings table (includes water quality + nutrients)
             const latestNutrients = await this.makeApiCall(`/data/nutrients/latest/${this.activeSystemId}`);
             
@@ -6356,18 +6362,7 @@ class AquaponicsApp {
             const waterQualityData = this.dataRecords.waterQuality || [];
             
             if (waterQualityData.length === 0) {
-                return {
-                    nitrate: { value: null, source: null },
-                    nitrite: { value: null, source: null },
-                    phosphorus: { value: null, source: null },
-                    potassium: { value: null, source: null },
-                    iron: { value: null, source: null },
-                    calcium: { value: null, source: null },
-                    magnesium: { value: null, source: null },
-                    ph: { value: null, source: null },
-                    humidity: { value: null, source: null },
-                    salinity: { value: null, source: null }
-                };
+                return this.getDefaultNutrientValues();
             }
             
             // Sort by date (most recent first)
@@ -6419,6 +6414,25 @@ class AquaponicsApp {
             
             return nutrients;
         }
+    }
+
+    getDefaultNutrientValues() {
+        return {
+            nitrate: { value: null, source: null },
+            nitrite: { value: null, source: null },
+            phosphorus: { value: null, source: null },
+            potassium: { value: null, source: null },
+            iron: { value: null, source: null },
+            calcium: { value: null, source: null },
+            magnesium: { value: null, source: null },
+            ph: { value: null, source: null },
+            temperature: { value: null, source: null },
+            dissolved_oxygen: { value: null, source: null },
+            ammonia: { value: null, source: null },
+            humidity: { value: null, source: null },
+            salinity: { value: null, source: null },
+            ec: { value: null, source: null }
+        };
     }
 
     updateNutrientStatus(nutrientName, value, analysis, source = null) {
