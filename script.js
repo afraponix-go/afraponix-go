@@ -16858,12 +16858,25 @@ class AquaponicsApp {
             
         } catch (error) {
             console.error('Failed to create demo system:', error);
+            console.error('Error details:', {
+                message: error.message,
+                name: error.name,
+                stack: error.stack
+            });
             
             // Check if it's the known server-side API issue
             if (error.message && error.message.includes('Server Error: The demo system API')) {
                 this.showNotification('🔧 Demo system feature is currently being updated. The API endpoint needs to be fixed on the server. Please try creating a custom system instead, or contact support.', 'error');
+            } else if (error.message && error.message.includes('Reference demo system not available')) {
+                this.showNotification('📋 Demo system template is missing from the database. Please contact support to initialize the demo system data.', 'error');
+            } else if (error.message && error.message.includes('Database constraint error')) {
+                this.showNotification('🔗 Database constraint issue during demo system creation. This may be due to missing reference data or schema differences.', 'error');
+            } else if (error.message && error.message.includes('Database connection error')) {
+                this.showNotification('🔌 Database connection issue. Please try again in a moment.', 'error');
             } else {
-                this.showNotification('❌ Failed to create demo system. Please try again or create a custom system instead.', 'error');
+                // Generic error - provide debugging info
+                console.log('📋 For debugging: Check staging server logs for detailed error information');
+                this.showNotification(`❌ Failed to create demo system: ${error.message}. Please try creating a custom system instead, or contact support if this persists.`, 'error');
             }
         }
     }
