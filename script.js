@@ -15686,7 +15686,7 @@ class AquaponicsApp {
                 const stockingEl = document.getElementById(`tank-stocking-${i}`);
                 const harvestEl = document.getElementById(`tank-harvest-${i}`);
 
-                if (volumeEl) volumeEl.value = tankVolume;
+                if (volumeEl) volumeEl.value = tankData.volume;
                 if (stockingEl) stockingEl.value = (existingTank && existingTank.stockingDensity !== null) ? existingTank.stockingDensity : fishDefaults.defaultDensity;
                 if (harvestEl) harvestEl.value = (existingTank && existingTank.harvestWeight !== null) ? existingTank.harvestWeight : fishDefaults.harvestWeight;
             }, 0);
