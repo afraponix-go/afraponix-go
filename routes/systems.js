@@ -309,51 +309,69 @@ router.post('/create-demo', async (req, res) => {
             `, [newSystemId, newBedId, ORIBI_1_SYSTEM_ID, originalBedId]);
         }
         
-        // 5. Copy sample plant growth data (recent 30 days worth) with proper bed ID mapping
+        // 5. Copy sample plant growth data (all available data, adjust dates to recent) with proper bed ID mapping
         for (const [originalBedId, newBedId] of Object.entries(bedIdMapping)) {
             await connection.execute(`
                 INSERT INTO plant_growth (system_id, grow_bed_id, crop_type, date, count, plants_harvested, 
                                         harvest_weight, new_seedlings, pest_control, health, growth_stage, 
                                         batch_id, seed_variety, batch_created_date, days_to_harvest, notes)
-                SELECT ?, ?, crop_type, date, count, plants_harvested, harvest_weight, new_seedlings, 
+                SELECT ?, ?, crop_type, 
+                       DATE_FORMAT(DATE_SUB(NOW(), INTERVAL ROW_NUMBER() OVER (ORDER BY date DESC) DAY), '%Y-%m-%d'),
+                       count, plants_harvested, harvest_weight, new_seedlings, 
                        pest_control, health, growth_stage, 
                        CONCAT(?, '_batch_', SUBSTRING_INDEX(batch_id, '_batch_', -1)), 
-                       seed_variety, batch_created_date, days_to_harvest, notes
+                       seed_variety, 
+                       DATE_FORMAT(DATE_SUB(NOW(), INTERVAL ROW_NUMBER() OVER (ORDER BY date DESC) DAY), '%Y-%m-%d'),
+                       days_to_harvest, notes
                 FROM plant_growth 
-                WHERE system_id = ? AND grow_bed_id = ? AND date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                WHERE system_id = ? AND grow_bed_id = ?
             `, [newSystemId, newBedId, newSystemId, ORIBI_1_SYSTEM_ID, originalBedId]);
         }
         
-        // 6. Copy sample fish health data (recent 30 days worth) with proper tank ID mapping
+        // 6. Copy sample fish health data (all available data, adjust dates to recent) with proper tank ID mapping
         for (const [originalTankId, newTankId] of Object.entries(tankIdMapping)) {
             await connection.execute(`
                 INSERT INTO fish_health (system_id, fish_tank_id, date, count, average_weight, mortality, 
                                        feed_consumption, feed_type, behavior, notes)
-                SELECT ?, ?, date, count, average_weight, mortality, feed_consumption, feed_type, behavior, notes
+                SELECT ?, ?, 
+                       DATE_FORMAT(DATE_SUB(NOW(), INTERVAL ROW_NUMBER() OVER (ORDER BY date DESC) DAY), '%Y-%m-%d'),
+                       count, average_weight, mortality, feed_consumption, feed_type, behavior, notes
                 FROM fish_health 
-                WHERE system_id = ? AND fish_tank_id = ? AND date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                WHERE system_id = ? AND fish_tank_id = ?
             `, [newSystemId, newTankId, ORIBI_1_SYSTEM_ID, originalTankId]);
         }
         
-        // 7. Copy sample water quality data (recent 30 days worth)
+        // 7. Copy sample water quality data (all available data, adjust dates to recent)
         await connection.execute(`
             INSERT INTO water_quality (system_id, date, temperature, ph, ammonia, nitrite, nitrate, 
                                      dissolved_oxygen, humidity, salinity, notes, created_at)
-            SELECT ?, DATE_SUB(NOW(), INTERVAL DATEDIFF(NOW(), date) DAY), temperature, ph, ammonia, 
-                   nitrite, nitrate, dissolved_oxygen, humidity, salinity, notes, NOW()
+            SELECT ?, DATE_FORMAT(DATE_SUB(NOW(), INTERVAL ROW_NUMBER() OVER (ORDER BY date DESC) DAY), '%Y-%m-%d'), 
+                   temperature, ph, ammonia, nitrite, nitrate, dissolved_oxygen, humidity, salinity, notes, NOW()
             FROM water_quality 
-            WHERE system_id = ? AND date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            WHERE system_id = ?
         `, [newSystemId, ORIBI_1_SYSTEM_ID]);
         
-        // 8. Copy sample nutrient readings (recent 30 days worth)
+        // 8. Copy sample nutrient readings (all available data, adjust dates to recent)
         await connection.execute(`
             INSERT INTO nutrient_readings (system_id, reading_date, nutrient_type, value, unit, 
                                          source, notes, created_at)
-            SELECT ?, DATE_SUB(NOW(), INTERVAL DATEDIFF(NOW(), reading_date) DAY), nutrient_type, 
-                   value, unit, source, notes, NOW()
+            SELECT ?, DATE_SUB(NOW(), INTERVAL ROW_NUMBER() OVER (ORDER BY reading_date DESC) DAY), 
+                   nutrient_type, value, unit, source, notes, NOW()
             FROM nutrient_readings 
-            WHERE system_id = ? AND reading_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            WHERE system_id = ?
         `, [newSystemId, ORIBI_1_SYSTEM_ID]);
+        
+        // 9. Copy fish inventory data with proper tank ID mapping
+        for (const [originalTankId, newTankId] of Object.entries(tankIdMapping)) {
+            await connection.execute(`
+                INSERT INTO fish_inventory (system_id, fish_tank_id, current_count, average_weight, 
+                                          fish_type, batch_id, created_at)
+                SELECT ?, ?, current_count, average_weight, fish_type, 
+                       CONCAT(?, '_', batch_id), NOW()
+                FROM fish_inventory 
+                WHERE system_id = ? AND fish_tank_id = ?
+            `, [newSystemId, newTankId, newSystemId, ORIBI_1_SYSTEM_ID, originalTankId]);
+        }
         
             // Commit transaction
             console.log('Committing transaction...');

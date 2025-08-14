@@ -6447,7 +6447,8 @@ class AquaponicsApp {
         const statusTextElement = document.getElementById(`${nutrientName}-status-text`);
         
         if (!valueElement || !indicatorElement || !statusTextElement) {
-            console.warn(`Missing elements for ${nutrientName} status update`);
+            // Elements might be intentionally missing in some tabs - use debug level
+            console.debug(`Nutrient status elements not found for ${nutrientName} (normal for some tabs)`);
             return;
         }
 
