@@ -281,11 +281,13 @@ router.post('/create-demo', async (req, res) => {
         // 5. Copy sample plant growth data (recent 30 days worth) with proper bed ID mapping
         for (const [originalBedId, newBedId] of Object.entries(bedIdMapping)) {
             await connection.execute(`
-                INSERT INTO plant_growth (system_id, grow_bed_id, crop_type, date, plants_planted, plants_harvested, 
-                                        harvest_weight, notes, batch_id, batch_tracking)
-                SELECT ?, ?, crop_type, DATE_SUB(NOW(), INTERVAL DATEDIFF(NOW(), date) DAY), plants_planted, 
-                       plants_harvested, harvest_weight, notes, 
-                       CONCAT(?, '_batch_', SUBSTRING_INDEX(batch_id, '_batch_', -1)), batch_tracking
+                INSERT INTO plant_growth (system_id, grow_bed_id, crop_type, date, count, plants_harvested, 
+                                        harvest_weight, new_seedlings, pest_control, health, growth_stage, 
+                                        batch_id, seed_variety, batch_created_date, days_to_harvest, notes)
+                SELECT ?, ?, crop_type, date, count, plants_harvested, harvest_weight, new_seedlings, 
+                       pest_control, health, growth_stage, 
+                       CONCAT(?, '_batch_', SUBSTRING_INDEX(batch_id, '_batch_', -1)), 
+                       seed_variety, batch_created_date, days_to_harvest, notes
                 FROM plant_growth 
                 WHERE system_id = ? AND grow_bed_id = ? AND date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
             `, [newSystemId, newBedId, newSystemId, ORIBI_1_SYSTEM_ID, originalBedId]);
@@ -294,12 +296,11 @@ router.post('/create-demo', async (req, res) => {
         // 6. Copy sample fish health data (recent 30 days worth) with proper tank ID mapping
         for (const [originalTankId, newTankId] of Object.entries(tankIdMapping)) {
             await connection.execute(`
-                INSERT INTO fish_health (system_id, tank_id, date, fish_count, average_weight, mortality, 
-                                       temperature, ph, ammonia, notes, created_at)
-                SELECT ?, ?, DATE_SUB(NOW(), INTERVAL DATEDIFF(NOW(), date) DAY), fish_count, average_weight, 
-                       mortality, temperature, ph, ammonia, notes, NOW()
+                INSERT INTO fish_health (system_id, fish_tank_id, date, count, average_weight, mortality, 
+                                       feed_consumption, feed_type, behavior, notes)
+                SELECT ?, ?, date, count, average_weight, mortality, feed_consumption, feed_type, behavior, notes
                 FROM fish_health 
-                WHERE system_id = ? AND tank_id = ? AND date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                WHERE system_id = ? AND fish_tank_id = ? AND date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
             `, [newSystemId, newTankId, ORIBI_1_SYSTEM_ID, originalTankId]);
         }
         
