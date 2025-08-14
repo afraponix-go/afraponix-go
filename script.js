@@ -15681,14 +15681,19 @@ class AquaponicsApp {
             container.innerHTML += tankHtml;
             
             // Explicitly set field values after DOM insertion to ensure they stick
+            // Capture values in closure to ensure they're available in setTimeout
+            const tankVolume = tankData.volume;
+            const tankStockingDensity = (existingTank && existingTank.stockingDensity !== null) ? existingTank.stockingDensity : fishDefaults.defaultDensity;
+            const tankHarvestWeight = (existingTank && existingTank.harvestWeight !== null) ? existingTank.harvestWeight : fishDefaults.harvestWeight;
+            
             setTimeout(() => {
                 const volumeEl = document.getElementById(`tank-volume-${i}`);
                 const stockingEl = document.getElementById(`tank-stocking-${i}`);
                 const harvestEl = document.getElementById(`tank-harvest-${i}`);
 
-                if (volumeEl) volumeEl.value = tankData.volume;
-                if (stockingEl) stockingEl.value = (existingTank && existingTank.stockingDensity !== null) ? existingTank.stockingDensity : fishDefaults.defaultDensity;
-                if (harvestEl) harvestEl.value = (existingTank && existingTank.harvestWeight !== null) ? existingTank.harvestWeight : fishDefaults.harvestWeight;
+                if (volumeEl) volumeEl.value = tankVolume;
+                if (stockingEl) stockingEl.value = tankStockingDensity;
+                if (harvestEl) harvestEl.value = tankHarvestWeight;
             }, 0);
         }
     }
