@@ -122,6 +122,7 @@ CREATE TABLE IF NOT EXISTS fish_health (
     mortality INT,
     average_weight DECIMAL(8,2),
     feed_consumption DECIMAL(8,2),
+    feed_type VARCHAR(100),
     behavior TEXT,
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -357,13 +358,17 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 -- Insert sample data for development and demo system template
 
+-- Create default user (password: demo123)
+INSERT IGNORE INTO users (id, username, email, first_name, last_name, password_hash, email_verified) 
+VALUES (1, 'demo', 'demo@aquaponics.local', 'Demo', 'User', '$2a$10$rZ4UzQ9mxLzK.vF0bL0WqOd7nQjvZ1gF8vZ1gF8vZ1gF8vZ1gF8vZ1g', 1);
+
 -- Create admin user (password: admin123)
 INSERT IGNORE INTO users (id, username, email, first_name, last_name, password_hash, email_verified) 
 VALUES (2, 'admin', 'admin@aquaponics.local', 'Admin', 'User', '$2a$10$rZ4UzQ9mxLzK.vF0bL0WqOd7nQjvZ1gF8vZ1gF8vZ1gF8vZ1gF8vZ1g', 1);
 
 -- Create Oribi 1 reference system for demo system creation
 INSERT IGNORE INTO systems (id, user_id, system_name, system_type, fish_type, fish_tank_count, total_fish_volume, grow_bed_count, total_grow_volume, total_grow_area, created_at)
-VALUES ('system_1754627714554', 2, 'Oribi 1', 'hybrid', 'tilapia', 7, 49000.00, 7, 43200.00, 355.20, '2025-08-08 04:35:14');
+VALUES ('system_1754627714554', 1, 'Oribi 1', 'hybrid', 'tilapia', 7, 49000.00, 7, 43200.00, 355.20, '2025-08-08 04:35:14');
 
 -- Create fish tanks for Oribi 1 reference system
 INSERT IGNORE INTO fish_tanks (id, system_id, tank_number, size_m3, volume_liters, fish_type, current_fish_count, created_at) VALUES
