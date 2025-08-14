@@ -276,26 +276,37 @@ router.post('/create-demo', async (req, res) => {
         });
         
         // 3. Copy fish tanks and create ID mapping
+        console.log('Step 3: Copying fish tanks...');
         const [originalTanks] = await connection.execute(
             'SELECT id, tank_number FROM fish_tanks WHERE system_id = ? ORDER BY tank_number', 
             [ORIBI_1_SYSTEM_ID]
         );
+        console.log('Original tanks found:', originalTanks.length);
+        originalTanks.forEach(tank => console.log(`   Original tank: ID=${tank.id}, Number=${tank.tank_number}`));
         
-        await connection.execute(`
+        const tankInsertResult = await connection.execute(`
             INSERT INTO fish_tanks (system_id, tank_number, size_m3, volume_liters, fish_type, current_fish_count)
             SELECT ?, tank_number, size_m3, volume_liters, fish_type, current_fish_count
             FROM fish_tanks WHERE system_id = ? ORDER BY tank_number
         `, [newSystemId, ORIBI_1_SYSTEM_ID]);
+        console.log('Fish tanks INSERT result:', { affectedRows: tankInsertResult[0].affectedRows });
         
         const [newTanks] = await connection.execute(
             'SELECT id, tank_number FROM fish_tanks WHERE system_id = ? ORDER BY tank_number', 
             [newSystemId]
         );
+        console.log('New tanks created:', newTanks.length);
+        newTanks.forEach(tank => console.log(`   New tank: ID=${tank.id}, Number=${tank.tank_number}`));
         
         // Create tank ID mapping
         const tankIdMapping = {};
         originalTanks.forEach((originalTank, index) => {
-            tankIdMapping[originalTank.id] = newTanks[index].id;
+            if (newTanks[index]) {
+                tankIdMapping[originalTank.id] = newTanks[index].id;
+                console.log(`   Tank mapping: ${originalTank.id} -> ${newTanks[index].id}`);
+            } else {
+                console.warn(`   Missing new tank for original tank ${originalTank.id}`);
+            }
         });
         
         // 4. Copy plant allocations using bed ID mapping
@@ -310,68 +321,90 @@ router.post('/create-demo', async (req, res) => {
         }
         
         // 5. Copy sample plant growth data (all available data, adjust dates to recent) with proper bed ID mapping
+        console.log('Step 5: Copying plant growth data...');
+        let plantGrowthCopied = 0;
         for (const [originalBedId, newBedId] of Object.entries(bedIdMapping)) {
-            await connection.execute(`
+            const plantResult = await connection.execute(`
                 INSERT INTO plant_growth (system_id, grow_bed_id, crop_type, date, count, plants_harvested, 
                                         harvest_weight, new_seedlings, pest_control, health, growth_stage, 
                                         batch_id, seed_variety, batch_created_date, days_to_harvest, notes)
                 SELECT ?, ?, crop_type, 
-                       DATE_FORMAT(DATE_SUB(NOW(), INTERVAL ROW_NUMBER() OVER (ORDER BY date DESC) DAY), '%Y-%m-%d'),
+                       DATE_FORMAT(DATE_SUB(NOW(), INTERVAL @row_number3 := @row_number3 + 1 DAY), '%Y-%m-%d'),
                        count, plants_harvested, harvest_weight, new_seedlings, 
                        pest_control, health, growth_stage, 
-                       CONCAT(?, '_batch_', SUBSTRING_INDEX(batch_id, '_batch_', -1)), 
+                       CONCAT(?, '_batch_', SUBSTRING_INDEX(COALESCE(batch_id, 'default'), '_batch_', -1)), 
                        seed_variety, 
-                       DATE_FORMAT(DATE_SUB(NOW(), INTERVAL ROW_NUMBER() OVER (ORDER BY date DESC) DAY), '%Y-%m-%d'),
+                       DATE_FORMAT(DATE_SUB(NOW(), INTERVAL @row_number3), '%Y-%m-%d'),
                        days_to_harvest, notes
-                FROM plant_growth 
+                FROM plant_growth, (SELECT @row_number3 := 0) r 
                 WHERE system_id = ? AND grow_bed_id = ?
+                ORDER BY date DESC
             `, [newSystemId, newBedId, newSystemId, ORIBI_1_SYSTEM_ID, originalBedId]);
+            plantGrowthCopied += plantResult[0].affectedRows;
         }
+        console.log('Plant growth records copied:', plantGrowthCopied);
         
         // 6. Copy sample fish health data (all available data, adjust dates to recent) with proper tank ID mapping
+        console.log('Step 6: Copying fish health data...');
+        let fishHealthCopied = 0;
         for (const [originalTankId, newTankId] of Object.entries(tankIdMapping)) {
-            await connection.execute(`
+            const fishHealthResult = await connection.execute(`
                 INSERT INTO fish_health (system_id, fish_tank_id, date, count, average_weight, mortality, 
                                        feed_consumption, feed_type, behavior, notes)
                 SELECT ?, ?, 
-                       DATE_FORMAT(DATE_SUB(NOW(), INTERVAL ROW_NUMBER() OVER (ORDER BY date DESC) DAY), '%Y-%m-%d'),
+                       DATE_FORMAT(DATE_SUB(NOW(), INTERVAL @row_number4 := @row_number4 + 1 DAY), '%Y-%m-%d'),
                        count, average_weight, mortality, feed_consumption, feed_type, behavior, notes
-                FROM fish_health 
+                FROM fish_health, (SELECT @row_number4 := 0) r
                 WHERE system_id = ? AND fish_tank_id = ?
+                ORDER BY date DESC
             `, [newSystemId, newTankId, ORIBI_1_SYSTEM_ID, originalTankId]);
+            fishHealthCopied += fishHealthResult[0].affectedRows;
         }
+        console.log('Fish health records copied:', fishHealthCopied);
         
         // 7. Copy sample water quality data (all available data, adjust dates to recent)
-        await connection.execute(`
+        console.log('Step 7: Copying water quality data...');
+        const waterQualityResult = await connection.execute(`
             INSERT INTO water_quality (system_id, date, temperature, ph, ammonia, nitrite, nitrate, 
                                      dissolved_oxygen, humidity, salinity, notes, created_at)
-            SELECT ?, DATE_FORMAT(DATE_SUB(NOW(), INTERVAL ROW_NUMBER() OVER (ORDER BY date DESC) DAY), '%Y-%m-%d'), 
+            SELECT ?, DATE_FORMAT(DATE_SUB(NOW(), INTERVAL @row_number := @row_number + 1 DAY), '%Y-%m-%d'), 
                    temperature, ph, ammonia, nitrite, nitrate, dissolved_oxygen, humidity, salinity, notes, NOW()
-            FROM water_quality 
+            FROM water_quality, (SELECT @row_number := 0) r
             WHERE system_id = ?
+            ORDER BY date DESC
         `, [newSystemId, ORIBI_1_SYSTEM_ID]);
+        console.log('Water quality INSERT result:', { affectedRows: waterQualityResult[0].affectedRows });
         
         // 8. Copy sample nutrient readings (all available data, adjust dates to recent)
-        await connection.execute(`
+        console.log('Step 8: Copying nutrient readings...');
+        const nutrientResult = await connection.execute(`
             INSERT INTO nutrient_readings (system_id, reading_date, nutrient_type, value, unit, 
                                          source, notes, created_at)
-            SELECT ?, DATE_SUB(NOW(), INTERVAL ROW_NUMBER() OVER (ORDER BY reading_date DESC) DAY), 
+            SELECT ?, DATE_SUB(NOW(), INTERVAL @row_number2 := @row_number2 + 1 DAY), 
                    nutrient_type, value, unit, source, notes, NOW()
-            FROM nutrient_readings 
+            FROM nutrient_readings, (SELECT @row_number2 := 0) r
             WHERE system_id = ?
+            ORDER BY reading_date DESC
         `, [newSystemId, ORIBI_1_SYSTEM_ID]);
+        console.log('Nutrient readings INSERT result:', { affectedRows: nutrientResult[0].affectedRows });
         
         // 9. Copy fish inventory data with proper tank ID mapping
+        console.log('Step 9: Copying fish inventory data...');
+        console.log('Tank ID mapping:', tankIdMapping);
+        let fishInventoryCopied = 0;
         for (const [originalTankId, newTankId] of Object.entries(tankIdMapping)) {
-            await connection.execute(`
+            const inventoryResult = await connection.execute(`
                 INSERT INTO fish_inventory (system_id, fish_tank_id, current_count, average_weight, 
                                           fish_type, batch_id, created_at)
                 SELECT ?, ?, current_count, average_weight, fish_type, 
-                       CONCAT(?, '_', batch_id), NOW()
+                       CONCAT(?, '_', COALESCE(batch_id, 'batch')), NOW()
                 FROM fish_inventory 
                 WHERE system_id = ? AND fish_tank_id = ?
             `, [newSystemId, newTankId, newSystemId, ORIBI_1_SYSTEM_ID, originalTankId]);
+            console.log(`   Tank ${originalTankId} -> ${newTankId}: ${inventoryResult[0].affectedRows} inventory records`);
+            fishInventoryCopied += inventoryResult[0].affectedRows;
         }
+        console.log('Fish inventory records copied:', fishInventoryCopied);
         
             // Commit transaction
             console.log('Committing transaction...');
