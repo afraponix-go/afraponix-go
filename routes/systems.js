@@ -327,6 +327,9 @@ router.post('/create-demo', async (req, res) => {
         // Commit transaction
         await connection.execute('COMMIT');
         
+        console.log('Transaction committed, waiting 100ms before SELECT...');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         // Return the created system
         const [createdSystemRows] = await connection.execute('SELECT * FROM systems WHERE id = ?', [newSystemId]);
         const createdSystem = createdSystemRows[0];
