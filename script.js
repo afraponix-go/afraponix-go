@@ -9983,6 +9983,14 @@ class AquaponicsApp {
             }
         });
         
+        // Handle case where no valid components exist (prevents Infinity values)
+        if (minX === Infinity || maxX === -Infinity) {
+            minX = 0;
+            maxX = 400;
+            minY = 0;
+            maxY = 300;
+        }
+        
         // Minimal space for scale indicator at bottom
         const scaleSpace = 30;
         // Reduce side margins for tighter layout
@@ -15243,8 +15251,8 @@ class AquaponicsApp {
         const submitBtn = modal.querySelector('.submit-btn');
 
         if (prevBtn) prevBtn.style.display = this.currentSystemStep > 1 ? 'flex' : 'none';
-        if (nextBtn) nextBtn.style.display = this.currentSystemStep < 3 ? 'flex' : 'none';
-        if (submitBtn) submitBtn.style.display = this.currentSystemStep === 3 ? 'flex' : 'none';
+        if (nextBtn) nextBtn.style.display = this.currentSystemStep < 4 ? 'flex' : 'none';
+        if (submitBtn) submitBtn.style.display = this.currentSystemStep === 4 ? 'flex' : 'none';
     }
     
     // Helper function to collect bed data directly from form fields
