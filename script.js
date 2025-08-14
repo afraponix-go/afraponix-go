@@ -15254,10 +15254,30 @@ class AquaponicsApp {
     }
 
     async switchToSystem(systemId) {
-        if (systemId === '') {
+        console.log('switchToSystem called with:', systemId);
+        
+        if (systemId === '' || systemId === undefined || systemId === 'undefined') {
+            console.log('Setting activeSystemId to null due to empty/undefined systemId');
             this.activeSystemId = null;
             localStorage.removeItem('activeSystemId');
+            
+            // Update the system selector dropdown to reflect the change
+            this.updateSystemSelector();
+            
+            // Clear all cached data  
+            this.plantData = null;
+            this.growBeds = null;
+            
+            // Destroy existing charts
+            this.destroyAllCharts();
+            
+            // Update displays to show no system selected
+            await this.updateDashboardFromData();
+            this.updateCurrentSystemDisplay();
+            
+            return; // Early return - don't load system-specific data
         } else {
+            console.log('Setting activeSystemId to:', systemId);
             this.activeSystemId = systemId;
             localStorage.setItem('activeSystemId', systemId);
         }
