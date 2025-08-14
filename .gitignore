@@ -62,6 +62,9 @@ typings/
 *.sqlite
 *.sqlite3
 
+# Exception: Include demo database for version control
+!database/demo-data.sqlite
+
 # Logs
 logs
 *.log
