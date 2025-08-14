@@ -16808,10 +16808,16 @@ class AquaponicsApp {
             
             console.log('Demo system created:', response);
             
+            // Check if response is just a message (server-side issue)
+            if (response && response.message && !response.id) {
+                console.error('Demo system API returned message instead of system object:', response);
+                throw new Error(`Server Error: The demo system API is not properly implemented. Expected system object with ID, got: ${response.message}. Please check the /systems/create-demo endpoint implementation.`);
+            }
+            
             // Ensure the response has an ID
             if (!response || !response.id) {
                 console.error('Demo system response missing ID:', response);
-                throw new Error('Invalid demo system response - missing ID');
+                throw new Error('Invalid demo system response - missing ID field');
             }
             
             return response;
@@ -16852,7 +16858,13 @@ class AquaponicsApp {
             
         } catch (error) {
             console.error('Failed to create demo system:', error);
-            this.showNotification('❌ Failed to create demo system. Please try again.', 'error');
+            
+            // Check if it's the known server-side API issue
+            if (error.message && error.message.includes('Server Error: The demo system API')) {
+                this.showNotification('🔧 Demo system feature is currently being updated. The API endpoint needs to be fixed on the server. Please try creating a custom system instead, or contact support.', 'error');
+            } else {
+                this.showNotification('❌ Failed to create demo system. Please try again or create a custom system instead.', 'error');
+            }
         }
     }
 
