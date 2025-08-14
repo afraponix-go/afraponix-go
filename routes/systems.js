@@ -331,19 +331,56 @@ router.post('/create-demo', async (req, res) => {
         const [createdSystemRows] = await connection.execute('SELECT * FROM systems WHERE id = ?', [newSystemId]);
         const createdSystem = createdSystemRows[0];
         
+        console.log('Demo system creation debug:');
+        console.log('- New system ID:', newSystemId);
+        console.log('- Query result rows count:', createdSystemRows.length);
+        console.log('- Created system object:', createdSystem);
+        
+        if (!createdSystem) {
+            console.error('CRITICAL: Failed to retrieve created system from database');
+            await connection.end();
+            return res.status(500).json({ 
+                error: 'System was created but could not be retrieved',
+                system_id: newSystemId 
+            });
+        }
+        
         await connection.end();
-        res.status(201).json({
+        
+        const response = {
             ...createdSystem,
             message: 'Demo system created successfully with Oribi 1 reference data'
-        });
+        };
+        
+        console.log('Final response object:', response);
+        console.log('Response has ID:', !!response.id);
+        
+        res.status(201).json(response);
         
     } catch (error) {
         if (connection) {
-            await connection.execute('ROLLBACK');
-            await connection.end();
+            try {
+                await connection.execute('ROLLBACK');
+                await connection.end();
+            } catch (rollbackError) {
+                console.error('Error during rollback:', rollbackError);
+            }
         }
-        console.error('Error creating demo system:', error);
-        res.status(500).json({ error: 'Failed to create demo system' });
+        
+        console.error('Failed to create demo system:', error);
+        console.error('Error stack:', error.stack);
+        console.error('Error details:', {
+            message: error.message,
+            code: error.code,
+            sqlState: error.sqlState,
+            sqlMessage: error.sqlMessage
+        });
+        
+        res.status(500).json({ 
+            error: 'Failed to create demo system',
+            details: error.message,
+            system_name: system_name || 'unknown'
+        });
     }
 });
 
