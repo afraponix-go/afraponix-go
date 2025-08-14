@@ -186,6 +186,166 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+// Create demo system by copying Oribi 1 data
+router.post('/create-demo', async (req, res) => {
+    const { system_name, user_id } = req.body;
+    const ORIBI_1_SYSTEM_ID = 'system_1754627714554'; // Oribi 1 reference system
+    
+    if (!system_name) {
+        return res.status(400).json({ error: 'System name is required' });
+    }
+
+    let connection;
+
+    try {
+        connection = await getDatabase();
+        
+        // Generate new system ID
+        const newSystemId = `system_${Date.now()}`;
+        const targetUserId = user_id || req.user.userId;
+        
+        // Start transaction
+        await connection.execute('START TRANSACTION');
+        
+        // 1. Copy main system record
+        await connection.execute(`
+            INSERT INTO systems (id, user_id, system_name, system_type, fish_type, fish_tank_count, 
+                                total_fish_volume, grow_bed_count, total_grow_volume, total_grow_area)
+            SELECT ?, ?, ?, system_type, fish_type, fish_tank_count, 
+                   total_fish_volume, grow_bed_count, total_grow_volume, total_grow_area
+            FROM systems WHERE id = ?
+        `, [newSystemId, targetUserId, system_name, ORIBI_1_SYSTEM_ID]);
+        
+        // 2. Copy grow beds and create ID mapping
+        const [originalBeds] = await connection.execute(
+            'SELECT id, bed_number FROM grow_beds WHERE system_id = ? ORDER BY bed_number', 
+            [ORIBI_1_SYSTEM_ID]
+        );
+        
+        await connection.execute(`
+            INSERT INTO grow_beds (system_id, bed_number, bed_type, bed_name, volume_liters, area_m2, 
+                                 length_meters, width_meters, height_meters, plant_capacity, vertical_count, 
+                                 plants_per_vertical, equivalent_m2, reservoir_volume, trough_length, 
+                                 trough_count, plant_spacing, reservoir_volume_liters)
+            SELECT ?, bed_number, bed_type, bed_name, volume_liters, area_m2, length_meters, width_meters, 
+                   height_meters, plant_capacity, vertical_count, plants_per_vertical, equivalent_m2, 
+                   reservoir_volume, trough_length, trough_count, plant_spacing, reservoir_volume_liters
+            FROM grow_beds WHERE system_id = ? ORDER BY bed_number
+        `, [newSystemId, ORIBI_1_SYSTEM_ID]);
+        
+        const [newBeds] = await connection.execute(
+            'SELECT id, bed_number FROM grow_beds WHERE system_id = ? ORDER BY bed_number', 
+            [newSystemId]
+        );
+        
+        // Create bed ID mapping
+        const bedIdMapping = {};
+        originalBeds.forEach((originalBed, index) => {
+            bedIdMapping[originalBed.id] = newBeds[index].id;
+        });
+        
+        // 3. Copy fish tanks and create ID mapping
+        const [originalTanks] = await connection.execute(
+            'SELECT id, tank_number FROM fish_tanks WHERE system_id = ? ORDER BY tank_number', 
+            [ORIBI_1_SYSTEM_ID]
+        );
+        
+        await connection.execute(`
+            INSERT INTO fish_tanks (system_id, tank_number, size_m3, volume_liters, fish_type, current_fish_count)
+            SELECT ?, tank_number, size_m3, volume_liters, fish_type, current_fish_count
+            FROM fish_tanks WHERE system_id = ? ORDER BY tank_number
+        `, [newSystemId, ORIBI_1_SYSTEM_ID]);
+        
+        const [newTanks] = await connection.execute(
+            'SELECT id, tank_number FROM fish_tanks WHERE system_id = ? ORDER BY tank_number', 
+            [newSystemId]
+        );
+        
+        // Create tank ID mapping
+        const tankIdMapping = {};
+        originalTanks.forEach((originalTank, index) => {
+            tankIdMapping[originalTank.id] = newTanks[index].id;
+        });
+        
+        // 4. Copy plant allocations using bed ID mapping
+        for (const [originalBedId, newBedId] of Object.entries(bedIdMapping)) {
+            await connection.execute(`
+                INSERT INTO plant_allocations (system_id, grow_bed_id, crop_type, percentage_allocated, 
+                                             plants_planted, plant_spacing, date_planted, status)
+                SELECT ?, ?, crop_type, percentage_allocated, plants_planted, plant_spacing, 
+                       date_planted, status
+                FROM plant_allocations WHERE system_id = ? AND grow_bed_id = ?
+            `, [newSystemId, newBedId, ORIBI_1_SYSTEM_ID, originalBedId]);
+        }
+        
+        // 5. Copy sample plant growth data (recent 30 days worth) with proper bed ID mapping
+        for (const [originalBedId, newBedId] of Object.entries(bedIdMapping)) {
+            await connection.execute(`
+                INSERT INTO plant_growth (system_id, grow_bed_id, crop_type, date, plants_planted, plants_harvested, 
+                                        harvest_weight, notes, batch_id, batch_tracking)
+                SELECT ?, ?, crop_type, DATE_SUB(NOW(), INTERVAL DATEDIFF(NOW(), date) DAY), plants_planted, 
+                       plants_harvested, harvest_weight, notes, 
+                       CONCAT(?, '_batch_', SUBSTRING_INDEX(batch_id, '_batch_', -1)), batch_tracking
+                FROM plant_growth 
+                WHERE system_id = ? AND grow_bed_id = ? AND date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            `, [newSystemId, newBedId, newSystemId, ORIBI_1_SYSTEM_ID, originalBedId]);
+        }
+        
+        // 6. Copy sample fish health data (recent 30 days worth) with proper tank ID mapping
+        for (const [originalTankId, newTankId] of Object.entries(tankIdMapping)) {
+            await connection.execute(`
+                INSERT INTO fish_health (system_id, tank_id, date, fish_count, average_weight, mortality, 
+                                       temperature, ph, ammonia, notes, created_at)
+                SELECT ?, ?, DATE_SUB(NOW(), INTERVAL DATEDIFF(NOW(), date) DAY), fish_count, average_weight, 
+                       mortality, temperature, ph, ammonia, notes, NOW()
+                FROM fish_health 
+                WHERE system_id = ? AND tank_id = ? AND date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            `, [newSystemId, newTankId, ORIBI_1_SYSTEM_ID, originalTankId]);
+        }
+        
+        // 7. Copy sample water quality data (recent 30 days worth)
+        await connection.execute(`
+            INSERT INTO water_quality (system_id, date, temperature, ph, ammonia, nitrite, nitrate, 
+                                     dissolved_oxygen, humidity, salinity, notes, created_at)
+            SELECT ?, DATE_SUB(NOW(), INTERVAL DATEDIFF(NOW(), date) DAY), temperature, ph, ammonia, 
+                   nitrite, nitrate, dissolved_oxygen, humidity, salinity, notes, NOW()
+            FROM water_quality 
+            WHERE system_id = ? AND date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        `, [newSystemId, ORIBI_1_SYSTEM_ID]);
+        
+        // 8. Copy sample nutrient readings (recent 30 days worth)
+        await connection.execute(`
+            INSERT INTO nutrient_readings (system_id, reading_date, nutrient_type, value, unit, 
+                                         source, notes, created_at)
+            SELECT ?, DATE_SUB(NOW(), INTERVAL DATEDIFF(NOW(), reading_date) DAY), nutrient_type, 
+                   value, unit, source, notes, NOW()
+            FROM nutrient_readings 
+            WHERE system_id = ? AND reading_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        `, [newSystemId, ORIBI_1_SYSTEM_ID]);
+        
+        // Commit transaction
+        await connection.execute('COMMIT');
+        
+        // Return the created system
+        const [createdSystemRows] = await connection.execute('SELECT * FROM systems WHERE id = ?', [newSystemId]);
+        const createdSystem = createdSystemRows[0];
+        
+        await connection.end();
+        res.status(201).json({
+            ...createdSystem,
+            message: 'Demo system created successfully with Oribi 1 reference data'
+        });
+        
+    } catch (error) {
+        if (connection) {
+            await connection.execute('ROLLBACK');
+            await connection.end();
+        }
+        console.error('Error creating demo system:', error);
+        res.status(500).json({ error: 'Failed to create demo system' });
+    }
+});
+
 // Delete system
 router.delete('/:id', async (req, res) => {
     let connection;

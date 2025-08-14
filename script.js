@@ -15285,6 +15285,15 @@ class AquaponicsApp {
         
         switch(this.currentSystemStep) {
             case 1:
+                // Step 1: Quickstart options - just validate that an option is selected
+                const setupType = document.querySelector('input[name="system-setup"]:checked')?.value;
+                if (!setupType) {
+                    errors.push('Please select a setup method');
+                }
+                break;
+                
+            case 2:
+                // Step 2: Basic info validation (only for custom setup)
                 const name = document.getElementById('new-system-name').value.trim();
                 const type = document.getElementById('new-system-type').value;
                 const tankCount = parseInt(document.getElementById('new-fish-tank-count').value);
@@ -15308,16 +15317,16 @@ class AquaponicsApp {
                 }
                 break;
                 
-            case 2:
-                // For step 2, we need to give the DOM time to update after HTML generation
+            case 3:
+                // For step 3 (fish tanks), we need to give the DOM time to update after HTML generation
                 // This ensures that when validation runs, the form elements have their values set
                 await new Promise(resolve => setTimeout(resolve, 50));
                 const debugEl = document.getElementById('tank-volume-1');
 
                 // Save current data first to ensure we validate current values
                 const tempStep = this.currentSystemStep;
-                this.currentSystemStep = 2; // Temporarily set to 2 for saveCurrentStepData
-                this.saveCurrentStepData();
+                this.currentSystemStep = 3; // Temporarily set to 3 for saveCurrentStepData
+                await this.saveCurrentStepData();
                 this.currentSystemStep = tempStep; // Restore original step
                 
                 const tankCountForValidation = this.systemWizardData.fishTankCount || parseInt(document.getElementById('new-fish-tank-count').value);
@@ -15366,8 +15375,8 @@ class AquaponicsApp {
                 }
                 break;
                 
-            case 3:
-                // Similar timing fix for step 3
+            case 4:
+                // Similar timing fix for step 4 (grow beds)
                 await new Promise(resolve => setTimeout(resolve, 50));
                 
                 const bedCountForValidation = parseInt(document.getElementById('new-grow-bed-count').value);
@@ -15477,14 +15486,10 @@ class AquaponicsApp {
         });
     }
     
-    saveCurrentStepData() {
+    async saveCurrentStepData() {
         switch(this.currentSystemStep) {
             case 1:
-                // Basic info step - save system name, type, and counts
-                this.systemWizardData.systemName = document.getElementById('new-system-name').value;
-                this.systemWizardData.systemType = document.getElementById('new-system-type').value;
-                
-                // Check if demo import is selected
+                // Quickstart options step - save setup type choice
                 const setupType = document.querySelector('input[name="system-setup"]:checked')?.value;
                 this.systemWizardData.setupType = setupType;
                 
@@ -15492,14 +15497,18 @@ class AquaponicsApp {
                     // Skip wizard and create demo system directly
                     await this.createDemoSystemAndFinish();
                     return;
-                } else {
-                    // Use user-specified counts
-                    this.systemWizardData.fishTankCount = parseInt(document.getElementById('new-fish-tank-count').value) || 1;
-                    this.systemWizardData.growBedCount = parseInt(document.getElementById('new-grow-bed-count').value) || 2;
                 }
                 break;
                 
             case 2:
+                // Basic info step - save system name, type, and counts (only for custom setup)
+                this.systemWizardData.systemName = document.getElementById('new-system-name').value;
+                this.systemWizardData.systemType = document.getElementById('new-system-type').value;
+                this.systemWizardData.fishTankCount = parseInt(document.getElementById('new-fish-tank-count').value) || 1;
+                this.systemWizardData.growBedCount = parseInt(document.getElementById('new-grow-bed-count').value) || 2;
+                break;
+                
+            case 3:
                 // Fish tanks step - save tank data
                 this.systemWizardData.fishTanks = [];
                 const tankCount = this.systemWizardData.fishTankCount || 1;
@@ -15521,7 +15530,7 @@ class AquaponicsApp {
                 }
                 break;
                 
-            case 3:
+            case 4:
                 // Grow beds step - save bed data
 
                 this.systemWizardData.growBeds = [];
@@ -15561,18 +15570,18 @@ class AquaponicsApp {
         if (!(await this.validateCurrentStep())) return;
         
         // Save current step data before moving to next step
-        this.saveCurrentStepData();
+        await this.saveCurrentStepData();
         
-        if (this.currentSystemStep < 3) {
+        if (this.currentSystemStep < 4) {
             this.currentSystemStep++;
             this.updateWizardUI();
             
             // Initialize specific steps when reaching them
-            if (this.currentSystemStep === 2) {
+            if (this.currentSystemStep === 3) {
                 // Ensure fish tank fields are properly initialized
                 const tankCount = parseInt(document.getElementById('new-fish-tank-count').value) || 1;
                 this.updateFishTankFields(tankCount);
-            } else if (this.currentSystemStep === 3) {
+            } else if (this.currentSystemStep === 4) {
                 // Ensure grow bed fields are properly initialized
                 const bedCount = parseInt(document.getElementById('new-grow-bed-count').value) || 2;
                 this.updateGrowBedFields(bedCount);
@@ -15580,10 +15589,10 @@ class AquaponicsApp {
         }
     }
     
-    prevSystemStep() {
+    async prevSystemStep() {
         if (this.currentSystemStep > 1) {
             // Save current step data before moving to previous step
-            this.saveCurrentStepData();
+            await this.saveCurrentStepData();
             this.currentSystemStep--;
             this.updateWizardUI();
         }

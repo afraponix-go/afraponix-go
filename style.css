@@ -16590,6 +16590,65 @@ h6,
     box-shadow: 0 0 0 3px rgba(0, 81, 177, 0.1);
 }
 
+/* Quickstart Options Layout */
+.quickstart-options {
+    display: flex;
+    gap: 20px;
+    margin-top: 0;
+}
+
+.quickstart-option {
+    flex: 1;
+    min-height: 200px;
+}
+
+.quickstart-option .demo-option-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 30px 20px;
+    height: 100%;
+    gap: 15px;
+}
+
+.demo-option-icon {
+    margin-bottom: 10px;
+}
+
+.option-icon-large {
+    width: 48px;
+    height: 48px;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.quickstart-option input[type="radio"]:checked + .demo-option-content .option-icon-large {
+    opacity: 1;
+}
+
+.quickstart-option .demo-option-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.quickstart-option .demo-option-description {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+    .quickstart-options {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .quickstart-option {
+        min-height: 150px;
+    }
+}
 
 /* Quick Actions Dropdown Styles */
 .quick-actions-dropdown {
