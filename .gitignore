@@ -65,6 +65,11 @@ typings/
 # Exception: Include demo database for version control
 !database/demo-data.sqlite
 
+# Production deployment files (exclude from version control)
+.env.production
+deploy-production.sh
+setup-production-ssl.sh
+
 # Logs
 logs
 *.log
