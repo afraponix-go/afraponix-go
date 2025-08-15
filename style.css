@@ -3139,14 +3139,30 @@ input[readonly]:focus {
     gap: 0.5rem;
 }
 
+.loading-step .step-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.5;
+    transition: opacity 0.3s ease;
+    flex-shrink: 0;
+}
+
 .loading-step.active {
     color: var(--color-deep-blue, #0051b1);
     font-weight: 600;
     transform: translateX(4px);
 }
 
+.loading-step.active .step-icon {
+    opacity: 1;
+}
+
 .loading-step.completed {
     color: var(--color-bio-green, #16a34a);
+    opacity: 0.8;
+}
+
+.loading-step.completed .step-icon {
     opacity: 0.8;
 }
 

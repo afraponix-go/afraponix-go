@@ -16865,12 +16865,8 @@ class AquaponicsApp {
             setTimeout(() => {
                 this.hideDemoLoadingModal();
                 
-                // Show enhanced success notification with data summary
-                const dataStats = demoSystem.imported_data ? 
-                    `\n📊 Imported: ${demoSystem.imported_data.fishTanks || 7} fish tanks, ${demoSystem.imported_data.waterQuality || 45} days of water quality data, ${demoSystem.imported_data.nutrients || 270} nutrient readings, and comprehensive historical data!` : 
-                    '';
-                
-                this.showNotification(`🎉 Demo system "${systemName}" created successfully!${dataStats}\n\n🔄 App refreshed with rich sample data - explore all tabs to see the complete aquaponics management experience!`, 'success', 8000);
+                // Success notification removed - progress modal provides sufficient feedback
+                // Users will see the demo system immediately after the modal closes
             }, 1500);
             
         } catch (error) {
