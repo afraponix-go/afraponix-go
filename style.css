@@ -3062,34 +3062,35 @@ input[readonly]:focus {
 .loading-modal {
     max-width: 500px !important;
     width: 95% !important;
-    padding: 2rem !important;
+    padding: 0 !important;
     text-align: center;
+}
+
+.loading-modal .modal-header {
+    background: var(--color-deep-blue, #0051b1);
+    color: white;
+    padding: 1.5rem 2rem;
+    border-radius: 15px 15px 0 0;
+    margin: 0;
+}
+
+.loading-modal .modal-header h2 {
+    color: white;
+    margin: 0;
+    font-weight: 600;
+}
+
+.loading-modal .modal-body {
+    padding: 2rem;
 }
 
 .loading-content {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.5rem;
+    gap: 1rem;
 }
 
-.loading-icon-large {
-    width: 80px;
-    height: 80px;
-    opacity: 0.8;
-    animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 0.6; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.05); }
-}
-
-.loading-description {
-    max-width: 400px;
-    line-height: 1.6;
-    margin: 0;
-}
 
 .progress-container {
     width: 100%;

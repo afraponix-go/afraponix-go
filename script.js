@@ -16858,6 +16858,11 @@ class AquaponicsApp {
             await this.switchToSystem(demoSystem.id);
             await this.forceRefreshAllData();
             
+            // Navigate to dashboard and update all data
+            this.updateProgress(95, 'Opening dashboard with fresh data...');
+            this.navigateToDashboard();
+            await this.updateDashboardData();
+            
             // Complete the process
             this.updateProgress(100, 'Demo system ready!');
             
@@ -16993,12 +16998,39 @@ class AquaponicsApp {
             // Update growth beds
             await this.updateGrowBeds();
             
-            // Refresh dashboard charts
-            this.initializeCharts();
-            
             console.log('✅ All data refreshed successfully');
         } catch (error) {
             console.error('⚠️ Error during data refresh:', error);
+            // Don't throw - just log the error so the demo system creation completes
+        }
+    }
+
+    async updateDashboardData() {
+        // Specifically update dashboard data and charts
+        console.log('🔄 Updating dashboard data...');
+        
+        try {
+            // Reinitialize and update dashboard charts with fresh data
+            this.initializeCharts();
+            
+            // Update dashboard from data
+            if (typeof this.updateDashboardFromData === 'function') {
+                await this.updateDashboardFromData();
+            }
+            
+            // Force update water quality metrics
+            if (typeof this.updateWaterQualityMetrics === 'function') {
+                await this.updateWaterQualityMetrics();
+            }
+            
+            // Update any other dashboard-specific elements
+            if (typeof this.updateDashboardStats === 'function') {
+                await this.updateDashboardStats();
+            }
+            
+            console.log('✅ Dashboard data updated successfully');
+        } catch (error) {
+            console.error('⚠️ Error during dashboard update:', error);
             // Don't throw - just log the error so the demo system creation completes
         }
     }
