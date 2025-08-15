@@ -1872,18 +1872,18 @@ input[readonly]:focus {
 
 .system-config-tab.active {
     background: linear-gradient(135deg, var(--color-bio-green) 0%, #6ee567 100%);
-    color: white;
+    color: var(--color-deep-blue, #0051b1);
     border-color: var(--color-bio-green);
     font-weight: 600;
     box-shadow: 0 2px 8px rgba(128, 251, 123, 0.3);
 }
 
 .system-config-tab.active .tab-icon svg {
-    fill: white;
+    fill: var(--color-deep-blue, #0051b1);
 }
 
 .system-config-tab.active .tab-icon svg path {
-    fill: white;
+    fill: var(--color-deep-blue, #0051b1);
 }
 
 .system-config-tab .tab-icon {
@@ -3173,6 +3173,97 @@ input[readonly]:focus {
 }
 
 #demo-loading-modal.show .modal-content {
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Data Capture Save Modal Styles */
+.save-modal {
+    max-width: 450px !important;
+    width: 95% !important;
+    padding: 0 !important;
+    text-align: center;
+}
+
+.save-modal .modal-header {
+    background: var(--color-deep-blue, #0051b1);
+    color: white;
+    padding: 1.2rem 2rem;
+    border-radius: 15px 15px 0 0;
+    margin: 0;
+}
+
+.save-modal .modal-header h2 {
+    color: white;
+    margin: 0;
+    font-weight: 600;
+    font-size: 1.3rem;
+}
+
+.save-modal .modal-body {
+    padding: 1.5rem 2rem 2rem;
+}
+
+.save-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.save-details {
+    width: 100%;
+    max-width: 320px;
+    text-align: left;
+    background: var(--bg-secondary, #f8f9fa);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 0.5rem;
+}
+
+.save-step {
+    padding: 0.35rem 0;
+    font-size: 0.8rem;
+    color: var(--text-muted, #9ca3af);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.save-step .step-icon {
+    width: 14px;
+    height: 14px;
+    opacity: 0.4;
+    transition: opacity 0.3s ease;
+    flex-shrink: 0;
+}
+
+.save-step.active {
+    color: var(--color-deep-blue, #0051b1);
+    font-weight: 600;
+    transform: translateX(3px);
+}
+
+.save-step.active .step-icon {
+    opacity: 1;
+}
+
+.save-step.completed {
+    color: var(--color-bio-green, #16a34a);
+    opacity: 0.8;
+}
+
+.save-step.completed .step-icon {
+    opacity: 0.8;
+}
+
+/* Prevent interaction during save */
+#data-save-modal.show {
+    pointer-events: auto;
+}
+
+#data-save-modal.show .modal-content {
     pointer-events: none;
     user-select: none;
 }
@@ -15489,7 +15580,7 @@ button[type="button"].btn.btn-secondary:hover {
     .system-config-tab.active {
         background: linear-gradient(135deg, var(--color-bio-green) 0%, #6ee567 100%);
         border-color: var(--color-bio-green);
-        color: white;
+        color: var(--color-deep-blue, #0051b1);
     }
     
     .system-config-tab .tab-icon {
@@ -15581,8 +15672,8 @@ button[type="button"].btn.btn-secondary:hover {
 .system-config-tab.active svg path,
 .system-config-tab.active svg circle,
 .system-config-tab.active svg g {
-    fill: white !important;
-    stroke: white !important;
+    fill: var(--color-deep-blue, #0051b1) !important;
+    stroke: var(--color-deep-blue, #0051b1) !important;
 }
 
 /* Fix tab icon container spacing */
