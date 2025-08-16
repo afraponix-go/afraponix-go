@@ -351,70 +351,6 @@ class AquaponicsApp {
         }
     }
 
-    async handleForgotPassword(e) {
-        e.preventDefault();
-        
-        const email = document.getElementById('forgot-email').value.trim();
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-        const originalBtnText = submitBtn.innerHTML;
-        
-        if (!email) {
-            this.showNotification('Please enter your email address', 'error');
-            return;
-        }
-
-        // Email validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            this.showNotification('Please enter a valid email address', 'error');
-            return;
-        }
-
-        // Show loading state
-        submitBtn.innerHTML = '<img src="icons/new-icons/Afraponix Go Icons_email.svg" alt="Sending" class="btn-icon-svg"> Sending...';
-        submitBtn.disabled = true;
-
-        try {
-            const response = await this.makeApiCall('/auth/forgot-password', {
-                method: 'POST',
-                body: JSON.stringify({ email })
-            });
-
-            // Show success notification
-            this.showNotification(
-                'Password reset instructions have been sent to your email address. Please check your inbox and spam folder.',
-                'success'
-            );
-
-            // Clear the form
-            document.getElementById('forgot-email').value = '';
-            
-            // Close the forgot password modal after a brief delay
-            setTimeout(() => {
-                this.closeForgotPasswordSlideout();
-            }, 3000);
-
-        } catch (error) {
-            console.error('Forgot password error:', error);
-            
-            // Handle different error scenarios
-            if (error.message && error.message.includes('temporarily unavailable')) {
-                this.showNotification(
-                    'Password reset is temporarily unavailable. Please contact support for assistance.',
-                    'warning'
-                );
-            } else {
-                this.showNotification(
-                    'If an account with that email exists, we\'ve sent password reset instructions.',
-                    'info'
-                );
-            }
-        } finally {
-            // Restore button state
-            submitBtn.innerHTML = originalBtnText;
-            submitBtn.disabled = false;
-        }
-    }
 
     async logout() {
 
@@ -1803,6 +1739,13 @@ class AquaponicsApp {
             return;
         }
 
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            this.showMessage('Please enter a valid email address', 'error');
+            return;
+        }
+
         form.classList.add('loading');
 
         try {
@@ -1820,15 +1763,34 @@ class AquaponicsApp {
             
             if (response.ok) {
                 this.showMessage(result.message, 'success');
+                // Also show toast notification for better visibility
+                this.showNotification(
+                    'Password reset instructions have been sent to your email address. Please check your inbox and spam folder.', 
+                    'success'
+                );
                 // Clear the form
                 document.getElementById('forgot-email').value = '';
+                
+                // Auto-close the forgot password modal after 3 seconds
+                setTimeout(() => {
+                    this.closeForgotPasswordSlideout();
+                }, 3000);
             } else {
-                this.showMessage(result.error || 'Failed to send reset email', 'error');
+                // Handle specific error cases
+                if (result.temporaryIssue) {
+                    this.showMessage('Password reset is temporarily unavailable. Please contact support for assistance.', 'warning');
+                    this.showNotification('Password reset is temporarily unavailable. Please contact support for assistance.', 'warning');
+                } else {
+                    this.showMessage(result.error || 'Failed to send reset email', 'error');
+                    this.showNotification(result.error || 'Failed to send reset email', 'error');
+                }
             }
         } catch (error) {
             form.classList.remove('loading');
             console.error('Forgot password error:', error);
             this.showMessage('Network error. Please try again.', 'error');
+            // Also show toast notification
+            this.showNotification('Network error. Please try again.', 'error');
         }
     }
 
