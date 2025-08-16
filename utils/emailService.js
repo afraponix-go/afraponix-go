@@ -6,7 +6,7 @@ const path = require('path');
 const loadSmtpConfig = () => {
     // Try environment variables first (production)
     if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-        const baseUrl = process.env.BASE_URL || 'https://go.aquaponics.online';
+        const baseUrl = process.env.BASE_URL || 'https://go.afraponix.com';
         return {
             host: process.env.SMTP_HOST,
             port: parseInt(process.env.SMTP_PORT) || 587,

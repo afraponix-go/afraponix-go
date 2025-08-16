@@ -142,7 +142,7 @@ chown your-app-user:your-app-group .env
 ### Required Environment Variables
 ```env
 NODE_ENV=production
-BASE_URL=https://go.aquaponics.online
+BASE_URL=https://go.afraponix.com
 JWT_SECRET=your-generated-jwt-secret
 ENCRYPTION_KEY=your-generated-encryption-key
 ```
