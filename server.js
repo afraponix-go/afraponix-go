@@ -35,11 +35,24 @@ app.use(helmet({
             scriptSrcAttr: ["'unsafe-inline'"],
             styleSrc: ["'self'", "'unsafe-inline'"],
             imgSrc: ["'self'", "data:", "blob:"],
+            connectSrc: ["'self'"],
+            fontSrc: ["'self'"],
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'"],
+            frameSrc: ["'none'"],
         },
     },
+    crossOriginEmbedderPolicy: false, // Disable COEP to avoid message port issues
 }));
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:8000', 'http://127.0.0.1:8000'],
+    origin: [
+        'http://localhost:3000', 
+        'http://127.0.0.1:3000', 
+        'http://localhost:8000', 
+        'http://127.0.0.1:8000',
+        'https://go.aquaponics.online',
+        'https://www.go.aquaponics.online'
+    ],
     credentials: true
 }));
 
@@ -79,6 +92,16 @@ app.use('/api/seed-varieties', seedVarietiesRoutes);
 // Email verification route - serve main page with token parameter
 app.get('/verify-email', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Password reset route - serve reset password page
+app.get('/reset-password', (req, res) => {
+    res.sendFile(path.join(__dirname, 'reset-password.html'));
+});
+
+// Favicon route
+app.get('/favicon.ico', (req, res) => {
+    res.sendFile(path.join(__dirname, 'logo-clean.svg'));
 });
 
 // Health check endpoint
