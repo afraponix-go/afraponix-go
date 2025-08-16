@@ -124,27 +124,30 @@ const sendPasswordResetEmail = async (email, resetToken, username) => {
                         align-items: center;
                         justify-content: center;
                     }
-                    .logo-icon::before {
-                        content: "🌱";
-                        font-size: 18px;
+                    .icon {
+                        width: 20px;
+                        height: 20px;
+                        display: inline-block;
+                        vertical-align: middle;
+                        margin-right: 8px;
                     }
                     .greeting {
                         background: linear-gradient(135deg, #e6f0fb 0%, #b3d1f0 100%);
                         border-radius: 12px;
-                        padding: 20px;
+                        padding: 25px;
                         margin: 25px 0;
                         border-left: 4px solid #0051b1;
                     }
                     .reset-btn {
                         display: inline-block;
                         background: linear-gradient(135deg, #0051b1 0%, #7baaee 100%);
-                        color: white;
-                        padding: 16px 32px;
+                        color: white !important;
+                        padding: 18px 36px;
                         text-decoration: none;
                         border-radius: 12px;
-                        font-weight: 600;
+                        font-weight: 700;
                         font-size: 16px;
-                        margin: 25px 0;
+                        margin: 30px 0;
                         text-align: center;
                         box-shadow: 0 4px 14px rgba(0, 81, 177, 0.3);
                         transition: transform 0.2s ease;
@@ -160,21 +163,12 @@ const sendPasswordResetEmail = async (email, resetToken, username) => {
                         margin: 25px 0;
                         border-left: 4px solid #f59e0b;
                     }
-                    .security-notice .icon {
-                        display: inline-flex;
+                    .security-header {
+                        display: flex;
                         align-items: center;
-                        justify-content: center;
-                        width: 24px;
-                        height: 24px;
-                        background: #f59e0b;
-                        color: white;
-                        border-radius: 50%;
-                        margin-right: 8px;
-                        font-weight: bold;
-                        font-size: 14px;
-                    }
-                    .security-notice .icon::before {
-                        content: "!";
+                        margin-bottom: 12px;
+                        color: #92400e;
+                        font-weight: 600;
                     }
                     .link-box {
                         background: #f8fafb;
@@ -189,11 +183,17 @@ const sendPasswordResetEmail = async (email, resetToken, username) => {
                     }
                     .request-details {
                         background: #f1f5f9;
-                        border-radius: 8px;
-                        padding: 15px;
-                        margin: 20px 0;
-                        font-size: 14px;
+                        border-radius: 12px;
+                        padding: 20px;
+                        margin: 25px 0;
+                        border-left: 4px solid #0051b1;
+                    }
+                    .detail-item {
+                        display: flex;
+                        align-items: center;
+                        margin: 8px 0;
                         color: #475569;
+                        font-size: 14px;
                     }
                     .footer {
                         text-align: center;
@@ -205,12 +205,16 @@ const sendPasswordResetEmail = async (email, resetToken, username) => {
                     }
                     .social-links {
                         margin: 20px 0;
+                        display: flex;
+                        justify-content: center;
+                        gap: 20px;
                     }
                     .social-links a {
-                        display: inline-block;
-                        margin: 0 10px;
+                        display: flex;
+                        align-items: center;
                         color: #0051b1;
                         text-decoration: none;
+                        font-weight: 500;
                     }
                 </style>
             </head>
@@ -218,55 +222,99 @@ const sendPasswordResetEmail = async (email, resetToken, username) => {
                 <div class="container">
                     <div class="header">
                         <div class="logo">
-                            <div class="logo-icon"></div>
+                            <div class="logo-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                                    <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1H5C3.89 1 3 1.89 3 3V21A2 2 0 0 0 5 23H19A2 2 0 0 0 21 21V9M19 21H5V3H13V9H19V21Z"/>
+                                </svg>
+                            </div>
                             Afraponix Go
                         </div>
-                        <h2 style="color: #0f172a; margin: 0;">Secure Password Reset</h2>
+                        <h2 style="color: #0f172a; margin: 0;">Password Reset Request</h2>
                     </div>
                     
                     <div class="greeting">
-                        <p style="margin: 0; font-weight: 600;">Hello ${username}! 👋</p>
-                        <p style="margin: 8px 0 0 0; color: #475569;">We're here to help you regain access to your aquaponics management system.</p>
+                        <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                            <svg class="icon" viewBox="0 0 24 24" fill="#0051b1">
+                                <path d="M12 12C14.21 12 16 10.21 16 8S14.21 4 12 4 8 5.79 8 8 9.79 12 12 12M12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z"/>
+                            </svg>
+                            <span style="font-weight: 600; color: #0051b1; font-size: 18px;">Hello ${username}!</span>
+                        </div>
+                        <p style="margin: 0; color: #475569;">We're here to help you regain access to your aquaponics management system.</p>
                     </div>
                     
-                    <p>We received a request to reset your password for your Afraponix Go account. Click the secure button below to create a new password:</p>
+                    <p style="margin: 20px 0;">We received a request to reset your password for your Afraponix Go account. Click the secure button below to create a new password:</p>
                     
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a href="${resetLink}" class="reset-btn">🔐 Reset My Password</a>
+                    <div style="text-align: center; margin: 35px 0;">
+                        <a href="${resetLink}" class="reset-btn">
+                            <svg style="width: 18px; height: 18px; margin-right: 8px; vertical-align: middle;" viewBox="0 0 24 24" fill="white">
+                                <path d="M12,17A2,2 0 0,0 14,15C14,13.89 13.1,13 12,13A2,2 0 0,0 10,15A2,2 0 0,0 12,17M18,8A2,2 0 0,1 20,10V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V10C4,8.89 4.9,8 6,8H7V6A5,5 0 0,1 12,1A5,5 0 0,1 17,6V8H18M12,3A3,3 0 0,0 9,6V8H15V6A3,3 0 0,0 12,3Z"/>
+                            </svg>
+                            Reset My Password
+                        </a>
                     </div>
                     
-                    <p>Having trouble with the button? Copy and paste this secure link into your browser:</p>
+                    <p style="margin: 20px 0; color: #64748b;">Having trouble with the button? Copy and paste this secure link into your browser:</p>
                     <div class="link-box">${resetLink}</div>
                     
                     <div class="security-notice">
-                        <div style="display: flex; align-items: flex-start;">
-                            <div class="icon"></div>
-                            <div>
-                                <strong style="color: #92400e;">Security Information</strong>
-                                <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #92400e;">
-                                    <li>This secure link expires in <strong>1 hour</strong> for your protection</li>
-                                    <li>If you didn't request this reset, please ignore this email safely</li>
-                                    <li>Your current password remains active until you create a new one</li>
-                                    <li>Only you have received this personalized reset link</li>
-                                </ul>
-                            </div>
+                        <div class="security-header">
+                            <svg class="icon" viewBox="0 0 24 24" fill="#92400e">
+                                <path d="M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z"/>
+                            </svg>
+                            Security Information
                         </div>
+                        <ul style="margin: 0; padding-left: 20px; color: #92400e;">
+                            <li>This secure link expires in <strong>1 hour</strong> for your protection</li>
+                            <li>If you didn't request this reset, please ignore this email safely</li>
+                            <li>Your current password remains active until you create a new one</li>
+                            <li>Only you have received this personalized reset link</li>
+                        </ul>
                     </div>
                     
                     <div class="request-details">
-                        <strong>Request Details:</strong><br>
-                        📧 Account: ${email}<br>
-                        🕐 Requested: ${currentDate}<br>
-                        🔒 Expires: 1 hour from request time
+                        <div style="margin-bottom: 15px; font-weight: 600; color: #0051b1;">Request Details</div>
+                        <div class="detail-item">
+                            <svg class="icon" viewBox="0 0 24 24" fill="#64748b">
+                                <path d="M20,8L12,13L4,8V6L12,11L20,6M20,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6C22,4.89 21.1,4 20,4Z"/>
+                            </svg>
+                            Account: ${email}
+                        </div>
+                        <div class="detail-item">
+                            <svg class="icon" viewBox="0 0 24 24" fill="#64748b">
+                                <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"/>
+                            </svg>
+                            Requested: ${currentDate}
+                        </div>
+                        <div class="detail-item">
+                            <svg class="icon" viewBox="0 0 24 24" fill="#64748b">
+                                <path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.6 14.8,10V11H16V16H8V11H9.2V10C9.2,8.6 10.6,7 12,7M12,8.2C11.2,8.2 10.4,8.7 10.4,10V11H13.6V10C13.6,8.7 12.8,8.2 12,8.2Z"/>
+                            </svg>
+                            Expires: 1 hour from request time
+                        </div>
                     </div>
                     
-                    <p>Need assistance? Our aquaponics experts are here to help you get back to managing your systems. Contact support if you're experiencing any issues.</p>
+                    <p style="margin: 25px 0;">Need assistance? Our aquaponics experts are here to help you get back to managing your systems. Contact support if you're experiencing any issues.</p>
                     
                     <div class="footer">
                         <div class="social-links">
-                            <a href="#" style="text-decoration: none;">📚 Documentation</a>
-                            <a href="#" style="text-decoration: none;">💬 Support</a>
-                            <a href="#" style="text-decoration: none;">🌿 Community</a>
+                            <a href="#">
+                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M19,3H5C3.9,3 3,3.9 3,5V19C3,20.1 3.9,21 5,21H19C20.1,21 21,20.1 21,19V5C21,3.9 20.1,3 19,3M14,17H12V14.5C12,13.9 11.6,13.5 11,13.5C10.4,13.5 10,13.9 10,14.5V17H8V10H10V10.8C10.3,10.4 10.8,10.1 11.5,10.1C12.6,10.1 13.5,11 13.5,12.1V17H14Z"/>
+                                </svg>
+                                Documentation
+                            </a>
+                            <a href="#">
+                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12,3C17.5,3 22,6.58 22,11C22,15.42 17.5,19 12,19C10.76,19 9.57,18.82 8.47,18.5C5.55,21 2,21 2,21C4.33,18.67 4.7,17.1 4.75,16.5C3.05,15.07 2,13.13 2,11C2,6.58 6.5,3 12,3Z"/>
+                                </svg>
+                                Support
+                            </a>
+                            <a href="#">
+                                <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"/>
+                                </svg>
+                                Community
+                            </a>
                         </div>
                         <p style="margin: 15px 0 5px 0;">This email was sent from your Afraponix Go aquaponics management system.</p>
                         <p style="margin: 0; font-size: 12px;">© ${new Date().getFullYear()} Afraponix Go. All rights reserved. | Cultivating sustainable futures through smart aquaponics.</p>
@@ -281,24 +329,39 @@ const sendPasswordResetEmail = async (email, resetToken, username) => {
             to: email,
             subject: '🔐 Reset Your Afraponix Go Password',
             html: htmlContent,
-            text: `Hello ${username}!
+            text: `AFRAPONIX GO - PASSWORD RESET REQUEST
 
-We received a request to reset your password for your Afraponix Go aquaponics management account.
+Hello ${username}!
+
+We received a request to reset your password for your Afraponix Go aquaponics management account. We're here to help you regain access to your system.
 
 SECURE RESET LINK:
 ${resetLink}
 
 SECURITY INFORMATION:
-- This link expires in 1 hour for your protection
+- This secure link expires in 1 hour for your protection
 - If you didn't request this reset, please ignore this email safely  
 - Your current password remains active until you create a new one
+- Only you have received this personalized reset link
 
 REQUEST DETAILS:
 Account: ${email}
 Requested: ${currentDate}
 Expires: 1 hour from request time
 
-Need assistance? Contact our aquaponics support team for help.
+NEXT STEPS:
+1. Click the secure reset link above
+2. Create a new strong password
+3. Sign in with your new credentials
+
+Need assistance? Our aquaponics experts are here to help you get back to managing your systems. Contact support if you're experiencing any issues.
+
+SUPPORT RESOURCES:
+- Documentation: Visit our help center
+- Support: Contact our technical team  
+- Community: Join our user community
+
+This email was sent from your Afraponix Go aquaponics management system.
 
 Best regards,
 Afraponix Go Team
