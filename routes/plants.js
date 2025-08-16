@@ -9,12 +9,12 @@ router.use(authenticateToken);
 
 // Get plant allocations for a system
 router.get('/allocations/:systemId', async (req, res) => {
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        const [allocations] = await connection.execute(`
+        const [allocations] = await pool.execute(`
             SELECT pa.*, gb.bed_name, gb.bed_type, gb.equivalent_m2
             FROM plant_allocations pa
             LEFT JOIN grow_beds gb ON pa.grow_bed_id = gb.id
@@ -28,9 +28,6 @@ router.get('/allocations/:systemId', async (req, res) => {
         console.error('Error fetching plant allocations:', error);
         res.status(500).json({ error: 'Failed to fetch plant allocations' });
     } finally {
-        if (connection) {
-            await connection.end();
-        }
     }
 });
 
@@ -52,27 +49,27 @@ router.post('/allocations', async (req, res) => {
         });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // Check if allocation already exists
-        const [existingRows] = await connection.execute(
+        const [existingRows] = await pool.execute(
             'SELECT id FROM plant_allocations WHERE system_id = ? AND grow_bed_id = ? AND crop_type = ?',
             [systemId, growBedId, cropType]
         );
 
         if (existingRows.length > 0) {
             // Update existing allocation
-            await connection.execute(`
+            await pool.execute(`
                 UPDATE plant_allocations 
                 SET percentage_allocated = ?, plants_planted = ?, date_planted = ?, plant_spacing = ?
                 WHERE id = ?
             `, [percentageAllocated, plantsPlanted || 0, datePlanted || null, plantSpacing || 30, existingRows[0].id]);
         } else {
             // Create new allocation
-            await connection.execute(`
+            await pool.execute(`
                 INSERT INTO plant_allocations 
                 (system_id, grow_bed_id, crop_type, percentage_allocated, plants_planted, date_planted, plant_spacing)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -85,20 +82,17 @@ router.post('/allocations', async (req, res) => {
         console.error('Error saving plant allocation:', error);
         res.status(500).json({ error: 'Failed to save plant allocation' });
     } finally {
-        if (connection) {
-            await connection.end();
-        }
     }
 });
 
 // Get custom crops for user
 router.get('/custom-crops', async (req, res) => {
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        const [crops] = await connection.execute(
+        const [crops] = await pool.execute(
             'SELECT * FROM custom_crops WHERE user_id = ? ORDER BY crop_name',
             [req.user.userId]
         );
@@ -109,9 +103,6 @@ router.get('/custom-crops', async (req, res) => {
         console.error('Error fetching custom crops:', error);
         res.status(500).json({ error: 'Failed to fetch custom crops' });
     } finally {
-        if (connection) {
-            await connection.end();
-        }
     }
 });
 
@@ -132,12 +123,12 @@ router.post('/custom-crops', async (req, res) => {
         return res.status(400).json({ error: 'Crop name is required' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        const [result] = await connection.execute(`
+        const [result] = await pool.execute(`
             INSERT INTO custom_crops 
             (user_id, crop_name, target_n, target_p, target_k, target_ca, target_mg, target_fe, target_ec)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -149,9 +140,6 @@ router.post('/custom-crops', async (req, res) => {
         console.error('Error adding custom crop:', error);
         res.status(500).json({ error: 'Failed to add custom crop' });
     } finally {
-        if (connection) {
-            await connection.end();
-        }
     }
 });
 
@@ -166,13 +154,13 @@ router.put('/allocations/:id', async (req, res) => {
         });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // Update the allocation
-        await connection.execute(`
+        await pool.execute(`
             UPDATE plant_allocations 
             SET crop_type = ?, percentage_allocated = ?, plants_planted = ?
             WHERE id = ?
@@ -184,20 +172,17 @@ router.put('/allocations/:id', async (req, res) => {
         console.error('Error updating plant allocation:', error);
         res.status(500).json({ error: 'Failed to update plant allocation' });
     } finally {
-        if (connection) {
-            await connection.end();
-        }
     }
 });
 
 // Delete plant allocation
 router.delete('/allocations/:id', async (req, res) => {
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        await connection.execute(
+        await pool.execute(
             'DELETE FROM plant_allocations WHERE id = ?',
             [req.params.id]
         );
@@ -208,20 +193,17 @@ router.delete('/allocations/:id', async (req, res) => {
         console.error('Error deleting plant allocation:', error);
         res.status(500).json({ error: 'Failed to delete plant allocation' });
     } finally {
-        if (connection) {
-            await connection.end();
-        }
     }
 });
 
 // Delete custom crop
 router.delete('/custom-crops/:id', async (req, res) => {
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        await connection.execute(
+        await pool.execute(
             'DELETE FROM custom_crops WHERE id = ? AND user_id = ?',
             [req.params.id, req.user.userId]
         );
@@ -232,20 +214,17 @@ router.delete('/custom-crops/:id', async (req, res) => {
         console.error('Error deleting custom crop:', error);
         res.status(500).json({ error: 'Failed to delete custom crop' });
     } finally {
-        if (connection) {
-            await connection.end();
-        }
     }
 });
 
 // Get grow bed utilization summary
 router.get('/utilization/:systemId', async (req, res) => {
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        const [utilization] = await connection.execute(`
+        const [utilization] = await pool.execute(`
             SELECT 
                 gb.id,
                 gb.bed_name,
@@ -266,9 +245,6 @@ router.get('/utilization/:systemId', async (req, res) => {
         console.error('Error fetching utilization data:', error);
         res.status(500).json({ error: 'Failed to fetch utilization data' });
     } finally {
-        if (connection) {
-            await connection.end();
-        }
     }
 });
 

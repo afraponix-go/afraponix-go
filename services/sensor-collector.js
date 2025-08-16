@@ -22,19 +22,16 @@ class SensorCollector {
     }
 
     async scheduleAllSensors() {
-        let connection;
-
         try {
-            connection = await getDatabase();
+            const connection = getDatabase();
             const [sensors] = await connection.execute('SELECT * FROM sensor_configs WHERE active = 1');
-            await connection.end();
+            // No need to end connection - pool handles lifecycle automatically
 
             for (const sensor of sensors) {
                 this.scheduleSensor(sensor);
             }
 
         } catch (error) {
-            if (connection) await connection.end();
             console.error('Error scheduling sensors:', error);
         }
     }
@@ -55,18 +52,15 @@ class SensorCollector {
     }
 
     async scheduleSensorById(sensorId) {
-        let connection;
-        
         try {
-            connection = await getDatabase();
+            const connection = getDatabase();
             const [sensors] = await connection.execute('SELECT * FROM sensor_configs WHERE id = ? AND active = 1', [sensorId]);
-            await connection.end();
+            // No need to end connection - pool handles lifecycle automatically
             
             if (sensors.length > 0) {
                 this.scheduleSensor(sensors[0]);
             }
         } catch (error) {
-            if (connection) await connection.end();
             console.error('Error scheduling sensor by ID:', error);
         }
     }
@@ -79,17 +73,13 @@ class SensorCollector {
     }
 
     async collectSensorData(sensorId) {
-        let connection;
-
         try {
-            connection = await getDatabase();
+            const connection = getDatabase();
 
             // Get sensor configuration
             const [sensorRows] = await connection.execute('SELECT * FROM sensor_configs WHERE id = ? AND active = 1', [sensorId]);
             
             if (sensorRows.length === 0) {
-                await connection.end();
-
                 return;
             }
 
@@ -105,7 +95,6 @@ class SensorCollector {
 
                 if (credentialRows.length === 0) {
                     console.error(`❌ No ThingsBoard credentials found for sensor ${sensor.sensor_name}`);
-                    await connection.end();
                     return;
                 }
 
@@ -121,7 +110,6 @@ class SensorCollector {
                 };
             } catch (credError) {
                 console.error(`❌ Failed to get credentials for sensor ${sensor.sensor_name}:`, credError.message);
-                await connection.end();
                 return;
             }
 
@@ -137,7 +125,6 @@ class SensorCollector {
                 authToken = authResponse.data.token;
             } catch (authError) {
                 console.error(`❌ Authentication failed for sensor ${sensor.sensor_name}:`, authError.message);
-                await connection.end();
                 return;
             }
 
@@ -159,7 +146,6 @@ class SensorCollector {
                     // Skip if reading has null or invalid value
                     if (latestReading.value === null || latestReading.value === undefined || latestReading.value === '') {
                         console.log(`⚠️  Skipping null/empty value for sensor ${sensor.sensor_name}`);
-                        await connection.end();
                         return;
                     }
                     
@@ -193,12 +179,51 @@ class SensorCollector {
             } catch (apiError) {
                 // Reduced logging: console.error(`❌ API Error for sensor ${sensor.sensor_name}:`, apiError.message);
             }
-
-            await connection.end();
+            // No need to end connection - pool handles lifecycle automatically
 
         } catch (error) {
-            if (connection) await connection.end();
             console.error(`Error collecting data for sensor ${sensorId}:`, error);
+        }
+    }
+
+    safeTransform(value, transform) {
+        // Only allow simple mathematical operations with strict validation
+        const cleanTransform = transform.trim();
+        
+        // Validate format: operator followed by number (e.g., "* 100", "/ 1000", "+ 5", "- 10")
+        const mathPattern = /^(\*|\/|\+|\-)\s*(\d+(?:\.\d+)?)$/;
+        const match = cleanTransform.match(mathPattern);
+        
+        if (!match) {
+            throw new Error(`Invalid transform pattern: ${transform}. Only simple math operations allowed (e.g., "* 100", "/ 1000")`);
+        }
+        
+        const operator = match[1];
+        const operand = parseFloat(match[2]);
+        
+        if (isNaN(operand)) {
+            throw new Error(`Invalid numeric operand: ${match[2]}`);
+        }
+        
+        const numericValue = parseFloat(value);
+        if (isNaN(numericValue)) {
+            throw new Error(`Cannot transform non-numeric value: ${value}`);
+        }
+        
+        switch (operator) {
+            case '*':
+                return numericValue * operand;
+            case '/':
+                if (operand === 0) {
+                    throw new Error('Division by zero not allowed');
+                }
+                return numericValue / operand;
+            case '+':
+                return numericValue + operand;
+            case '-':
+                return numericValue - operand;
+            default:
+                throw new Error(`Unsupported operator: ${operator}`);
         }
     }
 
@@ -209,10 +234,7 @@ class SensorCollector {
             // Apply data transformation if specified
             if (sensor.data_transform) {
                 try {
-                    // Simple math expressions like "* 100" or "/ 1000"
-                    if (sensor.data_transform.match(/^[\s\*\+\-\/\d\.]+$/)) {
-                        value = eval(`${value} ${sensor.data_transform}`);
-                    }
+                    value = this.safeTransform(value, sensor.data_transform);
                 } catch (transformError) {
                     console.warn(`⚠️  Transform error for sensor ${sensor.sensor_name}:`, transformError.message);
                 }
@@ -226,6 +248,12 @@ class SensorCollector {
                 `, [sensor.system_id, sensor.mapped_field, value, reading.ts / 1000]);
 
             } else if (sensor.mapped_table === 'fish_health') {
+                // Validate mapped_field against allowed columns to prevent SQL injection
+                const allowedFishHealthFields = ['count', 'mortality', 'average_weight', 'feed_consumption', 'behavior', 'notes'];
+                if (!allowedFishHealthFields.includes(sensor.mapped_field)) {
+                    throw new Error(`Invalid mapped field for fish_health: ${sensor.mapped_field}. Allowed: ${allowedFishHealthFields.join(', ')}`);
+                }
+                
                 await connection.execute(`
                     INSERT INTO fish_health (system_id, ${sensor.mapped_field}, date, created_at)
                     VALUES (?, ?, FROM_UNIXTIME(?), NOW())

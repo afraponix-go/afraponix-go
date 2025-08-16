@@ -380,7 +380,66 @@ async function createTables(connection) {
     }
 }
 
+// Connection pool for better performance
+let connectionPool = null;
+
+function initializeConnectionPool() {
+    if (!useMariaDB) {
+        console.log('📦 MariaDB environment variables not found, skipping connection pool initialization');
+        return null;
+    }
+
+    if (!connectionPool) {
+        console.log('🏊 Initializing MariaDB connection pool...');
+        
+        connectionPool = mysql.createPool({
+            host: process.env.DB_HOST,
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME,
+            charset: 'utf8mb4',
+            // Connection pool settings
+            connectionLimit: 10,           // Maximum number of connections in pool
+            queueLimit: 0,                 // No limit on queued connection requests
+            idleTimeout: 600000,           // Close idle connections after 10 minutes
+            enableKeepAlive: true,         // Keep connections alive
+            keepAliveInitialDelay: 0
+        });
+
+        // Handle pool events
+        connectionPool.on('connection', (connection) => {
+            console.log('🔗 New database connection established as id ' + connection.threadId);
+        });
+
+        connectionPool.on('error', (error) => {
+            console.error('❌ Database pool error:', error);
+            if (error.code === 'PROTOCOL_CONNECTION_LOST') {
+                console.log('🔄 Attempting to reconnect to database...');
+            }
+        });
+
+        console.log('✅ MariaDB connection pool initialized successfully');
+    }
+
+    return connectionPool;
+}
+
 function getDatabase() {
+    if (useMariaDB) {
+        // Initialize pool if it doesn't exist
+        if (!connectionPool) {
+            initializeConnectionPool();
+        }
+        
+        // Return pool connection (mysql2 handles connection/release automatically)
+        return connectionPool;
+    } else {
+        throw new Error('MariaDB environment variables not configured');
+    }
+}
+
+function getDatabaseConnection() {
+    // For cases where you need a single connection that you manage manually
     if (useMariaDB) {
         return mysql.createConnection({
             host: process.env.DB_HOST,
@@ -394,8 +453,20 @@ function getDatabase() {
     }
 }
 
+async function closeConnectionPool() {
+    if (connectionPool) {
+        console.log('🏊 Closing database connection pool...');
+        await connectionPool.end();
+        connectionPool = null;
+        console.log('✅ Database connection pool closed');
+    }
+}
+
 module.exports = {
     initializeDatabase,
+    initializeConnectionPool,
     getDatabase,
+    getDatabaseConnection,
+    closeConnectionPool,
     useMariaDB
 };

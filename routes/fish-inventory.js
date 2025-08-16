@@ -15,33 +15,31 @@ router.use(authenticateToken);
  */
 
 // Helper function to execute queries with promises - MariaDB version
-async function executeQuery(connection, query, params = []) {
-    const [results] = await connection.execute(query, params);
+async function executeQuery(pool, query, params = []) {
+    const [results] = await pool.execute(query, params);
     return results || [];
 }
 
 // Get current fish inventory for a system
 router.get('/system/:systemId', async (req, res) => {
     const { systemId } = req.params;
-    let connection;
+    // Using pool pool - no manual pool management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // Verify system ownership
-        const systemRows = await executeQuery(connection,
+        const systemRows = await executeQuery(pool,
             'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
             [systemId, req.user.userId]
         );
 
-        if (!systemRows || systemRows.length === 0) {
-            await connection.end();
-            return res.status(404).json({ error: 'System not found or access denied' });
+        if (!systemRows || systemRows.length === 0) {            return res.status(404).json({ error: 'System not found or access denied' });
         }
 
         // Get current inventory for all tanks in this system
         // In the new structure, fish count is stored directly in fish_tanks
-        const inventory = await executeQuery(connection, `
+        const inventory = await executeQuery(pool, `
             SELECT 
                 ft.id as fish_tank_id,
                 ft.tank_number,
@@ -82,17 +80,13 @@ router.get('/system/:systemId', async (req, res) => {
             FROM fish_tanks ft
             WHERE ft.system_id = ?
             ORDER BY ft.tank_number ASC
-        `, [systemId]);
-
-        await connection.end();
-        
+        `, [systemId]);        
         res.json({
             system_id: systemId,
             tanks: inventory
         });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching fish inventory:', error);
         res.status(500).json({ error: 'Failed to fetch fish inventory' });
     }
@@ -111,60 +105,54 @@ router.post('/add-fish', async (req, res) => {
     const safeBatchId = batch_id || null;
     const safeNotes = notes || null;
 
-    let connection;
+    // Using pool pool - no manual pool management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // Start transaction
-        await executeQuery(connection, 'START TRANSACTION');
+        await executeQuery(pool, 'START TRANSACTION');
 
         try {
             // Verify system ownership
-            const systemRows = await executeQuery(connection,
+            const systemRows = await executeQuery(pool,
                 'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
                 [system_id, req.user.userId]
             );
 
             if (!systemRows || systemRows.length === 0) {
-                await executeQuery(connection, 'ROLLBACK');
-                await connection.end();
-                return res.status(404).json({ error: 'System not found or access denied' });
+                await executeQuery(pool, 'ROLLBACK');                return res.status(404).json({ error: 'System not found or access denied' });
             }
 
             // Map tank_number to actual tank ID
             // First try to get the tank by its ID, if that fails, try by tank_number
-            const tankRows = await executeQuery(connection,
+            const tankRows = await executeQuery(pool,
                 'SELECT id FROM fish_tanks WHERE system_id = ? AND (id = ? OR tank_number = ?)',
                 [system_id, fish_tank_id, fish_tank_id]
             );
 
             if (!tankRows || tankRows.length === 0) {
-                await executeQuery(connection, 'ROLLBACK');
-                await connection.end();
-                return res.status(404).json({ error: 'Tank not found' });
+                await executeQuery(pool, 'ROLLBACK');                return res.status(404).json({ error: 'Tank not found' });
             }
 
             const actualTankId = tankRows[0].id;
             const eventDate = new Date();
 
             // 1. Update fish tank current count directly using actual tank ID
-            await executeQuery(connection, `
+            await executeQuery(pool, `
                 UPDATE fish_tanks 
                 SET current_fish_count = current_fish_count + ?
                 WHERE id = ? AND system_id = ?
             `, [count, actualTankId, system_id]);
 
             // 2. Log the event with actual tank ID
-            await executeQuery(connection, `
+            await executeQuery(pool, `
                 INSERT INTO fish_events (system_id, fish_tank_id, event_type, count_change, weight, batch_id, notes, event_date, user_id)
                 VALUES (?, ?, 'add_fish', ?, ?, ?, ?, ?, ?)
             `, [system_id, actualTankId, count, safeAverageWeight, safeBatchId, safeNotes, eventDate, req.user.userId]);
 
             // Commit transaction
-            await executeQuery(connection, 'COMMIT');
-            await connection.end();
-
+            await executeQuery(pool, 'COMMIT');
             res.status(201).json({ 
                 message: 'Fish added successfully',
                 added_count: count,
@@ -173,9 +161,7 @@ router.post('/add-fish', async (req, res) => {
 
         } catch (transactionError) {
             // Rollback on error
-            await executeQuery(connection, 'ROLLBACK').catch(() => {});
-            await connection.end();
-            throw transactionError;
+            await executeQuery(pool, 'ROLLBACK').catch(() => {});            throw transactionError;
         }
 
     } catch (error) {
@@ -196,46 +182,40 @@ router.post('/mortality', async (req, res) => {
     const safeCause = cause || null;
     const safeNotes = notes || null;
 
-    let connection;
+    // Using pool pool - no manual pool management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // Start transaction
-        await executeQuery(connection, 'START TRANSACTION');
+        await executeQuery(pool, 'START TRANSACTION');
 
         try {
             // Verify system ownership
-            const systemRows = await executeQuery(connection,
+            const systemRows = await executeQuery(pool,
                 'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
                 [system_id, req.user.userId]
             );
 
             if (!systemRows || systemRows.length === 0) {
-                await executeQuery(connection, 'ROLLBACK');
-                await connection.end();
-                return res.status(404).json({ error: 'System not found or access denied' });
+                await executeQuery(pool, 'ROLLBACK');                return res.status(404).json({ error: 'System not found or access denied' });
             }
 
             // Map tank_number to actual tank ID
-            const tankMappingRows = await executeQuery(connection,
+            const tankMappingRows = await executeQuery(pool,
                 'SELECT id, current_fish_count FROM fish_tanks WHERE system_id = ? AND (id = ? OR tank_number = ?)',
                 [system_id, fish_tank_id, fish_tank_id]
             );
 
             if (!tankMappingRows || tankMappingRows.length === 0) {
-                await executeQuery(connection, 'ROLLBACK');
-                await connection.end();
-                return res.status(404).json({ error: 'Tank not found' });
+                await executeQuery(pool, 'ROLLBACK');                return res.status(404).json({ error: 'Tank not found' });
             }
 
             const actualTankId = tankMappingRows[0].id;
             const currentCount = tankMappingRows[0].current_fish_count;
 
             if (currentCount < count) {
-                await executeQuery(connection, 'ROLLBACK');
-                await connection.end();
-                return res.status(400).json({ 
+                await executeQuery(pool, 'ROLLBACK');                return res.status(400).json({ 
                     error: `Insufficient fish in tank. Current count: ${currentCount}` 
                 });
             }
@@ -244,22 +224,20 @@ router.post('/mortality', async (req, res) => {
             const mortalityNotes = `Mortality - ${safeCause || 'Unknown cause'}. ${safeNotes || ''}`.trim();
 
             // 1. Update fish tank count (decrease count) using actual tank ID
-            await executeQuery(connection, `
+            await executeQuery(pool, `
                 UPDATE fish_tanks 
                 SET current_fish_count = GREATEST(0, current_fish_count - ?)
                 WHERE id = ? AND system_id = ?
             `, [count, actualTankId, system_id]);
 
             // 2. Log the mortality event with actual tank ID
-            await executeQuery(connection, `
+            await executeQuery(pool, `
                 INSERT INTO fish_events (system_id, fish_tank_id, event_type, count_change, notes, event_date, user_id)
                 VALUES (?, ?, 'mortality', ?, ?, ?, ?)
             `, [system_id, actualTankId, -count, mortalityNotes, eventDate, req.user.userId]);
 
             // Commit transaction
-            await executeQuery(connection, 'COMMIT');
-            await connection.end();
-
+            await executeQuery(pool, 'COMMIT');
             res.json({ 
                 message: 'Mortality recorded successfully',
                 removed_count: count,
@@ -268,9 +246,7 @@ router.post('/mortality', async (req, res) => {
             });
 
         } catch (transactionError) {
-            await executeQuery(connection, 'ROLLBACK').catch(() => {});
-            await connection.end();
-            throw transactionError;
+            await executeQuery(pool, 'ROLLBACK').catch(() => {});            throw transactionError;
         }
 
     } catch (error) {
@@ -290,37 +266,33 @@ router.post('/update-weight', async (req, res) => {
     // Convert undefined to null for SQL compatibility
     const safeNotes = notes || null;
 
-    let connection;
+    // Using pool pool - no manual pool management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // Start transaction
-        await executeQuery(connection, 'START TRANSACTION');
+        await executeQuery(pool, 'START TRANSACTION');
 
         try {
             // Verify system ownership
-            const systemRows = await executeQuery(connection,
+            const systemRows = await executeQuery(pool,
                 'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
                 [system_id, req.user.userId]
             );
 
             if (!systemRows || systemRows.length === 0) {
-                await executeQuery(connection, 'ROLLBACK');
-                await connection.end();
-                return res.status(404).json({ error: 'System not found or access denied' });
+                await executeQuery(pool, 'ROLLBACK');                return res.status(404).json({ error: 'System not found or access denied' });
             }
 
             // Map tank_number to actual tank ID
-            const tankRows = await executeQuery(connection,
+            const tankRows = await executeQuery(pool,
                 'SELECT id FROM fish_tanks WHERE system_id = ? AND (id = ? OR tank_number = ?)',
                 [system_id, fish_tank_id, fish_tank_id]
             );
 
             if (!tankRows || tankRows.length === 0) {
-                await executeQuery(connection, 'ROLLBACK');
-                await connection.end();
-                return res.status(404).json({ error: 'Tank not found' });
+                await executeQuery(pool, 'ROLLBACK');                return res.status(404).json({ error: 'Tank not found' });
             }
 
             const actualTankId = tankRows[0].id;
@@ -330,15 +302,13 @@ router.post('/update-weight', async (req, res) => {
             // Weight is calculated from recent fish_events records
 
             // 2. Log the weight update event with actual tank ID
-            await executeQuery(connection, `
+            await executeQuery(pool, `
                 INSERT INTO fish_events (system_id, fish_tank_id, event_type, count_change, weight, notes, event_date, user_id)
                 VALUES (?, ?, 'weight_update', 0, ?, ?, ?, ?)
             `, [system_id, actualTankId, average_weight, safeNotes, eventDate, req.user.userId]);
 
             // Commit transaction
-            await executeQuery(connection, 'COMMIT');
-            await connection.end();
-
+            await executeQuery(pool, 'COMMIT');
             res.json({ 
                 message: 'Fish weight updated successfully',
                 new_weight: average_weight,
@@ -346,9 +316,7 @@ router.post('/update-weight', async (req, res) => {
             });
 
         } catch (transactionError) {
-            await executeQuery(connection, 'ROLLBACK').catch(() => {});
-            await connection.end();
-            throw transactionError;
+            await executeQuery(pool, 'ROLLBACK').catch(() => {});            throw transactionError;
         }
 
     } catch (error) {
@@ -362,32 +330,27 @@ router.get('/events/:systemId/:tankId', async (req, res) => {
     const { systemId, tankId } = req.params;
     const { limit = 50 } = req.query;
 
-    let connection;
+    // Using pool pool - no manual pool management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // Verify system ownership
-        const systemRows = await executeQuery(connection,
+        const systemRows = await executeQuery(pool,
             'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
             [systemId, req.user.userId]
         );
 
-        if (!systemRows || systemRows.length === 0) {
-            await connection.end();
-            return res.status(404).json({ error: 'System not found or access denied' });
+        if (!systemRows || systemRows.length === 0) {            return res.status(404).json({ error: 'System not found or access denied' });
         }
 
         // Get events for this tank
-        const events = await executeQuery(connection, `
+        const events = await executeQuery(pool, `
             SELECT * FROM fish_events 
             WHERE system_id = ? AND fish_tank_id = ?
             ORDER BY event_date DESC, created_at DESC
             LIMIT ?
-        `, [systemId, tankId, parseInt(limit)]);
-
-        await connection.end();
-        
+        `, [systemId, tankId, parseInt(limit)]);        
         res.json({
             system_id: systemId,
             tank_id: tankId,
@@ -395,7 +358,6 @@ router.get('/events/:systemId/:tankId', async (req, res) => {
         });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching fish events:', error);
         res.status(500).json({ error: 'Failed to fetch fish events' });
     }

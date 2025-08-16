@@ -124,13 +124,11 @@ router.post('/send-email', async (req, res) => {
         const { subject, html, type } = req.body;
         
         // Get user email from the database using the authenticated user ID
-        const connection = await getDatabase();
-        const [userRows] = await connection.execute(
+        const pool = getDatabase();
+        const [userRows] = await pool.execute(
             'SELECT email FROM users WHERE id = ?', 
             [req.user.userId]
-        );
-        await connection.end();
-        
+        );        
         if (userRows.length === 0) {
             return res.status(404).json({ 
                 error: 'User not found' 

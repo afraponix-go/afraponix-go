@@ -1,7 +1,28 @@
 const crypto = require('crypto');
 
-// Generate encryption key from environment or use default (should be set in production)
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'afraponix-default-key-change-in-production-32';
+// Generate encryption key from environment - REQUIRED in production
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+
+// Validate encryption key is present and secure
+if (!ENCRYPTION_KEY) {
+    console.error('❌ CRITICAL SECURITY ERROR: ENCRYPTION_KEY environment variable is required');
+    console.error('   Generate a secure key with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+    process.exit(1);
+}
+
+if (ENCRYPTION_KEY.length < 32) {
+    console.error('❌ CRITICAL SECURITY ERROR: ENCRYPTION_KEY must be at least 32 characters');
+    console.error('   Generate a secure key with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+    process.exit(1);
+}
+
+if (ENCRYPTION_KEY === 'afraponix-default-key-change-in-production-32' || 
+    ENCRYPTION_KEY.includes('default') || 
+    ENCRYPTION_KEY.includes('change')) {
+    console.error('❌ CRITICAL SECURITY ERROR: Default encryption key detected - use a secure random key');
+    console.error('   Generate a secure key with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+    process.exit(1);
+}
 const ALGORITHM = 'aes-256-cbc';
 
 // Ensure key is exactly 32 bytes for AES-256

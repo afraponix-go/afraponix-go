@@ -20,11 +20,11 @@ const sprayProgrammeRoutes = require('./routes/spray-programmes');
 const sensorRoutes = require('./routes/sensors');
 const credentialsRoutes = require('./routes/credentials');
 const seedVarietiesRoutes = require('./routes/seed-varieties');
-const { initializeDatabase } = require('./database/init-mariadb');
+const { initializeDatabase, initializeConnectionPool, closeConnectionPool } = require('./database/init-mariadb');
 const sensorCollector = require('./services/sensor-collector');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 
 // Security middleware
 app.use(helmet({
@@ -100,7 +100,10 @@ app.use((req, res) => {
 // Global sensor collector instance is imported above
 
 // Initialize database and start server
-initializeDatabase().then(() => {
+Promise.all([
+    initializeDatabase(),
+    initializeConnectionPool()
+]).then(() => {
     app.listen(PORT, '127.0.0.1', () => {
         console.log(`🌿 Afraponix Go server running on http://127.0.0.1:${PORT}`);
         console.log(`📊 Health check: http://127.0.0.1:${PORT}/api/health`);
@@ -117,26 +120,35 @@ initializeDatabase().then(() => {
         process.exit(1);
     });
 }).catch(err => {
-    console.error('Failed to initialize database:', err);
+    console.error('Failed to initialize database and connection pool:', err);
     process.exit(1);
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-    console.log('SIGTERM received, shutting down gracefully...');
-    if (sensorCollector) {
-        sensorCollector.stop();
+const gracefulShutdown = async (signal) => {
+    console.log(`${signal} received, shutting down gracefully...`);
+    
+    try {
+        // Stop sensor collection first
+        if (sensorCollector) {
+            await sensorCollector.stop();
+            console.log('✅ Sensor collector stopped');
+        }
+        
+        // Close database connection pool
+        await closeConnectionPool();
+        console.log('✅ Database connection pool closed');
+        
+        console.log('✅ Graceful shutdown completed');
+        process.exit(0);
+    } catch (error) {
+        console.error('❌ Error during graceful shutdown:', error);
+        process.exit(1);
     }
-    process.exit(0);
-});
+};
 
-process.on('SIGINT', () => {
-    console.log('SIGINT received, shutting down gracefully...');
-    if (sensorCollector) {
-        sensorCollector.stop();
-    }
-    process.exit(0);
-});
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Make sensor collector available globally for routes
 global.sensorCollector = sensorCollector;

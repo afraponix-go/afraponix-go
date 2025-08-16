@@ -9,20 +9,16 @@ router.use(authenticateToken);
 
 // Get all grow beds for a system
 router.get('/system/:systemId', async (req, res) => {
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
-        const [growBeds] = await connection.execute(
+        const pool = getDatabase();
+        const [growBeds] = await pool.execute(
             'SELECT * FROM grow_beds WHERE system_id = ? ORDER BY bed_number', 
             [req.params.systemId]
-        );
-
-        await connection.end();
-        res.json(growBeds);
+        );        res.json(growBeds);
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching grow beds:', error);
         res.status(500).json({ error: 'Failed to fetch grow beds' });
     }
@@ -31,13 +27,13 @@ router.get('/system/:systemId', async (req, res) => {
 // Create or update grow beds for a system
 router.post('/system/:systemId', async (req, res) => {
     const { growBeds } = req.body;
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
 
         // Get existing grow beds for this system
-        const [existingBeds] = await connection.execute(
+        const [existingBeds] = await pool.execute(
             'SELECT * FROM grow_beds WHERE system_id = ? ORDER BY bed_number',
             [req.params.systemId]
         );
@@ -74,7 +70,7 @@ router.post('/system/:systemId', async (req, res) => {
             
             if (existingBed) {
                 // Update existing bed (preserve ID)
-                await connection.execute(`UPDATE grow_beds SET 
+                await pool.execute(`UPDATE grow_beds SET 
                     bed_type = ?, bed_name = ?, volume_liters = ?, area_m2 = ?, 
                     length_meters = ?, width_meters = ?, height_meters = ?, 
                     plant_capacity = ?, vertical_count = ?, plants_per_vertical = ?, 
@@ -89,7 +85,7 @@ router.post('/system/:systemId', async (req, res) => {
                 ]);
             } else {
                 // Insert new bed
-                await connection.execute(`INSERT INTO grow_beds 
+                await pool.execute(`INSERT INTO grow_beds 
                     (system_id, bed_number, bed_type, bed_name, volume_liters, area_m2, length_meters, width_meters, height_meters, 
                      plant_capacity, vertical_count, plants_per_vertical, equivalent_m2, reservoir_volume, 
                      trough_length, trough_count, plant_spacing, reservoir_volume_liters) 
@@ -106,7 +102,7 @@ router.post('/system/:systemId', async (req, res) => {
         const newBedNumbers = growBeds.map(bed => bed.bed_number);
         for (const existingBed of existingBeds) {
             if (!newBedNumbers.includes(existingBed.bed_number)) {
-                await connection.execute(
+                await pool.execute(
                     'DELETE FROM grow_beds WHERE id = ?',
                     [existingBed.id]
                 );
@@ -114,16 +110,12 @@ router.post('/system/:systemId', async (req, res) => {
         }
 
         // Get the final grow beds
-        const [updatedBeds] = await connection.execute(
+        const [updatedBeds] = await pool.execute(
             'SELECT * FROM grow_beds WHERE system_id = ? ORDER BY bed_number',
             [req.params.systemId]
-        );
-
-        await connection.end();
-        res.json(updatedBeds);
+        );        res.json(updatedBeds);
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error saving grow beds:', error);
         console.error('Error details:', error.message);
         console.error('Request data:', JSON.stringify(req.body, null, 2));
@@ -140,13 +132,13 @@ router.post('/system/:systemId', async (req, res) => {
 router.put('/bed/:systemId/:bedNumber', async (req, res) => {
     const { systemId, bedNumber } = req.params;
     const bedConfig = req.body;
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
 
         // Check if bed exists
-        const [existingBeds] = await connection.execute(
+        const [existingBeds] = await pool.execute(
             'SELECT * FROM grow_beds WHERE system_id = ? AND bed_number = ?',
             [systemId, bedNumber]
         );
@@ -154,7 +146,7 @@ router.put('/bed/:systemId/:bedNumber', async (req, res) => {
 
         if (existingBed) {
             // Update existing bed
-            await connection.execute(`UPDATE grow_beds SET 
+            await pool.execute(`UPDATE grow_beds SET 
                 bed_type = ?, bed_name = ?, volume_liters = ?, area_m2 = ?, 
                 length_meters = ?, width_meters = ?, height_meters = ?, 
                 plant_capacity = ?, vertical_count = ?, plants_per_vertical = ?, 
@@ -170,7 +162,7 @@ router.put('/bed/:systemId/:bedNumber', async (req, res) => {
             ]);
         } else {
             // Insert new bed
-            await connection.execute(`INSERT INTO grow_beds 
+            await pool.execute(`INSERT INTO grow_beds 
                 (system_id, bed_number, bed_type, bed_name, volume_liters, area_m2, 
                  length_meters, width_meters, height_meters, plant_capacity, vertical_count, 
                  plants_per_vertical, equivalent_m2, reservoir_volume, trough_length, 
@@ -186,17 +178,13 @@ router.put('/bed/:systemId/:bedNumber', async (req, res) => {
         }
 
         // Return the updated/created bed
-        const [updatedBeds] = await connection.execute(
+        const [updatedBeds] = await pool.execute(
             'SELECT * FROM grow_beds WHERE system_id = ? AND bed_number = ?',
             [systemId, bedNumber]
         );
-        const updatedBed = updatedBeds[0];
-
-        await connection.end();
-        res.json(updatedBed);
+        const updatedBed = updatedBeds[0];        res.json(updatedBed);
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error updating grow bed:', error);
         res.status(500).json({ error: 'Failed to update grow bed' });
     }
@@ -204,18 +192,15 @@ router.put('/bed/:systemId/:bedNumber', async (req, res) => {
 
 // Delete a specific grow bed
 router.delete('/:bedId', async (req, res) => {
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        const [result] = await connection.execute(
+        const [result] = await pool.execute(
             'DELETE FROM grow_beds WHERE id = ?',
             [req.params.bedId]
         );
-
-        await connection.end();
-
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Grow bed not found' });
         }
@@ -223,7 +208,6 @@ router.delete('/:bedId', async (req, res) => {
         res.json({ message: 'Grow bed deleted successfully' });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error deleting grow bed:', error);
         res.status(500).json({ error: 'Failed to delete grow bed' });
     }

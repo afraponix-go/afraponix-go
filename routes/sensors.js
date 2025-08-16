@@ -9,33 +9,27 @@ router.use(authenticateToken);
 // Get sensor configurations for a system
 router.get('/system/:systemId', async (req, res) => {
     const { systemId } = req.params;
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
 
         // Verify system ownership
-        const [systemRows] = await connection.execute(
+        const [systemRows] = await pool.execute(
             'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
             [systemId, req.user.userId]
         );
 
-        if (systemRows.length === 0) {
-            await connection.end();
-            return res.status(404).json({ error: 'System not found or access denied' });
+        if (systemRows.length === 0) {            return res.status(404).json({ error: 'System not found or access denied' });
         }
 
         // Get sensor configurations
-        const [sensorRows] = await connection.execute(
+        const [sensorRows] = await pool.execute(
             'SELECT * FROM sensor_configs WHERE system_id = ?', 
             [systemId]
-        );
-
-        await connection.end();
-        res.json({ sensors: sensorRows || [] });
+        );        res.json({ sensors: sensorRows || [] });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching sensor configs:', error);
         res.status(500).json({ error: 'Failed to fetch sensor configurations' });
     }
@@ -49,45 +43,38 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: 'Required fields missing' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
 
         // Verify system ownership
-        const [systemRows] = await connection.execute(
+        const [systemRows] = await pool.execute(
             'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
             [system_id, req.user.userId]
         );
 
-        if (systemRows.length === 0) {
-            await connection.end();
-            return res.status(404).json({ error: 'System not found or access denied' });
+        if (systemRows.length === 0) {            return res.status(404).json({ error: 'System not found or access denied' });
         }
 
         // Check for duplicate sensors in the same system
-        const [existingSensors] = await connection.execute(
+        const [existingSensors] = await pool.execute(
             'SELECT * FROM sensor_configs WHERE system_id = ? AND sensor_type = ? AND device_id = ?',
             [system_id, sensor_type, device_id]
         );
 
-        if (existingSensors.length > 0) {
-            await connection.end();
-            return res.status(409).json({ 
+        if (existingSensors.length > 0) {            return res.status(409).json({ 
                 error: `A ${sensor_type} sensor with this device ID already exists for this system. Each sensor type can only be added once per system.` 
             });
         }
 
         // Insert sensor configuration
-        const [result] = await connection.execute(
+        const [result] = await pool.execute(
             `INSERT INTO sensor_configs 
                 (system_id, sensor_name, sensor_type, device_id, telemetry_key, api_url, update_interval, active, mapped_table, mapped_field, data_transform) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`, 
             [system_id, sensor_name, sensor_type, device_id, telemetry_key, api_url || null, update_interval || 300, mapped_table || null, mapped_field || null, data_transform || null]
-        );
-
-        await connection.end();
-        
+        );        
         // Schedule the new sensor for data collection if collector is running
         if (global.sensorCollector) {
             try {
@@ -103,7 +90,6 @@ router.post('/', async (req, res) => {
         });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error saving sensor config:', error);
         res.status(500).json({ error: 'Failed to save sensor configuration' });
     }
@@ -111,20 +97,18 @@ router.post('/', async (req, res) => {
 
 // Get ThingsBoard JWT token from database credentials
 async function getThingsBoardToken(systemId) {
-    let connection;
+    // Using connection pool - no manual connection management
     
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // Get ThingsBoard credentials from database
-        const [credentialRows] = await connection.execute(
+        const [credentialRows] = await pool.execute(
             'SELECT * FROM system_credentials WHERE system_id = ? AND service_name = ?', 
             [systemId, 'thingsboard']
         );
 
-        if (credentialRows.length === 0 || !credentialRows[0].username_encrypted || !credentialRows[0].password_encrypted) {
-            await connection.end();
-            throw new Error(`ThingsBoard credentials not configured for system ${systemId}`);
+        if (credentialRows.length === 0 || !credentialRows[0].username_encrypted || !credentialRows[0].password_encrypted) {            throw new Error(`ThingsBoard credentials not configured for system ${systemId}`);
         }
 
         const credentials = credentialRows[0];
@@ -134,9 +118,6 @@ async function getThingsBoardToken(systemId) {
         const username = CredentialEncryption.decrypt(credentials.username_encrypted);
         const password = CredentialEncryption.decrypt(credentials.password_encrypted);
         const apiUrl = credentials.api_url || 'https://tb.datascapeindustrial.com';
-
-        await connection.end();
-
         // Authenticate with ThingsBoard
         const response = await axios.post(`${apiUrl}/api/auth/login`, {
             username,
@@ -145,7 +126,6 @@ async function getThingsBoardToken(systemId) {
         
         return { token: response.data.token, apiUrl };
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Failed to authenticate with ThingsBoard:', error.message);
         throw new Error('Failed to authenticate with ThingsBoard API');
     }
@@ -192,13 +172,13 @@ router.post('/test', async (req, res) => {
 // Fetch latest sensor data
 router.get('/data/:sensorId', async (req, res) => {
     const { sensorId } = req.params;
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
 
         // Get sensor configuration
-        const [sensorRows] = await connection.execute(
+        const [sensorRows] = await pool.execute(
             `SELECT sc.*, s.user_id 
                 FROM sensor_configs sc 
                 JOIN systems s ON sc.system_id = s.id 
@@ -206,9 +186,7 @@ router.get('/data/:sensorId', async (req, res) => {
             [sensorId, req.user.userId]
         );
 
-        if (sensorRows.length === 0) {
-            await connection.end();
-            return res.status(404).json({ error: 'Sensor not found or access denied' });
+        if (sensorRows.length === 0) {            return res.status(404).json({ error: 'Sensor not found or access denied' });
         }
 
         const sensor = sensorRows[0];
@@ -227,17 +205,13 @@ router.get('/data/:sensorId', async (req, res) => {
                     keys: sensor.telemetry_key
                 }
             }
-        );
-
-        await connection.end();
-        res.json({ 
+        );        res.json({ 
             sensor_name: sensor.sensor_name,
             sensor_type: sensor.sensor_type,
             data: response.data 
         });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching sensor data:', error);
         res.status(500).json({ error: 'Failed to fetch sensor data' });
     }
@@ -248,13 +222,13 @@ router.put('/:sensorId', async (req, res) => {
     const { sensorId } = req.params;
     const { sensor_name, sensor_type, device_id, telemetry_key, api_url, update_interval, mapped_table, mapped_field, data_transform } = req.body;
     
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
 
         // Verify sensor ownership through system ownership
-        const [sensorRows] = await connection.execute(
+        const [sensorRows] = await pool.execute(
             `SELECT sc.*, s.user_id 
                 FROM sensor_configs sc 
                 JOIN systems s ON sc.system_id = s.id 
@@ -262,15 +236,13 @@ router.put('/:sensorId', async (req, res) => {
             [sensorId, req.user.userId]
         );
 
-        if (sensorRows.length === 0) {
-            await connection.end();
-            return res.status(404).json({ error: 'Sensor not found or access denied' });
+        if (sensorRows.length === 0) {            return res.status(404).json({ error: 'Sensor not found or access denied' });
         }
 
         const sensor = sensorRows[0];
 
         // Update sensor configuration
-        await connection.execute(
+        await pool.execute(
             `UPDATE sensor_configs SET 
                 sensor_name = ?, sensor_type = ?, device_id = ?, telemetry_key = ?, api_url = ?, 
                 update_interval = ?, mapped_table = ?, mapped_field = ?, data_transform = ?
@@ -285,13 +257,9 @@ router.put('/:sensorId', async (req, res) => {
         // Reschedule sensor if collector is available
         if (global.sensorCollector) {
             await global.sensorCollector.scheduleSensorById(sensorId);
-        }
-
-        await connection.end();
-        res.json({ message: 'Sensor configuration updated successfully' });
+        }        res.json({ message: 'Sensor configuration updated successfully' });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error updating sensor config:', error);
         res.status(500).json({ error: 'Failed to update sensor configuration' });
     }
@@ -300,13 +268,13 @@ router.put('/:sensorId', async (req, res) => {
 // Toggle sensor active status
 router.patch('/:sensorId/toggle', async (req, res) => {
     const { sensorId } = req.params;
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
 
         // Verify sensor ownership through system ownership
-        const [sensorRows] = await connection.execute(
+        const [sensorRows] = await pool.execute(
             `SELECT sc.*, s.user_id 
                 FROM sensor_configs sc 
                 JOIN systems s ON sc.system_id = s.id 
@@ -314,16 +282,14 @@ router.patch('/:sensorId/toggle', async (req, res) => {
             [sensorId, req.user.userId]
         );
 
-        if (sensorRows.length === 0) {
-            await connection.end();
-            return res.status(404).json({ error: 'Sensor not found or access denied' });
+        if (sensorRows.length === 0) {            return res.status(404).json({ error: 'Sensor not found or access denied' });
         }
 
         const sensor = sensorRows[0];
         const newActiveStatus = !sensor.active;
 
         // Update sensor active status
-        await connection.execute(
+        await pool.execute(
             'UPDATE sensor_configs SET active = ? WHERE id = ?', 
             [newActiveStatus, sensorId]
         );
@@ -341,16 +307,12 @@ router.patch('/:sensorId/toggle', async (req, res) => {
             } catch (collectorError) {
                 console.error('Failed to update sensor collector schedule:', collectorError);
             }
-        }
-
-        await connection.end();
-        res.json({ 
+        }        res.json({ 
             message: `Sensor ${newActiveStatus ? 'activated' : 'deactivated'} successfully`,
             active: newActiveStatus 
         });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error toggling sensor status:', error);
         res.status(500).json({ error: 'Failed to toggle sensor status' });
     }
@@ -359,13 +321,13 @@ router.patch('/:sensorId/toggle', async (req, res) => {
 // Delete sensor configuration
 router.delete('/:sensorId', async (req, res) => {
     const { sensorId } = req.params;
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
 
         // Verify sensor ownership through system ownership
-        const [sensorRows] = await connection.execute(
+        const [sensorRows] = await pool.execute(
             `SELECT sc.*, s.user_id 
                 FROM sensor_configs sc 
                 JOIN systems s ON sc.system_id = s.id 
@@ -373,9 +335,7 @@ router.delete('/:sensorId', async (req, res) => {
             [sensorId, req.user.userId]
         );
 
-        if (sensorRows.length === 0) {
-            await connection.end();
-            return res.status(404).json({ error: 'Sensor not found or access denied' });
+        if (sensorRows.length === 0) {            return res.status(404).json({ error: 'Sensor not found or access denied' });
         }
 
         // Remove sensor from collector schedule if running
@@ -388,16 +348,12 @@ router.delete('/:sensorId', async (req, res) => {
         }
         
         // Delete sensor configuration
-        await connection.execute(
+        await pool.execute(
             'DELETE FROM sensor_configs WHERE id = ?', 
             [sensorId]
-        );
-
-        await connection.end();
-        res.json({ message: 'Sensor configuration deleted successfully' });
+        );        res.json({ message: 'Sensor configuration deleted successfully' });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error deleting sensor config:', error);
         res.status(500).json({ error: 'Failed to delete sensor configuration' });
     }

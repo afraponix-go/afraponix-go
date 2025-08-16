@@ -23,37 +23,33 @@ router.get('/latest/:systemId', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         const latestData = {};
         
         // Get latest water quality data from nutrient_readings
         const waterQualityParams = ['ph', 'ec', 'dissolved_oxygen', 'temperature', 'ammonia', 'humidity', 'salinity'];
-        const [latestWaterQuality] = await connection.execute(`SELECT * FROM nutrient_readings 
+        const [latestWaterQuality] = await pool.execute(`SELECT * FROM nutrient_readings 
                 WHERE system_id = ? 
                 AND nutrient_type IN (${waterQualityParams.map(() => '?').join(',')})
                 ORDER BY reading_date DESC LIMIT 10`, 
             [systemId, ...waterQualityParams]);
         
         // Get latest plant growth data
-        const [plantGrowthRows] = await connection.execute('SELECT * FROM plant_growth WHERE system_id = ? ORDER BY created_at DESC LIMIT 1', 
+        const [plantGrowthRows] = await pool.execute('SELECT * FROM plant_growth WHERE system_id = ? ORDER BY created_at DESC LIMIT 1', 
             [systemId]);
         const latestPlantGrowth = plantGrowthRows[0] || null;
         
         // Get latest fish health data
-        const [fishHealthRows] = await connection.execute('SELECT * FROM fish_health WHERE system_id = ? ORDER BY created_at DESC LIMIT 1', 
+        const [fishHealthRows] = await pool.execute('SELECT * FROM fish_health WHERE system_id = ? ORDER BY created_at DESC LIMIT 1', 
             [systemId]);
         const latestFishHealth = fishHealthRows[0] || null;
 
         latestData.waterQuality = latestWaterQuality;
         latestData.plantGrowth = latestPlantGrowth;
-        latestData.fishHealth = latestFishHealth;
-
-        await connection.end();
-        res.json(latestData);
+        latestData.fishHealth = latestFishHealth;        res.json(latestData);
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching latest data:', error);
         res.status(500).json({ error: 'Failed to fetch latest data' });
     }
@@ -61,15 +57,12 @@ router.get('/latest/:systemId', async (req, res) => {
 
 // Helper function to verify system ownership
 async function verifySystemOwnership(systemId, userId) {
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
-        const [rows] = await connection.execute('SELECT id FROM systems WHERE id = ? AND user_id = ?', 
-            [systemId, userId]);
-        await connection.end();
-        return rows.length > 0;
+        const pool = getDatabase();
+        const [rows] = await pool.execute('SELECT id FROM systems WHERE id = ? AND user_id = ?', 
+            [systemId, userId]);        return rows.length > 0;
     } catch (error) {
-        if (connection) await connection.end();
         throw error;
     }
 }
@@ -82,14 +75,14 @@ router.get('/water-quality/:systemId', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         // Get all unique dates from nutrient_readings for water quality parameters
         const waterQualityParams = ['ph', 'ec', 'dissolved_oxygen', 'temperature', 'ammonia', 'humidity', 'salinity'];
         
         // Get all readings for water quality parameters
-        const [rows] = await connection.execute(`
+        const [rows] = await pool.execute(`
             SELECT reading_date, nutrient_type, value, source, created_at
             FROM nutrient_readings 
             WHERE system_id = ? 
@@ -122,12 +115,8 @@ router.get('/water-quality/:systemId', async (req, res) => {
         // Convert to array and sort by date
         const result = Object.values(groupedData).sort((a, b) => 
             new Date(b.date) - new Date(a.date)
-        );
-        
-        await connection.end();
-        res.json(result);
+        );        res.json(result);
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching water quality data:', error);
         res.status(500).json({ error: 'Failed to fetch data' });
     }
@@ -142,9 +131,9 @@ router.post('/water-quality/:systemId', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         // Save all water quality parameters to nutrient_readings table
         const parameters = [
             { type: 'ph', value: ph, unit: '' },
@@ -170,7 +159,7 @@ router.post('/water-quality/:systemId', async (req, res) => {
         // Insert each parameter that has a value
         for (const param of parameters) {
             if (param.value !== null && param.value !== undefined && param.value !== '' && !isNaN(param.value)) {
-                const [result] = await connection.execute(`INSERT INTO nutrient_readings 
+                const [result] = await pool.execute(`INSERT INTO nutrient_readings 
                     (system_id, nutrient_type, value, unit, reading_date, source, notes) 
                     VALUES (?, ?, ?, ?, ?, 'manual', ?)`, 
                     [systemId, param.type, param.value, param.unit, readingDate, notes || '']);
@@ -182,19 +171,15 @@ router.post('/water-quality/:systemId', async (req, res) => {
         if (nutrients && Array.isArray(nutrients)) {
             for (const nutrient of nutrients) {
                 if (nutrient.type && nutrient.value !== null && nutrient.value !== undefined && nutrient.value !== '' && !isNaN(nutrient.value)) {
-                    const [result] = await connection.execute(`INSERT INTO nutrient_readings 
+                    const [result] = await pool.execute(`INSERT INTO nutrient_readings 
                         (system_id, nutrient_type, value, unit, reading_date, source, notes) 
                         VALUES (?, ?, ?, ?, ?, ?, ?)`, 
                         [systemId, nutrient.type, nutrient.value, nutrient.unit || 'mg/L', readingDate, nutrient.source || 'manual', nutrient.notes || '']);
                     insertedIds.push(result.insertId);
                 }
             }
-        }
-
-        await connection.end();
-        res.status(201).json({ ids: insertedIds, message: 'Water quality data saved to nutrient_readings' });
+        }        res.status(201).json({ ids: insertedIds, message: 'Water quality data saved to nutrient_readings' });
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error saving water quality data:', error);
         res.status(500).json({ error: 'Failed to save data' });
     }
@@ -209,9 +194,9 @@ router.get('/nutrients/:systemId', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         let query = 'SELECT * FROM nutrient_readings WHERE system_id = ?';
         let params = [systemId];
 
@@ -227,11 +212,8 @@ router.get('/nutrients/:systemId', async (req, res) => {
             params.push(parseInt(limit));
         }
 
-        const [data] = await connection.execute(query, params);
-        await connection.end();
-        res.json(data);
+        const [data] = await pool.execute(query, params);        res.json(data);
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching nutrient data:', error);
         res.status(500).json({ error: 'Failed to fetch data' });
     }
@@ -250,9 +232,9 @@ router.post('/nutrients/:systemId', async (req, res) => {
         return res.status(400).json({ error: 'nutrients array is required' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         const insertedIds = [];
         
         for (const nutrient of nutrients) {
@@ -260,7 +242,7 @@ router.post('/nutrients/:systemId', async (req, res) => {
                 continue; // Skip invalid entries
             }
 
-            const [result] = await connection.execute(`INSERT INTO nutrient_readings 
+            const [result] = await pool.execute(`INSERT INTO nutrient_readings 
                 (system_id, nutrient_type, value, unit, reading_date, source, notes) 
                 VALUES (?, ?, ?, ?, ?, ?, ?)`, 
                 [
@@ -273,15 +255,11 @@ router.post('/nutrients/:systemId', async (req, res) => {
                     nutrient.notes || ''
                 ]);
             insertedIds.push(result.insertId);
-        }
-
-        await connection.end();
-        res.status(201).json({ 
+        }        res.status(201).json({ 
             ids: insertedIds, 
             message: `${insertedIds.length} nutrient readings saved` 
         });
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error saving nutrient data:', error);
         res.status(500).json({ error: 'Failed to save data' });
     }
@@ -295,11 +273,11 @@ router.get('/nutrients/latest/:systemId', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         // Get the most recent reading for each nutrient type
-        const [data] = await connection.execute(`
+        const [data] = await pool.execute(`
             SELECT 
                 nr1.nutrient_type,
                 nr1.value,
@@ -326,12 +304,8 @@ router.get('/nutrients/latest/:systemId', async (req, res) => {
                 reading_date: row.reading_date,
                 source: row.source
             };
-        });
-
-        await connection.end();
-        res.json(nutrients);
+        });        res.json(nutrients);
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching latest nutrient data:', error);
         res.status(500).json({ error: 'Failed to fetch data' });
     }
@@ -345,20 +319,17 @@ router.get('/fish-health/:systemId', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
-        const [data] = await connection.execute(`
+        const pool = getDatabase();
+        const [data] = await pool.execute(`
             SELECT fh.*, ft.tank_number 
             FROM fish_health fh 
             LEFT JOIN fish_tanks ft ON fh.fish_tank_id = ft.id 
             WHERE fh.system_id = ? 
             ORDER BY fh.date DESC, fh.created_at DESC
-        `, [systemId]);
-        await connection.end();
-        res.json(data);
+        `, [systemId]);        res.json(data);
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching fish health data:', error);
         res.status(500).json({ error: 'Failed to fetch data' });
     }
@@ -372,26 +343,23 @@ router.post('/fish-health/:systemId', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // Map tank_number to actual tank ID
-        const [tankRows] = await connection.execute(
+        const [tankRows] = await pool.execute(
             'SELECT id FROM fish_tanks WHERE system_id = ? AND (id = ? OR tank_number = ?)',
             [systemId, fish_tank_id || 1, fish_tank_id || 1]
         );
         
         const actualTankId = tankRows && tankRows.length > 0 ? tankRows[0].id : fish_tank_id || 1;
         
-        const [result] = await connection.execute(`INSERT INTO fish_health 
+        const [result] = await pool.execute(`INSERT INTO fish_health 
             (system_id, fish_tank_id, date, count, mortality, average_weight, feed_consumption, feed_type, behavior, notes) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
-            [toSqlValue(systemId), toSqlValue(actualTankId), toSqlValue(date), toSqlValue(count), toSqlValue(mortality), toSqlValue(average_weight), toSqlValue(feed_consumption), toSqlValue(feed_type), toSqlValue(behavior), toSqlValue(notes)]);
-        await connection.end();
-        res.status(201).json({ id: result.insertId, message: 'Fish health data saved' });
+            [toSqlValue(systemId), toSqlValue(actualTankId), toSqlValue(date), toSqlValue(count), toSqlValue(mortality), toSqlValue(average_weight), toSqlValue(feed_consumption), toSqlValue(feed_type), toSqlValue(behavior), toSqlValue(notes)]);        res.status(201).json({ id: result.insertId, message: 'Fish health data saved' });
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error saving fish health data:', error);
         res.status(500).json({ error: 'Failed to save data' });
     }
@@ -405,15 +373,12 @@ router.get('/plant-growth/:systemId', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
-        const [data] = await connection.execute('SELECT * FROM plant_growth WHERE system_id = ? ORDER BY date DESC', 
-            [systemId]);
-        await connection.end();
-        res.json(data);
+        const pool = getDatabase();
+        const [data] = await pool.execute('SELECT * FROM plant_growth WHERE system_id = ? ORDER BY date DESC', 
+            [systemId]);        res.json(data);
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching plant growth data:', error);
         res.status(500).json({ error: 'Failed to fetch data' });
     }
@@ -427,17 +392,14 @@ router.post('/plant-growth/:systemId', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
-        const [result] = await connection.execute(`INSERT INTO plant_growth 
+        const pool = getDatabase();
+        const [result] = await pool.execute(`INSERT INTO plant_growth 
             (system_id, grow_bed_id, date, crop_type, count, harvest_weight, plants_harvested, new_seedlings, pest_control, health, growth_stage, notes, batch_id, seed_variety, batch_created_date, days_to_harvest) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
-            [systemId, grow_bed_id, date, crop_type, count || null, harvest_weight || null, plants_harvested || null, new_seedlings || null, pest_control || null, health || null, growth_stage || null, notes || null, batch_id || null, seed_variety || null, batch_created_date || null, days_to_harvest || null]);
-        await connection.end();
-        res.status(201).json({ id: result.insertId, message: 'Plant growth data saved' });
+            [systemId, grow_bed_id, date, crop_type, count || null, harvest_weight || null, plants_harvested || null, new_seedlings || null, pest_control || null, health || null, growth_stage || null, notes || null, batch_id || null, seed_variety || null, batch_created_date || null, days_to_harvest || null]);        res.status(201).json({ id: result.insertId, message: 'Plant growth data saved' });
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error saving plant growth data:', error);
         res.status(500).json({ error: 'Failed to save data' });
     }
@@ -451,21 +413,17 @@ router.delete('/plant-growth/:systemId/:recordId', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
-        const [result] = await connection.execute('DELETE FROM plant_growth WHERE id = ? AND system_id = ?', 
-            [recordId, systemId]);
-        
-        await connection.end();
-        
+        const pool = getDatabase();
+        const [result] = await pool.execute('DELETE FROM plant_growth WHERE id = ? AND system_id = ?', 
+            [recordId, systemId]);        
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Plant growth record not found' });
         }
         
         res.json({ message: 'Plant growth record deleted successfully' });
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error deleting plant growth record:', error);
         res.status(500).json({ error: 'Failed to delete record' });
     }
@@ -476,41 +434,33 @@ router.put('/plant-growth/:entryId', async (req, res) => {
     const { entryId } = req.params;
     const { date, grow_bed_id, crop_type, count, harvest_weight, plants_harvested, new_seedlings, pest_control, health, growth_stage, notes } = req.body;
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         // First verify the entry belongs to a system owned by the user
-        const [entryRows] = await connection.execute('SELECT system_id FROM plant_growth WHERE id = ?', [entryId]);
+        const [entryRows] = await pool.execute('SELECT system_id FROM plant_growth WHERE id = ?', [entryId]);
         const entry = entryRows[0];
 
-        if (!entry) {
-            await connection.end();
-            return res.status(404).json({ error: 'Plant growth record not found' });
+        if (!entry) {            return res.status(404).json({ error: 'Plant growth record not found' });
         }
 
-        if (!await verifySystemOwnership(entry.system_id, req.user.userId)) {
-            await connection.end();
-            return res.status(403).json({ error: 'Access denied to this system' });
+        if (!await verifySystemOwnership(entry.system_id, req.user.userId)) {            return res.status(403).json({ error: 'Access denied to this system' });
         }
 
         // Update the record
-        const [result] = await connection.execute(`UPDATE plant_growth SET 
+        const [result] = await pool.execute(`UPDATE plant_growth SET 
             date = ?, grow_bed_id = ?, crop_type = ?, count = ?, harvest_weight = ?, 
             plants_harvested = ?, new_seedlings = ?, pest_control = ?, health = ?, 
             growth_stage = ?, notes = ?
             WHERE id = ?`, 
             [date, grow_bed_id, crop_type, count || null, harvest_weight || null, plants_harvested || null, 
-             new_seedlings || null, pest_control || null, health || null, growth_stage || null, notes || null, entryId]);
-        
-        await connection.end();
-        
+             new_seedlings || null, pest_control || null, health || null, growth_stage || null, notes || null, entryId]);        
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Plant growth record not found' });
         }
         
         res.json({ message: 'Plant growth record updated successfully' });
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error updating plant growth record:', error);
         res.status(500).json({ error: 'Failed to update record' });
     }
@@ -524,15 +474,12 @@ router.get('/operations/:systemId', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
-        const [data] = await connection.execute('SELECT * FROM operations WHERE system_id = ? ORDER BY date DESC', 
-            [systemId]);
-        await connection.end();
-        res.json(data);
+        const pool = getDatabase();
+        const [data] = await pool.execute('SELECT * FROM operations WHERE system_id = ? ORDER BY date DESC', 
+            [systemId]);        res.json(data);
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching operations data:', error);
         res.status(500).json({ error: 'Failed to fetch data' });
     }
@@ -546,17 +493,14 @@ router.post('/operations/:systemId', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
-        const [result] = await connection.execute(`INSERT INTO operations 
+        const pool = getDatabase();
+        const [result] = await pool.execute(`INSERT INTO operations 
             (system_id, date, operation_type, water_volume, chemical_added, amount_added, downtime_duration, notes) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, 
-            [systemId, date, operation_type, water_volume, chemical_added, amount_added, downtime_duration, notes]);
-        await connection.end();
-        res.status(201).json({ id: result.insertId, message: 'Operations data saved' });
+            [systemId, date, operation_type, water_volume, chemical_added, amount_added, downtime_duration, notes]);        res.status(201).json({ id: result.insertId, message: 'Operations data saved' });
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error saving operations data:', error);
         res.status(500).json({ error: 'Failed to save data' });
     }
@@ -577,9 +521,9 @@ router.get('/entries/fish-health', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         let query = `
             SELECT fh.*, ft.tank_number 
             FROM fish_health fh 
@@ -594,11 +538,8 @@ router.get('/entries/fish-health', async (req, res) => {
             params.push(parseInt(limit, 10));
         }
         
-        const [data] = await connection.execute(query, params);
-        await connection.end();
-        res.json(data);
+        const [data] = await pool.execute(query, params);        res.json(data);
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching fish health data:', error);
         res.status(500).json({ error: 'Failed to fetch data' });
     }
@@ -616,26 +557,23 @@ router.post('/entries/fish-health', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // Map tank_number to actual tank ID
-        const [tankRows] = await connection.execute(
+        const [tankRows] = await pool.execute(
             'SELECT id FROM fish_tanks WHERE system_id = ? AND (id = ? OR tank_number = ?)',
             [system_id, fish_tank_id || 1, fish_tank_id || 1]
         );
         
         const actualTankId = tankRows && tankRows.length > 0 ? tankRows[0].id : fish_tank_id || 1;
         
-        const [result] = await connection.execute(`INSERT INTO fish_health 
+        const [result] = await pool.execute(`INSERT INTO fish_health 
             (system_id, fish_tank_id, date, count, mortality, average_weight, feed_consumption, feed_type, behavior, notes) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
-            [toSqlValue(system_id), toSqlValue(actualTankId), toSqlValue(date), toSqlValue(count), toSqlValue(mortality), toSqlValue(average_weight), toSqlValue(feed_consumption), toSqlValue(feed_type), toSqlValue(behavior), toSqlValue(notes)]);
-        await connection.end();
-        res.status(201).json({ id: result.insertId, message: 'Fish health data saved' });
+            [toSqlValue(system_id), toSqlValue(actualTankId), toSqlValue(date), toSqlValue(count), toSqlValue(mortality), toSqlValue(average_weight), toSqlValue(feed_consumption), toSqlValue(feed_type), toSqlValue(behavior), toSqlValue(notes)]);        res.status(201).json({ id: result.insertId, message: 'Fish health data saved' });
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error saving fish health data:', error);
         res.status(500).json({ error: 'Failed to save data' });
     }
@@ -653,9 +591,9 @@ router.get('/entries/water-quality', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         // Get water quality parameters from nutrient_readings
         const waterQualityParams = ['ph', 'ec', 'dissolved_oxygen', 'temperature', 'ammonia', 'humidity', 'salinity'];
         
@@ -674,12 +612,8 @@ router.get('/entries/water-quality', async (req, res) => {
             params.push(parseInt(limit, 10));
         }
         
-        const [data] = await connection.execute(query, params);
-        
-        await connection.end();
-        res.json(data);
+        const [data] = await pool.execute(query, params);        res.json(data);
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching water quality data:', error);
         res.status(500).json({ error: 'Failed to fetch data' });
     }
@@ -697,9 +631,9 @@ router.post('/entries/water-quality', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         let insertedReadings = [];
 
         // Save basic water quality parameters to nutrient_readings table
@@ -713,7 +647,7 @@ router.post('/entries/water-quality', async (req, res) => {
 
         for (const param of waterQualityParams) {
             if (param.value !== null && param.value !== undefined && param.value !== '') {
-                const [result] = await connection.execute(`INSERT INTO nutrient_readings 
+                const [result] = await pool.execute(`INSERT INTO nutrient_readings 
                     (system_id, nutrient_type, value, unit, reading_date, source, notes) 
                     VALUES (?, ?, ?, ?, ?, ?, ?)`, 
                     [system_id, param.type, param.value, param.unit, (date || new Date().toISOString()).replace('T', ' ').slice(0, 19), 'manual', notes || '']);
@@ -732,7 +666,7 @@ router.post('/entries/water-quality', async (req, res) => {
             if (calcium) legacyNutrients.push({ type: 'calcium', value: calcium });
 
             for (const nutrient of legacyNutrients) {
-                const [result] = await connection.execute(`INSERT INTO nutrient_readings 
+                const [result] = await pool.execute(`INSERT INTO nutrient_readings 
                     (system_id, nutrient_type, value, unit, reading_date, source, notes) 
                     VALUES (?, ?, ?, ?, ?, ?, ?)`, 
                     [system_id, nutrient.type, nutrient.value, 'mg/L', (date || new Date().toISOString()).replace('T', ' ').slice(0, 19), 'manual', notes || '']);
@@ -744,19 +678,15 @@ router.post('/entries/water-quality', async (req, res) => {
         if (nutrients && Array.isArray(nutrients)) {
             for (const nutrient of nutrients) {
                 if (nutrient.type && nutrient.value !== null && nutrient.value !== undefined) {
-                    const [result] = await connection.execute(`INSERT INTO nutrient_readings 
+                    const [result] = await pool.execute(`INSERT INTO nutrient_readings 
                         (system_id, nutrient_type, value, unit, reading_date, source, notes) 
                         VALUES (?, ?, ?, ?, ?, ?, ?)`, 
                         [system_id, nutrient.type, nutrient.value, nutrient.unit || 'mg/L', (date || new Date().toISOString()).replace('T', ' ').slice(0, 19), nutrient.source || 'manual', nutrient.notes || notes || '']);
                     insertedReadings.push(result.insertId);
                 }
             }
-        }
-
-        await connection.end();
-        res.status(201).json({ ids: insertedReadings, message: 'Water quality and nutrient data saved to nutrient_readings table' });
+        }        res.status(201).json({ ids: insertedReadings, message: 'Water quality and nutrient data saved to nutrient_readings table' });
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error saving water quality data:', error);
         res.status(500).json({ error: 'Failed to save data' });
     }
@@ -766,31 +696,23 @@ router.post('/entries/water-quality', async (req, res) => {
 router.delete('/fish-health/entry/:entryId', async (req, res) => {
     const { entryId } = req.params;
     
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // First verify the entry exists and belongs to a system owned by the user
-        const [entryRows] = await connection.execute('SELECT system_id FROM fish_health WHERE id = ?', [entryId]);
+        const [entryRows] = await pool.execute('SELECT system_id FROM fish_health WHERE id = ?', [entryId]);
         
-        if (entryRows.length === 0) {
-            await connection.end();
-            return res.status(404).json({ error: 'Entry not found' });
+        if (entryRows.length === 0) {            return res.status(404).json({ error: 'Entry not found' });
         }
         
         const entry = entryRows[0];
-        if (!await verifySystemOwnership(entry.system_id, req.user.userId)) {
-            await connection.end();
-            return res.status(403).json({ error: 'Access denied to this system' });
+        if (!await verifySystemOwnership(entry.system_id, req.user.userId)) {            return res.status(403).json({ error: 'Access denied to this system' });
         }
         
         // Delete the entry
-        const [result] = await connection.execute('DELETE FROM fish_health WHERE id = ?', [entryId]);
-        
-        await connection.end();
-        res.json({ message: 'Entry deleted successfully' });
+        const [result] = await pool.execute('DELETE FROM fish_health WHERE id = ?', [entryId]);        res.json({ message: 'Entry deleted successfully' });
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error deleting fish health entry:', error);
         res.status(500).json({ error: 'Failed to delete entry' });
     }
@@ -801,35 +723,27 @@ router.put('/fish-health/entry/:entryId', async (req, res) => {
     const { entryId } = req.params;
     const { feed_consumption, feed_type, mortality, behavior, notes } = req.body;
     
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // First verify the entry exists and belongs to a system owned by the user
-        const [entryRows] = await connection.execute('SELECT system_id FROM fish_health WHERE id = ?', [entryId]);
+        const [entryRows] = await pool.execute('SELECT system_id FROM fish_health WHERE id = ?', [entryId]);
         
-        if (entryRows.length === 0) {
-            await connection.end();
-            return res.status(404).json({ error: 'Entry not found' });
+        if (entryRows.length === 0) {            return res.status(404).json({ error: 'Entry not found' });
         }
         
         const entry = entryRows[0];
-        if (!await verifySystemOwnership(entry.system_id, req.user.userId)) {
-            await connection.end();
-            return res.status(403).json({ error: 'Access denied to this system' });
+        if (!await verifySystemOwnership(entry.system_id, req.user.userId)) {            return res.status(403).json({ error: 'Access denied to this system' });
         }
         
         // Update the entry
-        const [result] = await connection.execute(`
+        const [result] = await pool.execute(`
             UPDATE fish_health 
             SET feed_consumption = ?, feed_type = ?, mortality = ?, behavior = ?, notes = ?
             WHERE id = ?
-        `, [toSqlValue(feed_consumption), toSqlValue(feed_type), toSqlValue(mortality), toSqlValue(behavior), toSqlValue(notes), entryId]);
-        
-        await connection.end();
-        res.json({ message: 'Entry updated successfully' });
+        `, [toSqlValue(feed_consumption), toSqlValue(feed_type), toSqlValue(mortality), toSqlValue(behavior), toSqlValue(notes), entryId]);        res.json({ message: 'Entry updated successfully' });
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error updating fish health entry:', error);
         res.status(500).json({ error: 'Failed to update entry' });
     }
@@ -848,14 +762,11 @@ router.put('/batch/:systemId/:batchId/grow-bed', async (req, res) => {
         return res.status(400).json({ error: 'newGrowBedId is required' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
-        const [result] = await connection.execute('UPDATE plant_growth SET grow_bed_id = ? WHERE batch_id = ? AND system_id = ?', 
+        const pool = getDatabase();
+        const [result] = await pool.execute('UPDATE plant_growth SET grow_bed_id = ? WHERE batch_id = ? AND system_id = ?', 
             [newGrowBedId, batchId, systemId]);
-
-        await connection.end();
-
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'No records found for batch' });
         }
@@ -865,7 +776,6 @@ router.put('/batch/:systemId/:batchId/grow-bed', async (req, res) => {
             changes: result.affectedRows 
         });
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error updating batch grow bed:', error);
         res.status(500).json({ error: 'Failed to update batch grow bed' });
     }

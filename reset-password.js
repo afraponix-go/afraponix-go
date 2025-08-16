@@ -34,7 +34,7 @@ async function resetPassword(email, newPassword) {
         
         console.log(`🔑 Password reset successfully for ${user.username}`);
         console.log(`📧 Email: ${email}`);
-        console.log(`🔐 New password: ${newPassword}`);
+        console.log(`🔐 New password: [HIDDEN FOR SECURITY]`);
         
         await connection.end();
         

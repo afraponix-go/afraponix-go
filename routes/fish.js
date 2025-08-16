@@ -17,13 +17,13 @@ router.post('/feeding-schedule', async (req, res) => {
         });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // Check if feeding schedule already exists for this system
-        const [existingRows] = await connection.execute(
+        const [existingRows] = await pool.execute(
             'SELECT id FROM fish_feeding WHERE system_id = ?',
             [systemId]
         );
@@ -31,25 +31,21 @@ router.post('/feeding-schedule', async (req, res) => {
 
         if (existingSchedule) {
             // Update existing schedule
-            await connection.execute(`
+            await pool.execute(`
                 UPDATE fish_feeding 
                 SET fish_type = ?, feedings_per_day = ?, feeding_times = ?
                 WHERE system_id = ?
             `, [fishType, feedingsPerDay, feedingTimes, systemId]);
         } else {
             // Create new schedule
-            await connection.execute(`
+            await pool.execute(`
                 INSERT INTO fish_feeding 
                 (system_id, fish_type, feedings_per_day, feeding_times)
                 VALUES (?, ?, ?, ?)
             `, [systemId, fishType, feedingsPerDay, feedingTimes]);
-        }
-
-        await connection.end();
-        res.json({ success: true, message: 'Feeding schedule saved successfully' });
+        }        res.json({ success: true, message: 'Feeding schedule saved successfully' });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error saving feeding schedule:', error);
         res.status(500).json({ error: 'Failed to save feeding schedule' });
     }
@@ -57,19 +53,16 @@ router.post('/feeding-schedule', async (req, res) => {
 
 // Get fish feeding schedule for a system
 router.get('/feeding-schedule/:systemId', async (req, res) => {
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        const [scheduleRows] = await connection.execute(
+        const [scheduleRows] = await pool.execute(
             'SELECT * FROM fish_feeding WHERE system_id = ?',
             [req.params.systemId]
         );
-        const schedule = scheduleRows[0];
-
-        await connection.end();
-        
+        const schedule = scheduleRows[0];        
         if (!schedule) {
             return res.status(404).json({ error: 'No feeding schedule found' });
         }
@@ -77,7 +70,6 @@ router.get('/feeding-schedule/:systemId', async (req, res) => {
         res.json(schedule);
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching feeding schedule:', error);
         res.status(500).json({ error: 'Failed to fetch feeding schedule' });
     }
@@ -85,21 +77,17 @@ router.get('/feeding-schedule/:systemId', async (req, res) => {
 
 // Delete fish feeding schedule
 router.delete('/feeding-schedule/:systemId', async (req, res) => {
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        await connection.execute(
+        await pool.execute(
             'DELETE FROM fish_feeding WHERE system_id = ?',
             [req.params.systemId]
-        );
-
-        await connection.end();
-        res.json({ success: true, message: 'Feeding schedule deleted successfully' });
+        );        res.json({ success: true, message: 'Feeding schedule deleted successfully' });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error deleting feeding schedule:', error);
         res.status(500).json({ error: 'Failed to delete feeding schedule' });
     }
@@ -107,15 +95,12 @@ router.delete('/feeding-schedule/:systemId', async (req, res) => {
 
 // Helper function to verify system ownership
 async function verifySystemOwnership(systemId, userId) {
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
-        const [rows] = await connection.execute('SELECT id FROM systems WHERE id = ? AND user_id = ?', 
-            [systemId, userId]);
-        await connection.end();
-        return rows.length > 0;
+        const pool = getDatabase();
+        const [rows] = await pool.execute('SELECT id FROM systems WHERE id = ? AND user_id = ?', 
+            [systemId, userId]);        return rows.length > 0;
     } catch (error) {
-        if (connection) await connection.end();
         throw error;
     }
 }
@@ -136,23 +121,21 @@ router.post('/harvest', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // Start transaction to ensure both operations succeed or fail together
-        await connection.execute('START TRANSACTION');
+        await pool.execute('START TRANSACTION');
         
         // Map tank_number to actual tank ID and check current fish count
-        const [tankRows] = await connection.execute(`
+        const [tankRows] = await pool.execute(`
             SELECT id, current_fish_count FROM fish_tanks 
             WHERE system_id = ? AND (id = ? OR tank_number = ?)
         `, [system_id, tank_number, tank_number]);
         
         if (!tankRows || tankRows.length === 0) {
-            await connection.execute('ROLLBACK');
-            await connection.end();
-            return res.status(404).json({ 
+            await pool.execute('ROLLBACK');            return res.status(404).json({ 
                 error: `Tank ${tank_number} not found`
             });
         }
@@ -161,37 +144,33 @@ router.post('/harvest', async (req, res) => {
         const currentCount = tankRows[0].current_fish_count;
         
         if (currentCount < fish_count) {
-            await connection.execute('ROLLBACK');
-            await connection.end();
-            return res.status(400).json({ 
+            await pool.execute('ROLLBACK');            return res.status(400).json({ 
                 error: `Cannot harvest ${fish_count} fish. Tank ${tank_number} only has ${currentCount} fish available.`
             });
         }
         
         // 1. Insert fish harvest record (using actual tank ID)
-        const [result] = await connection.execute(`
+        const [result] = await pool.execute(`
             INSERT INTO fish_harvest 
             (system_id, tank_number, harvest_date, fish_count, total_weight_kg, average_weight_kg, notes, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
         `, [system_id, actualTankId, harvest_date, fish_count, total_weight_kg, average_weight_kg || null, notes || null]);
         
         // 2. Update fish tanks current count (decrease count)
-        await connection.execute(`
+        await pool.execute(`
             UPDATE fish_tanks 
             SET current_fish_count = current_fish_count - ?
             WHERE id = ? AND system_id = ?
         `, [fish_count, actualTankId, system_id]);
         
         // 3. Log the harvest event in fish_events
-        await connection.execute(`
+        await pool.execute(`
             INSERT INTO fish_events (system_id, fish_tank_id, event_type, count_change, weight, notes, event_date, user_id)
             VALUES (?, ?, 'harvest', ?, ?, ?, ?, ?)
         `, [system_id, actualTankId, -fish_count, average_weight_kg, notes, harvest_date, req.user.userId]);
         
         // Commit the transaction
-        await connection.execute('COMMIT');
-        await connection.end();
-        
+        await pool.execute('COMMIT');        
         res.status(201).json({ 
             id: result.insertId, 
             message: 'Fish harvest recorded successfully',
@@ -209,12 +188,10 @@ router.post('/harvest', async (req, res) => {
     } catch (error) {
         if (connection) {
             try {
-                await connection.execute('ROLLBACK');
+                await pool.execute('ROLLBACK');
             } catch (rollbackError) {
                 console.error('Error rolling back transaction:', rollbackError);
-            }
-            await connection.end();
-        }
+            }        }
         console.error('Error recording fish harvest:', error);
         res.status(500).json({ error: 'Failed to record fish harvest' });
     }
@@ -228,21 +205,17 @@ router.get('/harvest/:systemId', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        const [rows] = await connection.execute(`
+        const [rows] = await pool.execute(`
             SELECT * FROM fish_harvest 
             WHERE system_id = ? 
             ORDER BY harvest_date DESC, created_at DESC
-        `, [systemId]);
-
-        await connection.end();
-        res.json(rows);
+        `, [systemId]);        res.json(rows);
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching fish harvest records:', error);
         res.status(500).json({ error: 'Failed to fetch fish harvest records' });
     }
@@ -256,21 +229,17 @@ router.get('/harvest/:systemId/tank/:tankNumber', async (req, res) => {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        const [rows] = await connection.execute(`
+        const [rows] = await pool.execute(`
             SELECT * FROM fish_harvest 
             WHERE system_id = ? AND tank_number = ?
             ORDER BY harvest_date DESC, created_at DESC
-        `, [systemId, tankNumber]);
-
-        await connection.end();
-        res.json(rows);
+        `, [systemId, tankNumber]);        res.json(rows);
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching tank harvest records:', error);
         res.status(500).json({ error: 'Failed to fetch tank harvest records' });
     }

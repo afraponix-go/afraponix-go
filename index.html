@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="enhanced-calculator.css">
     <link rel="stylesheet" href="fish-calc-clean.css">
+    <link rel="stylesheet" href="landing-page.css">
     <link rel="manifest" href="manifest.json">
     <script src="chart.min.js"></script>
 </head>
@@ -63,6 +64,382 @@
     <div id="notification-container"></div>
 
     <main>
+        <!-- Pre-Authentication Landing Page -->
+        <div id="landing-page" class="landing-page" style="display: none;">
+            <!-- Hero Section -->
+            <section class="hero-section">
+                <div class="hero-content">
+                    <div class="hero-text">
+                        <h1 class="hero-title">
+                            Intelligent Aquaponics
+                            <span class="hero-title-accent">Management</span>
+                        </h1>
+                        <p class="hero-subtitle">
+                            Optimize your agricultural operations with AI-driven automation, real-time monitoring, and data-driven insights for maximum yield and efficiency.
+                        </p>
+                        <div class="hero-cta">
+                            <button id="hero-register-btn" class="btn-hero-primary">
+                                Start Your Free Trial
+                                <svg class="btn-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </button>
+                            <button id="hero-login-btn" class="btn-hero-secondary">
+                                Sign In
+                            </button>
+                        </div>
+                        <div class="hero-stats">
+                            <div class="stat-item">
+                                <span class="stat-number">24/7</span>
+                                <span class="stat-label">Real-time Monitoring</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">5min</span>
+                                <span class="stat-label">Setup Time</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">Auto</span>
+                                <span class="stat-label">Smart Alerts</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hero-visual">
+                        <div class="hero-logo-container">
+                            <img src="logo-clean.svg" alt="Afraponix Go" class="hero-logo">
+                            <div class="logo-glow"></div>
+                        </div>
+                        <div class="floating-elements">
+                            <div class="floating-card sensor-card">
+                                <img src="icons/new-icons/Afraponix Go Icons_sensor data.svg" alt="Sensor Data" class="card-icon">
+                                <span class="card-text">pH: 6.8</span>
+                            </div>
+                            <div class="floating-card growth-card">
+                                <img src="icons/new-icons/Afraponix Go Icons_growth.svg" alt="Growth" class="card-icon">
+                                <span class="card-text">+15% Growth</span>
+                            </div>
+                            <div class="floating-card fish-card">
+                                <img src="icons/new-icons/Afraponix Go Icons_fish.svg" alt="Fish Health" class="card-icon">
+                                <span class="card-text">Healthy</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Features Section -->
+            <section class="features-section">
+                <div class="section-container">
+                    <div class="section-header">
+                        <h2 class="section-title">Powerful Features for Modern Agriculture</h2>
+                        <p class="section-subtitle">Everything you need to run a successful aquaponics operation</p>
+                    </div>
+                    <div class="features-grid">
+                        <div class="feature-card" data-feature="sensors">
+                            <div class="feature-icon">
+                                <img src="icons/new-icons/Afraponix Go Icons_sensor data.svg" alt="Automatic Sensor Configuration">
+                            </div>
+                            <h3 class="feature-title">Automatic Sensor Configuration</h3>
+                            <p class="feature-description">
+                                Real-time monitoring and auto-calibration of pH, temperature, and nutrient sensors with intelligent alerts and automated adjustments.
+                            </p>
+                            <div class="feature-benefits">
+                                <span class="benefit-tag">Real-time Data</span>
+                                <span class="benefit-tag">Auto-calibration</span>
+                                <span class="benefit-tag">Smart Alerts</span>
+                            </div>
+                        </div>
+
+                        <div class="feature-card" data-feature="plants">
+                            <div class="feature-icon">
+                                <img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant Batch Management">
+                            </div>
+                            <h3 class="feature-title">Plant Batch Management</h3>
+                            <p class="feature-description">
+                                Track multiple grow cycles, varieties, and harvest schedules with predictive analytics for optimal timing and maximum yield.
+                            </p>
+                            <div class="feature-benefits">
+                                <span class="benefit-tag">Growth Tracking</span>
+                                <span class="benefit-tag">Harvest Planning</span>
+                                <span class="benefit-tag">Yield Prediction</span>
+                            </div>
+                        </div>
+
+                        <div class="feature-card" data-feature="fish">
+                            <div class="feature-icon">
+                                <img src="icons/new-icons/Afraponix Go Icons_fish.svg" alt="Fish Batch Management">
+                            </div>
+                            <h3 class="feature-title">Fish Batch Management</h3>
+                            <p class="feature-description">
+                                Monitor fish health, feeding schedules, and population metrics with automated feeding systems and health diagnostics.
+                            </p>
+                            <div class="feature-benefits">
+                                <span class="benefit-tag">Health Monitoring</span>
+                                <span class="benefit-tag">Auto Feeding</span>
+                                <span class="benefit-tag">Population Tracking</span>
+                            </div>
+                        </div>
+
+                        <div class="feature-card" data-feature="spray">
+                            <div class="feature-icon">
+                                <img src="icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="Spray Programme Automation">
+                            </div>
+                            <h3 class="feature-title">Spray Programme Automation</h3>
+                            <p class="feature-description">
+                                Scheduled nutrient and pesticide application with smart dosing algorithms and environmental condition optimization.
+                            </p>
+                            <div class="feature-benefits">
+                                <span class="benefit-tag">Smart Dosing</span>
+                                <span class="benefit-tag">Scheduled Application</span>
+                                <span class="benefit-tag">Environmental Optimization</span>
+                            </div>
+                        </div>
+
+                        <div class="feature-card" data-feature="analytics">
+                            <div class="feature-icon">
+                                <img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Data Analytics & Trending">
+                            </div>
+                            <h3 class="feature-title">Data Analytics & Trending</h3>
+                            <p class="feature-description">
+                                Visual dashboards showing growth trends, yield predictions, and system performance with AI-powered insights and recommendations.
+                            </p>
+                            <div class="feature-benefits">
+                                <span class="benefit-tag">Visual Dashboards</span>
+                                <span class="benefit-tag">AI Insights</span>
+                                <span class="benefit-tag">Performance Tracking</span>
+                            </div>
+                        </div>
+
+                        <div class="feature-card" data-feature="ecosystem">
+                            <div class="feature-icon">
+                                <img src="icons/new-icons/Afraponix Go Icons_ecosystem.svg" alt="Complete Ecosystem">
+                            </div>
+                            <h3 class="feature-title">Complete Ecosystem Management</h3>
+                            <p class="feature-description">
+                                Integrated system management with automated nutrient cycling, water quality optimization, and symbiotic balance maintenance.
+                            </p>
+                            <div class="feature-benefits">
+                                <span class="benefit-tag">System Integration</span>
+                                <span class="benefit-tag">Auto Cycling</span>
+                                <span class="benefit-tag">Balance Optimization</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Benefits/ROI Section -->
+            <section class="benefits-section">
+                <div class="section-container">
+                    <div class="benefits-content">
+                        <div class="benefits-text">
+                            <h2 class="section-title">Maximize Your Agricultural ROI</h2>
+                            <p class="section-subtitle">Data-driven results that speak for themselves</p>
+                            <div class="benefit-metrics">
+                                <div class="metric-item">
+                                    <div class="metric-chart">
+                                        <svg width="60" height="60" viewBox="0 0 60 60">
+                                            <circle cx="30" cy="30" r="25" stroke="var(--color-deep-blue-lighter)" stroke-width="3" fill="none"/>
+                                            <circle cx="30" cy="30" r="25" stroke="var(--color-bio-green)" stroke-width="3" fill="none" 
+                                                stroke-dasharray="157" stroke-dashoffset="15.7" class="progress-circle"/>
+                                        </svg>
+                                        <span class="metric-percentage">90%</span>
+                                    </div>
+                                    <div class="metric-details">
+                                        <h4>Resource Efficiency</h4>
+                                        <p>Optimal water and nutrient utilization</p>
+                                    </div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="metric-chart">
+                                        <svg width="60" height="60" viewBox="0 0 60 60">
+                                            <circle cx="30" cy="30" r="25" stroke="var(--color-deep-blue-lighter)" stroke-width="3" fill="none"/>
+                                            <circle cx="30" cy="30" r="25" stroke="var(--color-blue-fish)" stroke-width="3" fill="none" 
+                                                stroke-dasharray="157" stroke-dashoffset="31.4" class="progress-circle"/>
+                                        </svg>
+                                        <span class="metric-percentage">80%</span>
+                                    </div>
+                                    <div class="metric-details">
+                                        <h4>Labor Reduction</h4>
+                                        <p>Automated monitoring and management</p>
+                                    </div>
+                                </div>
+                                <div class="metric-item">
+                                    <div class="metric-chart">
+                                        <svg width="60" height="60" viewBox="0 0 60 60">
+                                            <circle cx="30" cy="30" r="25" stroke="var(--color-deep-blue-lighter)" stroke-width="3" fill="none"/>
+                                            <circle cx="30" cy="30" r="25" stroke="var(--color-aqua-green)" stroke-width="3" fill="none" 
+                                                stroke-dasharray="157" stroke-dashoffset="47.1" class="progress-circle"/>
+                                        </svg>
+                                        <span class="metric-percentage">70%</span>
+                                    </div>
+                                    <div class="metric-details">
+                                        <h4>Faster Growth</h4>
+                                        <p>Optimized growing conditions</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="benefits-visual">
+                            <div class="dashboard-preview">
+                                <div class="preview-header">
+                                    <div class="preview-title">Live Dashboard</div>
+                                    <div class="preview-status online">Online</div>
+                                </div>
+                                <div class="preview-metrics">
+                                    <div class="preview-metric">
+                                        <span class="metric-label">Water Temp</span>
+                                        <span class="metric-value">24.5°C</span>
+                                    </div>
+                                    <div class="preview-metric">
+                                        <span class="metric-label">pH Level</span>
+                                        <span class="metric-value">6.8</span>
+                                    </div>
+                                    <div class="preview-metric">
+                                        <span class="metric-label">Fish Count</span>
+                                        <span class="metric-value">1,247</span>
+                                    </div>
+                                    <div class="preview-metric">
+                                        <span class="metric-label">Harvest Ready</span>
+                                        <span class="metric-value">89</span>
+                                    </div>
+                                </div>
+                                <div class="preview-chart">
+                                    <svg width="100%" height="80" viewBox="0 0 300 80">
+                                        <path d="M10,60 Q50,30 90,45 T170,35 Q210,25 250,40 T290,30" 
+                                              stroke="var(--color-bio-green)" stroke-width="2" fill="none"/>
+                                        <path d="M10,60 Q50,30 90,45 T170,35 Q210,25 250,40 T290,30 L290,70 L10,70 Z" 
+                                              fill="url(#chartGradient)" opacity="0.3"/>
+                                        <defs>
+                                            <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                                <stop offset="0%" stop-color="var(--color-bio-green)" stop-opacity="0.6"/>
+                                                <stop offset="100%" stop-color="var(--color-bio-green)" stop-opacity="0"/>
+                                            </linearGradient>
+                                        </defs>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Social Proof Section -->
+            <section class="testimonials-section">
+                <div class="section-container">
+                    <div class="section-header">
+                        <h2 class="section-title">Trusted by Modern Farmers</h2>
+                        <p class="section-subtitle">Join thousands of successful aquaponics operations worldwide</p>
+                    </div>
+                    <div class="testimonials-grid">
+                        <div class="testimonial-card">
+                            <div class="testimonial-content">
+                                <p class="testimonial-text">
+                                    "Afraponix Go transformed our operation. We've seen a 40% increase in yield and 60% reduction in water usage. The automated monitoring gives us peace of mind."
+                                </p>
+                                <div class="testimonial-author">
+                                    <div class="author-info">
+                                        <h4 class="author-name">Sarah Chen</h4>
+                                        <p class="author-title">Owner, Green Valley Aquaponics</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="testimonial-metrics">
+                                <div class="metric">
+                                    <span class="metric-number">+40%</span>
+                                    <span class="metric-label">Yield</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-number">-60%</span>
+                                    <span class="metric-label">Water Use</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="testimonial-card">
+                            <div class="testimonial-content">
+                                <p class="testimonial-text">
+                                    "The AI-driven insights helped us optimize our feeding schedules and reduce costs by 35%. The platform is intuitive and powerful."
+                                </p>
+                                <div class="testimonial-author">
+                                    <div class="author-info">
+                                        <h4 class="author-name">Marcus Rodriguez</h4>
+                                        <p class="author-title">Farm Manager, AquaTech Solutions</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="testimonial-metrics">
+                                <div class="metric">
+                                    <span class="metric-number">-35%</span>
+                                    <span class="metric-label">Costs</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-number">24/7</span>
+                                    <span class="metric-label">Monitoring</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="testimonial-card">
+                            <div class="testimonial-content">
+                                <p class="testimonial-text">
+                                    "The automated nutrient management and real-time alerts saved us from multiple potential crop losses. ROI was achieved in just 6 months."
+                                </p>
+                                <div class="testimonial-author">
+                                    <div class="author-info">
+                                        <h4 class="author-name">Emily Foster</h4>
+                                        <p class="author-title">Director, Urban Harvest Co.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="testimonial-metrics">
+                                <div class="metric">
+                                    <span class="metric-number">6mo</span>
+                                    <span class="metric-label">ROI</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-number">0</span>
+                                    <span class="metric-label">Crop Loss</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CTA Section -->
+            <section class="cta-section">
+                <div class="section-container">
+                    <div class="cta-content">
+                        <h2 class="cta-title">Ready to Revolutionize Your Aquaponics Operation?</h2>
+                        <p class="cta-subtitle">Join thousands of successful farmers using AI-powered aquaponics management</p>
+                        <div class="cta-buttons">
+                            <button id="cta-register-btn" class="btn-cta-primary">
+                                Start Free Trial
+                                <svg class="btn-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </button>
+                            <button id="cta-login-btn" class="btn-cta-secondary">
+                                Sign In to Dashboard
+                            </button>
+                        </div>
+                        <div class="cta-features">
+                            <div class="cta-feature">
+                                <img src="icons/new-icons/Afraponix Go Icons_success.svg" alt="Free Trial" class="cta-icon">
+                                <span>30-day free trial</span>
+                            </div>
+                            <div class="cta-feature">
+                                <img src="icons/new-icons/Afraponix Go Icons_settings.svg" alt="Easy Setup" class="cta-icon">
+                                <span>Easy 5-minute setup</span>
+                            </div>
+                            <div class="cta-feature">
+                                <img src="icons/new-icons/Afraponix Go Icons_user.svg" alt="Expert Support" class="cta-icon">
+                                <span>Expert support included</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
         <div class="mobile-content">
         <section id="dashboard" class="view active">
             <div class="dashboard-header">
@@ -2100,24 +2477,21 @@
         </button>
     </nav>
 
-    <!-- Authentication Modal -->
-    <div id="auth-modal" class="modal">
-        <div class="modal-content">
-            <span class="close" id="close-modal">&times;</span>
-            
-            <!-- Login Form -->
-            <div id="login-form" class="auth-form">
-                <div class="auth-header">
-                    <div class="auth-logo">
-                        <div class="logo-icon">
-                            <img src="logo-clean.svg" alt="Afraponix Go Logo" class="logo-image">
-                        </div>
-                        <h2 class="heading-2 auth-title">Login to Afraponix Go</h2>
-                    </div>
-                    <p class="auth-subtitle text-muted">Welcome back! Please sign in to your account</p>
+    <!-- Login Slide-out Panel -->
+    <div id="login-slideout-backdrop" class="slideout-backdrop">
+        <div id="login-slideout-panel" class="slideout-panel auth-slideout">
+            <div class="slideout-header">
+                <h2>Welcome Back</h2>
+                <button type="button" class="slideout-close" id="login-close-btn">&times;</button>
+            </div>
+            <div class="slideout-body">
+                <div class="auth-logo">
+                    <img src="logo-clean.svg" alt="Afraponix Go Logo" class="logo-image">
+                    <h2 class="auth-title">Login to Afraponix Go</h2>
+                    <p class="auth-subtitle">Welcome back! Please sign in to your account</p>
                 </div>
                 
-                <form id="login-form-element" class="auth-form-content">
+                <form id="login-form-element" class="slideout-form">
                     <div class="form-field">
                         <label for="login-username" class="form-label">
                             <img src="icons/new-icons/Afraponix Go Icons_user.svg" alt="User" class="label-icon-svg">
@@ -2139,7 +2513,7 @@
                         </div>
                     </div>
                     
-                    <button type="submit" class="btn btn-primary auth-submit-btn">
+                    <button type="submit" class="auth-submit-btn">
                         <img src="icons/new-icons/Afraponix Go Icons_sign in.svg" alt="Login" class="btn-icon-svg">
                         Sign In
                     </button>
@@ -2159,85 +2533,165 @@
                     </div>
                 </form>
             </div>
+        </div>
+    </div>
 
-            <!-- Register Form -->
-            <div id="register-form" class="auth-form" style="display: none;">
-                <div class="auth-header">
+    <!-- Registration Slide-out Panel -->
+    <div id="register-slideout-backdrop" class="slideout-backdrop">
+        <div id="register-slideout-panel" class="slideout-panel auth-slideout">
+            <div class="slideout-header">
+                <h2>Create Account</h2>
+                <button type="button" class="slideout-close" id="register-close-btn">&times;</button>
+            </div>
+            <div class="slideout-body">
+                <!-- Registration Step 1: Account Details -->
+                <div id="register-step-1" class="registration-step">
                     <div class="auth-logo">
-                        <div class="logo-icon">
-                            <img src="logo-clean.svg" alt="Afraponix Go Logo" class="logo-image">
-                        </div>
-                        <h2 class="heading-2 auth-title">Create Afraponix Go Account</h2>
+                        <img src="logo-clean.svg" alt="Afraponix Go Logo" class="logo-image">
+                        <h2 class="auth-title">Create Afraponix Go Account</h2>
+                        <p class="auth-subtitle">Join the future of aquaponics management</p>
                     </div>
-                    <p class="auth-subtitle text-muted">Join the future of aquaponics management</p>
+                    
+                    <form id="register-form-element" class="slideout-form">
+                        <div class="name-fields-container">
+                            <div class="form-field">
+                                <input type="text" id="register-first-name" class="form-input" placeholder="First Name" required>
+                            </div>
+                            <div class="form-field">
+                                <input type="text" id="register-last-name" class="form-input" placeholder="Last Name" required>
+                            </div>
+                        </div>
+                        <div class="form-field">
+                            <div class="username-input-container">
+                                <input type="text" id="register-username" class="form-input" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]+" placeholder="Username (3-20 characters, letters, numbers, underscore)">
+                                <div class="username-status" id="username-status" style="display: none;">
+                                    <span class="status-icon"></span>
+                                    <span class="status-text"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-field">
+                            <input type="email" id="register-email" class="form-input" placeholder="Email Address" required>
+                        </div>
+                        <div class="form-field">
+                            <div class="password-input-container">
+                                <input type="password" id="register-password" class="form-input" required minlength="8" placeholder="Password (at least 8 characters)">
+                                <button type="button" class="password-toggle" onclick="app.togglePasswordVisibility('register-password')" aria-label="Toggle password visibility">
+                                    <img src="icons/new-icons/Afraponix Go Icons_view.svg" alt="Show" class="password-toggle-icon">
+                                </button>
+                            </div>
+                            <div id="password-strength" class="password-strength">
+                                <div class="strength-bar">
+                                    <div class="strength-fill"></div>
+                                </div>
+                                <div class="strength-text">Password strength: <span id="strength-level">Weak</span></div>
+                            </div>
+                            <div class="password-requirements">
+                                <div class="requirement" id="req-length">
+                                    <span class="req-icon">✗</span> At least 8 characters
+                                </div>
+                                <div class="requirement" id="req-uppercase">
+                                    <span class="req-icon">✗</span> One uppercase letter
+                                </div>
+                                <div class="requirement" id="req-lowercase">
+                                    <span class="req-icon">✗</span> One lowercase letter
+                                </div>
+                                <div class="requirement" id="req-number">
+                                    <span class="req-icon">✗</span> One number
+                                </div>
+                                <div class="requirement" id="req-special">
+                                    <span class="req-icon">✗</span> One special character (!@#$%^&*)
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-field">
+                            <div class="password-input-container">
+                                <input type="password" id="register-confirm-password" class="form-input" required placeholder="Confirm Password">
+                                <button type="button" class="password-toggle" onclick="app.togglePasswordVisibility('register-confirm-password')" aria-label="Toggle password visibility">
+                                    <img src="icons/new-icons/Afraponix Go Icons_view.svg" alt="Show" class="password-toggle-icon">
+                                </button>
+                            </div>
+                            <div id="password-match" class="password-match" style="display: none;">
+                                <span class="match-icon">✗</span> <span class="match-text">Passwords do not match</span>
+                            </div>
+                        </div>
+                        <button type="submit" class="auth-submit-btn">
+                            <img src="icons/new-icons/Afraponix Go Icons_user.svg" alt="Create" class="btn-icon-svg">
+                            Create Account
+                        </button>
+                        
+                        <div class="auth-divider">
+                            <span class="divider-text">or</span>
+                        </div>
+                        
+                        <div class="auth-actions">
+                            <p class="auth-switch">
+                                Already have an account? 
+                                <a href="#" id="show-login" class="auth-link">Sign in</a>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Registration Step 2: Email Verification -->
+                <div id="register-step-2" class="registration-step verification-step" style="display: none;">
+                    <h3>Verify Your Email</h3>
+                    <p>We've sent both a verification code and a link to <strong id="verification-email-display"></strong>. You can use either method to verify your account.</p>
+                    
+                    <div class="verification-methods">
+                        <h4>Option 1: Enter Verification Code</h4>
+                        <div class="verification-code-input">
+                            <input type="text" class="code-digit" maxlength="1" id="code-1">
+                            <input type="text" class="code-digit" maxlength="1" id="code-2">
+                            <input type="text" class="code-digit" maxlength="1" id="code-3">
+                            <input type="text" class="code-digit" maxlength="1" id="code-4">
+                            <input type="text" class="code-digit" maxlength="1" id="code-5">
+                            <input type="text" class="code-digit" maxlength="1" id="code-6">
+                        </div>
+                        
+                        <div class="verification-actions">
+                            <button type="button" class="verify-btn" id="verify-code-btn">Verify Code</button>
+                            <button type="button" class="resend-btn" id="resend-code-btn">Resend Code</button>
+                        </div>
+                        
+                        <div class="auth-divider">
+                            <span class="divider-text">or</span>
+                        </div>
+                        
+                        <h4>Option 2: Check Your Email</h4>
+                        <p>Click the verification link in the email we sent you to instantly verify your account.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Slide-out Panel -->
+    <div id="forgot-password-slideout-backdrop" class="slideout-backdrop">
+        <div id="forgot-password-slideout-panel" class="slideout-panel auth-slideout">
+            <div class="slideout-header">
+                <h2>Reset Password</h2>
+                <button type="button" class="slideout-close" id="forgot-password-close-btn">&times;</button>
+            </div>
+            <div class="slideout-body">
+                <div class="auth-logo">
+                    <img src="logo-clean.svg" alt="Afraponix Go Logo" class="logo-image">
+                    <h2 class="auth-title">Reset Password</h2>
+                    <p class="auth-subtitle">Enter your email address and we'll send you a reset link</p>
                 </div>
                 
-                <form id="register-form-element" class="auth-form-content">
-                    <div class="name-fields-container">
-                        <div class="form-field name-field">
-                            <input type="text" id="register-first-name" class="form-input" placeholder="First Name" required>
-                        </div>
-                        <div class="form-field name-field">
-                            <input type="text" id="register-last-name" class="form-input" placeholder="Last Name" required>
-                        </div>
-                    </div>
+                <form id="forgot-password-form-element" class="slideout-form">
                     <div class="form-field">
-                        <div class="username-input-container">
-                            <input type="text" id="register-username" class="form-input" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]+" placeholder="Username (3-20 characters, letters, numbers, underscore)">
-                            <div class="username-status" id="username-status" style="display: none;">
-                                <span class="status-icon"></span>
-                                <span class="status-text"></span>
-                            </div>
-                        </div>
+                        <label for="forgot-email" class="form-label">
+                            <img src="icons/new-icons/Afraponix Go Icons_email.svg" alt="Email" class="label-icon-svg">
+                            Email Address
+                        </label>
+                        <input type="email" id="forgot-email" class="form-input" placeholder="Enter your email address" required>
                     </div>
-                    <div class="form-field">
-                        <input type="email" id="register-email" class="form-input" placeholder="Email Address" required>
-                    </div>
-                    <div class="form-field">
-                        <div class="password-input-container">
-                            <input type="password" id="register-password" class="form-input" required minlength="8" placeholder="Password (at least 8 characters)">
-                            <button type="button" class="password-toggle" onclick="app.togglePasswordVisibility('register-password')" aria-label="Toggle password visibility">
-                                <img src="icons/new-icons/Afraponix Go Icons_view.svg" alt="Show" class="password-toggle-icon">
-                            </button>
-                        </div>
-                        <div id="password-strength" class="password-strength">
-                            <div class="strength-bar">
-                                <div class="strength-fill"></div>
-                            </div>
-                            <div class="strength-text">Password strength: <span id="strength-level">Weak</span></div>
-                        </div>
-                        <div class="password-requirements">
-                            <div class="requirement" id="req-length">
-                                <span class="req-icon">✗</span> At least 8 characters
-                            </div>
-                            <div class="requirement" id="req-uppercase">
-                                <span class="req-icon">✗</span> One uppercase letter
-                            </div>
-                            <div class="requirement" id="req-lowercase">
-                                <span class="req-icon">✗</span> One lowercase letter
-                            </div>
-                            <div class="requirement" id="req-number">
-                                <span class="req-icon">✗</span> One number
-                            </div>
-                            <div class="requirement" id="req-special">
-                                <span class="req-icon">✗</span> One special character (!@#$%^&*)
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-field">
-                        <div class="password-input-container">
-                            <input type="password" id="register-confirm-password" class="form-input" required placeholder="Confirm Password">
-                            <button type="button" class="password-toggle" onclick="app.togglePasswordVisibility('register-confirm-password')" aria-label="Toggle password visibility">
-                                <img src="icons/new-icons/Afraponix Go Icons_view.svg" alt="Show" class="password-toggle-icon">
-                            </button>
-                        </div>
-                        <div id="password-match" class="password-match" style="display: none;">
-                            <span class="match-icon">✗</span> <span class="match-text">Passwords do not match</span>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary auth-submit-btn">
-                        <img src="icons/new-icons/Afraponix Go Icons_user.svg" alt="Create" class="btn-icon-svg">
-                        Create Account
+                    
+                    <button type="submit" class="auth-submit-btn">
+                        <img src="icons/new-icons/Afraponix Go Icons_email.svg" alt="Send" class="btn-icon-svg">
+                        Send Reset Link
                     </button>
                     
                     <div class="auth-divider">
@@ -2246,27 +2700,10 @@
                     
                     <div class="auth-actions">
                         <p class="auth-switch">
-                            Already have an account? 
-                            <a href="#" id="show-login" class="auth-link">Sign in here</a>
+                            Remember your password? 
+                            <a href="#" id="back-to-login" class="auth-link">Back to Login</a>
                         </p>
                     </div>
-                </form>
-            </div>
-
-            <!-- Forgot Password Form -->
-            <div id="forgot-password-form" class="auth-form" style="display: none;">
-                <h2 class="heading-2">Reset Your Password</h2>
-                <p style="color: #666; margin-bottom: 1rem;">Enter your email address and we'll send you a link to reset your password.</p>
-                <form id="forgot-password-form-element">
-                    <div class="form-field">
-                        <label for="forgot-email">Email Address:</label>
-                        <input type="email" id="forgot-email" required>
-                    </div>
-                    <button type="submit" class="form-btn">Send Reset Link</button>
-                    <p class="auth-switch">
-                        Remember your password? 
-                        <a href="#" id="show-login-from-forgot">Back to Login</a>
-                    </p>
                 </form>
             </div>
         </div>
@@ -2911,6 +3348,48 @@
                         <div class="loading-step" id="step-complete">
                             <img src="icons/new-icons/Afraponix Go Icons_success.svg" alt="" class="step-icon">
                             Finalizing demo system...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Capture Save Modal -->
+    <div id="data-save-modal" class="modal">
+        <div class="modal-content save-modal">
+            <div class="modal-header">
+                <h2 class="heading-2">Saving Data</h2>
+            </div>
+            <div class="modal-body">
+                <div class="save-content">
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="save-progress-fill"></div>
+                        </div>
+                        <div class="progress-text" id="save-progress-text">Preparing data...</div>
+                    </div>
+                    
+                    <div class="save-details" id="save-loading-details">
+                        <div class="save-step" id="save-step-validate">
+                            <img src="icons/new-icons/Afraponix Go Icons_success.svg" alt="" class="step-icon">
+                            Validating form data...
+                        </div>
+                        <div class="save-step" id="save-step-process">
+                            <img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="" class="step-icon">
+                            Processing information...
+                        </div>
+                        <div class="save-step" id="save-step-save">
+                            <img src="icons/new-icons/Afraponix Go Icons_sensor data.svg" alt="" class="step-icon">
+                            Saving to database...
+                        </div>
+                        <div class="save-step" id="save-step-refresh">
+                            <img src="icons/new-icons/Afraponix Go Icons_growth.svg" alt="" class="step-icon">
+                            Refreshing displays...
+                        </div>
+                        <div class="save-step" id="save-step-complete">
+                            <img src="icons/new-icons/Afraponix Go Icons_success.svg" alt="" class="step-icon">
+                            Save complete!
                         </div>
                     </div>
                 </div>

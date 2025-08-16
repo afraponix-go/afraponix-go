@@ -9,33 +9,27 @@ router.use(authenticateToken);
 // Get credentials for a system
 router.get('/system/:systemId', async (req, res) => {
     const { systemId } = req.params;
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
 
         // Verify system ownership
-        const [systemRows] = await connection.execute(
+        const [systemRows] = await pool.execute(
             'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
             [systemId, req.user.userId]
         );
 
-        if (systemRows.length === 0) {
-            await connection.end();
-            return res.status(404).json({ error: 'System not found or access denied' });
+        if (systemRows.length === 0) {            return res.status(404).json({ error: 'System not found or access denied' });
         }
 
         // Get system credentials (without decrypting for security)
-        const [credentialRows] = await connection.execute(
+        const [credentialRows] = await pool.execute(
             'SELECT id, service_name, api_url FROM system_credentials WHERE system_id = ?', 
             [systemId]
-        );
-
-        await connection.end();
-        res.json({ credentials: credentialRows || [] });
+        );        res.json({ credentials: credentialRows || [] });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching credentials:', error);
         res.status(500).json({ error: 'Failed to fetch credentials' });
     }
@@ -49,20 +43,18 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: 'Required fields missing' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
 
         // Verify system ownership
-        const [systemRows] = await connection.execute(
+        const [systemRows] = await pool.execute(
             'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
             [system_id, req.user.userId]
         );
 
-        if (systemRows.length === 0) {
-            await connection.end();
-            return res.status(404).json({ error: 'System not found or access denied' });
+        if (systemRows.length === 0) {            return res.status(404).json({ error: 'System not found or access denied' });
         }
 
         // Encrypt credentials
@@ -70,14 +62,14 @@ router.post('/', async (req, res) => {
         const encryptedPassword = CredentialEncryption.encrypt(password);
 
         // Check if credentials already exist for this system/service
-        const [existingRows] = await connection.execute(
+        const [existingRows] = await pool.execute(
             'SELECT id FROM system_credentials WHERE system_id = ? AND service_name = ?', 
             [system_id, service_name]
         );
 
         if (existingRows.length > 0) {
             // Update existing credentials
-            await connection.execute(
+            await pool.execute(
                 `UPDATE system_credentials SET 
                     api_url = ?, username_encrypted = ?, password_encrypted = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE system_id = ? AND service_name = ?`, 
@@ -85,22 +77,18 @@ router.post('/', async (req, res) => {
             );
         } else {
             // Insert new credentials
-            await connection.execute(
+            await pool.execute(
                 `INSERT INTO system_credentials 
                     (system_id, service_name, api_url, username_encrypted, password_encrypted) 
                     VALUES (?, ?, ?, ?, ?)`, 
                 [system_id, service_name, api_url, encryptedUsername, encryptedPassword]
             );
-        }
-
-        await connection.end();
-        res.status(201).json({ 
+        }        res.status(201).json({ 
             message: 'Credentials saved successfully',
             service: service_name
         });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error saving credentials:', error);
         res.status(500).json({ error: 'Failed to save credentials' });
     }
@@ -109,37 +97,31 @@ router.post('/', async (req, res) => {
 // Get decrypted credentials for internal use (used by sensor collector)
 router.get('/internal/:systemId/:serviceName', async (req, res) => {
     const { systemId, serviceName } = req.params;
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
 
         // Get encrypted credentials
-        const [credentialRows] = await connection.execute(
+        const [credentialRows] = await pool.execute(
             'SELECT * FROM system_credentials WHERE system_id = ? AND service_name = ?', 
             [systemId, serviceName]
         );
 
-        if (credentialRows.length === 0) {
-            await connection.end();
-            return res.status(404).json({ error: 'Credentials not found' });
+        if (credentialRows.length === 0) {            return res.status(404).json({ error: 'Credentials not found' });
         }
 
         const credentials = credentialRows[0];
 
         // Decrypt credentials
         const decryptedUsername = CredentialEncryption.decrypt(credentials.username_encrypted);
-        const decryptedPassword = CredentialEncryption.decrypt(credentials.password_encrypted);
-
-        await connection.end();
-        res.json({ 
+        const decryptedPassword = CredentialEncryption.decrypt(credentials.password_encrypted);        res.json({ 
             api_url: credentials.api_url,
             username: decryptedUsername,
             password: decryptedPassword
         });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching decrypted credentials:', error);
         res.status(500).json({ error: 'Failed to fetch credentials' });
     }
@@ -148,31 +130,27 @@ router.get('/internal/:systemId/:serviceName', async (req, res) => {
 // Test ThingsBoard credentials status
 router.get('/thingsboard/status/:systemId', async (req, res) => {
     const { systemId } = req.params;
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
 
         // Verify system ownership
-        const [systemRows] = await connection.execute(
+        const [systemRows] = await pool.execute(
             'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
             [systemId, req.user.userId]
         );
 
-        if (systemRows.length === 0) {
-            await connection.end();
-            return res.status(404).json({ error: 'System not found or access denied' });
+        if (systemRows.length === 0) {            return res.status(404).json({ error: 'System not found or access denied' });
         }
 
         // Get ThingsBoard credentials
-        const [credentialRows] = await connection.execute(
+        const [credentialRows] = await pool.execute(
             'SELECT * FROM system_credentials WHERE system_id = ? AND service_name = ?', 
             [systemId, 'thingsboard']
         );
 
-        if (credentialRows.length === 0 || !credentialRows[0].username_encrypted || !credentialRows[0].password_encrypted) {
-            await connection.end();
-            return res.json({ 
+        if (credentialRows.length === 0 || !credentialRows[0].username_encrypted || !credentialRows[0].password_encrypted) {            return res.json({ 
                 configured: false, 
                 connected: false, 
                 message: 'ThingsBoard credentials not configured'
@@ -197,19 +175,14 @@ router.get('/thingsboard/status/:systemId', async (req, res) => {
                 headers: {
                     'User-Agent': 'Afraponix-Go/1.0'
                 }
-            });
-
-            await connection.end();
-            return res.json({
+            });            return res.json({
                 configured: true,
                 connected: true,
                 message: 'ThingsBoard connection successful',
                 api_url: apiUrl
             });
 
-        } catch (authError) {
-            await connection.end();
-            let errorMessage = 'Unknown connection error';
+        } catch (authError) {            let errorMessage = 'Unknown connection error';
             
             if (authError.code === 'ECONNREFUSED') {
                 errorMessage = 'Connection refused - server may be down or blocking connections';
@@ -238,7 +211,6 @@ router.get('/thingsboard/status/:systemId', async (req, res) => {
         }
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error checking ThingsBoard status:', error);
         res.status(500).json({ error: 'Failed to check ThingsBoard status' });
     }
@@ -247,31 +219,27 @@ router.get('/thingsboard/status/:systemId', async (req, res) => {
 // Get available ThingsBoard devices
 router.get('/thingsboard/devices/:systemId', async (req, res) => {
     const { systemId } = req.params;
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
 
         // Verify system ownership
-        const [systemRows] = await connection.execute(
+        const [systemRows] = await pool.execute(
             'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
             [systemId, req.user.userId]
         );
 
-        if (systemRows.length === 0) {
-            await connection.end();
-            return res.status(404).json({ error: 'System not found or access denied' });
+        if (systemRows.length === 0) {            return res.status(404).json({ error: 'System not found or access denied' });
         }
 
         // Get ThingsBoard credentials and authenticate
-        const [credentialRows] = await connection.execute(
+        const [credentialRows] = await pool.execute(
             'SELECT * FROM system_credentials WHERE system_id = ? AND service_name = ?', 
             [systemId, 'thingsboard']
         );
 
-        if (credentialRows.length === 0) {
-            await connection.end();
-            return res.status(400).json({ error: 'ThingsBoard credentials not configured' });
+        if (credentialRows.length === 0) {            return res.status(400).json({ error: 'ThingsBoard credentials not configured' });
         }
 
         const credentials = credentialRows[0];
@@ -310,13 +278,9 @@ router.get('/thingsboard/devices/:systemId', async (req, res) => {
             name: device.name,
             type: device.type,
             label: device.label
-        }));
-
-        await connection.end();
-        res.json({ devices });
+        }));        res.json({ devices });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching ThingsBoard devices:', error);
         
         let errorMessage = 'Failed to fetch devices from ThingsBoard';
@@ -337,31 +301,27 @@ router.get('/thingsboard/devices/:systemId', async (req, res) => {
 // Get telemetry keys for a specific device
 router.get('/thingsboard/devices/:systemId/:deviceId/telemetry-keys', async (req, res) => {
     const { systemId, deviceId } = req.params;
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
 
         // Verify system ownership
-        const [systemRows] = await connection.execute(
+        const [systemRows] = await pool.execute(
             'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
             [systemId, req.user.userId]
         );
 
-        if (systemRows.length === 0) {
-            await connection.end();
-            return res.status(404).json({ error: 'System not found or access denied' });
+        if (systemRows.length === 0) {            return res.status(404).json({ error: 'System not found or access denied' });
         }
 
         // Get ThingsBoard credentials and authenticate
-        const [credentialRows] = await connection.execute(
+        const [credentialRows] = await pool.execute(
             'SELECT * FROM system_credentials WHERE system_id = ? AND service_name = ?', 
             [systemId, 'thingsboard']
         );
 
-        if (credentialRows.length === 0) {
-            await connection.end();
-            return res.status(400).json({ error: 'ThingsBoard credentials not configured' });
+        if (credentialRows.length === 0) {            return res.status(400).json({ error: 'ThingsBoard credentials not configured' });
         }
 
         const credentials = credentialRows[0];
@@ -384,13 +344,9 @@ router.get('/thingsboard/devices/:systemId/:deviceId/telemetry-keys', async (req
             headers: {
                 'X-Authorization': `Bearer ${token}`
             }
-        });
-
-        await connection.end();
-        res.json({ telemetryKeys: keysResponse.data });
+        });        res.json({ telemetryKeys: keysResponse.data });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching telemetry keys:', error);
         
         let errorMessage = 'Failed to fetch telemetry keys from ThingsBoard';
@@ -411,13 +367,13 @@ router.get('/thingsboard/devices/:systemId/:deviceId/telemetry-keys', async (req
 // Delete credentials
 router.delete('/:credentialId', async (req, res) => {
     const { credentialId } = req.params;
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
 
         // Verify credential ownership through system ownership
-        const [credentialRows] = await connection.execute(
+        const [credentialRows] = await pool.execute(
             `SELECT sc.*, s.user_id 
                 FROM system_credentials sc 
                 JOIN systems s ON sc.system_id = s.id 
@@ -425,22 +381,16 @@ router.delete('/:credentialId', async (req, res) => {
             [credentialId, req.user.userId]
         );
 
-        if (credentialRows.length === 0) {
-            await connection.end();
-            return res.status(404).json({ error: 'Credential not found or access denied' });
+        if (credentialRows.length === 0) {            return res.status(404).json({ error: 'Credential not found or access denied' });
         }
 
         // Delete credential
-        await connection.execute(
+        await pool.execute(
             'DELETE FROM system_credentials WHERE id = ?', 
             [credentialId]
-        );
-
-        await connection.end();
-        res.json({ message: 'Credentials deleted successfully' });
+        );        res.json({ message: 'Credentials deleted successfully' });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error deleting credentials:', error);
         res.status(500).json({ error: 'Failed to delete credentials' });
     }

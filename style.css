@@ -930,8 +930,8 @@ main {
     text-align: center;
     transition: transform 0.2s ease;
     border: 1px solid #f0f0f0;
-    max-height: 200px;
-    overflow: hidden;
+    min-height: 220px;
+    overflow: visible;
 }
 
 .chart-card canvas {

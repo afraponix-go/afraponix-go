@@ -9,16 +9,16 @@ router.use(authenticateToken);
 // Get spray programmes for a system
 router.get('/', async (req, res) => {
     const { system_id } = req.query;
-    let connection;
+    // Using connection pool - no manual connection management
 
     if (!system_id) {
         return res.status(400).json({ error: 'System ID is required' });
     }
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        const [programmes] = await connection.execute(`
+        const [programmes] = await pool.execute(`
             SELECT 
                 sp.*,
                 CASE 
@@ -60,13 +60,9 @@ router.get('/', async (req, res) => {
             return acc;
         }, {});
         console.log('📊 Spray programmes status distribution:', statusCount);
-        console.log('🔍 Inactive programmes:', transformedProgrammes.filter(p => p.status === 'inactive').map(p => `${p.id}: ${p.product_name}`));
-
-        await connection.end();
-        res.json({ programmes: transformedProgrammes });
+        console.log('🔍 Inactive programmes:', transformedProgrammes.filter(p => p.status === 'inactive').map(p => `${p.id}: ${p.product_name}`));        res.json({ programmes: transformedProgrammes });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching spray programmes:', error);
         
         // Fallback to mock data if database fails
@@ -161,10 +157,10 @@ router.post('/', async (req, res) => {
         });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // Build target field based on category
         let target_field = '';
@@ -182,21 +178,17 @@ router.post('/', async (req, res) => {
         // Build frequency text
         const frequency_text = frequency_days ? `Every ${frequency_days} days` : '';
 
-        const [result] = await connection.execute(`
+        const [result] = await pool.execute(`
             INSERT INTO spray_programmes 
             (system_id, category, product_name, active_ingredient, target_pest, application_rate, frequency, start_date, end_date, notes)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [system_id, category, product_name, active_ingredient, target_field, full_application_rate, frequency_text, start_date, end_date, notes]);
-
-        await connection.end();
-        res.json({ 
+        `, [system_id, category, product_name, active_ingredient, target_field, full_application_rate, frequency_text, start_date, end_date, notes]);        res.json({ 
             success: true, 
             id: result.insertId, 
             message: 'Spray programme created successfully' 
         });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error creating spray programme:', error);
         res.status(500).json({ error: 'Failed to create spray programme' });
     }
@@ -215,23 +207,20 @@ router.post('/record', async (req, res) => {
         effectiveness_rating,
         notes 
     } = req.body;
-    let connection;
+    // Using connection pool - no manual connection management
 
     if (!programme_id || !application_date) {
         return res.status(400).json({ error: 'Programme ID and application date are required' });
     }
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        const [result] = await connection.execute(`
+        const [result] = await pool.execute(`
             INSERT INTO spray_applications 
             (programme_id, application_date, dilution_rate, volume_applied, weather_conditions, effectiveness_rating, notes)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        `, [programme_id, application_date, dilution_rate, volume_applied, weather_conditions, effectiveness_rating, notes]);
-
-        await connection.end();
-        res.json({ 
+        `, [programme_id, application_date, dilution_rate, volume_applied, weather_conditions, effectiveness_rating, notes]);        res.json({ 
             success: true, 
             application_id: result.insertId,
             message: 'Spray application recorded successfully',
@@ -248,7 +237,6 @@ router.post('/record', async (req, res) => {
         });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error recording spray application:', error);
         res.status(500).json({ error: 'Failed to record spray application' });
     }
@@ -267,25 +255,22 @@ router.put('/:id', async (req, res) => {
         end_date,
         notes 
     } = req.body;
-    let connection;
+    // Using connection pool - no manual connection management
 
     if (!id) {
         return res.status(400).json({ error: 'Programme ID is required' });
     }
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        await connection.execute(`
+        await pool.execute(`
             UPDATE spray_programmes 
             SET product_name = ?, active_ingredient = ?, target_pest = ?, 
                 application_rate = ?, frequency = ?, start_date = ?, 
                 end_date = ?, notes = ?
             WHERE id = ?
-        `, [product_name, active_ingredient, target_pest, application_rate, frequency, start_date, end_date, notes, id]);
-
-        await connection.end();
-        res.json({ 
+        `, [product_name, active_ingredient, target_pest, application_rate, frequency, start_date, end_date, notes, id]);        res.json({ 
             success: true, 
             message: 'Spray programme updated successfully',
             data: {
@@ -303,7 +288,6 @@ router.put('/:id', async (req, res) => {
         });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error updating spray programme:', error);
         res.status(500).json({ error: 'Failed to update spray programme' });
     }
@@ -312,30 +296,27 @@ router.put('/:id', async (req, res) => {
 // Delete spray programme
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
-    let connection;
+    // Using connection pool - no manual connection management
 
     if (!id) {
         return res.status(400).json({ error: 'Programme ID is required' });
     }
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // Mark programme as inactive instead of deleting it (preserves history)
-        await connection.execute('UPDATE spray_programmes SET status = ?, end_date = ? WHERE id = ?', 
+        await pool.execute('UPDATE spray_programmes SET status = ?, end_date = ? WHERE id = ?', 
             ['inactive', new Date().toISOString().split('T')[0], id]);
 
         // Keep spray_applications intact - this preserves the history
         // Only the programme is marked as inactive, stopping future applications
-
-        await connection.end();
         res.json({ 
             success: true, 
             message: 'Spray programme removed from schedule (history preserved)'
         });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error deleting spray programme:', error);
         res.status(500).json({ error: 'Failed to delete spray programme' });
     }
@@ -387,31 +368,27 @@ router.get('/calendar', async (req, res) => {
 // Get application history for a spray programme
 router.get('/:id/history', async (req, res) => {
     const { id } = req.params;
-    let connection;
+    // Using connection pool - no manual connection management
 
     if (!id) {
         return res.status(400).json({ error: 'Programme ID is required' });
     }
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        const [history] = await connection.execute(`
+        const [history] = await pool.execute(`
             SELECT sa.*, sp.product_name, sp.category
             FROM spray_applications sa
             JOIN spray_programmes sp ON sa.programme_id = sp.id
             WHERE sp.id = ?
             ORDER BY sa.application_date DESC
-        `, [id]);
-
-        await connection.end();
-        res.json({ 
+        `, [id]);        res.json({ 
             programme_id: id,
             applications: history 
         });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching spray programme history:', error);
         res.status(500).json({ error: 'Failed to fetch spray programme history' });
     }
@@ -420,27 +397,25 @@ router.get('/:id/history', async (req, res) => {
 // Create default spray programmes for a new system
 router.post('/create-defaults', async (req, res) => {
     const { system_id, force } = req.body;
-    let connection;
+    // Using connection pool - no manual connection management
 
     if (!system_id) {
         return res.status(400).json({ error: 'System ID is required' });
     }
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // Check if system already has spray programmes
-        const [existingRows] = await connection.execute('SELECT COUNT(*) as count FROM spray_programmes WHERE system_id = ?', [system_id]);
+        const [existingRows] = await pool.execute('SELECT COUNT(*) as count FROM spray_programmes WHERE system_id = ?', [system_id]);
         const existingProgrammes = existingRows[0].count;
 
-        if (existingProgrammes > 0 && !force) {
-            await connection.end();
-            return res.json({ message: 'System already has spray programmes', created: 0 });
+        if (existingProgrammes > 0 && !force) {            return res.json({ message: 'System already has spray programmes', created: 0 });
         }
 
         // If force flag is set, delete existing programmes first
         if (force && existingProgrammes > 0) {
-            await connection.execute('DELETE FROM spray_programmes WHERE system_id = ?', [system_id]);
+            await pool.execute('DELETE FROM spray_programmes WHERE system_id = ?', [system_id]);
             console.log('Deleted existing programmes for system:', system_id);
         }
 
@@ -643,24 +618,20 @@ router.post('/create-defaults', async (req, res) => {
         // Insert all default programmes
         let createdCount = 0;
         for (const programme of defaultProgrammes) {
-            await connection.execute(`
+            await pool.execute(`
                 INSERT INTO spray_programmes 
                 (system_id, category, product_name, active_ingredient, target_pest, application_rate, frequency, notes)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `, [system_id, programme.category, programme.product_name, programme.active_ingredient, 
                 programme.target_pest, programme.application_rate, programme.frequency, programme.notes]);
             createdCount++;
-        }
-
-        await connection.end();
-        res.json({ 
+        }        res.json({ 
             success: true, 
             message: `${createdCount} default spray programmes created successfully`,
             created: createdCount
         });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error creating default spray programmes:', error);
         res.status(500).json({ error: 'Failed to create default spray programmes' });
     }

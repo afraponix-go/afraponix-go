@@ -9,21 +9,17 @@ router.use(authenticateToken);
 
 // Get all systems for authenticated user
 router.get('/', async (req, res) => {
-    let connection;
-
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
 
-        const [systems] = await connection.execute(
+        const [systems] = await pool.execute(
             'SELECT * FROM systems WHERE user_id = ? ORDER BY created_at DESC', 
             [req.user.userId]
         );
 
-        await connection.end();
         res.json(systems);
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching systems:', error);
         res.status(500).json({ error: 'Failed to fetch systems' });
     }
@@ -31,17 +27,13 @@ router.get('/', async (req, res) => {
 
 // Get specific system
 router.get('/:id', async (req, res) => {
-    let connection;
-
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
 
-        const [systemRows] = await connection.execute(
+        const [systemRows] = await pool.execute(
             'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
             [req.params.id, req.user.userId]
         );
-
-        await connection.end();
 
         if (systemRows.length === 0) {
             return res.status(404).json({ error: 'System not found' });
@@ -50,7 +42,6 @@ router.get('/:id', async (req, res) => {
         res.json(systemRows[0]);
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching system:', error);
         res.status(500).json({ error: 'Failed to fetch system' });
     }
@@ -74,12 +65,10 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: 'System ID and name are required' });
     }
 
-    let connection;
-
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        const [result] = await connection.execute(`INSERT INTO systems 
+        const [result] = await pool.execute(`INSERT INTO systems 
             (id, user_id, system_name, system_type, fish_type, fish_tank_count, total_fish_volume, grow_bed_count, total_grow_volume, total_grow_area) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
             [id, req.user.userId, system_name, system_type || 'media-bed', fish_type || 'tilapia',
@@ -88,14 +77,12 @@ router.post('/', async (req, res) => {
         );
 
         // Return the created system
-        const [createdSystemRows] = await connection.execute('SELECT * FROM systems WHERE id = ?', [id]);
+        const [createdSystemRows] = await pool.execute('SELECT * FROM systems WHERE id = ?', [id]);
         const createdSystem = createdSystemRows[0];
 
-        await connection.end();
         res.status(201).json(createdSystem);
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error creating system:', error);
         if (error.code === 'ER_DUP_ENTRY') {
             res.status(400).json({ error: 'System ID already exists' });
@@ -159,28 +146,23 @@ router.put('/:id', async (req, res) => {
         return res.status(400).json({ error: 'No fields to update' });
     }
 
-    let connection;
-
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         const query = `UPDATE systems SET ${updateFields.join(', ')} WHERE id = ? AND user_id = ?`;
-        const [result] = await connection.execute(query, [...updateValues, req.params.id, req.user.userId]);
+        const [result] = await pool.execute(query, [...updateValues, req.params.id, req.user.userId]);
 
         if (result.affectedRows === 0) {
-            await connection.end();
             return res.status(404).json({ error: 'System not found' });
         }
 
         // Return the updated system
-        const [updatedSystemRows] = await connection.execute('SELECT * FROM systems WHERE id = ?', [req.params.id]);
+        const [updatedSystemRows] = await pool.execute('SELECT * FROM systems WHERE id = ?', [req.params.id]);
         const updatedSystem = updatedSystemRows[0];
 
-        await connection.end();
         res.json(updatedSystem);
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error updating system:', error);
         res.status(500).json({ error: 'Failed to update system' });
     }
@@ -310,47 +292,42 @@ router.post('/create-demo', async (req, res) => {
 
 // Delete system
 router.delete('/:id', async (req, res) => {
-    let connection;
-
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
         // First verify the system exists and belongs to the user
-        const [systemRows] = await connection.execute('SELECT * FROM systems WHERE id = ? AND user_id = ?', 
+        const [systemRows] = await pool.execute('SELECT * FROM systems WHERE id = ? AND user_id = ?', 
             [req.params.id, req.user.userId]);
         const system = systemRows[0];
 
         if (!system) {
-            await connection.end();
             return res.status(404).json({ error: 'System not found' });
         }
 
         // Delete all related data in the correct order (to handle foreign key constraints)
         
         // Delete plant allocations
-        await connection.execute('DELETE FROM plant_allocations WHERE system_id = ?', [req.params.id]);
+        await pool.execute('DELETE FROM plant_allocations WHERE system_id = ?', [req.params.id]);
 
         // Delete nutrient readings (consolidated table)
-        await connection.execute('DELETE FROM nutrient_readings WHERE system_id = ?', [req.params.id]);
+        await pool.execute('DELETE FROM nutrient_readings WHERE system_id = ?', [req.params.id]);
 
         // Delete plant growth records
-        await connection.execute('DELETE FROM plant_growth WHERE system_id = ?', [req.params.id]);
+        await pool.execute('DELETE FROM plant_growth WHERE system_id = ?', [req.params.id]);
 
         // Delete fish health records
-        await connection.execute('DELETE FROM fish_health WHERE system_id = ?', [req.params.id]);
+        await pool.execute('DELETE FROM fish_health WHERE system_id = ?', [req.params.id]);
 
         // Delete grow beds
-        await connection.execute('DELETE FROM grow_beds WHERE system_id = ?', [req.params.id]);
+        await pool.execute('DELETE FROM grow_beds WHERE system_id = ?', [req.params.id]);
 
         // Finally delete the system itself
-        await connection.execute('DELETE FROM systems WHERE id = ? AND user_id = ?', 
+        await pool.execute('DELETE FROM systems WHERE id = ? AND user_id = ?', 
             [req.params.id, req.user.userId]);
 
-        await connection.end();
         res.json({ message: 'System and all related data deleted successfully' });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error deleting system:', error);
         res.status(500).json({ error: 'Failed to delete system' });
     }

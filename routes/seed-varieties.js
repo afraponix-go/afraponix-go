@@ -8,21 +8,17 @@ router.use(authenticateToken);
 // Get seed varieties for a specific crop type
 router.get('/crop/:cropType', async (req, res) => {
     const { cropType } = req.params;
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        const [varieties] = await connection.execute(
+        const [varieties] = await pool.execute(
             'SELECT * FROM seed_varieties WHERE crop_type = ? ORDER BY variety_name ASC',
             [cropType]
-        );
-
-        await connection.end();
-        res.json({ varieties });
+        );        res.json({ varieties });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching seed varieties:', error);
         res.status(500).json({ error: 'Failed to fetch seed varieties' });
     }
@@ -30,12 +26,12 @@ router.get('/crop/:cropType', async (req, res) => {
 
 // Get all seed varieties grouped by crop type
 router.get('/', async (req, res) => {
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        const [varieties] = await connection.execute(
+        const [varieties] = await pool.execute(
             'SELECT * FROM seed_varieties ORDER BY crop_type ASC, variety_name ASC'
         );
 
@@ -46,13 +42,9 @@ router.get('/', async (req, res) => {
             }
             acc[variety.crop_type].push(variety);
             return acc;
-        }, {});
-
-        await connection.end();
-        res.json({ varieties: grouped });
+        }, {});        res.json({ varieties: grouped });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error fetching all seed varieties:', error);
         res.status(500).json({ error: 'Failed to fetch seed varieties' });
     }
@@ -66,18 +58,15 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: 'Crop type and variety name are required' });
     }
 
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        const [result] = await connection.execute(
+        const [result] = await pool.execute(
             'INSERT INTO seed_varieties (crop_type, variety_name) VALUES (?, ?)',
             [crop_type, variety_name]
-        );
-
-        await connection.end();
-        res.status(201).json({ 
+        );        res.status(201).json({ 
             message: 'Seed variety added successfully',
             id: result.insertId,
             crop_type,
@@ -85,8 +74,7 @@ router.post('/', async (req, res) => {
         });
 
     } catch (error) {
-        if (connection) await connection.end();
-        
+        if (connection)        
         if (error.code === 'ER_DUP_ENTRY') {
             res.status(409).json({ 
                 error: `Variety '${variety_name}' already exists for ${crop_type}` 
@@ -101,18 +89,15 @@ router.post('/', async (req, res) => {
 // Delete a seed variety
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
-    let connection;
+    // Using connection pool - no manual connection management
 
     try {
-        connection = await getDatabase();
+        const pool = getDatabase();
         
-        const [result] = await connection.execute(
+        const [result] = await pool.execute(
             'DELETE FROM seed_varieties WHERE id = ?',
             [id]
-        );
-
-        await connection.end();
-        
+        );        
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Seed variety not found' });
         }
@@ -120,7 +105,6 @@ router.delete('/:id', async (req, res) => {
         res.json({ message: 'Seed variety deleted successfully' });
 
     } catch (error) {
-        if (connection) await connection.end();
         console.error('Error deleting seed variety:', error);
         res.status(500).json({ error: 'Failed to delete seed variety' });
     }

@@ -241,9 +241,18 @@ class AquaponicsApp {
         document.getElementById('user-controls').style.display = 'none';
         document.getElementById('system-selector').style.display = 'none';
         
-        // Hide main content until authenticated
+        // Clear any existing notifications when showing landing page
+        this.clearAllNotifications();
+        
+        // Show landing page and hide main content until authenticated
+        document.getElementById('landing-page').style.display = 'block';
         document.querySelector('.mobile-content').style.display = 'none';
-        document.querySelector('.bottom-nav').style.display = 'none';
+        if (document.querySelector('.bottom-nav')) {
+            document.querySelector('.bottom-nav').style.display = 'none';
+        }
+        
+        // Setup landing page button event listeners
+        this.setupLandingPageButtons();
     }
 
     showAppUI() {
@@ -260,9 +269,12 @@ class AquaponicsApp {
             }
         }
         
-        // Show main content
+        // Hide landing page and show main content
+        document.getElementById('landing-page').style.display = 'none';
         document.querySelector('.mobile-content').style.display = 'block';
-        document.querySelector('.bottom-nav').style.display = 'flex';
+        if (document.querySelector('.bottom-nav')) {
+            document.querySelector('.bottom-nav').style.display = 'flex';
+        }
         
         // Ensure dashboard is updated when app UI is shown
         setTimeout(() => {
@@ -417,7 +429,12 @@ class AquaponicsApp {
     showNotification(message, type = 'info', duration = 4000) {
         // Suppress notifications during loading unless it's the success message after loading completes
         if (this.isLoading && !message.includes('Afraponix Go loaded successfully')) {
+            return;
+        }
 
+        // Suppress notifications when landing page is visible (unauthenticated state)
+        const landingPage = document.getElementById('landing-page');
+        if (landingPage && landingPage.style.display === 'block') {
             return;
         }
 
@@ -504,6 +521,16 @@ class AquaponicsApp {
         });
     }
 
+    clearAllNotifications() {
+        const container = document.getElementById('notification-container');
+        if (container) {
+            // Remove all notification elements
+            while (container.firstChild) {
+                container.removeChild(container.firstChild);
+            }
+        }
+    }
+
     showCustomConfirm(title, message, details = []) {
         return new Promise((resolve) => {
             const modal = document.getElementById('confirm-modal');
@@ -585,9 +612,9 @@ class AquaponicsApp {
             // Clear the URL parameter
             window.history.replaceState({}, document.title, window.location.pathname);
             
-            // Show login modal with a message about requesting new verification
+            // Show login panel with a message about requesting new verification
             setTimeout(() => {
-                this.showModal('login');
+                this.showLoginSlideout();
                 this.showNotification('⏰ Your verification link has expired. Please log in to request a new verification email.', 'info', 8000);
             }, 100);
             return;
@@ -996,52 +1023,72 @@ class AquaponicsApp {
         }
         this.authModalSetup = true;
         
-        const modal = document.getElementById('auth-modal');
-        const closeBtn = document.getElementById('close-modal');
+        // Get main auth buttons
         const loginBtn = document.getElementById('login-btn');
         const registerBtn = document.getElementById('register-btn');
         const logoutBtn = document.getElementById('logout-btn');
+        
+        // Get slide-out panel elements
+        const loginCloseBtn = document.getElementById('login-close-btn');
+        const registerCloseBtn = document.getElementById('register-close-btn');
+        const forgotPasswordCloseBtn = document.getElementById('forgot-password-close-btn');
+        
+        // Get form switching links
         const showRegisterLink = document.getElementById('show-register');
         const showLoginLink = document.getElementById('show-login');
         const showForgotPasswordLink = document.getElementById('show-forgot-password');
-        const showLoginFromForgotLink = document.getElementById('show-login-from-forgot');
+        const backToLoginLink = document.getElementById('back-to-login');
+        
+        // Get forms
         const loginForm = document.getElementById('login-form-element');
         const registerForm = document.getElementById('register-form-element');
         const forgotPasswordForm = document.getElementById('forgot-password-form-element');
 
-        // Modal controls
-        loginBtn.addEventListener('click', () => this.showModal('login'));
-        registerBtn.addEventListener('click', () => this.showModal('register'));
+        // Main auth button controls - call slideout functions directly
+        loginBtn.addEventListener('click', () => this.showLoginSlideout());
+        registerBtn.addEventListener('click', () => this.showRegisterSlideout());
         
         if (logoutBtn) {
             logoutBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
-
                 await this.logout();
             });
-
         } else {
             console.error('Logout button not found');
         }
         
-        closeBtn.addEventListener('click', () => this.closeAuthModal());
+        // Close button controls
+        loginCloseBtn.addEventListener('click', () => this.closeLoginSlideout());
+        registerCloseBtn.addEventListener('click', () => this.closeRegisterSlideout());
+        forgotPasswordCloseBtn.addEventListener('click', () => this.closeForgotPasswordSlideout());
         
-        // Form switching
+        // Backdrop click to close (only on backdrop, not panel)
+        const loginBackdrop = document.getElementById('login-slideout-backdrop');
+        const registerBackdrop = document.getElementById('register-slideout-backdrop');
+        const forgotPasswordBackdrop = document.getElementById('forgot-password-slideout-backdrop');
+        
+        // No backdrop click to close for better UX (as requested)
+        
+        // Form switching - transition between panels
         showRegisterLink.addEventListener('click', (e) => {
             e.preventDefault();
-            this.showModal('register');
+            this.closeLoginSlideout();
+            setTimeout(() => this.showRegisterSlideout(), 300);
         });
         showLoginLink.addEventListener('click', (e) => {
             e.preventDefault();
-            this.showModal('login');
+            this.closeRegisterSlideout();
+            setTimeout(() => this.showLoginSlideout(), 300);
         });
         showForgotPasswordLink.addEventListener('click', (e) => {
             e.preventDefault();
-            this.showModal('forgot-password');
+            this.closeLoginSlideout();
+            setTimeout(() => this.showForgotPasswordSlideout(), 300);
         });
-        showLoginFromForgotLink.addEventListener('click', (e) => {
+        backToLoginLink.addEventListener('click', (e) => {
             e.preventDefault();
-            this.showModal('login');
+            this.closeForgotPasswordSlideout();
+            setTimeout(() => this.showLoginSlideout(), 300);
         });
 
         // Form submissions with debounce protection
@@ -1096,41 +1143,356 @@ class AquaponicsApp {
             await this.handleForgotPassword(e);
         });
 
-        // Close modal when clicking outside
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                this.closeAuthModal();
-            }
-        });
+        // Setup verification code functionality
+        this.setupVerificationCode();
     }
 
     showModal(type = 'login') {
-        const modal = document.getElementById('auth-modal');
-        const loginForm = document.getElementById('login-form');
-        const registerForm = document.getElementById('register-form');
-        const forgotPasswordForm = document.getElementById('forgot-password-form');
+        // Close any open slide-out panels first
+        this.closeAllSlideoutPanels();
         
-        // Hide all forms
-        loginForm.style.display = 'none';
-        registerForm.style.display = 'none';
-        forgotPasswordForm.style.display = 'none';
-        
-        // Show the requested form
-        if (type === 'login') {
-            loginForm.style.display = 'block';
-        } else if (type === 'register') {
-            registerForm.style.display = 'block';
+        if (type === 'register') {
+            this.showRegisterSlideout();
         } else if (type === 'forgot-password') {
-            forgotPasswordForm.style.display = 'block';
+            this.showForgotPasswordSlideout();
+        } else {
+            this.showLoginSlideout();
         }
         
-        modal.classList.add('show');
         this.clearMessages();
     }
 
-    closeAuthModal() {
-        document.getElementById('auth-modal').classList.remove('show');
+    // New slide-out panel functions
+    showLoginSlideout() {
+        const backdrop = document.getElementById('login-slideout-backdrop');
+        const panel = document.getElementById('login-slideout-panel');
+        
+        backdrop.classList.add('show');
+        // Small delay for smooth animation
+        setTimeout(() => {
+            panel.classList.add('show');
+        }, 10);
+    }
+
+    showRegisterSlideout() {
+        const backdrop = document.getElementById('register-slideout-backdrop');
+        const panel = document.getElementById('register-slideout-panel');
+        
+        // Reset to step 1
+        document.getElementById('register-step-1').style.display = 'block';
+        document.getElementById('register-step-2').style.display = 'none';
+        
+        backdrop.classList.add('show');
+        setTimeout(() => {
+            panel.classList.add('show');
+        }, 10);
+    }
+
+    showForgotPasswordSlideout() {
+        const backdrop = document.getElementById('forgot-password-slideout-backdrop');
+        const panel = document.getElementById('forgot-password-slideout-panel');
+        
+        backdrop.classList.add('show');
+        setTimeout(() => {
+            panel.classList.add('show');
+        }, 10);
+    }
+
+    closeLoginSlideout() {
+        const backdrop = document.getElementById('login-slideout-backdrop');
+        const panel = document.getElementById('login-slideout-panel');
+        
+        panel.classList.remove('show');
+        setTimeout(() => {
+            backdrop.classList.remove('show');
+        }, 400);
         this.clearMessages();
+    }
+
+    closeRegisterSlideout() {
+        const backdrop = document.getElementById('register-slideout-backdrop');
+        const panel = document.getElementById('register-slideout-panel');
+        
+        panel.classList.remove('show');
+        setTimeout(() => {
+            backdrop.classList.remove('show');
+        }, 400);
+        this.clearMessages();
+    }
+
+    closeForgotPasswordSlideout() {
+        const backdrop = document.getElementById('forgot-password-slideout-backdrop');
+        const panel = document.getElementById('forgot-password-slideout-panel');
+        
+        panel.classList.remove('show');
+        setTimeout(() => {
+            backdrop.classList.remove('show');
+        }, 400);
+        this.clearMessages();
+    }
+
+    closeAllSlideoutPanels() {
+        this.closeLoginSlideout();
+        this.closeRegisterSlideout();
+        this.closeForgotPasswordSlideout();
+    }
+
+    closeAuthModal() {
+        // Updated to work with slide-out panels
+        this.closeAllSlideoutPanels();
+    }
+
+    // Verification code functionality
+    setupVerificationCode() {
+        // Setup verification code input handling
+        const codeInputs = document.querySelectorAll('.code-digit');
+        
+        codeInputs.forEach((input, index) => {
+            input.addEventListener('input', (e) => {
+                // Only allow digits
+                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+                
+                // Move to next input if digit entered
+                if (e.target.value && index < codeInputs.length - 1) {
+                    codeInputs[index + 1].focus();
+                }
+            });
+            
+            input.addEventListener('keydown', (e) => {
+                // Move to previous input on backspace
+                if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                    codeInputs[index - 1].focus();
+                }
+                
+                // Submit on Enter if all fields filled
+                if (e.key === 'Enter') {
+                    this.verifyEmailCode();
+                }
+            });
+            
+            input.addEventListener('paste', (e) => {
+                e.preventDefault();
+                const pastedData = e.clipboardData.getData('text');
+                const digits = pastedData.replace(/[^0-9]/g, '').split('');
+                
+                // Fill inputs with pasted digits
+                digits.forEach((digit, i) => {
+                    if (index + i < codeInputs.length) {
+                        codeInputs[index + i].value = digit;
+                    }
+                });
+                
+                // Focus last filled input or verify if complete
+                if (digits.length >= 6) {
+                    this.verifyEmailCode();
+                } else if (index + digits.length < codeInputs.length) {
+                    codeInputs[index + digits.length].focus();
+                }
+            });
+        });
+        
+        // Setup verification buttons
+        const verifyBtn = document.getElementById('verify-code-btn');
+        const resendBtn = document.getElementById('resend-code-btn');
+        
+        if (verifyBtn) {
+            verifyBtn.addEventListener('click', () => this.verifyEmailCode());
+        }
+        
+        if (resendBtn) {
+            resendBtn.addEventListener('click', () => this.resendVerificationCode());
+        }
+    }
+
+    showRegistrationStep2(email) {
+        // Hide step 1, show step 2
+        document.getElementById('register-step-1').style.display = 'none';
+        document.getElementById('register-step-2').style.display = 'block';
+        
+        // Display email in verification message
+        document.getElementById('verification-email-display').textContent = email;
+        
+        // Focus first code input
+        document.getElementById('code-1').focus();
+        
+        // Generate and store verification code for testing (in production, this would be server-side)
+        this.verificationCode = this.generateVerificationCode();
+        this.verificationEmail = email;
+        
+        console.log('🔐 Verification code for testing:', this.verificationCode);
+    }
+
+    generateVerificationCode() {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+    }
+
+    async verifyEmailCode() {
+        const codeInputs = document.querySelectorAll('.code-digit');
+        const enteredCode = Array.from(codeInputs).map(input => input.value).join('');
+        
+        if (enteredCode.length !== 6) {
+            this.showNotification('❌ Please enter the complete 6-digit code', 'error');
+            return;
+        }
+        
+        const verifyBtn = document.getElementById('verify-code-btn');
+        const originalText = verifyBtn.textContent;
+        verifyBtn.textContent = 'Verifying...';
+        verifyBtn.disabled = true;
+        
+        try {
+            // TODO: Future backend integration - add 6-digit code endpoint
+            // For now, using demo verification code system
+            // Future implementation would call: /auth/verify-code with { code: enteredCode, email: this.pendingRegistration.email }
+            
+            if (enteredCode === this.verificationCode) {
+                this.showNotification('✅ Email verified successfully!', 'success');
+                
+                // Close registration panel and show login
+                setTimeout(() => {
+                    this.closeRegisterSlideout();
+                    this.showNotification('🎉 Account created! Please log in with your credentials.', 'success');
+                    this.showLoginSlideout();
+                }, 1500);
+            } else {
+                this.showNotification('❌ Invalid verification code. Please try again.', 'error');
+                // Clear inputs
+                codeInputs.forEach(input => input.value = '');
+                codeInputs[0].focus();
+            }
+        } catch (error) {
+            console.error('Verification error:', error);
+            this.showNotification('❌ Verification failed. Please try again.', 'error');
+        } finally {
+            verifyBtn.textContent = originalText;
+            verifyBtn.disabled = false;
+        }
+    }
+
+    async resendVerificationCode() {
+        const resendBtn = document.getElementById('resend-code-btn');
+        const originalText = resendBtn.textContent;
+        
+        resendBtn.textContent = 'Sending...';
+        resendBtn.disabled = true;
+        
+        try {
+            // Call backend to resend verification email
+            if (this.pendingRegistration && this.pendingRegistration.email) {
+                const response = await fetch(`${this.API_BASE}/auth/resend-verification`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email: this.pendingRegistration.email })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    this.showNotification('📧 New verification email sent! Check your inbox.', 'success');
+                } else {
+                    this.showNotification('❌ Failed to resend verification email.', 'error');
+                    console.error('Resend verification error:', result);
+                }
+            }
+            
+            // For demo purposes, also generate new code for testing
+            this.verificationCode = this.generateVerificationCode();
+            console.log('🔐 New verification code for testing:', this.verificationCode);
+            
+            // Clear current inputs
+            document.querySelectorAll('.code-digit').forEach(input => input.value = '');
+            document.getElementById('code-1').focus();
+            
+            // Start countdown
+            let countdown = 30;
+            const countdownInterval = setInterval(() => {
+                resendBtn.textContent = `Resend (${countdown}s)`;
+                countdown--;
+                
+                if (countdown < 0) {
+                    clearInterval(countdownInterval);
+                    resendBtn.textContent = originalText;
+                    resendBtn.disabled = false;
+                }
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Resend error:', error);
+            this.showNotification('❌ Failed to resend code. Please try again.', 'error');
+            resendBtn.textContent = originalText;
+            resendBtn.disabled = false;
+        }
+    }
+
+    setupLandingPageButtons() {
+        // Only setup once to avoid duplicate listeners
+        if (this.landingPageSetup) return;
+        this.landingPageSetup = true;
+
+        // Get all landing page buttons
+        const heroRegisterBtn = document.getElementById('hero-register-btn');
+        const heroLoginBtn = document.getElementById('hero-login-btn');
+        const ctaRegisterBtn = document.getElementById('cta-register-btn');
+        const ctaLoginBtn = document.getElementById('cta-login-btn');
+
+        // Setup event listeners
+        if (heroRegisterBtn) {
+            heroRegisterBtn.addEventListener('click', () => this.showRegisterSlideout());
+        }
+        if (heroLoginBtn) {
+            heroLoginBtn.addEventListener('click', () => this.showLoginSlideout());
+        }
+        if (ctaRegisterBtn) {
+            ctaRegisterBtn.addEventListener('click', () => this.showRegisterSlideout());
+        }
+        if (ctaLoginBtn) {
+            ctaLoginBtn.addEventListener('click', () => this.showLoginSlideout());
+        }
+
+        // Add smooth scroll for internal navigation (if needed)
+        this.setupSmoothScroll();
+
+        // Add intersection observer for animations
+        this.setupScrollAnimations();
+    }
+
+    setupSmoothScroll() {
+        // Add smooth scrolling between sections
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    }
+
+    setupScrollAnimations() {
+        // Create intersection observer for scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-in');
+                }
+            });
+        }, observerOptions);
+
+        // Observe feature cards, testimonials, and metric items
+        document.querySelectorAll('.feature-card, .testimonial-card, .metric-item').forEach(el => {
+            observer.observe(el);
+        });
     }
 
     async handleLogin(e) {
@@ -1219,10 +1581,16 @@ class AquaponicsApp {
         
         if (result.success) {
             if (result.needsVerification) {
-                // Show success message in form instead of replacing modal content
-                this.showMessage('Registration successful! Please check your email to verify your account before logging in.', 'success');
-                // Clear the form fields after successful registration
-                form.reset();
+                // Store registration data for verification step
+                this.pendingRegistration = {
+                    username,
+                    email,
+                    firstName,
+                    lastName
+                };
+                
+                // Show verification step
+                this.showRegistrationStep2(email);
             } else {
                 this.showMessage('Account created successfully!', 'success');
             }
@@ -1810,9 +2178,6 @@ class AquaponicsApp {
                 const targetElement = document.getElementById(targetContent);
                 if (targetElement) {
                     targetElement.classList.add('active');
-
-                } else {
-
                 }
             });
         });
@@ -2303,22 +2668,28 @@ class AquaponicsApp {
         }
 
         try {
-            await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`, {
-                method: 'POST',
-                body: JSON.stringify(data)
+            await this.performSaveWithProgress('plant', async () => {
+                // API call
+                await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                
+                // Reload data and update displays
+                await this.loadDataRecords();
+                await this.updateDashboardFromData();
+                // Update other plant management components
+                this.updateGrowBeds();
+                this.updatePlantGrowthHistoryDisplay();
+                this.updatePlantRecommendations();
+                this.updateRecentPlantEntries();
+                await this.updatePlantOverview();
+                this.updateRemainingPlantsDisplay();
+                
+                return { success: true, batchId, cropType: data.crop_type, count: data.count };
             });
             
-            // Reload data and update displays
-            await this.loadDataRecords();
-            await this.updateDashboardFromData();
-            // Update other plant management components (not overview to avoid double-render)
-            this.updateGrowBeds();
-            this.updatePlantGrowthHistoryDisplay();
-            this.updatePlantRecommendations();
-            this.updateRecentPlantEntries();
-            await this.updatePlantOverview(); // Force update plant overview to refresh batch data
-            this.updateRemainingPlantsDisplay(); // Update remaining plants display
-            
+            // Success actions after modal closes
             this.showNotification(`🌱 Recorded planting of ${data.count} ${this.cleanCustomCropName(data.crop_type)} plants in batch ${batchId}!`, 'success');
             this.clearPlantingForm();
             
@@ -2374,23 +2745,28 @@ class AquaponicsApp {
         }
 
         try {
-            await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`, {
-                method: 'POST',
-                body: JSON.stringify(data)
+            await this.performSaveWithProgress('plant', async () => {
+                // API call
+                await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                
+                // Reload data and update displays
+                await this.loadDataRecords();
+                await this.updateDashboardFromData();
+                // Update other plant management components
+                this.updateGrowBeds();
+                this.updatePlantGrowthHistoryDisplay();
+                this.updatePlantRecommendations();
+                this.updateRecentPlantEntries();
+                await this.updatePlantOverview();
+                this.updateRemainingPlantsDisplay();
+                
+                return { success: true, data };
             });
             
-            // Reload data and update displays
-            await this.loadDataRecords();
-            await this.updateDashboardFromData();
-            // Update other plant management components (not overview to avoid double-render)
-            this.updateGrowBeds();
-            this.updatePlantGrowthHistoryDisplay();
-            this.updatePlantRecommendations();
-            this.updateRecentPlantEntries();
-            await this.updatePlantOverview(); // Force update plant overview to refresh batch data
-            this.updateRemainingPlantsDisplay(); // Update remaining plants display
-            
-            // Create appropriate success message based on whether plants were removed
+            // Success actions after modal closes
             const weightMsg = `${(data.harvest_weight/1000).toFixed(1)}kg`;
             const cropName = this.cleanCustomCropName(data.crop_type);
             let successMsg;
@@ -3217,6 +3593,84 @@ class AquaponicsApp {
 
         // Setup modal close handlers
         this.setupNutrientModalHandlers();
+        
+        // Setup Quick Actions event delegation for Plant tab beds
+        this.setupQuickActionsEventDelegation();
+    }
+    
+    setupQuickActionsEventDelegation() {
+        // Use event delegation on document body for dynamically created quick action buttons
+        // Store reference to 'this' for use in event handler
+        const app = this;
+        
+        document.addEventListener('click', async (event) => {
+            // Enhanced debugging for all clicks
+            if (event.target.closest('.quick-action-item')) {
+                console.log('🎯 Quick Action click detected!');
+                console.log('🔍 Event target:', event.target);
+                console.log('🔍 Closest quick-action-item:', event.target.closest('.quick-action-item'));
+                console.log('🔍 All classes on target:', event.target.className);
+                console.log('🔍 All classes on button:', event.target.closest('.quick-action-item')?.className);
+            }
+            
+            // Handle quick plant button clicks
+            if (event.target.closest('.quick-plant-btn')) {
+                const btn = event.target.closest('.quick-plant-btn');
+                const bedId = parseInt(btn.getAttribute('data-bed-id'));
+                const bedName = btn.getAttribute('data-bed-name');
+                console.log('🌱 Quick Plant clicked - bedId:', bedId, 'bedName:', bedName);
+                app.openQuickPlantDialog(bedId, bedName);
+            }
+            
+            // Handle quick harvest button clicks
+            if (event.target.closest('.quick-harvest-btn')) {
+                const btn = event.target.closest('.quick-harvest-btn');
+                const bedId = parseInt(btn.getAttribute('data-bed-id'));
+                const bedName = btn.getAttribute('data-bed-name');
+                console.log('🌾 HARVEST CLICK DETECTED! bedId:', bedId, 'bedName:', bedName);
+                console.log('🔍 Button element:', btn);
+                console.log('🔍 App object:', app);
+                console.log('🔍 openQuickHarvestDialog function exists:', typeof app.openQuickHarvestDialog);
+                
+                try {
+                    console.log('🚀 About to call openQuickHarvestDialog...');
+                    console.log('🔍 Function type check:', typeof app.openQuickHarvestDialog);
+                    console.log('🔍 Calling with params:', {bedId, bedName});
+                    
+                    const result = app.openQuickHarvestDialog(bedId, bedName);
+                    console.log('🔍 Function returned:', result);
+                    console.log('🔍 Result type:', typeof result);
+                    
+                    if (result && typeof result.then === 'function') {
+                        console.log('🔍 Function returned a promise, awaiting...');
+                        await result;
+                        console.log('✅ Promise resolved');
+                    }
+                    console.log('✅ openQuickHarvestDialog call completed');
+                } catch (error) {
+                    console.error('❌ Error calling openQuickHarvestDialog:', error);
+                    console.error('❌ Error stack:', error.stack);
+                }
+            }
+            
+            // Handle quick move batch button clicks
+            if (event.target.closest('.quick-move-btn')) {
+                const btn = event.target.closest('.quick-move-btn');
+                const bedId = parseInt(btn.getAttribute('data-bed-id'));
+                const bedName = btn.getAttribute('data-bed-name');
+                console.log('📦 Quick Move Batch clicked - bedId:', bedId, 'bedName:', bedName);
+                app.openQuickMoveDialog(bedId, bedName);
+            }
+            
+            // Handle quick details button clicks
+            if (event.target.closest('.quick-details-btn')) {
+                const btn = event.target.closest('.quick-details-btn');
+                const bedId = parseInt(btn.getAttribute('data-bed-id'));
+                console.log('📋 Quick Details clicked - bedId:', bedId);
+                app.showBedDetails(bedId);
+                app.hideBedQuickActions(bedId);
+            }
+        });
     }
 
     setupNutrientModalHandlers() {
@@ -5294,73 +5748,42 @@ class AquaponicsApp {
 
     // Bed Quick Actions Functions
     toggleBedQuickActions(bedId) {
-        // Hide all existing dropdowns first
-        this.hideAllBedQuickActionMenus();
+        console.log('🔄 toggleBedQuickActions called for bed:', bedId);
         
-        // Find the button that was clicked
-        const button = document.querySelector(`button[onclick="app.toggleBedQuickActions('${bedId}')"]`);
-        if (!button) {
-            console.log('Button not found for bed:', bedId);
+        // Find the inline dropdown menu that exists in the HTML
+        const menu = document.getElementById(`bed-quick-actions-${bedId}`);
+        if (!menu) {
+            console.log('❌ Menu not found for bed:', bedId);
+            console.log('🔍 Available menu elements:', document.querySelectorAll('[id*="bed-quick-actions"]'));
             return;
         }
         
-        // Create or find the dropdown menu
-        let menu = document.getElementById(`floating-bed-quick-actions-${bedId}`);
-        if (!menu) {
-            // Create the menu dynamically
-            menu = this.createFloatingBedQuickActionsMenu(bedId);
-        }
+        console.log('📍 Menu found:', menu);
+        console.log('🎯 Menu current style:', menu.style.cssText);
+        console.log('🎯 Menu computed style display:', window.getComputedStyle(menu).display);
         
-        // Position the menu relative to the button with smart positioning
-        const buttonRect = button.getBoundingClientRect();
+        // Check if this specific menu is currently visible
+        const isVisible = menu.style.display === 'block' || window.getComputedStyle(menu).display === 'block';
+        console.log('👁️ Is menu visible?', isVisible, 'style display:', menu.style.display, 'computed display:', window.getComputedStyle(menu).display);
         
-        menu.style.display = 'block';
-        menu.style.position = 'fixed';
-        menu.style.zIndex = '999999';
-        
-        // Get menu dimensions after showing it
-        const menuRect = menu.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-        const viewportWidth = window.innerWidth;
-        
-        // Smart vertical positioning
-        const spaceBelow = viewportHeight - buttonRect.bottom;
-        const spaceAbove = buttonRect.top;
-        const menuHeight = menuRect.height || 200; // Fallback height if not measured yet
-        
-        let topPosition;
-        if (spaceBelow >= menuHeight + 10) {
-            // Enough space below - position below button
-            topPosition = buttonRect.bottom + 4;
-        } else if (spaceAbove >= menuHeight + 10) {
-            // Not enough space below but enough above - position above button
-            topPosition = buttonRect.top - menuHeight - 4;
+        if (isVisible) {
+            // Menu is visible, hide it
+            console.log('➖ Menu was visible, hiding it');
+            this.hideAllBedQuickActionMenus();
         } else {
-            // Not enough space either way - position at top of viewport with padding
-            topPosition = 10;
+            // Menu is not visible, hide all others first then show this one
+            console.log('✅ Showing menu for bed:', bedId);
+            this.hideAllBedQuickActionMenus();
+            
+            // Show this menu after a small delay to ensure hiding is complete
+            setTimeout(() => {
+                menu.style.setProperty('display', 'block', 'important');
+                menu.style.setProperty('visibility', 'visible', 'important');
+                menu.style.setProperty('opacity', '1', 'important');
+                menu.style.setProperty('z-index', '99999', 'important');
+                console.log('🎯 Menu style after showing:', menu.style.cssText);
+            }, 10);
         }
-        
-        // Smart horizontal positioning
-        let leftPosition = buttonRect.left;
-        const menuWidth = menuRect.width || 200; // Fallback width
-        
-        if (leftPosition + menuWidth > viewportWidth - 10) {
-            // Menu would extend beyond right edge - align right edge with button right edge
-            leftPosition = buttonRect.right - menuWidth;
-        }
-        
-        // Ensure menu doesn't go beyond left edge
-        if (leftPosition < 10) {
-            leftPosition = 10;
-        }
-        
-        menu.style.top = topPosition + 'px';
-        menu.style.left = leftPosition + 'px';
-        
-        // Close menu when clicking outside
-        setTimeout(() => {
-            document.addEventListener('click', this.closeBedQuickActionsOnOutsideClick, true);
-        }, 0);
     }
     
     createFloatingBedQuickActionsMenu(bedId) {
@@ -5385,6 +5808,12 @@ class AquaponicsApp {
                     <path d="M12 2L13.09 8.26L22 9L14 14.74L16.18 22L12 18.27L7.82 22L10 14.74L2 9L10.91 8.26L12 2z"/>
                 </svg>
                 Harvest
+            </button>
+            <button class="quick-action-item" onclick="app.openQuickMoveDialog('${bedId}', '${bedName}')">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                </svg>
+                Move Batch
             </button>
             <button class="quick-action-item" onclick="app.showBedDetails('${bedId}')">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
@@ -5451,23 +5880,56 @@ class AquaponicsApp {
     }
 
     // Bed Action Functions
-    openQuickPlantDialog(bedId, bedName) {
-        console.log('openQuickPlantDialog called for bed:', bedId);
-        // Close the menu first
-        this.hideAllBedQuickActionMenus();
+    async openQuickPlantDialog(bedId, bedName) {
+        console.log('🌱 Opening quick plant dialog for bed:', bedId, bedName);
         
-        // Navigate to Plant & Harvest tab and show plant form for this bed
-        this.navigateToPlantHarvest();
-        
-        // Wait a moment for the tab to load then pre-select the bed
-        setTimeout(() => {
-            const bedSelect = document.getElementById('plant-bed');
-            if (bedSelect) {
-                bedSelect.value = bedId;
-                // Trigger change event to update crop dropdown
-                bedSelect.dispatchEvent(new Event('change'));
+        try {
+            // Hide the quick actions menu
+            this.hideBedQuickActions(bedId);
+            this.hideAllBedQuickActionMenus();
+            
+            // First ensure we're in the Plants view
+            const plantsView = document.getElementById('plants');
+            if (plantsView && !plantsView.classList.contains('active')) {
+                const plantsNavBtn = document.querySelector('[data-view="plants"]') || document.getElementById('plants-btn');
+                if (plantsNavBtn) {
+                    plantsNavBtn.click();
+                }
             }
-        }, 100);
+            
+            // Then switch to Plant & Harvest main tab
+            const plantHarvestTab = document.getElementById('planting-harvesting-tab');
+            if (plantHarvestTab) {
+                plantHarvestTab.click();
+            }
+            
+            // Wait a bit, then switch to the specific planting sub-tab
+            setTimeout(() => {
+                const plantingTab = document.getElementById('planting-tab');
+                if (plantingTab) {
+                    plantingTab.click();
+                }
+            }, 100);
+            
+            // Pre-populate the main planting form with bed information
+            document.getElementById('plant-grow-bed').value = bedId;
+            document.getElementById('plant-date').value = new Date().toISOString().split('T')[0];
+            
+            // Show a helpful notification about the pre-populated form
+            this.showNotification(`🌱 Planting form opened for ${bedName}. Select crop and enter planting details.`, 'info');
+            
+            // Focus on the crop selection dropdown
+            setTimeout(() => {
+                const cropSelect = document.getElementById('plant-crop-type');
+                if (cropSelect) {
+                    cropSelect.focus();
+                }
+            }, 300);
+            
+        } catch (error) {
+            console.error('Error opening plant dialog:', error);
+            this.showNotification('Error loading planting form', 'error');
+        }
     }
     
     navigateToPlantHarvest() {
@@ -5489,55 +5951,530 @@ class AquaponicsApp {
         }
     }
 
-    openQuickHarvestDialog(bedId, bedName) {
-        console.log('openQuickHarvestDialog called for bed:', bedId);
-        // Close the menu first
-        this.hideAllBedQuickActionMenus();
+    async openQuickHarvestDialog(bedId, bedName) {
+        console.log('🌾 Opening quick harvest dialog for bed:', bedId, bedName);
         
-        // Navigate to Plant & Harvest tab and show harvest form for this bed
-        this.navigateToPlantHarvest();
-        
-        // Wait a moment for the tab to load then switch to harvest and pre-select the bed
-        setTimeout(() => {
-            // Click harvest tab
-            const harvestTab = document.querySelector('#plant-harvest-tabs .tab[data-tab="harvest"]');
-            if (harvestTab) {
-                harvestTab.click();
+        try {
+            // Hide the quick actions menu
+            this.hideBedQuickActions(bedId);
+            this.hideAllBedQuickActionMenus();
+            
+            // First ensure we're in the Plants view
+            const plantsView = document.getElementById('plants');
+            if (plantsView && !plantsView.classList.contains('active')) {
+                const plantsNavBtn = document.querySelector('[data-view="plants"]') || document.getElementById('plants-btn');
+                if (plantsNavBtn) {
+                    plantsNavBtn.click();
+                }
             }
             
-            // Pre-select the bed
-            const bedSelect = document.getElementById('harvest-bed');
-            if (bedSelect) {
-                bedSelect.value = bedId;
-                // Trigger change event to update crop dropdown
-                bedSelect.dispatchEvent(new Event('change'));
+            // Then switch to Plant & Harvest main tab
+            const plantHarvestTab = document.getElementById('planting-harvesting-tab');
+            if (plantHarvestTab) {
+                plantHarvestTab.click();
             }
-        }, 200);
+            
+            // Wait a bit, then switch to the specific harvest sub-tab
+            setTimeout(() => {
+                const harvestTab = document.getElementById('harvesting-tab');
+                if (harvestTab) {
+                    harvestTab.click();
+                }
+            }, 100);
+            
+            // Pre-populate the main harvest form with bed information
+            document.getElementById('harvest-grow-bed').value = bedId;
+            document.getElementById('harvest-date').value = new Date().toISOString().split('T')[0];
+            
+            // Show a helpful notification about the pre-populated form
+            this.showNotification(`🌾 Harvest form opened for ${bedName}. Select crop and enter harvest details.`, 'info');
+            
+            // Focus on the crop selection dropdown
+            setTimeout(() => {
+                const cropSelect = document.getElementById('harvest-crop-type');
+                if (cropSelect) {
+                    cropSelect.focus();
+                }
+            }, 300);
+            
+        } catch (error) {
+            console.error('Error opening harvest dialog:', error);
+            this.showNotification('Error loading harvest form', 'error');
+        }
+    }
+
+    async openQuickMoveDialog(bedId, bedName) {
+        console.log('📦 Opening quick batch move dialog for bed:', bedId, bedName);
+        
+        try {
+            // Hide the quick actions menu
+            this.hideBedQuickActions(bedId);
+            this.hideAllBedQuickActionMenus();
+            
+            // Get fresh plant data from API instead of using cached data
+            const plantData = await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`);
+            console.log('📊 Fresh plant data received:', plantData?.length, 'entries');
+            
+            const batchesInBed = {};
+            
+            // Group plant data by batch for this bed
+            plantData.forEach(entry => {
+                if (entry.grow_bed_id == bedId && entry.batch_id) {
+                    if (!batchesInBed[entry.batch_id]) {
+                        batchesInBed[entry.batch_id] = {
+                            batch_id: entry.batch_id,
+                            crop_type: entry.crop_type,
+                            planted: 0,
+                            harvested: 0
+                        };
+                    }
+                    
+                    if (entry.plants_harvested && entry.plants_harvested > 0) {
+                        batchesInBed[entry.batch_id].harvested += entry.plants_harvested;
+                    } else if (entry.count && entry.count > 0) {
+                        batchesInBed[entry.batch_id].planted += entry.count;
+                    }
+                }
+            });
+            
+            const batches = Object.values(batchesInBed).filter(batch => batch.planted > batch.harvested);
+            console.log('🎯 Active batches in bed:', batches);
+            
+            if (batches.length === 0) {
+                this.showNotification(`No active batches found in ${bedName} to move`, 'warning');
+                return;
+            }
+            
+            // Get all grow beds for destination selection
+            const growBeds = await this.getGrowBedsForSystem();
+            console.log('🛏️ Available destination beds:', growBeds.length);
+            
+            // Create batch selection modal
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content batch-move-modal">
+                    <div class="modal-header">
+                        <h4>Move Batch from ${bedName}</h4>
+                        <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="quick-batch-select" class="form-label">Select Batch to Move:</label>
+                            <select id="quick-batch-select" class="form-input">
+                                <option value="">Choose a batch...</option>
+                                ${batches.map(batch => `
+                                    <option value="${batch.batch_id}">
+                                        ${batch.crop_type} - Batch ${batch.batch_id} (${batch.planted - batch.harvested} plants)
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="quick-destination-bed" class="form-label">Move to Grow Bed:</label>
+                            <select id="quick-destination-bed" class="form-input">
+                                <option value="">Choose destination...</option>
+                                ${growBeds.filter(bed => bed.id != bedId).map(bed => `
+                                    <option value="${bed.id}">
+                                        ${bed.bed_name || `Bed ${bed.bed_number}`} (${bed.bed_type || 'Standard'})
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+                        <button class="btn btn-primary" onclick="window.app.confirmQuickBatchMove(${bedId})">Move Batch</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
+            console.log('✅ Modal appended to body, batches available:', batches.length);
+            
+        } catch (error) {
+            console.error('Error opening move dialog:', error);
+            this.showNotification('Error loading batch move options', 'error');
+        }
+    }
+
+    async confirmQuickBatchMove(fromBedId) {
+        try {
+            const batchSelect = document.getElementById('quick-batch-select');
+            const destinationSelect = document.getElementById('quick-destination-bed');
+            
+            const batchId = batchSelect.value;
+            const toBedId = destinationSelect.value;
+            
+            if (!batchId) {
+                this.showNotification('Please select a batch to move', 'warning');
+                return;
+            }
+            
+            if (!toBedId) {
+                this.showNotification('Please select a destination grow bed', 'warning');
+                return;
+            }
+            
+            // Use the existing batch move API - note: API expects camelCase
+            const response = await this.makeApiCall(`/data/batch/${this.activeSystemId}/${batchId}/grow-bed`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    newGrowBedId: parseInt(toBedId)
+                })
+            });
+            
+            if (response.message && !response.error) {
+                // Close modal
+                document.querySelector('.modal .batch-move-modal')?.closest('.modal').remove();
+                
+                // Get destination bed name for notification
+                const growBeds = await this.getGrowBedsForSystem();
+                const destinationBed = growBeds.find(bed => bed.id == toBedId);
+                const destinationName = destinationBed?.bed_name || `Bed ${destinationBed?.bed_number}`;
+                
+                this.showNotification(`Batch ${batchId} moved successfully to ${destinationName}`, 'success');
+                
+                // Refresh data and UI
+                await this.loadDataRecords();
+                await this.updatePlantOverview();
+                await this.loadBedsOverview();
+            } else {
+                this.showNotification('Failed to move batch: ' + (response.error || 'Unknown error'), 'error');
+            }
+            
+        } catch (error) {
+            console.error('Error moving batch:', error);
+            this.showNotification('Error moving batch', 'error');
+        }
+    }
+
+    showQuickHarvestModal(bedId, bedName, plants) {
+        console.log('🌾 Showing harvest modal for bed:', bedId, 'with plants:', plants);
+        
+        // Remove any existing harvest modal
+        const existing = document.getElementById('quick-harvest-modal');
+        if (existing) existing.remove();
+        
+        // Group plants by crop type and include batch information with ages
+        const cropGroups = {};
+        plants.forEach(plant => {
+            const cropType = plant.crop_type;
+            if (!cropGroups[cropType]) {
+                cropGroups[cropType] = { total: 0, entries: [], batches: new Map() };
+            }
+            cropGroups[cropType].total += plant.count;
+            cropGroups[cropType].entries.push(plant);
+            if (plant.batch_id && !cropGroups[cropType].batches.has(plant.batch_id)) {
+                // Calculate age from planting date
+                const plantDate = new Date(plant.date);
+                const today = new Date();
+                const ageInDays = Math.floor((today - plantDate) / (1000 * 60 * 60 * 24));
+                
+                cropGroups[cropType].batches.set(plant.batch_id, {
+                    id: plant.batch_id,
+                    age: ageInDays,
+                    plantDate: plant.date
+                });
+            }
+        });
+        
+        // Convert maps to arrays for easier handling
+        Object.keys(cropGroups).forEach(crop => {
+            cropGroups[crop].batches = Array.from(cropGroups[crop].batches.values());
+        });
+        
+        // Create modal HTML
+        const modalHtml = `
+            <div id="quick-harvest-modal" class="modal-overlay" style="display: block;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>🌾 Harvest from ${bedName}</h3>
+                        <button type="button" class="close-modal" onclick="this.closest('.modal-overlay').remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="quick-harvest-form">
+                            <div class="form-group">
+                                <label class="form-label">Select crop to harvest:</label>
+                                <select id="harvest-crop-select" class="form-input" required>
+                                    <option value="">Choose a crop...</option>
+                                    ${Object.keys(cropGroups).map(crop => 
+                                        `<option value="${crop}">${this.cleanCustomCropName(crop)} (${cropGroups[crop].total} plants)</option>`
+                                    ).join('')}
+                                </select>
+                            </div>
+                            <div class="form-group" id="batch-selection-group" style="display: none;">
+                                <label class="form-label">Select batch:</label>
+                                <select id="harvest-batch-select" class="form-input" required>
+                                    <option value="">Choose a batch...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Harvest type:</label>
+                                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                                    <label style="display: flex; align-items: center; gap: 5px;">
+                                        <input type="radio" name="harvest-type" value="weight-only" checked>
+                                        <span>🍅 Harvest produce only (plants remain)</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 5px;">
+                                        <input type="radio" name="harvest-type" value="full-harvest">
+                                        <span>🌱 Harvest entire plants</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group" id="plant-count-group" style="display: none;">
+                                <label class="form-label">Number of plants to harvest:</label>
+                                <input type="number" id="harvest-count" class="form-input" min="1" placeholder="Enter plant count">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Harvest weight (kg):</label>
+                                <input type="number" id="quick-harvest-weight" class="form-input" min="0.1" step="0.1" required placeholder="Enter weight in kg">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Quality/Health:</label>
+                                <select id="harvest-quality" class="form-input" required>
+                                    <option value="">Select quality...</option>
+                                    <option value="excellent">Excellent</option>
+                                    <option value="good">Good</option>
+                                    <option value="fair">Fair</option>
+                                    <option value="poor">Poor</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Notes (optional):</label>
+                                <textarea id="harvest-notes" class="form-input" rows="2" placeholder="Add any harvest notes..."></textarea>
+                            </div>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+                                <button type="submit" class="btn btn-success">Record Harvest</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add modal to page
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Add event listeners
+        const form = document.getElementById('quick-harvest-form');
+        const cropSelect = document.getElementById('harvest-crop-select');
+        const batchSelect = document.getElementById('harvest-batch-select');
+        const batchGroup = document.getElementById('batch-selection-group');
+        const countInput = document.getElementById('harvest-count');
+        const plantCountGroup = document.getElementById('plant-count-group');
+        const harvestTypeRadios = document.querySelectorAll('input[name="harvest-type"]');
+        
+        // Handle harvest type changes
+        harvestTypeRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                if (radio.value === 'full-harvest') {
+                    plantCountGroup.style.display = 'block';
+                    countInput.required = true;
+                } else {
+                    plantCountGroup.style.display = 'none';
+                    countInput.required = false;
+                    countInput.value = '';
+                }
+            });
+        });
+        
+        // Update batch dropdown when crop is selected
+        cropSelect.addEventListener('change', () => {
+            const selectedCrop = cropSelect.value;
+            if (selectedCrop && cropGroups[selectedCrop]) {
+                // Update plant count limits
+                countInput.max = cropGroups[selectedCrop].total;
+                countInput.placeholder = `Max: ${cropGroups[selectedCrop].total} plants`;
+                
+                // Show batch selection if batches exist
+                const batches = cropGroups[selectedCrop].batches;
+                if (batches.length > 0) {
+                    batchGroup.style.display = 'block';
+                    batchSelect.innerHTML = '<option value="">Choose a batch...</option>' +
+                        batches.map(batch => {
+                            const ageText = batch.age === 1 ? '1 day old' : `${batch.age} days old`;
+                            return `<option value="${batch.id}">Batch ${batch.id} (${ageText})</option>`;
+                        }).join('');
+                    batchSelect.required = true;
+                } else {
+                    batchGroup.style.display = 'none';
+                    batchSelect.required = false;
+                }
+            } else {
+                batchGroup.style.display = 'none';
+                batchSelect.required = false;
+            }
+        });
+        
+        // Handle form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this.submitQuickHarvest(bedId, cropGroups);
+        });
+    }
+
+    async submitQuickHarvest(bedId, cropGroups) {
+        const cropType = document.getElementById('harvest-crop-select').value;
+        const batchId = document.getElementById('harvest-batch-select').value;
+        const weight = parseFloat(document.getElementById('quick-harvest-weight').value);
+        const quality = document.getElementById('harvest-quality').value;
+        const notes = document.getElementById('harvest-notes').value;
+        const harvestType = document.querySelector('input[name="harvest-type"]:checked').value;
+        const plantCount = harvestType === 'full-harvest' ? parseInt(document.getElementById('harvest-count').value) || 0 : 0;
+        
+        // Debug validation
+        console.log('🔍 Validation Debug:');
+        console.log('- cropType:', cropType);
+        console.log('- batchId:', batchId);
+        console.log('- weight:', weight);
+        console.log('- quality:', quality);
+        console.log('- harvestType:', harvestType);
+        console.log('- plantCount:', plantCount);
+        
+        // Validation
+        if (!cropType || !weight || !quality) {
+            console.error('❌ Validation failed:', { cropType: !!cropType, weight: !!weight, quality: !!quality });
+            this.showNotification('Please fill in all required fields', 'error');
+            return;
+        }
+        
+        if (harvestType === 'full-harvest' && (!plantCount || plantCount <= 0)) {
+            this.showNotification('Please enter the number of plants to harvest', 'error');
+            return;
+        }
+        
+        if (harvestType === 'full-harvest' && plantCount > cropGroups[cropType].total) {
+            this.showNotification(`Cannot harvest ${plantCount} plants. Only ${cropGroups[cropType].total} available.`, 'error');
+            return;
+        }
+        
+        // Check batch requirement
+        if (cropGroups[cropType].batches.length > 0 && !batchId) {
+            this.showNotification('Please select a batch to harvest from', 'error');
+            return;
+        }
+        
+        try {
+            // Prepare harvest data matching the existing recordHarvest structure
+            const harvestData = {
+                date: new Date().toISOString().split('T')[0],
+                grow_bed_id: bedId,
+                crop_type: cropType,
+                plants_harvested: plantCount, // 0 for weight-only harvests, actual count for full harvests
+                harvest_weight: weight * 1000, // Convert kg to grams
+                health: quality,
+                growth_stage: 'harvest',
+                notes: notes || '',
+                batch_id: batchId || null
+            };
+            
+            console.log('🚀 Submitting harvest data:', harvestData);
+            
+            const response = await fetch(`/api/data/plant-growth/${this.activeSystemId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(harvestData)
+            });
+            
+            if (response.ok) {
+                const cropName = this.cleanCustomCropName(cropType);
+                const weightMsg = `${weight.toFixed(1)}kg`;
+                
+                let successMsg;
+                if (harvestType === 'weight-only') {
+                    successMsg = `🍅 Recorded harvest of ${weightMsg} ${cropName} produce (plants remain in bed)!`;
+                } else {
+                    successMsg = `🥬 Recorded harvest of ${weightMsg} from ${plantCount} ${cropName} plants!`;
+                }
+                
+                this.showNotification(successMsg, 'success');
+                
+                // Close modal
+                document.getElementById('quick-harvest-modal').remove();
+                
+                // Refresh data and ensure bed overview stays visible
+                await this.loadDataRecords();
+                await this.updatePlantOverview();
+                this.updateGrowBeds();
+                this.updatePlantGrowthHistoryDisplay();
+                this.updateRemainingPlantsDisplay();
+                
+                // Ensure plant overview tab is active and bed overview is visible
+                const overviewTab = document.getElementById('plant-overview-tab');
+                if (overviewTab) {
+                    overviewTab.click();
+                }
+                
+                // Refresh the bed overview specifically
+                setTimeout(() => {
+                    this.updateGrowBeds();
+                    // Force refresh of the bed overview display
+                    const bedOverview = document.querySelector('.grow-beds-overview');
+                    if (bedOverview) {
+                        bedOverview.style.display = 'block';
+                    }
+                }, 100);
+                
+            } else {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to record harvest');
+            }
+            
+        } catch (error) {
+            console.error('Error submitting harvest:', error);
+            this.showNotification('Error recording harvest', 'error');
+        }
     }
 
     showBedDetails(bedId) {
-        console.log('showBedDetails called for bed:', bedId);
-        // Navigate to Plant Overview tab which shows bed details
-        // First ensure we're on the plants view
-        const plantsView = document.getElementById('plants');
-        if (!plantsView.classList.contains('active')) {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            plantsView.classList.add('active');
-            const plantsNavBtn = document.querySelector('[data-view="plants"]') || document.getElementById('plants-btn');
-            if (plantsNavBtn) plantsNavBtn.classList.add('active');
-        }
+        console.log('🔍 showBedDetails called for bed:', bedId);
         
-        // Then click the Plant Overview tab to show bed details
-        const overviewTab = document.getElementById('plant-overview-tab');
-        if (overviewTab) {
-            overviewTab.click();
+        try {
+            // First ensure we're in the Plants view
+            const plantsView = document.getElementById('plants');
+            if (plantsView && !plantsView.classList.contains('active')) {
+                console.log('🔄 Switching to Plants view');
+                const plantsNavBtn = document.querySelector('[data-view="plants"]') || document.getElementById('plants-btn');
+                if (plantsNavBtn) {
+                    plantsNavBtn.click();
+                }
+            }
+            
+            // Then click the Plant Overview tab to show bed details
+            const overviewTab = document.getElementById('plant-overview-tab');
+            if (overviewTab) {
+                console.log('🔄 Switching to Plant Overview tab');
+                overviewTab.click();
+            } else {
+                console.error('❌ Plant Overview tab not found');
+            }
+            
+            // Show notification about the bed
+            const bed = this.allGrowBeds?.find(b => b.id == bedId);
+            const bedName = bed?.bed_name || `Bed ${bed?.bed_number || bedId}`;
+            console.log('📋 Found bed data:', bed);
+            
+            this.showNotification(`📋 Viewing details for ${bedName}. Check the grow bed summary and plant batches in the overview.`, 'info');
+            
+            // Scroll to bed details after a moment
+            setTimeout(() => {
+                const bedOverview = document.querySelector('.grow-beds-overview') || 
+                                 document.querySelector('.plant-overview-section');
+                if (bedOverview) {
+                    bedOverview.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 300);
+            
+        } catch (error) {
+            console.error('❌ Error in showBedDetails:', error);
+            this.showNotification('Error showing bed details', 'error');
         }
-        
-        // Show notification about the bed
-        const bed = this.allGrowBeds?.find(b => b.id === bedId);
-        const bedName = bed?.bed_name || `Bed ${bed?.bed_number || bedId}`;
-        this.showNotification(`Viewing details for ${bedName}`, 'info');
     }
 
     getTankSpecificFishData(tankNumber, latestFishData) {
@@ -8945,9 +9882,15 @@ class AquaponicsApp {
     }
     
     showInlineHarvestModal(batchId, cropType, growBedId, remainingPlants) {
-        // Hide any existing modals first
-        this.hideAllModals();
+        console.log('📋 === INLINE HARVEST MODAL STARTING ===');
+        console.log('📋 showInlineHarvestModal called with:', {batchId, cropType, growBedId, remainingPlants});
         
+        // Hide any existing modals first
+        console.log('📋 Step 1: Hiding existing modals...');
+        this.hideAllModals();
+        console.log('📋 Step 1 completed');
+        
+        console.log('📋 Step 2: Creating modal HTML...');
         // Create harvest modal HTML
         const modalHtml = `
             <div class="inline-harvest-modal" id="inline-harvest-modal">
@@ -8980,16 +9923,38 @@ class AquaponicsApp {
                 </div>
             </div>
         `;
+        console.log('📋 Step 2 completed - HTML created, length:', modalHtml.length);
         
+        console.log('📋 Step 3: Adding modal to document...');
         // Add modal to document
         document.body.insertAdjacentHTML('beforeend', modalHtml);
+        console.log('📋 Step 3 completed');
         
+        console.log('📋 Step 4: Finding and showing modal...');
         // Show modal
         const modal = document.getElementById('inline-harvest-modal');
-        modal.style.display = 'flex';
+        console.log('📋 Modal element found:', modal);
+        console.log('📋 Modal element style before:', modal?.style.display);
         
+        if (modal) {
+            modal.style.display = 'flex';
+            console.log('📋 Modal display set to flex');
+            console.log('📋 Modal computed style:', window.getComputedStyle(modal).display);
+            console.log('📋 Modal z-index:', window.getComputedStyle(modal).zIndex);
+            console.log('📋 Modal position:', window.getComputedStyle(modal).position);
+        } else {
+            console.error('❌ CRITICAL: Modal element not found after creation!');
+            return;
+        }
+        
+        console.log('📋 Step 5: Setting focus...');
         // Focus on first input
-        document.getElementById('inline-harvest-count').focus();
+        const countInput = document.getElementById('inline-harvest-count');
+        console.log('📋 Count input found:', countInput);
+        if (countInput) {
+            countInput.focus();
+            console.log('📋 Focus set on count input');
+        }
         
         // Add ESC key support to close modal
         const handleEscKey = (e) => {
@@ -9100,11 +10065,335 @@ class AquaponicsApp {
             existingModal.remove();
         }
         
+        // Hide any existing inline plant modals
+        const existingPlantModal = document.getElementById('inline-plant-modal');
+        if (existingPlantModal) {
+            existingPlantModal.remove();
+        }
+        
         // Hide any existing batch selection modals
         const existingBatchModal = document.getElementById('batch-selection-modal');
         if (existingBatchModal) {
             existingBatchModal.remove();
         }
+    }
+
+    async showInlinePlantModal(bedId, bedName) {
+        // Hide any existing modals first
+        this.hideAllModals();
+        
+        // Get bed information for the modal
+        const bed = this.allGrowBeds?.find(b => b.id === parseInt(bedId));
+        
+        // Create plant modal HTML
+        const modalHtml = `
+            <div class="inline-harvest-modal" id="inline-plant-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant" style="width: 1.2em; height: 1.2em; vertical-align: middle; margin-right: 0.5em;"> Plant in ${bedName}</h3>
+                        <button class="modal-close" onclick="window.app.hideInlinePlantModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="harvest-info">
+                            <p><strong>Grow Bed:</strong> ${bedName}</p>
+                            <p><strong>Bed Type:</strong> ${bed?.bed_type || 'Not specified'}</p>
+                            <p><strong>Available Space:</strong> ${bed?.dimensions || 'Not specified'}</p>
+                        </div>
+                        <form class="inline-harvest-form" onsubmit="event.preventDefault(); window.app.submitInlinePlant('${bedId}')">
+                            <div class="form-group">
+                                <label for="inline-plant-crop">Crop Type:</label>
+                                <select id="inline-plant-crop" required>
+                                    <option value="">Select crop type...</option>
+                                    <optgroup label="Leafy Greens">
+                                        <option value="lettuce">Lettuce (General)</option>
+                                        <option value="spinach">Spinach</option>
+                                        <option value="kale">Kale</option>
+                                        <option value="chard">Swiss Chard</option>
+                                        <option value="arugula">Arugula</option>
+                                    </optgroup>
+                                    <optgroup label="Herbs">
+                                        <option value="basil">Basil</option>
+                                        <option value="cilantro">Cilantro</option>
+                                        <option value="parsley">Parsley</option>
+                                        <option value="mint">Mint</option>
+                                    </optgroup>
+                                    <optgroup label="Fruiting Plants">
+                                        <option value="tomato">Tomato</option>
+                                        <option value="pepper">Pepper</option>
+                                        <option value="cucumber">Cucumber</option>
+                                        <option value="strawberry">Strawberry</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="inline-plant-variety">Seed Variety (Optional):</label>
+                                <input type="text" id="inline-plant-variety" placeholder="e.g., Red Oak Leaf, Cherry Tomato">
+                            </div>
+                            <div class="form-group">
+                                <label for="inline-plant-count">Number of Plants:</label>
+                                <input type="number" id="inline-plant-count" min="1" required>
+                                <small>How many plants are you planting?</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="inline-plant-source">Plant Source:</label>
+                                <select id="inline-plant-source">
+                                    <option value="seed">From Seed</option>
+                                    <option value="seedling">Seedlings</option>
+                                    <option value="transplant">Transplant</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="inline-plant-notes">Notes (Optional):</label>
+                                <input type="text" id="inline-plant-notes" placeholder="Any additional notes...">
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn-submit"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant" style="width: 1em; height: 1em; vertical-align: middle; margin-right: 0.5em;"> Record Planting</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add modal to document
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Show modal
+        const modal = document.getElementById('inline-plant-modal');
+        modal.style.display = 'flex';
+        
+        // Focus on first input
+        document.getElementById('inline-plant-crop').focus();
+        
+        // Add ESC key support to close modal
+        const handleEscKey = (e) => {
+            if (e.key === 'Escape') {
+                this.hideInlinePlantModal();
+                document.removeEventListener('keydown', handleEscKey);
+            }
+        };
+        document.addEventListener('keydown', handleEscKey);
+        
+        // Add click-outside-to-close support
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                this.hideInlinePlantModal();
+            }
+        };
+    }
+    
+    hideInlinePlantModal() {
+        const modal = document.getElementById('inline-plant-modal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    async showHarvestModalForBed(bedId, bedName) {
+        try {
+            console.log('🌾 === SHOW HARVEST MODAL STARTING ===');
+            console.log('🌾 showHarvestModalForBed called for bed:', bedId, 'name:', bedName);
+            console.log('🔍 this.activeSystemId:', this.activeSystemId);
+            console.log('🔍 Making API call to get plant data...');
+            
+            // Get plant data to find harvestable batches in this bed
+            const plantData = await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`);
+            console.log('📊 Plant data received:', plantData?.length || 0, 'entries');
+            console.log('📊 First few plant records:', plantData?.slice(0, 3));
+            
+            // Find active batches (planted but not fully harvested) for this bed
+            console.log('🔍 Getting active batches for bed ID:', bedId, '(type:', typeof bedId, ')');
+            const activeBatches = this.getActiveBatchesForBed(plantData, bedId);
+            console.log('📈 Active batches found:', activeBatches?.length || 0);
+            console.log('📈 Active batches details:', activeBatches);
+            
+            if (activeBatches.length === 0) {
+                console.log('⚠️ No harvestable plants found - showing notification');
+                this.showNotification(`No harvestable plants found in ${bedName}`, 'info');
+                console.log('⚠️ Notification sent, returning early');
+                return;
+            }
+            
+            if (activeBatches.length === 1) {
+                // Single batch - show harvest modal directly
+                console.log('🎯 Single batch found, showing direct harvest modal');
+                const batch = activeBatches[0];
+                console.log('🎯 Batch details:', batch);
+                console.log('🎯 Calling showInlineHarvestModal...');
+                this.showInlineHarvestModal(batch.batchId, batch.cropType, bedId, batch.remainingPlants);
+                console.log('🎯 showInlineHarvestModal call completed');
+            } else {
+                // Multiple batches - show selection modal
+                console.log('🔢 Multiple batches found, showing selection modal');
+                console.log('🔢 Calling showBatchSelectionModalForBed...');
+                this.showBatchSelectionModalForBed(bedName, activeBatches, bedId);
+                console.log('🔢 showBatchSelectionModalForBed call completed');
+            }
+            
+            console.log('🌾 === SHOW HARVEST MODAL ENDING ===');
+        } catch (error) {
+            console.error('❌ CRITICAL ERROR in showHarvestModalForBed:', error);
+            console.error('❌ Error stack:', error.stack);
+            this.showNotification('❌ Could not load harvest options for this bed', 'error');
+        }
+    }
+
+    showBatchSelectionModalForBed(bedName, batches, bedId) {
+        // Hide any existing modals first
+        this.hideAllModals();
+        
+        const modalHtml = `
+            <div class="inline-harvest-modal" id="batch-selection-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3><img src="icons/new-icons/Afraponix Go Icons_harvest.svg" alt="Harvest" style="width: 1.2em; height: 1.2em; vertical-align: middle; margin-right: 0.5em;"> Select Batch to Harvest from ${bedName}</h3>
+                        <button class="modal-close" onclick="window.app.hideBatchSelectionModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="harvest-info">
+                            <p>Multiple batches are available for harvest in this bed. Select which batch you'd like to harvest:</p>
+                        </div>
+                        <div class="batch-options">
+                            ${batches.map(batch => `
+                                <button class="batch-option-btn" onclick="window.app.selectBatchForHarvest('${batch.batchId}', '${batch.cropType}', '${bedId}', ${batch.remainingPlants})">
+                                    <div class="batch-option-header">
+                                        <strong>${this.formatCropName(batch.cropType)}</strong>
+                                        <span class="batch-id">Batch ${batch.batchId}</span>
+                                    </div>
+                                    <div class="batch-option-details">
+                                        <span>📅 Planted: ${this.formatDate(batch.plantedDate)}</span>
+                                        <span>🌱 Available: ${batch.remainingPlants} plants</span>
+                                    </div>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add modal to document
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Show modal
+        const modal = document.getElementById('batch-selection-modal');
+        modal.style.display = 'flex';
+        
+        // Add ESC key support
+        const handleEscKey = (e) => {
+            if (e.key === 'Escape') {
+                this.hideBatchSelectionModal();
+                document.removeEventListener('keydown', handleEscKey);
+            }
+        };
+        document.addEventListener('keydown', handleEscKey);
+        
+        // Add click-outside-to-close support
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                this.hideBatchSelectionModal();
+            }
+        };
+    }
+
+    async submitInlinePlant(bedId) {
+        const cropSelect = document.getElementById('inline-plant-crop');
+        const varietyInput = document.getElementById('inline-plant-variety');
+        const countInput = document.getElementById('inline-plant-count');
+        const sourceSelect = document.getElementById('inline-plant-source');
+        const notesInput = document.getElementById('inline-plant-notes');
+        
+        const cropType = cropSelect.value;
+        const variety = varietyInput.value.trim();
+        const plantCount = parseInt(countInput.value);
+        const source = sourceSelect.value;
+        const notes = notesInput.value.trim();
+        
+        if (!cropType || !plantCount) {
+            this.showNotification('Please fill in all required fields', 'error');
+            return;
+        }
+        
+        try {
+            // Generate batch ID
+            const now = new Date();
+            const timestamp = now.getTime();
+            const batchId = `${cropType}_${bedId}_${timestamp}`;
+            
+            const plantData = {
+                grow_bed_id: parseInt(bedId),
+                crop_type: cropType,
+                seed_variety: variety || null,
+                plant_count: plantCount,
+                plants_harvested: 0,
+                harvest_weight: 0,
+                date_planted: now.toISOString().split('T')[0],
+                expected_harvest_date: this.calculateExpectedHarvestDate(cropType),
+                health: 'good',
+                growth_stage: 'seedling',
+                notes: notes || null,
+                batch_id: batchId,
+                source: source
+            };
+            
+            console.log('Plant data being sent:', plantData);
+            
+            const response = await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`, {
+                method: 'POST',
+                body: JSON.stringify(plantData)
+            });
+            
+            console.log('Plant response:', response);
+            
+            if (response) {
+                this.showNotification(`✅ Planted ${plantCount} ${this.formatCropName(cropType)} in ${this.allGrowBeds?.find(b => b.id === parseInt(bedId))?.bed_name || `Bed ${bedId}`}`, 'success');
+                this.hideInlinePlantModal();
+                
+                // Refresh plant data
+                this.plantData = null; // Clear cache
+                this.growBeds = null; // Clear cache
+                await this.updatePlantOverview();
+                
+                // Refresh current tabs
+                if (this.activePlantTab === 'grow-beds') {
+                    await this.loadGrowBedsTab();
+                }
+                
+                // Also refresh Beds Overview tab if it has been loaded
+                const bedsOverviewContent = document.getElementById('beds-overview');
+                if (bedsOverviewContent && bedsOverviewContent.innerHTML.trim() !== '') {
+                    await this.loadBedsOverview();
+                }
+            }
+        } catch (error) {
+            console.error('Inline plant error:', error);
+            this.showNotification('❌ Failed to record planting', 'error');
+        }
+    }
+
+    calculateExpectedHarvestDate(cropType) {
+        // Basic harvest timeline estimates (days to maturity)
+        const harvestDays = {
+            lettuce: 45,
+            spinach: 40,
+            kale: 55,
+            chard: 50,
+            arugula: 35,
+            basil: 60,
+            cilantro: 35,
+            parsley: 70,
+            mint: 80,
+            tomato: 75,
+            pepper: 70,
+            cucumber: 55,
+            strawberry: 90
+        };
+        
+        const daysToHarvest = harvestDays[cropType] || 60; // Default to 60 days
+        const harvestDate = new Date();
+        harvestDate.setDate(harvestDate.getDate() + daysToHarvest);
+        
+        return harvestDate.toISOString().split('T')[0];
     }
     
     // Navigate to harvest ready plants with filter enabled
@@ -9174,6 +10463,36 @@ class AquaponicsApp {
             }, 100);
         } else {
             console.error(`Tab with ID ${tabId} not found`);
+        }
+    }
+    
+    // Navigate to Fish Management tab and Tank Information subtab
+    navigateToFishManagement() {
+        // First, make sure the fish-tank section is visible
+        const fishTankSection = document.getElementById('fish-tank');
+        if (fishTankSection) {
+            // Hide all other views/sections
+            const allViews = document.querySelectorAll('.view');
+            allViews.forEach(view => {
+                view.classList.remove('active');
+            });
+            
+            // Show the fish-tank section
+            fishTankSection.classList.add('active');
+            
+            // Then activate the Tank Information subtab
+            setTimeout(() => {
+                const tankInfoTab = document.getElementById('tank-information-tab');
+                if (tankInfoTab) {
+                    tankInfoTab.click();
+                }
+                // Scroll to top after navigation
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 100);
+        } else {
+            console.error('Fish tank section not found');
+            // Fallback: try the direct tab approach
+            this.navigateToTab('tank-information-tab');
         }
     }
     
@@ -9397,13 +10716,36 @@ class AquaponicsApp {
             
             // Fetch system data
             const [fishTanksResponse, growBeds, plantData] = await Promise.all([
-                this.makeApiCall(`/fish-tanks/system/${this.activeSystemId}`),
+                this.makeApiCall(`/fish-tanks/system/${this.activeSystemId}`).catch(() => ({ tanks: [] })),
                 this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`),
                 this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`)
             ]);
             
-            // Extract fish tanks array from response object
-            const fishTanks = fishTanksResponse?.tanks || [];
+            // Extract fish tanks array from response object, with fallback to system config
+            let fishTanks = fishTanksResponse?.tanks || [];
+            
+            // If no tank data from API, create fallback tanks from system configuration
+            if (!fishTanks || fishTanks.length === 0) {
+                const systemData = this.getActiveSystem();
+                if (systemData && systemData.fish_tank_count > 0) {
+                    const tankCount = systemData.fish_tank_count || 1;
+                    const tankVolume = systemData.total_fish_volume || 1000;
+                    const volumePerTankLiters = Math.floor(tankVolume / tankCount);
+                    const volumePerTankM3 = volumePerTankLiters / 1000;
+                    
+                    fishTanks = [];
+                    for (let i = 1; i <= tankCount; i++) {
+                        fishTanks.push({
+                            id: i,
+                            tank_number: i,
+                            size_m3: volumePerTankM3,
+                            volume_liters: volumePerTankLiters,
+                            fish_type: 'tilapia' // default fish type
+                        });
+                    }
+                    console.log('🐟 Created fallback tank data from system config:', fishTanks);
+                }
+            }
             
             // Calculate layout bounds and positioning
             const layoutData = this.calculateLayoutPositions(fishTanks, growBeds, plantData);
@@ -9843,13 +11185,36 @@ class AquaponicsApp {
         try {
             // Fetch system data
             const [fishTanksResponse, growBeds, plantData] = await Promise.all([
-                this.makeApiCall(`/fish-tanks/system/${this.activeSystemId}`),
+                this.makeApiCall(`/fish-tanks/system/${this.activeSystemId}`).catch(() => ({ tanks: [] })),
                 this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`),
                 this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`)
             ]);
             
-            // Extract fish tanks array from response object
-            const fishTanks = fishTanksResponse?.tanks || [];
+            // Extract fish tanks array from response object, with fallback to system config
+            let fishTanks = fishTanksResponse?.tanks || [];
+            
+            // If no tank data from API, create fallback tanks from system configuration
+            if (!fishTanks || fishTanks.length === 0) {
+                const systemData = this.getActiveSystem();
+                if (systemData && systemData.fish_tank_count > 0) {
+                    const tankCount = systemData.fish_tank_count || 1;
+                    const tankVolume = systemData.total_fish_volume || 1000;
+                    const volumePerTankLiters = Math.floor(tankVolume / tankCount);
+                    const volumePerTankM3 = volumePerTankLiters / 1000;
+                    
+                    fishTanks = [];
+                    for (let i = 1; i <= tankCount; i++) {
+                        fishTanks.push({
+                            id: i,
+                            tank_number: i,
+                            size_m3: volumePerTankM3,
+                            volume_liters: volumePerTankLiters,
+                            fish_type: 'tilapia' // default fish type
+                        });
+                    }
+                    console.log('🐟 Created fallback tank data from system config:', fishTanks);
+                }
+            }
             
             // Calculate layout bounds and positioning
             const layoutData = this.calculateLayoutPositions(fishTanks, growBeds, plantData);
@@ -10426,6 +11791,12 @@ class AquaponicsApp {
         // Hide any tooltips first
         this.hideLayoutTooltip();
         
+        // Debug: Log tank data to understand structure
+        console.log('🐟 Tank modal data:', tank);
+        console.log('🐟 Tank volume:', tank.volume, 'Type:', typeof tank.volume);
+        console.log('🐟 Tank volume > 0:', tank.volume > 0);
+        console.log('🐟 Volume validation result:', (tank.volume && typeof tank.volume === 'number' && tank.volume > 0));
+        
         // Create modal overlay
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
@@ -10458,21 +11829,21 @@ class AquaponicsApp {
                     </div>
                     <div class="info-item">
                         <label>Volume:</label>
-                        <span>${(tank.volume && typeof tank.volume === 'number') ? tank.volume.toFixed(2) : 'Unknown'} m³</span>
+                        <span>${(tank.volume && typeof tank.volume === 'number' && tank.volume > 0) ? tank.volume.toFixed(2) + ' m³' : 'Not configured'}</span>
                     </div>
                     <div class="info-item">
                         <label>Density:</label>
-                        <span>${tank.density || 'Unknown'} kg/m³</span>
+                        <span>${(tank.density && tank.density !== '0.0') ? tank.density + ' kg/m³' : 'No fish or volume not configured'}</span>
                     </div>
                     <div class="info-item">
                         <label>Diameter:</label>
-                        <span>${(tank.diameter && typeof tank.diameter === 'number') ? (tank.diameter / 50).toFixed(1) : 'Unknown'} meters</span>
+                        <span>${(tank.diameter && typeof tank.diameter === 'number' && tank.diameter > 0) ? (tank.diameter / 50).toFixed(1) + ' meters' : 'Not configured'}</span>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">Close</button>
-                <button class="btn-primary" onclick="app.navigateToTab('tank-information-tab'); this.closest('.modal-overlay').remove();">Manage Tank</button>
+                <button class="btn-primary" onclick="app.navigateToFishManagement(); this.closest('.modal-overlay').remove();">Manage Tank</button>
             </div>
         `;
         
@@ -10602,7 +11973,7 @@ class AquaponicsApp {
                 
                 <!-- Action Buttons -->
                 <div class="action-buttons-row">
-                    <button class="quick-action-btn harvest-btn" onclick="app.toggleBatchQuickForm('harvest', '${batchModalId}')">
+                    <button class="quick-action-btn batch-harvest-btn" onclick="app.toggleBatchQuickForm('harvest', '${batchModalId}')">
                         <img src="/icons/new-icons/Afraponix Go Icons_harvest.svg" alt="Harvest" class="btn-icon-svg" style="width: 1em; height: 1em; vertical-align: middle; margin-right: 0.5em;"> Harvest
                     </button>
                     <button class="quick-action-btn move-btn" onclick="app.toggleBatchQuickForm('move', '${batchModalId}')">
@@ -11030,7 +12401,7 @@ class AquaponicsApp {
                         <!-- Quick Action Buttons -->
                         <div class="tank-actions">
                             <div class="quick-actions-dropdown">
-                                <button class="quick-actions-btn" onclick="app.toggleBedQuickActions('${bed.id}')">
+                                <button class="quick-actions-btn" onclick="app.toggleBedQuickActions(${bed.id})">
                                     <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
                                         <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
                                     </svg>
@@ -11040,19 +12411,25 @@ class AquaponicsApp {
                                     </svg>
                                 </button>
                                 <div class="quick-actions-menu" id="bed-quick-actions-${bed.id}" style="display: none;">
-                                    <button class="quick-action-item" onclick="app.openQuickPlantDialog('${bed.id}', '${bed.bed_name || `Bed ${bed.bed_number}`}'); app.hideBedQuickActions('${bed.id}')">
+                                    <button class="quick-action-item quick-plant-btn" data-bed-id="${bed.id}" data-bed-name="${(bed.bed_name || 'Bed ' + bed.bed_number).replace(/"/g, '&quot;')}">
                                         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                                         </svg>
                                         Plant
                                     </button>
-                                    <button class="quick-action-item" onclick="app.openQuickHarvestDialog('${bed.id}', '${bed.bed_name || `Bed ${bed.bed_number}`}'); app.hideBedQuickActions('${bed.id}')">
+                                    <button class="quick-action-item quick-harvest-btn" data-bed-id="${bed.id}" data-bed-name="${(bed.bed_name || 'Bed ' + bed.bed_number).replace(/"/g, '&quot;')}">
                                         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                             <path d="M12 2L13.09 8.26L22 9L14 14.74L16.18 22L12 18.27L7.82 22L10 14.74L2 9L10.91 8.26L12 2z"/>
                                         </svg>
                                         Harvest
                                     </button>
-                                    <button class="quick-action-item" onclick="app.showBedDetails('${bed.id}'); app.hideBedQuickActions('${bed.id}')">
+                                    <button class="quick-action-item quick-move-btn" data-bed-id="${bed.id}" data-bed-name="${(bed.bed_name || 'Bed ' + bed.bed_number).replace(/"/g, '&quot;')}">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                                        </svg>
+                                        Move Batch
+                                    </button>
+                                    <button class="quick-action-item quick-details-btn" data-bed-id="${bed.id}">
                                         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                             <path d="M13 17.5c0 1.1.9 2 2 2s2-.9 2-2-.9-2-2-2-2 .9-2 2zm0-9c0 1.1.9 2 2 2s2-.9 2-2-.9-2-2-2-2 .9-2 2zm-6 0c0 1.1.9 2 2 2s2-.9 2-2-.9-2-2-2-2 .9-2 2z"/>
                                         </svg>
@@ -11291,7 +12668,7 @@ class AquaponicsApp {
                         <!-- Quick Action Buttons -->
                         <div class="tank-actions">
                             <div class="quick-actions-dropdown">
-                                <button class="quick-actions-btn" onclick="app.toggleBedQuickActions('${bed.id}')">
+                                <button class="quick-actions-btn" onclick="app.toggleBedQuickActions(${bed.id})">
                                     <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
                                         <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
                                     </svg>
@@ -11301,19 +12678,25 @@ class AquaponicsApp {
                                     </svg>
                                 </button>
                                 <div class="quick-actions-menu" id="bed-quick-actions-${bed.id}" style="display: none;">
-                                    <button class="quick-action-item" onclick="app.openQuickPlantDialog('${bed.id}', '${bed.bed_name || `Bed ${bed.bed_number}`}'); app.hideBedQuickActions('${bed.id}')">
+                                    <button class="quick-action-item quick-plant-btn" data-bed-id="${bed.id}" data-bed-name="${(bed.bed_name || 'Bed ' + bed.bed_number).replace(/"/g, '&quot;')}">
                                         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                                         </svg>
                                         Plant
                                     </button>
-                                    <button class="quick-action-item" onclick="app.openQuickHarvestDialog('${bed.id}', '${bed.bed_name || `Bed ${bed.bed_number}`}'); app.hideBedQuickActions('${bed.id}')">
+                                    <button class="quick-action-item quick-harvest-btn" data-bed-id="${bed.id}" data-bed-name="${(bed.bed_name || 'Bed ' + bed.bed_number).replace(/"/g, '&quot;')}">
                                         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                             <path d="M12 2L13.09 8.26L22 9L14 14.74L16.18 22L12 18.27L7.82 22L10 14.74L2 9L10.91 8.26L12 2z"/>
                                         </svg>
                                         Harvest
                                     </button>
-                                    <button class="quick-action-item" onclick="app.showBedDetails('${bed.id}'); app.hideBedQuickActions('${bed.id}')">
+                                    <button class="quick-action-item quick-move-btn" data-bed-id="${bed.id}" data-bed-name="${(bed.bed_name || 'Bed ' + bed.bed_number).replace(/"/g, '&quot;')}">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                                        </svg>
+                                        Move Batch
+                                    </button>
+                                    <button class="quick-action-item quick-details-btn" data-bed-id="${bed.id}">
                                         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                             <path d="M13 17.5c0 1.1.9 2 2 2s2-.9 2-2-.9-2-2-2-2 .9-2 2zm0-9c0 1.1.9 2 2 2s2-.9 2-2-.9-2-2-2-2 .9-2 2zm-6 0c0 1.1.9 2 2 2s2-.9 2-2-.9-2-2-2-2 .9-2 2z"/>
                                         </svg>
@@ -11540,7 +12923,7 @@ class AquaponicsApp {
             }
             
             // Submit harvest
-            await this.makeApiCall('/plant-data', {
+            await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`, {
                 method: 'POST',
                 body: JSON.stringify({
                     system_id: this.activeSystemId,
@@ -12423,7 +13806,7 @@ class AquaponicsApp {
                         <!-- Quick Action Buttons -->
                         <div class="tank-actions">
                             <div class="quick-actions-dropdown">
-                                <button class="quick-actions-btn" onclick="app.toggleBedQuickActions('${bed.id}')">
+                                <button class="quick-actions-btn" onclick="app.toggleBedQuickActions(${bed.id})">
                                     <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
                                         <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
                                     </svg>
@@ -12433,19 +13816,25 @@ class AquaponicsApp {
                                     </svg>
                                 </button>
                                 <div class="quick-actions-menu" id="bed-quick-actions-${bed.id}" style="display: none;">
-                                    <button class="quick-action-item" onclick="app.openQuickPlantDialog('${bed.id}', '${bed.bed_name || `Bed ${bed.bed_number}`}'); app.hideBedQuickActions('${bed.id}')">
+                                    <button class="quick-action-item quick-plant-btn" data-bed-id="${bed.id}" data-bed-name="${(bed.bed_name || 'Bed ' + bed.bed_number).replace(/"/g, '&quot;')}">
                                         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                                         </svg>
                                         Plant
                                     </button>
-                                    <button class="quick-action-item" onclick="app.openQuickHarvestDialog('${bed.id}', '${bed.bed_name || `Bed ${bed.bed_number}`}'); app.hideBedQuickActions('${bed.id}')">
+                                    <button class="quick-action-item quick-harvest-btn" data-bed-id="${bed.id}" data-bed-name="${(bed.bed_name || 'Bed ' + bed.bed_number).replace(/"/g, '&quot;')}">
                                         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                             <path d="M12 2L13.09 8.26L22 9L14 14.74L16.18 22L12 18.27L7.82 22L10 14.74L2 9L10.91 8.26L12 2z"/>
                                         </svg>
                                         Harvest
                                     </button>
-                                    <button class="quick-action-item" onclick="app.showBedDetails('${bed.id}'); app.hideBedQuickActions('${bed.id}')">
+                                    <button class="quick-action-item quick-move-btn" data-bed-id="${bed.id}" data-bed-name="${(bed.bed_name || 'Bed ' + bed.bed_number).replace(/"/g, '&quot;')}">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                                        </svg>
+                                        Move Batch
+                                    </button>
+                                    <button class="quick-action-item quick-details-btn" data-bed-id="${bed.id}">
                                         <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                             <path d="M13 17.5c0 1.1.9 2 2 2s2-.9 2-2-.9-2-2-2-2 .9-2 2zm0-9c0 1.1.9 2 2 2s2-.9 2-2-.9-2-2-2-2 .9-2 2zm-6 0c0 1.1.9 2 2 2s2-.9 2-2-.9-2-2-2-2 .9-2 2z"/>
                                         </svg>
@@ -12727,26 +14116,8 @@ class AquaponicsApp {
     }
     
     // Quick plant dialog
-    openQuickPlantDialog() {
-        // Find the first grow bed and open its plant form
-        const firstPlantBtn = document.querySelector('.quick-action-btn.plant-btn');
-        if (firstPlantBtn) {
-            firstPlantBtn.click();
-        } else {
-            // Navigate to plant tab if no beds visible
-            this.navigateToPlants();
-        }
-    }
+    // Removed duplicate openQuickPlantDialog function - now using the one with bedId/bedName parameters
     
-    // Quick harvest dialog
-    openQuickHarvestDialog() {
-        const firstHarvestBtn = document.querySelector('.quick-action-btn.harvest-btn');
-        if (firstHarvestBtn) {
-            firstHarvestBtn.click();
-        } else {
-            this.navigateToPlants();
-        }
-    }
     
     // Show keyboard shortcuts help
     showKeyboardShortcuts() {
@@ -15032,15 +16403,21 @@ class AquaponicsApp {
         };
 
         try {
-            await this.makeApiCall(`/data/water-quality/${this.activeSystemId}`, {
-                method: 'POST',
-                body: JSON.stringify(data)
-            });
+            await this.performSaveWithProgress('water', async () => {
+                // API call
+                await this.makeApiCall(`/data/water-quality/${this.activeSystemId}`, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
 
-            // Reload data and update dashboard
-            await this.loadDataRecords();
-            await this.updateDashboardFromData();
+                // Reload data and update dashboard
+                await this.loadDataRecords();
+                await this.updateDashboardFromData();
+                
+                return { success: true, data };
+            });
             
+            // Success actions after modal closes
             this.showNotification('Water quality data saved successfully! Dashboard updated.', 'success');
             this.clearForm('water-quality');
             
@@ -15095,23 +16472,30 @@ class AquaponicsApp {
         };
 
         try {
-            await this.makeApiCall(`/data/entries/fish-health`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    system_id: this.activeSystemId,
-                    fish_tank_id: data.fish_tank_id,
-                    date: data.date,
-                    count: data.count,
-                    mortality: data.mortality,
-                    average_weight: data.average_weight,
-                    feed_consumption: data.feed_consumption,
-                    behavior: data.behavior,
-                    notes: data.notes
-                })
+            await this.performSaveWithProgress('fish', async () => {
+                // API call
+                await this.makeApiCall(`/data/entries/fish-health`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        system_id: this.activeSystemId,
+                        fish_tank_id: data.fish_tank_id,
+                        date: data.date,
+                        count: data.count,
+                        mortality: data.mortality,
+                        average_weight: data.average_weight,
+                        feed_consumption: data.feed_consumption,
+                        behavior: data.behavior,
+                        notes: data.notes
+                    })
+                });
+                
+                await this.loadDataRecords();
+                await this.updateFishTankSummary();
+                
+                return { success: true, data };
             });
             
-            await this.loadDataRecords();
-            await this.updateFishTankSummary(); // Update tank summary with new feeding data
+            // Success actions after modal closes
             this.showNotification('Fish health data saved successfully!', 'success');
             this.clearForm('fish-health');
         } catch (error) {
@@ -17037,6 +18421,120 @@ class AquaponicsApp {
 
     delay(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Data Capture Save Modal Methods
+    showDataSaveModal(dataType = 'data') {
+        const modal = document.getElementById('data-save-modal');
+        if (modal) {
+            modal.classList.add('show');
+            // Update header based on data type
+            const header = modal.querySelector('.modal-header h2');
+            if (header) {
+                const typeMap = {
+                    'plant': 'Saving Plant Data',
+                    'fish': 'Saving Fish Data',
+                    'water': 'Saving Water Quality',
+                    'nutrient': 'Saving Nutrient Data',
+                    'spray': 'Saving Spray Application',
+                    'data': 'Saving Data'
+                };
+                header.textContent = typeMap[dataType] || 'Saving Data';
+            }
+            // Reset progress
+            this.updateSaveProgress(0, 'Preparing data...');
+            this.markSaveStepActive('save-step-validate');
+        }
+    }
+
+    hideDataSaveModal() {
+        const modal = document.getElementById('data-save-modal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+    }
+
+    updateSaveProgress(percentage, text) {
+        const progressFill = document.getElementById('save-progress-fill');
+        const progressText = document.getElementById('save-progress-text');
+        
+        if (progressFill) {
+            progressFill.style.width = `${percentage}%`;
+        }
+        
+        if (progressText) {
+            progressText.textContent = text;
+        }
+    }
+
+    markSaveStepActive(stepId) {
+        // Clear all active/completed states for save steps
+        const steps = document.querySelectorAll('.save-step');
+        steps.forEach(step => {
+            step.classList.remove('active', 'completed');
+        });
+        
+        // Mark current step as active
+        const currentStep = document.getElementById(stepId);
+        if (currentStep) {
+            currentStep.classList.add('active');
+        }
+    }
+
+    markSaveStepCompleted(stepId) {
+        const step = document.getElementById(stepId);
+        if (step) {
+            step.classList.remove('active');
+            step.classList.add('completed');
+        }
+    }
+
+    async performSaveWithProgress(dataType, saveFunction) {
+        try {
+            // Show save modal
+            this.showDataSaveModal(dataType);
+            
+            // Step 1: Validate
+            this.updateSaveProgress(20, 'Validating form data...');
+            await this.delay(200);
+            
+            // Step 2: Process
+            this.markSaveStepCompleted('save-step-validate');
+            this.markSaveStepActive('save-step-process');
+            this.updateSaveProgress(40, 'Processing information...');
+            await this.delay(300);
+            
+            // Step 3: Save (call actual save function)
+            this.markSaveStepCompleted('save-step-process');
+            this.markSaveStepActive('save-step-save');
+            this.updateSaveProgress(60, 'Saving to database...');
+            
+            const result = await saveFunction();
+            
+            // Step 4: Refresh
+            this.markSaveStepCompleted('save-step-save');
+            this.markSaveStepActive('save-step-refresh');
+            this.updateSaveProgress(80, 'Refreshing displays...');
+            await this.delay(200);
+            
+            // Step 5: Complete
+            this.markSaveStepCompleted('save-step-refresh');
+            this.markSaveStepActive('save-step-complete');
+            this.updateSaveProgress(100, 'Save complete!');
+            
+            // Wait a moment to show completion
+            await this.delay(800);
+            
+            // Hide modal
+            this.hideDataSaveModal();
+            
+            return result;
+            
+        } catch (error) {
+            console.error('Save operation failed:', error);
+            this.hideDataSaveModal();
+            throw error;
+        }
     }
 
     async createNewSystem(systemData) {
@@ -22316,15 +23814,20 @@ Generated by Afraponix Go - Aquaponics Management System`;
         }
         
         try {
-            // Try API call first
-            await this.makeApiCall('/spray-programmes/record', {
-                method: 'POST',
-                body: JSON.stringify(formData)
+            await this.performSaveWithProgress('spray', async () => {
+                // Try API call first
+                await this.makeApiCall('/spray-programmes/record', {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                });
+                
+                // Store completed application record in localStorage
+                this.recordCompletedSprayApplication(this.currentSprayApplication.id, formData.date);
+                
+                return { success: true, formData };
             });
             
-            // Store completed application record in localStorage for Actions Required tracking
-            this.recordCompletedSprayApplication(this.currentSprayApplication.id, formData.date);
-            
+            // Success actions after modal closes
             this.showNotification('Spray application recorded successfully!', 'success');
             this.closeRecordSprayModal();
             this.setupSprayProgrammes(); // Reload data
@@ -27870,6 +29373,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     app = new AquaponicsApp();
     window.app = app;
+    
+    // Debug: Check if Quick Action functions exist
+    console.log('🔍 Debug: Checking if Quick Action functions exist:');
+    console.log('openQuickHarvestDialog:', typeof app.openQuickHarvestDialog);
+    console.log('openQuickPlantDialog:', typeof app.openQuickPlantDialog);
+    console.log('showHarvestModalForBed:', typeof app.showHarvestModalForBed);
+    console.log('showInlinePlantModal:', typeof app.showInlinePlantModal);
+    
+    // Test function to verify Quick Actions work
+    window.testQuickActions = function() {
+        console.log('🧪 Testing Quick Actions...');
+        if (app.openQuickHarvestDialog) {
+            console.log('✅ Calling openQuickHarvestDialog test...');
+            app.openQuickHarvestDialog('166', 'Test Bed');
+        } else {
+            console.error('❌ openQuickHarvestDialog not found');
+        }
+    };
+    console.log('🧪 Test function created. Run testQuickActions() in console to test.');
     
     // Initialize plant tabs
     app.initializePlantTabs();

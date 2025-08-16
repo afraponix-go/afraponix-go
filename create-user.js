@@ -34,7 +34,7 @@ async function createUser(username, email, password, firstName, lastName, role =
         console.log(`👤 ID: ${result.insertId}`);
         console.log(`📧 Email: ${email}`);
         console.log(`👨‍💼 Username: ${username}`);
-        console.log(`🔐 Password: ${password}`);
+        console.log(`🔐 Password: [HIDDEN FOR SECURITY]`);
         console.log(`👤 Name: ${firstName} ${lastName}`);
         console.log(`🏷️ Role: ${role}`);
         
