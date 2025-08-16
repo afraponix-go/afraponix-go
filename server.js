@@ -51,7 +51,9 @@ app.use(cors({
         'http://localhost:8000', 
         'http://127.0.0.1:8000',
         'https://go.aquaponics.online',
-        'https://www.go.aquaponics.online'
+        'https://www.go.aquaponics.online',
+        'https://staging.aquaponics.online',
+        'https://staging.go.aquaponics.online'
     ],
     credentials: true
 }));
