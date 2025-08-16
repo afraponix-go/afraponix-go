@@ -1023,10 +1023,16 @@ class AquaponicsApp {
         }
         this.authModalSetup = true;
         
-        // Get main auth buttons
+        // Get main auth buttons with null checks
         const loginBtn = document.getElementById('login-btn');
         const registerBtn = document.getElementById('register-btn');
         const logoutBtn = document.getElementById('logout-btn');
+        
+        // Early return if essential elements are missing
+        if (!loginBtn || !registerBtn) {
+            console.warn('Auth modal setup skipped - login/register buttons not found');
+            return;
+        }
         
         // Get slide-out panel elements
         const loginCloseBtn = document.getElementById('login-close-btn');
@@ -1045,8 +1051,12 @@ class AquaponicsApp {
         const forgotPasswordForm = document.getElementById('forgot-password-form-element');
 
         // Main auth button controls - call slideout functions directly
-        loginBtn.addEventListener('click', () => this.showLoginSlideout());
-        registerBtn.addEventListener('click', () => this.showRegisterSlideout());
+        if (loginBtn) {
+            loginBtn.addEventListener('click', () => this.showLoginSlideout());
+        }
+        if (registerBtn) {
+            registerBtn.addEventListener('click', () => this.showRegisterSlideout());
+        }
         
         if (logoutBtn) {
             logoutBtn.addEventListener('click', async (e) => {
