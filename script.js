@@ -1556,6 +1556,49 @@ class AquaponicsApp {
         });
     }
 
+    showFieldError(fieldId, message) {
+        const field = document.getElementById(fieldId);
+        const errorElement = document.getElementById(fieldId + '-error');
+        
+        if (field && errorElement) {
+            field.classList.add('error');
+            
+            // Fix the actual input field text alignment
+            field.style.textAlign = 'left';
+            field.style.direction = 'ltr';
+            
+            errorElement.textContent = message;
+            errorElement.classList.add('show');
+            
+            // Ensure error message is left-aligned
+            errorElement.style.textAlign = 'left';
+            errorElement.style.direction = 'ltr';
+        }
+    }
+
+    clearFieldError(fieldId) {
+        const field = document.getElementById(fieldId);
+        const errorElement = document.getElementById(fieldId + '-error');
+        
+        if (field && errorElement) {
+            field.classList.remove('error');
+            errorElement.textContent = '';
+            errorElement.classList.remove('show');
+        }
+    }
+
+    clearAllFieldErrors() {
+        // Clear login form errors
+        this.clearFieldError('login-username');
+        this.clearFieldError('login-password');
+        
+        // Clear registration form errors (if they exist)
+        this.clearFieldError('register-username');
+        this.clearFieldError('register-email');
+        this.clearFieldError('register-password');
+        this.clearFieldError('register-confirm-password');
+    }
+
     async handleLogin(e) {
         const form = e.target;
         const submitBtn = form.querySelector('button[type="submit"]');
@@ -1570,7 +1613,9 @@ class AquaponicsApp {
         const username = document.getElementById('login-username').value;
         const password = document.getElementById('login-password').value;
 
-        this.showMessage('', 'info'); // Clear previous messages
+        // Clear previous messages and field errors
+        this.showMessage('', 'info');
+        this.clearAllFieldErrors();
         form.classList.add('loading');
         
         // Disable submit button
@@ -1598,9 +1643,23 @@ class AquaponicsApp {
                 // Don't show an additional error message
                 return;
             } else {
-                this.showMessage(result.error, 'error');
-                // Also show as toast notification for visibility on landing page
-                this.showNotification(result.error, 'error');
+                // Display field-specific error and toast notification for better visibility
+                if (result.error.includes('Invalid credentials') || result.error.includes('password')) {
+                    this.showFieldError('login-password', 'Invalid username or password');
+                    this.showNotification('Invalid username or password', 'error');
+                } else if (result.error.includes('Username') || result.error.includes('username')) {
+                    this.showFieldError('login-username', result.error);
+                    this.showNotification(result.error, 'error');
+                } else if (result.error.includes('wait')) {
+                    // Rate limiting - show on both fields
+                    this.showFieldError('login-username', result.error);
+                    this.showFieldError('login-password', result.error);
+                    this.showNotification(result.error, 'error');
+                } else {
+                    // Fallback to password field for unknown errors
+                    this.showFieldError('login-password', result.error);
+                    this.showNotification(result.error, 'error');
+                }
             }
         }
     }

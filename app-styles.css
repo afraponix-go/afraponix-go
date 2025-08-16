@@ -495,6 +495,17 @@ a:hover {
     background: var(--color-error-light);
     border-left: 3px solid var(--color-error);
     border-radius: 4px;
+    text-align: left !important;
+}
+
+/* Ensure field errors are left aligned in all contexts */
+.slideout-form .field-error,
+.auth-slideout .field-error,
+.slideout-body .field-error,
+#login-password-error,
+#login-username-error {
+    text-align: left !important;
+    direction: ltr !important;
 }
 
 .field-error.show {

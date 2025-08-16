@@ -17030,3 +17030,28 @@ h6,
     z-index: 1000 \!important;
     position: relative \!important;
 }
+
+/* CRITICAL: Field error text alignment override - MUST be at end of file to override all other rules */
+.field-error,
+.slideout-form .field-error,
+.auth-slideout .field-error,
+.slideout-body .field-error,
+#login-password-error,
+#login-username-error,
+div[id$="-error"].field-error,
+.field-error *,
+#login-password-error *,
+#login-username-error * {
+    text-align: left !important;
+    direction: ltr !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    display: block !important;
+}
+
+/* Even more aggressive override */
+body .field-error,
+html body .field-error,
+* .field-error {
+    text-align: left !important;
+}
