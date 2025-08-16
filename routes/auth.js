@@ -371,6 +371,8 @@ router.post('/resend-verification', async (req, res) => {
 
 // Reset password with token
 router.post('/reset-password', async (req, res) => {
+    console.log('Password reset endpoint hit:', { method: req.method, url: req.url, body: req.body });
+    
     const { token, password } = req.body;
 
     if (!token || !password) {
@@ -407,6 +409,16 @@ router.post('/reset-password', async (req, res) => {
         console.error('Password reset error:', error);
         res.status(500).json({ error: 'Failed to reset password' });
     }
+});
+
+// Test endpoint to verify auth routes are working
+router.get('/test', (req, res) => {
+    res.json({ 
+        message: 'Auth routes are working', 
+        timestamp: new Date().toISOString(),
+        url: req.url,
+        method: req.method 
+    });
 });
 
 // Check username availability
