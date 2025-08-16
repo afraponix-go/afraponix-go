@@ -421,6 +421,18 @@ router.get('/test', (req, res) => {
     });
 });
 
+// Alternative GET endpoint for password reset (for debugging)
+router.get('/reset-password-test', (req, res) => {
+    res.json({ 
+        message: 'Password reset endpoint accessible',
+        availableEndpoints: [
+            'POST /api/auth/reset-password',
+            'GET /api/auth/test',
+            'POST /api/auth/forgot-password'
+        ]
+    });
+});
+
 // Check username availability
 router.post('/check-username', async (req, res) => {
     const { username } = req.body;
