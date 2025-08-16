@@ -15097,6 +15097,44 @@ button[type="button"].btn.btn-secondary:hover {
     border-color: #1e3f1e !important;
 }
 
+/* Override test button color while keeping btn-success design system properties */
+#test-tb-credentials {
+    /* Just override the colors - inherit everything else from btn-success */
+    background-color: #2d5a2d !important;
+    color: #ffffff !important;
+    border-color: #2d5a2d !important;
+}
+
+#test-tb-credentials:hover {
+    background-color: #1e3f1e !important;
+    border-color: #1e3f1e !important;
+}
+
+#test-tb-credentials:active {
+    background-color: #1e3f1e !important;
+}
+
+/* Disabled state for test credentials button */
+#test-tb-credentials:disabled {
+    background: #6c757d !important;
+    background-color: #6c757d !important;
+    color: #fff !important;
+    border-color: #6c757d !important;
+    opacity: 0.65 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+#test-tb-credentials:disabled:hover {
+    background: #6c757d !important;
+    background-color: #6c757d !important;
+    color: #fff !important;
+    border-color: #6c757d !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
 /* ===== ADMIN USERS SECTION ===== */
 
 .users-grid {

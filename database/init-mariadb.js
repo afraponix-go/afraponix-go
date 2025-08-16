@@ -365,6 +365,20 @@ async function createTables(connection) {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (sensor_id) REFERENCES sensor_configs (id) ON DELETE CASCADE,
             INDEX idx_sensor_time (sensor_id, reading_time)
+        ) ENGINE=InnoDB`,
+
+        // System credentials table for secure storage of external service credentials
+        `CREATE TABLE IF NOT EXISTS system_credentials (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            system_id VARCHAR(255) NOT NULL,
+            service_name VARCHAR(100) NOT NULL,
+            api_url VARCHAR(255),
+            username_encrypted TEXT,
+            password_encrypted TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (system_id) REFERENCES systems(id) ON DELETE CASCADE,
+            UNIQUE KEY unique_system_service (system_id, service_name)
         ) ENGINE=InnoDB`
     ];
 
