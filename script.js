@@ -1350,7 +1350,6 @@ class AquaponicsApp {
         this.verificationCode = this.generateVerificationCode();
         this.verificationEmail = email;
         
-        console.log('🔐 Verification code for testing:', this.verificationCode);
     }
 
     generateVerificationCode() {
@@ -1430,7 +1429,6 @@ class AquaponicsApp {
             
             // For demo purposes, also generate new code for testing
             this.verificationCode = this.generateVerificationCode();
-            console.log('🔐 New verification code for testing:', this.verificationCode);
             
             // Clear current inputs
             document.querySelectorAll('.code-digit').forEach(input => input.value = '');
@@ -2275,12 +2273,9 @@ class AquaponicsApp {
                     const harvestCropSelect = document.getElementById('harvest-crop-type');
                     if (harvestCropSelect) {
                         harvestCropSelect.addEventListener('change', async () => {
-                            console.log('🚀 Harvest crop select changed, calling updateHarvestBatchSummary');
                             await this.updateHarvestBatchSummary();
-                            console.log('✅ updateHarvestBatchSummary completed');
                             // Check if there's a pending batch preselection
                             if (this.pendingBatchPreselection) {
-                                console.log('🎯 Attempting to preselect pending batch:', this.pendingBatchPreselection);
                                 this.preselectBatchInCheckboxes(this.pendingBatchPreselection);
                                 this.pendingBatchPreselection = null;
                             }
@@ -2344,7 +2339,6 @@ class AquaponicsApp {
                 plantCropSelect.innerHTML += customOptionsHtml;
             }
         } catch (error) {
-            console.log('No custom crops available or error loading:', error);
         }
         
         plantCropSelect.innerHTML += '<option value="other">Other</option>';
@@ -3082,7 +3076,6 @@ class AquaponicsApp {
         const summaryContent = document.getElementById('harvest-batch-summary-content');
         
         if (!growBedSelect.value || !cropTypeSelect.value) {
-            console.log(`❌ Early return - bed: '${growBedSelect.value}', crop: '${cropTypeSelect.value}'`);
             summaryContainer.style.display = 'none';
             return;
         }
@@ -3091,8 +3084,6 @@ class AquaponicsApp {
             // Get plant data for the selected grow bed and crop type
             const plantData = await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`);
             
-            console.log(`Harvest batch summary - Selected bed: ${growBedSelect.value}, crop: ${cropTypeSelect.value}`);
-            console.log(`Total plant records: ${plantData.length}`);
             
             // Filter for batches that match the selected grow bed and crop type
             const availableBatches = plantData.filter(record => {
@@ -3102,13 +3093,11 @@ class AquaponicsApp {
                        record.new_seedlings > 0; // Records with new plantings (regardless of harvest status)
                 
                 if (record.batch_id === 'batch_tomato_20250727') {
-                    console.log(`Debug batch_tomato_20250727: bed_id=${record.grow_bed_id}, crop=${record.crop_type}, seedlings=${record.new_seedlings}, matches=${matches}`);
                 }
                 
                 return matches;
             });
             
-            console.log(`Filtered batches: ${availableBatches.length}`);
 
             // Create a unique list of batches with remaining plant counts
             const uniqueBatches = {};
@@ -3136,9 +3125,7 @@ class AquaponicsApp {
             const availableBatchList = Object.values(uniqueBatches).filter(batch => batch.remaining_count > 0);
             
             // Debug: Log batch processing results
-            console.log(`Harvest batch summary - Found ${Object.keys(uniqueBatches).length} total batches, ${availableBatchList.length} with remaining plants`);
             if (Object.keys(uniqueBatches).length > 0) {
-                console.log('All batches with counts:', Object.values(uniqueBatches).map(b => `${b.batch_id}: ${b.remaining_count}/${b.planted_count}`));
             }
             
             if (availableBatchList.length === 0) {
@@ -3350,7 +3337,6 @@ class AquaponicsApp {
                         console.error('❌ Failed to find batch checkbox even on retry:', batchId);
                         // Debug: List all available batch checkboxes
                         const allCheckboxes = document.querySelectorAll('.batch-checkbox');
-                        console.log('Available batch checkboxes:', Array.from(allCheckboxes).map(cb => cb.dataset.batchId));
                     }
                 }, 500);
             }
@@ -3637,11 +3623,6 @@ class AquaponicsApp {
         document.addEventListener('click', async (event) => {
             // Enhanced debugging for all clicks
             if (event.target.closest('.quick-action-item')) {
-                console.log('🎯 Quick Action click detected!');
-                console.log('🔍 Event target:', event.target);
-                console.log('🔍 Closest quick-action-item:', event.target.closest('.quick-action-item'));
-                console.log('🔍 All classes on target:', event.target.className);
-                console.log('🔍 All classes on button:', event.target.closest('.quick-action-item')?.className);
             }
             
             // Handle quick plant button clicks
@@ -3649,7 +3630,6 @@ class AquaponicsApp {
                 const btn = event.target.closest('.quick-plant-btn');
                 const bedId = parseInt(btn.getAttribute('data-bed-id'));
                 const bedName = btn.getAttribute('data-bed-name');
-                console.log('🌱 Quick Plant clicked - bedId:', bedId, 'bedName:', bedName);
                 app.openQuickPlantDialog(bedId, bedName);
             }
             
@@ -3658,26 +3638,14 @@ class AquaponicsApp {
                 const btn = event.target.closest('.quick-harvest-btn');
                 const bedId = parseInt(btn.getAttribute('data-bed-id'));
                 const bedName = btn.getAttribute('data-bed-name');
-                console.log('🌾 HARVEST CLICK DETECTED! bedId:', bedId, 'bedName:', bedName);
-                console.log('🔍 Button element:', btn);
-                console.log('🔍 App object:', app);
-                console.log('🔍 openQuickHarvestDialog function exists:', typeof app.openQuickHarvestDialog);
                 
                 try {
-                    console.log('🚀 About to call openQuickHarvestDialog...');
-                    console.log('🔍 Function type check:', typeof app.openQuickHarvestDialog);
-                    console.log('🔍 Calling with params:', {bedId, bedName});
                     
                     const result = app.openQuickHarvestDialog(bedId, bedName);
-                    console.log('🔍 Function returned:', result);
-                    console.log('🔍 Result type:', typeof result);
                     
                     if (result && typeof result.then === 'function') {
-                        console.log('🔍 Function returned a promise, awaiting...');
                         await result;
-                        console.log('✅ Promise resolved');
                     }
-                    console.log('✅ openQuickHarvestDialog call completed');
                 } catch (error) {
                     console.error('❌ Error calling openQuickHarvestDialog:', error);
                     console.error('❌ Error stack:', error.stack);
@@ -3689,7 +3657,6 @@ class AquaponicsApp {
                 const btn = event.target.closest('.quick-move-btn');
                 const bedId = parseInt(btn.getAttribute('data-bed-id'));
                 const bedName = btn.getAttribute('data-bed-name');
-                console.log('📦 Quick Move Batch clicked - bedId:', bedId, 'bedName:', bedName);
                 app.openQuickMoveDialog(bedId, bedName);
             }
             
@@ -3697,7 +3664,6 @@ class AquaponicsApp {
             if (event.target.closest('.quick-details-btn')) {
                 const btn = event.target.closest('.quick-details-btn');
                 const bedId = parseInt(btn.getAttribute('data-bed-id'));
-                console.log('📋 Quick Details clicked - bedId:', bedId);
                 app.showBedDetails(bedId);
                 app.hideBedQuickActions(bedId);
             }
@@ -4351,7 +4317,6 @@ class AquaponicsApp {
     }
 
     destroyAllCharts() {
-        console.log('🔥 destroyAllCharts() called - destroying', Object.keys(this.charts).length, 'charts');
         console.trace('destroyAllCharts call stack');
         // Destroy all existing charts before creating new ones
         Object.keys(this.charts).forEach(canvasId => {
@@ -4363,7 +4328,6 @@ class AquaponicsApp {
     }
 
     initializeCharts() {
-        console.log('📊 initializeCharts() called');
         // Destroy existing charts first
         this.destroyAllCharts();
         
@@ -4516,9 +4480,7 @@ class AquaponicsApp {
     }
 
     async updateCharts() {
-        console.log('📈 updateCharts() called - current charts:', Object.keys(this.charts).length);
         if (Object.keys(this.charts).length === 0) {
-            console.log('📈 No charts found, skipping chart update (charts should be initialized elsewhere)');
             return;
         }
 
@@ -4615,7 +4577,6 @@ class AquaponicsApp {
         this.updateChartTimestamp('salinity-chart-timestamp', lastUpdateTime);
         
         // Update nutrient charts
-        console.log('About to call updateNutrientCharts');
         await this.updateNutrientCharts();
     }
 
@@ -4635,7 +4596,6 @@ class AquaponicsApp {
             }
         }
         
-        console.log(`Updating chart ${chartId} with ${filteredData.length} data points`);
         this.charts[chartId].data.labels = filteredLabels;
         this.charts[chartId].data.datasets[0].data = filteredData;
         this.charts[chartId].update('none'); // No animation for better performance
@@ -4645,7 +4605,6 @@ class AquaponicsApp {
         try {
             // Early return if no active system selected
             if (!this.activeSystemId || this.activeSystemId === 'undefined') {
-                console.log('No active system selected, skipping nutrient charts update');
                 return;
             }
             
@@ -4672,7 +4631,6 @@ class AquaponicsApp {
             
             for (const nutrientType of nutrientTypes) {
                 const data = getRecentNutrientData(nutrientType);
-                console.log(`${nutrientType} data:`, data.length, 'records');
                 
                 if (data.length > 0) {
                     const labels = data.map(item => {
@@ -4680,7 +4638,6 @@ class AquaponicsApp {
                         return date.getMonth() + 1 + '/' + date.getDate();
                     });
                     const values = data.map(item => parseFloat(item.value));
-                    console.log(`Updating ${nutrientType} chart with:`, values);
                     this.updateChart(`${nutrientType}-chart`, labels, values);
                     
                     // Update timestamp
@@ -4689,7 +4646,6 @@ class AquaponicsApp {
                     this.updateChartTimestamp(`${nutrientType}-chart-timestamp`, timestamp);
                 } else {
                     // No data available
-                    console.log(`No data for ${nutrientType} chart`);
                     this.updateChartTimestamp(`${nutrientType}-chart-timestamp`, 'No data available');
                 }
             }
@@ -5044,7 +5000,6 @@ class AquaponicsApp {
                     totalFish = latestHealthEntry.count;
                     averageWeight = latestHealthEntry.average_weight;
                     totalBiomassKg = (totalFish * averageWeight) / 1000; // Convert to kg
-                    console.log('🐟 Using fish health data as fallback:', {totalFish, averageWeight, totalBiomassKg});
                 }
             } catch (error) {
                 console.error('Failed to use fish health fallback:', error);
@@ -5628,7 +5583,6 @@ class AquaponicsApp {
         // Find the button that was clicked
         const button = document.querySelector(`button[onclick="app.toggleQuickActions(${tankNumber})"]`);
         if (!button) {
-            console.log('Button not found for tank:', tankNumber);
             return;
         }
         
@@ -5779,31 +5733,22 @@ class AquaponicsApp {
 
     // Bed Quick Actions Functions
     toggleBedQuickActions(bedId) {
-        console.log('🔄 toggleBedQuickActions called for bed:', bedId);
         
         // Find the inline dropdown menu that exists in the HTML
         const menu = document.getElementById(`bed-quick-actions-${bedId}`);
         if (!menu) {
-            console.log('❌ Menu not found for bed:', bedId);
-            console.log('🔍 Available menu elements:', document.querySelectorAll('[id*="bed-quick-actions"]'));
             return;
         }
         
-        console.log('📍 Menu found:', menu);
-        console.log('🎯 Menu current style:', menu.style.cssText);
-        console.log('🎯 Menu computed style display:', window.getComputedStyle(menu).display);
         
         // Check if this specific menu is currently visible
         const isVisible = menu.style.display === 'block' || window.getComputedStyle(menu).display === 'block';
-        console.log('👁️ Is menu visible?', isVisible, 'style display:', menu.style.display, 'computed display:', window.getComputedStyle(menu).display);
         
         if (isVisible) {
             // Menu is visible, hide it
-            console.log('➖ Menu was visible, hiding it');
             this.hideAllBedQuickActionMenus();
         } else {
             // Menu is not visible, hide all others first then show this one
-            console.log('✅ Showing menu for bed:', bedId);
             this.hideAllBedQuickActionMenus();
             
             // Show this menu after a small delay to ensure hiding is complete
@@ -5812,7 +5757,6 @@ class AquaponicsApp {
                 menu.style.setProperty('visibility', 'visible', 'important');
                 menu.style.setProperty('opacity', '1', 'important');
                 menu.style.setProperty('z-index', '99999', 'important');
-                console.log('🎯 Menu style after showing:', menu.style.cssText);
             }, 10);
         }
     }
@@ -5858,8 +5802,6 @@ class AquaponicsApp {
         menu.addEventListener('click', (e) => {
             const clickedItem = e.target.closest('.quick-action-item');
             if (clickedItem) {
-                console.log('Menu item clicked:', clickedItem.textContent.trim());
-                console.log('onclick attribute:', clickedItem.getAttribute('onclick'));
                 // Don't hide menu here - let the onclick handler execute first
                 // Menu will be hidden by the action functions themselves
             }
@@ -5870,10 +5812,8 @@ class AquaponicsApp {
     }
 
     hideAllBedQuickActionMenus() {
-        console.log('hideAllBedQuickActionMenus called');
         // Hide old inline menus
         document.querySelectorAll('[id^="bed-quick-actions-"]').forEach(menu => {
-            console.log('Hiding inline menu:', menu.id);
             menu.removeAttribute('style');
             menu.style.setProperty('display', 'none', 'important');
             menu.style.setProperty('visibility', 'hidden', 'important');
@@ -5881,7 +5821,6 @@ class AquaponicsApp {
         });
         // Hide floating menus more aggressively
         document.querySelectorAll('[id^="floating-bed-quick-actions-"]').forEach(menu => {
-            console.log('Hiding floating menu:', menu.id);
             menu.style.setProperty('display', 'none', 'important');
             menu.style.setProperty('visibility', 'hidden', 'important');
             menu.style.setProperty('opacity', '0', 'important');
@@ -5912,7 +5851,6 @@ class AquaponicsApp {
 
     // Bed Action Functions
     async openQuickPlantDialog(bedId, bedName) {
-        console.log('🌱 Opening quick plant dialog for bed:', bedId, bedName);
         
         try {
             // Hide the quick actions menu
@@ -5964,7 +5902,6 @@ class AquaponicsApp {
     }
     
     navigateToPlantHarvest() {
-        console.log('navigateToPlantHarvest called');
         // First ensure we're on the plants view
         const plantsView = document.getElementById('plants');
         if (!plantsView.classList.contains('active')) {
@@ -5983,7 +5920,6 @@ class AquaponicsApp {
     }
 
     async openQuickHarvestDialog(bedId, bedName) {
-        console.log('🌾 Opening quick harvest dialog for bed:', bedId, bedName);
         
         try {
             // Hide the quick actions menu
@@ -6035,7 +5971,6 @@ class AquaponicsApp {
     }
 
     async openQuickMoveDialog(bedId, bedName) {
-        console.log('📦 Opening quick batch move dialog for bed:', bedId, bedName);
         
         try {
             // Hide the quick actions menu
@@ -6044,7 +5979,6 @@ class AquaponicsApp {
             
             // Get fresh plant data from API instead of using cached data
             const plantData = await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`);
-            console.log('📊 Fresh plant data received:', plantData?.length, 'entries');
             
             const batchesInBed = {};
             
@@ -6069,7 +6003,6 @@ class AquaponicsApp {
             });
             
             const batches = Object.values(batchesInBed).filter(batch => batch.planted > batch.harvested);
-            console.log('🎯 Active batches in bed:', batches);
             
             if (batches.length === 0) {
                 this.showNotification(`No active batches found in ${bedName} to move`, 'warning');
@@ -6078,7 +6011,6 @@ class AquaponicsApp {
             
             // Get all grow beds for destination selection
             const growBeds = await this.getGrowBedsForSystem();
-            console.log('🛏️ Available destination beds:', growBeds.length);
             
             // Create batch selection modal
             const modal = document.createElement('div');
@@ -6122,7 +6054,6 @@ class AquaponicsApp {
             
             document.body.appendChild(modal);
             modal.style.display = 'block';
-            console.log('✅ Modal appended to body, batches available:', batches.length);
             
         } catch (error) {
             console.error('Error opening move dialog:', error);
@@ -6182,7 +6113,6 @@ class AquaponicsApp {
     }
 
     showQuickHarvestModal(bedId, bedName, plants) {
-        console.log('🌾 Showing harvest modal for bed:', bedId, 'with plants:', plants);
         
         // Remove any existing harvest modal
         const existing = document.getElementById('quick-harvest-modal');
@@ -6357,13 +6287,6 @@ class AquaponicsApp {
         const plantCount = harvestType === 'full-harvest' ? parseInt(document.getElementById('harvest-count').value) || 0 : 0;
         
         // Debug validation
-        console.log('🔍 Validation Debug:');
-        console.log('- cropType:', cropType);
-        console.log('- batchId:', batchId);
-        console.log('- weight:', weight);
-        console.log('- quality:', quality);
-        console.log('- harvestType:', harvestType);
-        console.log('- plantCount:', plantCount);
         
         // Validation
         if (!cropType || !weight || !quality) {
@@ -6402,7 +6325,6 @@ class AquaponicsApp {
                 batch_id: batchId || null
             };
             
-            console.log('🚀 Submitting harvest data:', harvestData);
             
             const response = await fetch(`/api/data/plant-growth/${this.activeSystemId}`, {
                 method: 'POST',
@@ -6464,13 +6386,11 @@ class AquaponicsApp {
     }
 
     showBedDetails(bedId) {
-        console.log('🔍 showBedDetails called for bed:', bedId);
         
         try {
             // First ensure we're in the Plants view
             const plantsView = document.getElementById('plants');
             if (plantsView && !plantsView.classList.contains('active')) {
-                console.log('🔄 Switching to Plants view');
                 const plantsNavBtn = document.querySelector('[data-view="plants"]') || document.getElementById('plants-btn');
                 if (plantsNavBtn) {
                     plantsNavBtn.click();
@@ -6480,7 +6400,6 @@ class AquaponicsApp {
             // Then click the Plant Overview tab to show bed details
             const overviewTab = document.getElementById('plant-overview-tab');
             if (overviewTab) {
-                console.log('🔄 Switching to Plant Overview tab');
                 overviewTab.click();
             } else {
                 console.error('❌ Plant Overview tab not found');
@@ -6489,7 +6408,6 @@ class AquaponicsApp {
             // Show notification about the bed
             const bed = this.allGrowBeds?.find(b => b.id == bedId);
             const bedName = bed?.bed_name || `Bed ${bed?.bed_number || bedId}`;
-            console.log('📋 Found bed data:', bed);
             
             this.showNotification(`📋 Viewing details for ${bedName}. Check the grow bed summary and plant batches in the overview.`, 'info');
             
@@ -6573,13 +6491,11 @@ class AquaponicsApp {
     async initializeFishDensityChart() {
         const canvas = document.getElementById('fish-density-chart');
         if (!canvas) {
-            console.log('🐟 Fish density chart canvas not found');
             return;
         }
 
         // Prevent multiple simultaneous initializations
         if (this.fishDensityChartInitializing) {
-            console.log('🐟 Fish density chart already initializing, skipping...');
             return;
         }
         this.fishDensityChartInitializing = true;
@@ -6589,7 +6505,6 @@ class AquaponicsApp {
             
             // Destroy existing chart if it exists
             if (this.fishDensityChart) {
-                console.log('🐟 Destroying existing fish density chart');
                 this.fishDensityChart.destroy();
                 this.fishDensityChart = null;
             }
@@ -6604,7 +6519,6 @@ class AquaponicsApp {
             
             if (fishInventoryData && fishInventoryData.tanks && fishInventoryData.tanks.length > 0) {
                 // Use fish inventory data (comprehensive data across all tanks)
-                console.log('🐟 Fish density chart - Using inventory data:', fishInventoryData.tanks.length, 'tanks');
                 
                 // Create a single data point representing current system density
                 const totalFish = fishInventoryData.tanks.reduce((sum, tank) => sum + (parseInt(tank.current_count) || 0), 0);
@@ -6613,17 +6527,14 @@ class AquaponicsApp {
                 if (totalFish > 0 && totalBiomass > 0) {
                     const density = fishVolumeM3 > 0 ? totalBiomass / fishVolumeM3 : 0;
                     densityData = [{ date: 'Current', density: density, source: 'inventory' }];
-                    console.log('🐟 Chart using inventory:', totalFish, 'fish,', totalBiomass, 'kg,', density.toFixed(2), 'kg/m³');
                 }
             }
         } catch (error) {
-            console.log('🐟 Fish inventory API failed, falling back to health data');
         }
         
         // Fall back to fish health data if no inventory data
         if (densityData.length === 0) {
             const fishHealthData = this.dataRecords?.fishHealth || [];
-            console.log('🐟 Fish density chart - Using health data:', fishHealthData.length, 'records');
             
             // Filter to only include entries with valid weight data
             const validHealthData = fishHealthData.filter(entry => 
@@ -6639,7 +6550,6 @@ class AquaponicsApp {
         
         // If no density data available, show a message instead of empty chart
         if (densityData.length === 0) {
-            console.log('🐟 No fish density data available - need records with both count and average_weight');
             
             // Create a simple message chart
             this.fishDensityChart = new Chart(ctx, {
@@ -7216,13 +7126,11 @@ class AquaponicsApp {
 
     async updatePlantNutrientData() {
         try {
-            console.log('updatePlantNutrientData started');
             const plantData = this.dataRecords.plantGrowth || [];
             const crops = this.getCurrentCrops(plantData);
             
             // Get the most recent value for each nutrient (may come from different entries)
             const recentNutrients = await this.getLatestNutrientValues();
-            console.log('Latest nutrients loaded:', recentNutrients);
         
         // Update plant nutrient displays with latest readings and status indicators
         this.updateNutrientStatus('nitrate', recentNutrients.nitrate.value, this.analyzeNitrate(recentNutrients.nitrate.value, crops), recentNutrients.nitrate.source);
@@ -7241,7 +7149,6 @@ class AquaponicsApp {
             // Update nutrient recommendations
             this.updateNutrientRecommendations();
             
-            console.log('updatePlantNutrientData completed successfully');
         } catch (error) {
             console.error('Error in updatePlantNutrientData:', error);
             // Set default "No data" values for all nutrients
@@ -7261,7 +7168,6 @@ class AquaponicsApp {
         try {
             // Early return if no active system selected
             if (!this.activeSystemId || this.activeSystemId === 'undefined') {
-                console.log('No active system selected, returning default values');
                 return this.getDefaultNutrientValues();
             }
             
@@ -9316,7 +9222,6 @@ class AquaponicsApp {
                 }
             });
             
-            console.log(`Overview: ${activeBatches} active batches, ${totalPlants} total plants remaining`);
             
             const activeGrowBeds = Math.min(systemConfig.grow_bed_count || 4, this.getActiveGrowBeds(plantData));
             const totalHarvested = this.calculateTotalHarvested(plantData);
@@ -9913,15 +9818,10 @@ class AquaponicsApp {
     }
     
     showInlineHarvestModal(batchId, cropType, growBedId, remainingPlants) {
-        console.log('📋 === INLINE HARVEST MODAL STARTING ===');
-        console.log('📋 showInlineHarvestModal called with:', {batchId, cropType, growBedId, remainingPlants});
         
         // Hide any existing modals first
-        console.log('📋 Step 1: Hiding existing modals...');
         this.hideAllModals();
-        console.log('📋 Step 1 completed');
         
-        console.log('📋 Step 2: Creating modal HTML...');
         // Create harvest modal HTML
         const modalHtml = `
             <div class="inline-harvest-modal" id="inline-harvest-modal">
@@ -9954,37 +9854,24 @@ class AquaponicsApp {
                 </div>
             </div>
         `;
-        console.log('📋 Step 2 completed - HTML created, length:', modalHtml.length);
         
-        console.log('📋 Step 3: Adding modal to document...');
         // Add modal to document
         document.body.insertAdjacentHTML('beforeend', modalHtml);
-        console.log('📋 Step 3 completed');
         
-        console.log('📋 Step 4: Finding and showing modal...');
         // Show modal
         const modal = document.getElementById('inline-harvest-modal');
-        console.log('📋 Modal element found:', modal);
-        console.log('📋 Modal element style before:', modal?.style.display);
         
         if (modal) {
             modal.style.display = 'flex';
-            console.log('📋 Modal display set to flex');
-            console.log('📋 Modal computed style:', window.getComputedStyle(modal).display);
-            console.log('📋 Modal z-index:', window.getComputedStyle(modal).zIndex);
-            console.log('📋 Modal position:', window.getComputedStyle(modal).position);
         } else {
             console.error('❌ CRITICAL: Modal element not found after creation!');
             return;
         }
         
-        console.log('📋 Step 5: Setting focus...');
         // Focus on first input
         const countInput = document.getElementById('inline-harvest-count');
-        console.log('📋 Count input found:', countInput);
         if (countInput) {
             countInput.focus();
-            console.log('📋 Focus set on count input');
         }
         
         // Add ESC key support to close modal
@@ -10033,7 +9920,6 @@ class AquaponicsApp {
             const now = new Date();
             const dateStr = now.toISOString().slice(0, 16);
             
-            console.log(`Submitting harvest: ${harvestCount} plants, ${harvestWeight}kg from batch ${batchId}`);
             
             const harvestData = {
                 system_id: this.activeSystemId,
@@ -10054,14 +9940,12 @@ class AquaponicsApp {
                 days_to_harvest: null
             };
             
-            console.log('Harvest data being sent:', harvestData);
             
             const response = await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`, {
                 method: 'POST',
                 body: JSON.stringify(harvestData)
             });
             
-            console.log('Harvest response:', response);
             
             if (response) {
                 this.showNotification(`✅ Harvested ${harvestCount} plants (${harvestWeight}kg) from batch ${batchId}`, 'success');
@@ -10222,46 +10106,27 @@ class AquaponicsApp {
 
     async showHarvestModalForBed(bedId, bedName) {
         try {
-            console.log('🌾 === SHOW HARVEST MODAL STARTING ===');
-            console.log('🌾 showHarvestModalForBed called for bed:', bedId, 'name:', bedName);
-            console.log('🔍 this.activeSystemId:', this.activeSystemId);
-            console.log('🔍 Making API call to get plant data...');
             
             // Get plant data to find harvestable batches in this bed
             const plantData = await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`);
-            console.log('📊 Plant data received:', plantData?.length || 0, 'entries');
-            console.log('📊 First few plant records:', plantData?.slice(0, 3));
             
             // Find active batches (planted but not fully harvested) for this bed
-            console.log('🔍 Getting active batches for bed ID:', bedId, '(type:', typeof bedId, ')');
             const activeBatches = this.getActiveBatchesForBed(plantData, bedId);
-            console.log('📈 Active batches found:', activeBatches?.length || 0);
-            console.log('📈 Active batches details:', activeBatches);
             
             if (activeBatches.length === 0) {
-                console.log('⚠️ No harvestable plants found - showing notification');
                 this.showNotification(`No harvestable plants found in ${bedName}`, 'info');
-                console.log('⚠️ Notification sent, returning early');
                 return;
             }
             
             if (activeBatches.length === 1) {
                 // Single batch - show harvest modal directly
-                console.log('🎯 Single batch found, showing direct harvest modal');
                 const batch = activeBatches[0];
-                console.log('🎯 Batch details:', batch);
-                console.log('🎯 Calling showInlineHarvestModal...');
                 this.showInlineHarvestModal(batch.batchId, batch.cropType, bedId, batch.remainingPlants);
-                console.log('🎯 showInlineHarvestModal call completed');
             } else {
                 // Multiple batches - show selection modal
-                console.log('🔢 Multiple batches found, showing selection modal');
-                console.log('🔢 Calling showBatchSelectionModalForBed...');
                 this.showBatchSelectionModalForBed(bedName, activeBatches, bedId);
-                console.log('🔢 showBatchSelectionModalForBed call completed');
             }
             
-            console.log('🌾 === SHOW HARVEST MODAL ENDING ===');
         } catch (error) {
             console.error('❌ CRITICAL ERROR in showHarvestModalForBed:', error);
             console.error('❌ Error stack:', error.stack);
@@ -10367,14 +10232,12 @@ class AquaponicsApp {
                 source: source
             };
             
-            console.log('Plant data being sent:', plantData);
             
             const response = await this.makeApiCall(`/data/plant-growth/${this.activeSystemId}`, {
                 method: 'POST',
                 body: JSON.stringify(plantData)
             });
             
-            console.log('Plant response:', response);
             
             if (response) {
                 this.showNotification(`✅ Planted ${plantCount} ${this.formatCropName(cropType)} in ${this.allGrowBeds?.find(b => b.id === parseInt(bedId))?.bed_name || `Bed ${bedId}`}`, 'success');
@@ -10741,7 +10604,6 @@ class AquaponicsApp {
         try {
             // Early return if no active system selected
             if (!this.activeSystemId || this.activeSystemId === 'undefined') {
-                console.log('No active system selected, skipping farm layout render');
                 return;
             }
             
@@ -10774,7 +10636,6 @@ class AquaponicsApp {
                             fish_type: 'tilapia' // default fish type
                         });
                     }
-                    console.log('🐟 Created fallback tank data from system config:', fishTanks);
                 }
             }
             
@@ -11243,7 +11104,6 @@ class AquaponicsApp {
                             fish_type: 'tilapia' // default fish type
                         });
                     }
-                    console.log('🐟 Created fallback tank data from system config:', fishTanks);
                 }
             }
             
@@ -11400,8 +11260,6 @@ class AquaponicsApp {
                 if (!batches.has(entry.batch_id)) {
                     // Debug: log available fields for the first entry
                     if (Object.keys(batches).length === 0) {
-                        console.log('Plant data entry fields:', Object.keys(entry));
-                        console.log('Sample entry:', entry);
                     }
                     
                     // Try multiple possible field names for crop
@@ -11458,18 +11316,15 @@ class AquaponicsApp {
         let plantCount = 0;
         const plantCounts = new Map();
         
-        console.log(`Calculating plant count for bed ID ${bedId}, plant data entries:`, plantData.length);
         
         plantData.forEach(entry => {
             // Use == for type coercion since bed IDs might be strings or numbers
             if (entry.grow_bed_id == bedId && entry.batch_id) {
-                console.log(`Processing entry for bed ID ${bedId}:`, entry);
                 
                 // Add planted plants
                 if (entry.new_seedlings && entry.new_seedlings > 0) {
                     const existing = plantCounts.get(entry.batch_id) || 0;
                     plantCounts.set(entry.batch_id, existing + entry.new_seedlings);
-                    console.log(`Added ${entry.new_seedlings} plants to batch ${entry.batch_id}, total: ${existing + entry.new_seedlings}`);
                 }
                 
                 // Subtract harvested plants
@@ -11477,18 +11332,15 @@ class AquaponicsApp {
                     const existing = plantCounts.get(entry.batch_id) || 0;
                     const newCount = Math.max(0, existing - entry.plants_harvested);
                     plantCounts.set(entry.batch_id, newCount);
-                    console.log(`Subtracted ${entry.plants_harvested} plants from batch ${entry.batch_id}, remaining: ${newCount}`);
                 }
             }
         });
         
-        console.log(`Plant counts by batch for bed ID ${bedId}:`, plantCounts);
         
         plantCounts.forEach(count => {
             plantCount += count;
         });
         
-        console.log(`Final plant count for bed ID ${bedId}: ${plantCount}`);
         return plantCount;
     }
     
@@ -11823,10 +11675,6 @@ class AquaponicsApp {
         this.hideLayoutTooltip();
         
         // Debug: Log tank data to understand structure
-        console.log('🐟 Tank modal data:', tank);
-        console.log('🐟 Tank volume:', tank.volume, 'Type:', typeof tank.volume);
-        console.log('🐟 Tank volume > 0:', tank.volume > 0);
-        console.log('🐟 Volume validation result:', (tank.volume && typeof tank.volume === 'number' && tank.volume > 0));
         
         // Create modal overlay
         const overlay = document.createElement('div');
@@ -12234,9 +12082,7 @@ class AquaponicsApp {
             this.pendingBatchPreselection = batchId;
             
             if (harvestBedSelect) {
-                console.log(`🏠 Setting harvest bed to: ${growBedId}`);
                 harvestBedSelect.value = growBedId;
-                console.log(`📤 Dispatching change event for harvest bed`);
                 harvestBedSelect.dispatchEvent(new Event('change'));
             }
             
@@ -12244,9 +12090,7 @@ class AquaponicsApp {
             setTimeout(() => {
                 if (harvestCropSelect) {
                     const formattedCropType = cropType.toLowerCase().replace(/\s+/g, '_');
-                    console.log(`🔄 Setting harvest crop to: ${formattedCropType}`);
                     harvestCropSelect.value = formattedCropType;
-                    console.log(`📤 Dispatching change event for harvest crop`);
                     harvestCropSelect.dispatchEvent(new Event('change'));
                 }
                 
@@ -12887,13 +12731,10 @@ class AquaponicsApp {
 
     // Helper function to generate bed options for move dropdown
     async generateBedOptions(currentBedId) {
-        console.log('generateBedOptions called with currentBedId:', currentBedId);
-        console.log('this.activeSystemId:', this.activeSystemId);
         
         // Use the reliable getGrowBedsForSystem method instead of direct API call
         try {
             this.growBeds = await this.getGrowBedsForSystem();
-            console.log('Fetched growBeds using getGrowBedsForSystem:', this.growBeds);
         } catch (error) {
             console.error('Error fetching grow beds for dropdown:', error);
             console.error('Error details:', error.message);
@@ -12901,12 +12742,10 @@ class AquaponicsApp {
         }
         
         if (!this.growBeds || !Array.isArray(this.growBeds)) {
-            console.log('Still no growBeds available');
             return '<option value="" disabled>No beds available</option>';
         }
         
         const filteredBeds = this.growBeds.filter(bed => bed.id != currentBedId);
-        console.log('Filtered beds (excluding current):', filteredBeds);
         
         const options = filteredBeds
             .map(bed => {
@@ -12914,12 +12753,10 @@ class AquaponicsApp {
                 const bedName = bed.bed_name || bed.name || `Bed ${bed.bed_number || bed.id}`;
                 const bedType = bed.bed_type ? bed.bed_type.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()) : '';
                 const displayName = bedType ? `${bedName} (${bedType})` : bedName;
-                console.log(`Bed ${bed.id}: ${displayName}`);
                 return `<option value="${bed.id}">${displayName}</option>`;
             })
             .join('');
             
-        console.log('Generated bed options HTML:', options);
         return options || '<option value="" disabled>No other beds available</option>';
     }
     
@@ -13026,18 +12863,15 @@ class AquaponicsApp {
             formId = `quick-${formType}`;
         }
         const form = document.getElementById(formId);
-        console.log(`Toggling form: ${formId}, found element:`, form);
         
         // Check for duplicate IDs
         const allFormsWithId = document.querySelectorAll(`#${formId}`);
-        console.log(`Found ${allFormsWithId.length} forms with ID ${formId}:`, allFormsWithId);
         
         if (form) {
             const isVisible = form.style.display !== 'none';
             
             // Hide all other forms in the same card (try both class names for compatibility)
             const card = form.closest('.bed-summary-card') || form.closest('.bed-item-unified');
-            console.log('Found parent card:', card);
             
             if (card) {
                 card.querySelectorAll('.inline-quick-form').forEach(f => {
@@ -13064,33 +12898,17 @@ class AquaponicsApp {
                     form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }, 100);
             }
-            console.log(`Form ${formId} display set to:`, form.style.display);
-            console.log(`Form classes:`, form.className);
-            console.log(`Form computed display:`, window.getComputedStyle(form).display);
             
             // Debug positioning and dimensions
             const rect = form.getBoundingClientRect();
             const computedStyles = window.getComputedStyle(form);
-            console.log(`Form position:`, { 
-                top: rect.top, 
-                left: rect.left, 
-                width: rect.width, 
-                height: rect.height,
-                visibility: computedStyles.visibility,
-                opacity: computedStyles.opacity,
-                zIndex: computedStyles.zIndex
-            });
             
             // Check if form is actually in the viewport
             const inViewport = rect.top >= 0 && rect.left >= 0 && 
                               rect.bottom <= window.innerHeight && 
                               rect.right <= window.innerWidth;
-            console.log(`Form is in viewport:`, inViewport);
             
             // Debug form content
-            console.log(`Form innerHTML length:`, form.innerHTML.length);
-            console.log(`Form children count:`, form.children.length);
-            console.log(`Form first 200 chars:`, form.innerHTML.substring(0, 200));
             
             // Force minimum dimensions if form has no natural size
             if (rect.width === 0 || rect.height === 0) {
@@ -13102,7 +12920,6 @@ class AquaponicsApp {
                 form.style.setProperty('border', '5px solid blue', 'important');
                 form.style.setProperty('padding', '20px', 'important');
                 form.style.setProperty('margin', '20px', 'important');
-                console.log('Applied minimum dimensions and bright styling to form');
                 
                 // Add a large text overlay to make it impossible to miss
                 form.innerHTML = '<div style="font-size: 48px; color: white; text-align: center; padding: 50px;">🚨 FORM IS HERE! 🚨<br>Click to close</div>' + form.innerHTML;
@@ -13288,7 +13105,6 @@ class AquaponicsApp {
                     })
                 });
             } catch (error) {
-                console.log('New variety save failed (may already exist):', error);
             }
         } else if (varietySelect.value && varietySelect.value !== '_new') {
             seedVariety = varietySelect.value;
@@ -14034,7 +13850,6 @@ class AquaponicsApp {
         this.quickActionHandler = (e) => {
             if (e.target.classList.contains('quick-action-btn')) {
                 e.preventDefault();
-                console.log('Quick action button clicked:', e.target.className, 'bedId:', e.target.dataset.bedId);
                 
                 const bedId = e.target.dataset.bedId;
                 
@@ -14066,22 +13881,18 @@ class AquaponicsApp {
     // Initialize grow bed specific features for proper form functionality
     initializeGrowBedFeatures() {
         // Debug: Log that initialization is starting
-        console.log('Initializing grow bed features for beds overview tab');
         
         // Force re-initialization of quick actions with a small delay
         // to ensure DOM is fully rendered
         setTimeout(() => {
             this.initializeQuickActions();
-            console.log('Quick actions re-initialized for beds overview');
         }, 100);
         
         // Ensure window.app is properly bound
         if (!window.app) {
             window.app = this;
-            console.log('window.app re-bound for beds overview');
         }
         
-        console.log('Grow bed features initialization complete');
     }
     
     // Initialize keyboard shortcuts
@@ -14981,9 +14792,6 @@ class AquaponicsApp {
         // Simple and correct: count batches with plants remaining
         const batches = new Map();
         
-        console.log('=== getActiveBatchCount DEBUG ===');
-        console.log(`Processing ${plantData.length} plant data entries`);
-        console.log('Plant data source:', plantData.slice(0, 3)); // Show first 3 entries
         
         // Process all entries
         plantData.forEach(entry => {
@@ -14997,37 +14805,28 @@ class AquaponicsApp {
             const batch = batches.get(key);
             if (entry.new_seedlings > 0) {
                 batch.planted += entry.new_seedlings;
-                console.log(`  Added ${entry.new_seedlings} plants to batch ${key}, total planted: ${batch.planted}`);
             }
             if (entry.plants_harvested > 0) {
                 batch.harvested += entry.plants_harvested;
-                console.log(`  Added ${entry.plants_harvested} harvested to batch ${key}, total harvested: ${batch.harvested}`);
             }
         });
         
-        console.log(`Found ${batches.size} unique batches:`);
         
         // Count batches with remaining plants
         let activeBatchCount = 0;
         batches.forEach((batch, key) => {
             const remaining = batch.planted - batch.harvested;
-            console.log(`  Batch ${key}: planted=${batch.planted}, harvested=${batch.harvested}, remaining=${remaining}`);
             if (remaining > 0) {
                 activeBatchCount++;
-                console.log(`    ✓ Active batch (${remaining} plants remaining)`);
             } else {
-                console.log(`    ✗ No remaining plants`);
             }
         });
         
-        console.log(`Final result: ${activeBatchCount} active batches`);
         
         // Show all batches for user verification
-        console.log('\n=== BATCH VERIFICATION ===');
         batches.forEach((batch, key) => {
             const remaining = batch.planted - batch.harvested;
             const status = remaining > 0 ? '✅ ACTIVE' : '❌ FULLY HARVESTED';
-            console.log(`${key}: ${batch.planted} planted, ${batch.harvested} harvested, ${remaining} remaining ${status}`);
         });
         
         return activeBatchCount;
@@ -16670,10 +16469,8 @@ class AquaponicsApp {
     }
 
     async switchToSystem(systemId) {
-        console.log('switchToSystem called with:', systemId);
         
         if (systemId === '' || systemId === undefined || systemId === 'undefined') {
-            console.log('Setting activeSystemId to null due to empty/undefined systemId');
             this.activeSystemId = null;
             localStorage.removeItem('activeSystemId');
             
@@ -16693,7 +16490,6 @@ class AquaponicsApp {
             
             return; // Early return - don't load system-specific data
         } else {
-            console.log('Setting activeSystemId to:', systemId);
             this.activeSystemId = systemId;
             localStorage.setItem('activeSystemId', systemId);
         }
@@ -16709,9 +16505,7 @@ class AquaponicsApp {
         this.destroyAllCharts();
         
         // Load fresh data for the new system
-        console.log(`🔄 Loading data for system: ${systemId}`);
         await this.loadDataRecords(); // Reload data for new system
-        console.log(`✅ Data loaded for system: ${this.activeSystemId}`);
         
         // Initialize charts first
         this.initializeCharts(); // Reinitialize all charts with new data
@@ -18213,7 +18007,6 @@ class AquaponicsApp {
     // Create demo system by copying Oribi 1 data
     async createDemoSystem(systemName) {
         try {
-            console.log('Creating demo system from Oribi 1 data...');
             
             // Call the new API endpoint to copy Oribi 1 data
             const response = await this.makeApiCall('/systems/create-demo', {
@@ -18224,7 +18017,6 @@ class AquaponicsApp {
                 })
             });
             
-            console.log('Demo system created:', response);
             
             // Check if response is just a message (server-side issue)
             if (response && response.message && !response.id) {
@@ -18262,7 +18054,6 @@ class AquaponicsApp {
                 throw new Error('Invalid demo system created - missing ID');
             }
             
-            console.log('Demo system ID:', demoSystem.id);
             
             // Update systems list
             this.systems[demoSystem.id] = demoSystem;
@@ -18304,7 +18095,6 @@ class AquaponicsApp {
                 this.showNotification('🔌 Database connection issue. Please try again in a moment.', 'error');
             } else {
                 // Generic error - provide debugging info
-                console.log('📋 For debugging: Check staging server logs for detailed error information');
                 this.showNotification(`❌ Failed to create demo system: ${error.message}. Please try creating a custom system instead, or contact support if this persists.`, 'error');
             }
         }
@@ -18400,7 +18190,6 @@ class AquaponicsApp {
 
     async forceRefreshAllData() {
         // Force refresh all application data
-        console.log('🔄 Force refreshing all data after demo system creation...');
         
         try {
             // Load all data records
@@ -18413,7 +18202,6 @@ class AquaponicsApp {
             // Update growth beds
             await this.updateGrowBeds();
             
-            console.log('✅ All data refreshed successfully');
         } catch (error) {
             console.error('⚠️ Error during data refresh:', error);
             // Don't throw - just log the error so the demo system creation completes
@@ -18422,7 +18210,6 @@ class AquaponicsApp {
 
     async updateDashboardData() {
         // Specifically update dashboard data and charts
-        console.log('🔄 Updating dashboard data...');
         
         try {
             // Reinitialize and update dashboard charts with fresh data
@@ -18443,7 +18230,6 @@ class AquaponicsApp {
                 await this.updateDashboardStats();
             }
             
-            console.log('✅ Dashboard data updated successfully');
         } catch (error) {
             console.error('⚠️ Error during dashboard update:', error);
             // Don't throw - just log the error so the demo system creation completes
@@ -19168,23 +18954,19 @@ class AquaponicsApp {
     async updateReservoirVolumeFromSystem() {
         const systemConfig = this.loadSystemConfig();
         let tankVolume = systemConfig.total_fish_volume || 0;
-        console.log('Initial tank volume from system config:', tankVolume, 'L');
         
         // Check if we need to fetch actual tank configurations for correct volume
         if (systemConfig.id) {
             try {
                 // Get actual fish tank volumes
-                console.log('Fetching tanks for system:', systemConfig.id);
                 const tankResponse = await fetch(`/api/fish-tanks/system/${systemConfig.id}`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                     }
                 });
                 
-                console.log('Tank response status:', tankResponse.status);
                 if (tankResponse.ok) {
                     const tanksResponse = await tankResponse.json();
-                    console.log('Tanks data:', tanksResponse);
                     // Extract tanks array from response object
                     const tanks = tanksResponse.tanks || tanksResponse;
                     if (tanks && tanks.length > 0) {
@@ -19198,17 +18980,13 @@ class AquaponicsApp {
                             }
                             return sum;
                         }, 0);
-                        console.log('Calculated tank volume from individual tanks:', tankVolume, 'L');
                     } else {
-                        console.log('No individual tanks found, using system total_fish_volume');
                         // If no individual tanks, check if total_fish_volume needs conversion
                         // 7 tanks × 7m³ = 49m³ = 49000L
                         // If total_fish_volume is 7000, it might be a data entry error
                         if (systemConfig.fish_tank_count === 7 && tankVolume === 7000) {
-                            console.log('Detected possible volume error: 7 tanks with only 7000L total');
                             // Assume 7m³ per tank if we have 7 tanks
                             tankVolume = 7 * 7 * 1000; // 7 tanks × 7m³ × 1000L/m³
-                            console.log('Corrected tank volume to:', tankVolume, 'L');
                         }
                     }
                 } else {
@@ -19232,7 +19010,6 @@ class AquaponicsApp {
                 
                 if (response.ok) {
                     const growBedData = await response.json();
-                    console.log('Grow bed data received:', growBedData);
                     
                     // growBedData is directly an array
                     if (Array.isArray(growBedData)) {
@@ -19252,11 +19029,9 @@ class AquaponicsApp {
                                     // This accounts for media displacement
                                     const bedWaterVolume = parseFloat(bed.equivalent_m2) * 150;
                                     growBedVolume += bedWaterVolume;
-                                    console.log(`Bed ${bed.bed_number}: ${bed.equivalent_m2}m² = ${bedWaterVolume}L water`);
                                 }
                             });
                         }
-                        console.log('Calculated grow bed volume:', growBedVolume, 'L');
                     }
                 }
             } catch (error) {
@@ -20319,7 +20094,6 @@ Generated by Afraponix Go - Aquaponics Management System`;
         
         try {
 
-            console.log('Loading nutrients for system:', systemConfig.id);
             // Use the same endpoint that charts use for nutrient data
             const response = await fetch(`${this.API_BASE}/data/nutrients/latest/${systemConfig.id}`, {
                 method: 'GET',
@@ -20329,23 +20103,18 @@ Generated by Afraponix Go - Aquaponics Management System`;
                 }
             });
             
-            console.log('Nutrient data response status:', response.status);
             if (!response.ok) {
                 throw new Error('Failed to fetch latest nutrient data');
             }
             
             const nutrientData = await response.json();
-            console.log('Latest nutrient data received:', nutrientData);
             
             // Check structure of all nutrient data
             if (nutrientData.nitrate) {
-                console.log('Nitrate data structure:', nutrientData.nitrate);
             }
             if (nutrientData.potassium) {
-                console.log('Potassium data structure:', nutrientData.potassium);
             }
             if (nutrientData.phosphorus) {
-                console.log('Phosphorus data structure:', nutrientData.phosphorus);
             }
             
             let waterQuality = nutrientData;
@@ -20353,7 +20122,6 @@ Generated by Afraponix Go - Aquaponics Management System`;
             // The nutrient endpoint returns an object with nutrient properties directly
             // No need to extract from array format
             if (waterQuality && typeof waterQuality === 'object') {
-                console.log('Using nutrient data directly from API');
                 let loadedCount = 0;
                 
                 // Nitrate/Nitrogen - Use the value directly (assuming it's already in correct form)
@@ -20373,7 +20141,6 @@ Generated by Afraponix Go - Aquaponics Management System`;
                     const nInput = document.getElementById('current-n');
                     if (nInput) {
                         nInput.value = nValue;
-                        console.log('Set nitrogen input to:', nValue, '(from nitrate value:', nitrateValue, ')');
                     } else {
                         console.error('Could not find current-n input field');
                     }
@@ -20450,11 +20217,9 @@ Generated by Afraponix Go - Aquaponics Management System`;
                     loadedCount++;
                 }
 
-                console.log('Total nutrients loaded:', loadedCount);
                 if (loadedCount > 0) {
                     this.showNotification(`🔄 Loaded ${loadedCount} nutrient values from water quality data (${this.formatDateDDMMYYYY(new Date(waterQuality.date))})`, 'success', 3000);
                 } else {
-                    console.log('No nutrients loaded - water quality data:', waterQuality);
                     this.showNotification('📊 No nutrient values found in latest water quality data. Enter values manually as needed.', 'info', 4000);
                 }
             } else {
@@ -20900,17 +20665,11 @@ Generated by Afraponix Go - Aquaponics Management System`;
         }
 
         try {
-            console.log('Loading grow bed configuration for system:', this.activeSystemId);
             
             // Check if container exists first
             const container = document.getElementById('grow-beds-container');
-            console.log('Container element found:', !!container);
             if (container) {
                 const containerStyles = window.getComputedStyle(container);
-                console.log('Container visibility:', containerStyles.visibility);
-                console.log('Container display:', containerStyles.display);
-                console.log('Container opacity:', containerStyles.opacity);
-                console.log('Container current innerHTML length:', container.innerHTML.length);
             }
             if (!container) {
                 console.error('grow-beds-container not found in DOM');
@@ -20918,15 +20677,12 @@ Generated by Afraponix Go - Aquaponics Management System`;
             }
             
             const growBeds = await this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`);
-            console.log('Fetched grow beds:', growBeds);
 
             // Wait for growBedManager to be available (loaded at bottom of file)
             if (!window.growBedManager) {
-                console.log('Waiting for growBedManager to load...');
                 await new Promise(resolve => {
                     const checkManager = () => {
                         if (window.growBedManager) {
-                            console.log('growBedManager loaded successfully');
                             resolve();
                         } else {
                             setTimeout(checkManager, 10);
@@ -20947,15 +20703,10 @@ Generated by Afraponix Go - Aquaponics Management System`;
                 bedCount = parseInt(systemConfig.grow_bed_count);
             }
 
-            console.log('Generating grow bed configuration for', bedCount, 'beds');
-            console.log('window.growBedManager exists:', !!window.growBedManager);
-            console.log('generateGrowBedConfiguration function exists:', typeof window.growBedManager?.generateGrowBedConfiguration);
             
             if (window.growBedManager && typeof window.growBedManager.generateGrowBedConfiguration === 'function') {
-                console.log('Calling growBedManager.generateGrowBedConfiguration...');
                 try {
                     window.growBedManager.generateGrowBedConfiguration(bedCount);
-                    console.log('Function call completed successfully');
                 } catch (error) {
                     console.error('Error in generateGrowBedConfiguration:', error);
                     console.error('Error stack:', error.stack);
@@ -23653,7 +23404,6 @@ Generated by Afraponix Go - Aquaponics Management System`;
                 }
             }
         } catch (error) {
-            console.log('API not available, searching mock data');
         }
         
         // If not found in API data or API failed, search mock data
@@ -23924,7 +23674,6 @@ Generated by Afraponix Go - Aquaponics Management System`;
             });
             
             localStorage.setItem(storageKey, JSON.stringify(completedApplications));
-            console.log(`Recorded completed spray application: ${applicationId} on ${today}`);
         }
     }
 
@@ -25262,19 +25011,14 @@ Generated by Afraponix Go - Aquaponics Management System`;
                 const startDate = new Date(programme.startDate);
                 const weeksSinceStart = Math.floor((checkDate - startDate) / (7 * 24 * 60 * 60 * 1000));
                 
-                console.log(`Day ${dayOffset}: ${checkDate.toDateString()}, dayOfWeek: ${dayOfWeek}, weeksSinceStart: ${weeksSinceStart}`);
-                console.log(`Programme schedule:`, programme.schedule);
                 
                 let products = [];
                 
                 // Monday applications
                 if (dayOfWeek === 1 && programme.schedule.monday) {
-                    console.log(`Monday application day for ${programme.name}`);
                     const insecticideIndex = weeksSinceStart % Math.max(programme.selections.insecticides.length, 1);
                     const foliarIndex = weeksSinceStart % Math.max(programme.selections.foliarFeeds.length, 1);
                     
-                    console.log(`Insecticide selections:`, programme.selections.insecticides);
-                    console.log(`Foliar selections:`, programme.selections.foliarFeeds);
                     
                     if (programme.selections.insecticides[insecticideIndex]) {
                         const insecticide = allProducts.insecticides.find(p => 
@@ -25282,7 +25026,6 @@ Generated by Afraponix Go - Aquaponics Management System`;
                         );
                         if (insecticide) {
                             products.push(insecticide.product_name);
-                            console.log(`Added insecticide: ${insecticide.product_name}`);
                         }
                     }
                     
@@ -25292,19 +25035,15 @@ Generated by Afraponix Go - Aquaponics Management System`;
                         );
                         if (foliar) {
                             products.push(foliar.product_name);
-                            console.log(`Added foliar: ${foliar.product_name}`);
                         }
                     }
                 }
                 
                 // Wednesday applications
                 if (dayOfWeek === 3 && programme.schedule.wednesday) {
-                    console.log(`Wednesday application day for ${programme.name}`);
                     const fungicideIndex = weeksSinceStart % Math.max(programme.selections.fungicides.length, 1);
                     const foliarIndex = weeksSinceStart % Math.max(programme.selections.foliarFeeds.length, 1);
                     
-                    console.log(`Fungicide selections:`, programme.selections.fungicides);
-                    console.log(`Foliar selections:`, programme.selections.foliarFeeds);
                     
                     if (programme.selections.fungicides[fungicideIndex]) {
                         const fungicide = allProducts.fungicides.find(p => 
@@ -25312,7 +25051,6 @@ Generated by Afraponix Go - Aquaponics Management System`;
                         );
                         if (fungicide) {
                             products.push(fungicide.product_name);
-                            console.log(`Added fungicide: ${fungicide.product_name}`);
                         }
                     }
                     
@@ -25322,13 +25060,11 @@ Generated by Afraponix Go - Aquaponics Management System`;
                         );
                         if (foliar) {
                             products.push(foliar.product_name);
-                            console.log(`Added foliar: ${foliar.product_name}`);
                         }
                     }
                 }
                 
                 if (products.length > 0) {
-                    console.log(`Found ${products.length} products for ${checkDate.toDateString()}: ${products.join(', ')}`);
                     upcomingApplications.push({
                         date: checkDate,
                         programme: programme.name,
@@ -25878,7 +25614,6 @@ Generated by Afraponix Go - Aquaponics Management System`;
     async submitBulkTankData() {
         // Prevent double submission
         if (this.isSubmittingBulkData) {
-            console.log('Already submitting, ignoring duplicate request');
             return;
         }
         
@@ -26455,10 +26190,7 @@ Generated by Afraponix Go - Aquaponics Management System`;
 
     async populateRecentFeedingData(targetTankId = null) {
         try {
-            console.log('🔄 Auto-population called for tank:', targetTankId, 'System:', this.activeSystemId);
-            console.log('📋 Active system data:', this.systems[this.activeSystemId]);
             if (!this.activeSystemId) {
-                console.log('❌ No active system ID, skipping auto-population');
                 return;
             }
             
@@ -26467,70 +26199,46 @@ Generated by Afraponix Go - Aquaponics Management System`;
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
             });
             
-            console.log('📡 API Response status:', response.status);
             if (!response.ok) {
-                console.log('❌ API request failed:', response.status, response.statusText);
                 return;
             }
             
             const fishHealthData = await response.json();
-            console.log('📊 Received fish health data:', fishHealthData.length, 'records');
             let mostRecentFeeding = null;
             
             if (targetTankId) {
                 // Find most recent feeding entry for specific tank (using tank_number, not fish_tank_id)
-                console.log('🎯 Looking for tank number:', targetTankId);
                 const tankEntries = fishHealthData.filter(entry => entry.tank_number == targetTankId);
-                console.log('🔍 Found', tankEntries.length, 'entries for tank', targetTankId);
                 
                 mostRecentFeeding = fishHealthData.find(entry => 
                     entry.tank_number == targetTankId && 
                     entry.feed_consumption > 0 &&
                     entry.feed_type
                 );
-                console.log('🍽️ Most recent feeding for tank:', mostRecentFeeding);
             } else {
                 // Find most recent feeding entry for any tank
                 mostRecentFeeding = fishHealthData.find(entry => 
                     entry.feed_consumption > 0 &&
                     entry.feed_type
                 );
-                console.log('🍽️ Most recent feeding (any tank):', mostRecentFeeding);
             }
             
             if (mostRecentFeeding) {
-                console.log('📝 Found feeding data to auto-populate:', mostRecentFeeding);
                 
                 // Wait a bit to ensure DOM is ready
                 await new Promise(resolve => setTimeout(resolve, 50));
                 
                 // Auto-populate feed amount
                 const feedAmountInput = document.getElementById('feeding-amount');
-                console.log('🔍 Feed amount input element:', feedAmountInput);
                 if (feedAmountInput && mostRecentFeeding.feed_consumption) {
-                    console.log('💰 Setting feed amount to:', mostRecentFeeding.feed_consumption);
                     feedAmountInput.value = mostRecentFeeding.feed_consumption;
-                } else {
-                    console.log('❌ Could not set feed amount. Input:', feedAmountInput, 'Value:', mostRecentFeeding.feed_consumption);
                 }
                 
                 // Pre-select feed type
                 const feedTypeSelect = document.getElementById('feeding-type');
-                console.log('🔍 Feed type select element:', feedTypeSelect);
                 if (feedTypeSelect && mostRecentFeeding.feed_type) {
-                    console.log('🎯 Setting feed type to:', mostRecentFeeding.feed_type);
                     feedTypeSelect.value = mostRecentFeeding.feed_type;
-                    // Double-check if the value was set
-                    console.log('✅ Feed type after setting:', feedTypeSelect.value);
-                } else {
-                    console.log('❌ Could not set feed type. Select:', feedTypeSelect, 'Value:', mostRecentFeeding.feed_type);
                 }
-                
-                console.log('Auto-populated feeding data:', {
-                    amount: mostRecentFeeding.feed_consumption,
-                    type: mostRecentFeeding.feed_type,
-                    tankId: mostRecentFeeding.fish_tank_id
-                });
             }
         } catch (error) {
             console.error('Error populating recent feeding data:', error);
@@ -26574,11 +26282,6 @@ Generated by Afraponix Go - Aquaponics Management System`;
                     if (feedTypeSelect && tankFeeding.feed_type) {
                         feedTypeSelect.value = tankFeeding.feed_type;
                     }
-                    
-                    console.log(`Auto-populated tank ${tankId} feeding data:`, {
-                        amount: tankFeeding.feed_consumption,
-                        type: tankFeeding.feed_type
-                    });
                 }
             });
         } catch (error) {
@@ -26804,7 +26507,6 @@ Generated by Afraponix Go - Aquaponics Management System`;
         try {
             // Early return if no active system selected
             if (!this.activeSystemId || this.activeSystemId === 'undefined') {
-                console.log('No active system selected, skipping tank cards display');
                 container.innerHTML = '<p>Please select a system to view tank information.</p>';
                 return;
             }
@@ -26870,15 +26572,12 @@ Generated by Afraponix Go - Aquaponics Management System`;
             
             // Merge tank configuration with inventory data
             const inventoryTanks = fishInventoryData.tanks || [];
-            console.log('🔍 Tank Configuration:', fishTanks.map(t => ({tank_number: t.tank_number, id: t.id})));
-            console.log('🔍 Inventory Data:', inventoryTanks.map(i => ({fish_tank_id: i.fish_tank_id, tank_number: i.tank_number, current_count: i.current_count})));
             
             fishTanks = fishTanks.map(tank => {
                 // Try to match by tank ID first, then by tank number
                 const inventory = inventoryTanks.find(inv => 
                     inv.fish_tank_id === tank.id || inv.fish_tank_id === tank.tank_number
                 ) || {};
-                console.log(`🔍 Tank ${tank.tank_number} (ID: ${tank.id}): Found inventory with ${inventory.current_count || 0} fish`);
                 return { ...tank, inventory };
             });
             
@@ -29406,23 +29105,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.app = app;
     
     // Debug: Check if Quick Action functions exist
-    console.log('🔍 Debug: Checking if Quick Action functions exist:');
-    console.log('openQuickHarvestDialog:', typeof app.openQuickHarvestDialog);
-    console.log('openQuickPlantDialog:', typeof app.openQuickPlantDialog);
-    console.log('showHarvestModalForBed:', typeof app.showHarvestModalForBed);
-    console.log('showInlinePlantModal:', typeof app.showInlinePlantModal);
     
     // Test function to verify Quick Actions work
     window.testQuickActions = function() {
-        console.log('🧪 Testing Quick Actions...');
         if (app.openQuickHarvestDialog) {
-            console.log('✅ Calling openQuickHarvestDialog test...');
             app.openQuickHarvestDialog('166', 'Test Bed');
         } else {
             console.error('❌ openQuickHarvestDialog not found');
         }
     };
-    console.log('🧪 Test function created. Run testQuickActions() in console to test.');
     
     // Initialize plant tabs
     app.initializePlantTabs();
@@ -30031,17 +29722,12 @@ window.growBedManager = new GrowBedManager();
 
 // Actions Required Management Functions
 async function loadActionsRequired() {
-    console.log('=== Loading Actions Required ===');
-    console.log('window.app exists:', !!window.app);
-    console.log('activeSystemId:', window.app?.activeSystemId);
     
     if (!window.app || !window.app.activeSystemId) {
-        console.log('No app or activeSystemId, returning early');
         return;
     }
     
     try {
-        console.log('Fetching tasks for system:', window.app.activeSystemId);
         
         // Load all pending tasks
         const [nutrientTasks, fishTasks, sprayTasks, maintenanceTasks] = await Promise.all([
@@ -30051,11 +29737,6 @@ async function loadActionsRequired() {
             getPendingMaintenanceTasks(window.app.activeSystemId)
         ]);
         
-        console.log('Tasks loaded:');
-        console.log('- Nutrient tasks:', nutrientTasks.length, nutrientTasks);
-        console.log('- Fish tasks:', fishTasks.length, fishTasks);
-        console.log('- Spray tasks:', sprayTasks.length, sprayTasks);
-        console.log('- Maintenance tasks:', maintenanceTasks.length, maintenanceTasks);
         
         // Display tasks in their respective containers
         displayDataCaptureTasks([...nutrientTasks, ...fishTasks]);
@@ -30064,15 +29745,12 @@ async function loadActionsRequired() {
         
         // Update badge count
         const totalTasks = nutrientTasks.length + fishTasks.length + sprayTasks.length + maintenanceTasks.length;
-        console.log('Total tasks:', totalTasks);
         updateActionsBadge(totalTasks);
         
         // Show empty state if no tasks
         if (totalTasks === 0) {
-            console.log('Showing empty state');
             showEmptyState();
         } else {
-            console.log('Hiding empty state');
             hideEmptyState();
         }
         
@@ -30084,10 +29762,8 @@ async function loadActionsRequired() {
 
 async function getPendingNutrientTasks(systemId) {
     try {
-        console.log('Checking nutrient tasks for system:', systemId);
         // Check when last nutrient readings were taken
         const latestReadings = await window.app.makeApiCall(`/data/nutrients/latest/${systemId}`);
-        console.log('Latest nutrient readings:', latestReadings);
         const tasks = [];
         
         // Check if readings are older than 7 days or missing
@@ -30099,11 +29775,9 @@ async function getPendingNutrientTasks(systemId) {
         for (const nutrientType of nutrientTypes) {
             const reading = latestReadings[nutrientType];
             const lastReading = reading ? new Date(reading.reading_date) : null;
-            console.log(`Checking ${nutrientType}: reading=${!!reading}, lastReading=${lastReading}, weekAgo=${weekAgo}`);
             
             if (!lastReading || lastReading < weekAgo) {
                 const daysAgo = lastReading ? Math.floor((now - lastReading) / (1000 * 60 * 60 * 24)) : 999;
-                console.log(`✓ Adding nutrient task: ${nutrientType} is ${daysAgo} days old`);
                 
                 tasks.push({
                     type: 'nutrient_capture',
@@ -30118,7 +29792,6 @@ async function getPendingNutrientTasks(systemId) {
                 });
                 break; // Only show one water quality task
             } else {
-                console.log(`✗ ${nutrientType} is up to date: ${Math.floor((now - lastReading) / (1000 * 60 * 60 * 24))} days old`);
             }
         }
         
@@ -30131,10 +29804,8 @@ async function getPendingNutrientTasks(systemId) {
 
 async function getPendingFishTasks(systemId) {
     try {
-        console.log('Checking fish tasks for system:', systemId);
         // Check when last fish measurements were taken
         const fishHealth = await window.app.makeApiCall(`/data/fish-health/${systemId}?limit=1`);
-        console.log('Fish health data:', fishHealth);
         const tasks = [];
         
         const now = new Date();
@@ -30178,26 +29849,21 @@ async function getPendingFishTasks(systemId) {
 
 async function getTodaysSprayTasks(systemId) {
     try {
-        console.log('Checking spray tasks for system:', systemId);
         // Get today's spray applications from programmes
         const programmes = JSON.parse(localStorage.getItem('spray_programmes') || '[]');
-        console.log('All programmes in localStorage:', programmes);
         const activeProgrammes = programmes.filter(p => 
             p.systemId === systemId && p.status === 'active'
         );
-        console.log('Active programmes for system:', activeProgrammes);
         
         const tasks = [];
         const today = new Date();
         const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, 3 = Wednesday
         const todayString = today.toDateString();
-        console.log('Today is day:', dayOfWeek, '(0=Sun, 1=Mon, 2=Tue, 3=Wed, etc.)');
         
         // Get completed applications for today
         const storageKey = `completed_spray_applications_${systemId}`;
         const completedApplications = JSON.parse(localStorage.getItem(storageKey) || '{}');
         const completedToday = completedApplications[todayString] || [];
-        console.log('Completed spray applications today:', completedToday);
         
         // Get all available spray products
         const allProducts = {
@@ -30211,7 +29877,6 @@ async function getTodaysSprayTasks(systemId) {
         };
         
         activeProgrammes.forEach(programme => {
-            console.log('Processing programme:', programme.name, 'schedule:', programme.schedule);
             
             // Check if today matches programme schedule and get products for today
             let productsForToday = [];
@@ -30264,12 +29929,10 @@ async function getTodaysSprayTasks(systemId) {
                 // Skip if this product has already been completed today
                 if (completedToday.includes(product.id)) {
                     const dayName = dayOfWeek === 1 ? 'Monday' : 'Wednesday';
-                    console.log(`✓ Skipping ${product.product_name} - already completed today`);
                     return;
                 }
                 
                 const dayName = dayOfWeek === 1 ? 'Monday' : 'Wednesday';
-                console.log(`✓ Adding spray task for ${product.product_name} from ${programme.name} on ${dayName}`);
                 
                 tasks.push({
                     type: 'spray_application',
@@ -30288,7 +29951,6 @@ async function getTodaysSprayTasks(systemId) {
             });
             
             if (productsForToday.length === 0) {
-                console.log(`✗ No products for ${programme.name} today: schedule=${JSON.stringify(programme.schedule)}, today=${dayOfWeek}`);
             }
         });
         
@@ -30453,7 +30115,6 @@ function handleTaskAction(event, action, task) {
             break;
             
         default:
-            console.log('Unknown action:', action);
     }
 }
 

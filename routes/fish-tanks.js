@@ -9,7 +9,6 @@ router.use(authenticateToken);
 
 // Create or update fish tank
 router.post('/', async (req, res) => {
-    console.log('Fish tank POST request received:', req.body);
     const { system_id, tank_number, size_m3, volume_liters, fish_type } = req.body;
 
     // Input validation
@@ -45,55 +44,45 @@ router.post('/', async (req, res) => {
     try {
         const pool = getDatabase();
         
-        console.log(`Verifying system ${system_id} for user ${req.user.userId}`);
         // First verify the system exists and belongs to the user
         const [systemRows] = await pool.execute('SELECT * FROM systems WHERE id = ? AND user_id = ?', 
             [system_id, req.user.userId]);
         const system = systemRows[0];
 
         if (!system) {
-            console.log(`System ${system_id} not found or access denied for user ${req.user.userId}`);            return res.status(404).json({ error: 'System not found or access denied' });
+            return res.status(404).json({ error: 'System not found or access denied' });
         }
-        console.log(`System ${system_id} verified successfully`);
 
         // Check if tank with this number already exists for this system
-        console.log(`Checking for existing tank ${tank_number} in system ${system_id}`);
         const [existingTankRows] = await pool.execute('SELECT * FROM fish_tanks WHERE system_id = ? AND tank_number = ?', 
             [system_id, tank_number]);
         const existingTank = existingTankRows[0];
-        console.log(`Existing tank found:`, existingTank ? 'Yes' : 'No');
 
         let result;
         if (existingTank) {
             // Update existing tank
-            console.log(`Updating existing tank ${tank_number}`);
             const [updateResult] = await pool.execute(`UPDATE fish_tanks SET 
                 size_m3 = ?, volume_liters = ?, fish_type = ?
                 WHERE system_id = ? AND tank_number = ?`, 
                 [size_m3, volume_liters, fish_type.toLowerCase(), system_id, tank_number]);
             result = { id: existingTank.id, changes: updateResult.affectedRows };
-            console.log(`Update result:`, result);
         } else {
             // Create new tank
-            console.log(`Creating new tank ${tank_number}`);
             const [insertResult] = await pool.execute(`INSERT INTO fish_tanks 
                 (system_id, tank_number, size_m3, volume_liters, fish_type) 
                 VALUES (?, ?, ?, ?, ?)`, 
                 [system_id, tank_number, size_m3, volume_liters, fish_type.toLowerCase()]);
             result = { id: insertResult.insertId };
-            console.log(`Insert result:`, result);
         }
 
         // Get the created/updated tank
-        console.log(`Fetching final tank data for tank ${tank_number}`);
         const [tankRows] = await pool.execute('SELECT * FROM fish_tanks WHERE system_id = ? AND tank_number = ?', 
             [system_id, tank_number]);
         const tank = tankRows[0];
-        console.log(`Final tank data:`, tank);        
+        
         const statusCode = existingTank ? 200 : 201;
         const message = existingTank ? 'Fish tank updated successfully' : 'Fish tank created successfully';
         
-        console.log(`Sending response: ${statusCode} - ${message}`);
         res.status(statusCode).json({
             message,
             tank

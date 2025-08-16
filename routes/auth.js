@@ -332,17 +332,14 @@ router.post('/resend-verification', async (req, res) => {
         await pool.execute('UPDATE users SET verification_token = ?, verification_token_expiry = ? WHERE id = ?', 
             [verificationToken, formatDateForMySQL(verificationTokenExpiry), user.id]);
         // Send verification email
-        console.log('📧 Attempting to send verification email to:', email);
         const emailResult = await sendVerificationEmail(email, verificationToken, user.username);
-        console.log('📧 Email result:', emailResult);
         
         if (emailResult.success) {
-            console.log('✅ Verification email sent successfully to:', email);
             res.json({ 
                 message: 'If an account with that email exists and is unverified, we\'ve sent a new verification link.' 
             });
         } else {
-            console.error('❌ Failed to send verification email:', emailResult.error);
+            console.error('Failed to send verification email:', emailResult.error);
             res.status(500).json({ error: 'Failed to send verification email' });
         }
 

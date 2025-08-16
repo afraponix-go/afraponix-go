@@ -59,8 +59,7 @@ router.get('/', async (req, res) => {
             acc[prog.status] = (acc[prog.status] || 0) + 1;
             return acc;
         }, {});
-        console.log('📊 Spray programmes status distribution:', statusCount);
-        console.log('🔍 Inactive programmes:', transformedProgrammes.filter(p => p.status === 'inactive').map(p => `${p.id}: ${p.product_name}`));        res.json({ programmes: transformedProgrammes });
+        res.json({ programmes: transformedProgrammes });
 
     } catch (error) {
         console.error('Error fetching spray programmes:', error);
@@ -416,7 +415,6 @@ router.post('/create-defaults', async (req, res) => {
         // If force flag is set, delete existing programmes first
         if (force && existingProgrammes > 0) {
             await pool.execute('DELETE FROM spray_programmes WHERE system_id = ?', [system_id]);
-            console.log('Deleted existing programmes for system:', system_id);
         }
 
         // Default spray programme data (based on BCF Spray Plan)

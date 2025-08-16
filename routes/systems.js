@@ -188,9 +188,6 @@ router.post('/create-demo', async (req, res) => {
         return res.status(401).json({ error: 'User authentication required' });
     }
 
-    console.log('🚀 Creating demo system using SQLite database...');
-    console.log('   System name:', system_name);
-    console.log('   User ID:', targetUserId);
     
     let connection;
 
@@ -199,23 +196,18 @@ router.post('/create-demo', async (req, res) => {
         
         // Generate new system ID
         const newSystemId = `system_${Date.now()}`;
-        console.log('   Generated system ID:', newSystemId);
         
         // Start transaction
         await connection.execute('START TRANSACTION');
-        console.log('✅ Transaction started');
         
         try {
             // Use SQLite importer to populate demo system
             const importer = new SQLiteDemoImporter(connection);
             const importResult = await importer.importDemoSystem(newSystemId, targetUserId);
             
-            console.log('📊 Import summary:', importResult.imported);
             
             // Commit transaction
-            console.log('💾 Committing transaction...');
             await connection.execute('COMMIT');
-            console.log('✅ Transaction committed successfully');
             
             // Query for the created system
             const [createdSystemRows] = await connection.execute(
@@ -224,7 +216,6 @@ router.post('/create-demo', async (req, res) => {
             );
             
             if (createdSystemRows.length === 0) {
-                console.error('❌ CRITICAL: System not found after creation');
                 return res.status(500).json({ 
                     error: 'System creation failed - transaction may have been rolled back',
                     system_id: newSystemId,
@@ -240,21 +231,17 @@ router.post('/create-demo', async (req, res) => {
                 imported_data: importResult.imported
             };
             
-            console.log('🎉 Demo system created successfully!');
-            console.log('   System ID:', createdSystem.id);
-            console.log('   Data imported:', Object.keys(importResult.imported).length, 'categories');
             
             res.status(201).json(response);
             
         } catch (transactionError) {
-            console.error('❌ Transaction error occurred:', transactionError);
-            console.error('🔄 Rolling back transaction...');
+            console.error('Transaction error occurred:', transactionError);
             await connection.execute('ROLLBACK');
             throw transactionError;
         }
         
     } catch (error) {
-        console.error('❌ Failed to create demo system:', error);
+        console.error('Failed to create demo system:', error);
         
         // Determine error type for better user feedback
         let errorMessage = 'Failed to create demo system';
@@ -282,9 +269,8 @@ router.post('/create-demo', async (req, res) => {
         if (connection) {
             try {
                 await connection.end();
-                console.log('🔌 Database connection closed');
             } catch (closeError) {
-                console.error('❌ Error closing database connection:', closeError);
+                console.error('Error closing database connection:', closeError);
             }
         }
     }
