@@ -1067,10 +1067,16 @@ class AquaponicsApp {
             console.error('Logout button not found');
         }
         
-        // Close button controls
-        loginCloseBtn.addEventListener('click', () => this.closeLoginSlideout());
-        registerCloseBtn.addEventListener('click', () => this.closeRegisterSlideout());
-        forgotPasswordCloseBtn.addEventListener('click', () => this.closeForgotPasswordSlideout());
+        // Close button controls with null checks
+        if (loginCloseBtn) {
+            loginCloseBtn.addEventListener('click', () => this.closeLoginSlideout());
+        }
+        if (registerCloseBtn) {
+            registerCloseBtn.addEventListener('click', () => this.closeRegisterSlideout());
+        }
+        if (forgotPasswordCloseBtn) {
+            forgotPasswordCloseBtn.addEventListener('click', () => this.closeForgotPasswordSlideout());
+        }
         
         // Backdrop click to close (only on backdrop, not panel)
         const loginBackdrop = document.getElementById('login-slideout-backdrop');
@@ -1079,33 +1085,42 @@ class AquaponicsApp {
         
         // No backdrop click to close for better UX (as requested)
         
-        // Form switching - transition between panels
-        showRegisterLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.closeLoginSlideout();
-            setTimeout(() => this.showRegisterSlideout(), 300);
-        });
-        showLoginLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.closeRegisterSlideout();
-            setTimeout(() => this.showLoginSlideout(), 300);
-        });
-        showForgotPasswordLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.closeLoginSlideout();
-            setTimeout(() => this.showForgotPasswordSlideout(), 300);
-        });
-        backToLoginLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.closeForgotPasswordSlideout();
-            setTimeout(() => this.showLoginSlideout(), 300);
-        });
+        // Form switching - transition between panels with null checks
+        if (showRegisterLink) {
+            showRegisterLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.closeLoginSlideout();
+                setTimeout(() => this.showRegisterSlideout(), 300);
+            });
+        }
+        if (showLoginLink) {
+            showLoginLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.closeRegisterSlideout();
+                setTimeout(() => this.showLoginSlideout(), 300);
+            });
+        }
+        if (showForgotPasswordLink) {
+            showForgotPasswordLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.closeLoginSlideout();
+                setTimeout(() => this.showForgotPasswordSlideout(), 300);
+            });
+        }
+        if (backToLoginLink) {
+            backToLoginLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.closeForgotPasswordSlideout();
+                setTimeout(() => this.showLoginSlideout(), 300);
+            });
+        }
 
         // Form submissions with debounce protection
         let loginSubmitTimeout;
         let isLoginInProgress = false;
         
-        loginForm.addEventListener('submit', async (e) => {
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
             // Prevent submission if login is already in progress
@@ -1139,19 +1154,25 @@ class AquaponicsApp {
                     isLoginInProgress = false;
                 }
             }, 100);
-        });
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await this.handleRegister(e);
-        });
+            });
+        }
+        
+        if (registerForm) {
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await this.handleRegister(e);
+            });
+        }
 
         // Set up password validation and strength checking
         this.setupPasswordValidation();
 
-        forgotPasswordForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await this.handleForgotPassword(e);
-        });
+        if (forgotPasswordForm) {
+            forgotPasswordForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await this.handleForgotPassword(e);
+            });
+        }
 
         // Setup verification code functionality
         this.setupVerificationCode();
