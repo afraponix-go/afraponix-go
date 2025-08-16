@@ -63,7 +63,7 @@ router.post('/register', async (req, res) => {
         
         const userId = result.insertId;
         // Send verification email
-        const emailResult = await sendVerificationEmail(email, verificationToken, username);
+        const emailResult = await sendVerificationEmail(email, verificationToken, firstName);
         
         if (!emailResult.success) {
             console.error('Failed to send verification email:', emailResult.error);
@@ -222,7 +222,8 @@ router.post('/forgot-password', async (req, res) => {
         await pool.execute('UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE id = ?', 
             [resetToken, formatDateForMySQL(resetTokenExpiry), user.id]);
         // Send password reset email
-        const emailResult = await sendPasswordResetEmail(email, resetToken, user.username);
+        const displayName = user.first_name || user.username;
+        const emailResult = await sendPasswordResetEmail(email, resetToken, displayName);
         
         if (emailResult.success) {
             res.json({ 
@@ -342,7 +343,8 @@ router.post('/resend-verification', async (req, res) => {
         await pool.execute('UPDATE users SET verification_token = ?, verification_token_expiry = ? WHERE id = ?', 
             [verificationToken, formatDateForMySQL(verificationTokenExpiry), user.id]);
         // Send verification email
-        const emailResult = await sendVerificationEmail(email, verificationToken, user.username);
+        const displayName = user.first_name || user.username;
+        const emailResult = await sendVerificationEmail(email, verificationToken, displayName);
         
         if (emailResult.success) {
             res.json({ 
