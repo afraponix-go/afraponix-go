@@ -433,9 +433,31 @@ class AquaponicsApp {
         }
 
         // Suppress notifications when landing page is visible (unauthenticated state)
+        // BUT allow authentication-related notifications (login/registration errors)
         const landingPage = document.getElementById('landing-page');
         if (landingPage && landingPage.style.display === 'block') {
-            return;
+            // Allow authentication-related notifications
+            const authMessages = [
+                'invalid credentials',
+                'email already exists',
+                'username already exists',
+                'password',
+                'verification',
+                'login',
+                'register',
+                'email not verified',
+                'all fields are required',
+                'failed to create user',
+                'failed to authenticate'
+            ];
+            
+            const isAuthNotification = authMessages.some(authMsg => 
+                message.toLowerCase().includes(authMsg.toLowerCase())
+            );
+            
+            if (!isAuthNotification) {
+                return; // Suppress non-auth notifications
+            }
         }
 
         // Ensure notification container exists
@@ -1491,13 +1513,23 @@ class AquaponicsApp {
         // Add smooth scrolling between sections
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
+                const href = this.getAttribute('href');
+                // Skip if href is just "#" or empty
+                if (!href || href === '#') {
+                    return;
+                }
                 e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
+                try {
+                    const target = document.querySelector(href);
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                } catch (error) {
+                    // Invalid selector, ignore
+                    console.error('Invalid selector for smooth scroll:', href);
                 }
             });
         });

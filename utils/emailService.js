@@ -52,7 +52,17 @@ const createTransporter = () => {
 // Send password reset email
 const sendPasswordResetEmail = async (email, resetToken, username) => {
     try {
-        const config = loadSmtpConfig();
+        let config;
+        try {
+            config = loadSmtpConfig();
+        } catch (configError) {
+            console.error('SMTP configuration not available:', configError.message);
+            return { 
+                success: false, 
+                error: 'Email service not configured. Please contact support.' 
+            };
+        }
+        
         const transporter = createTransporter();
         
         const resetLink = `${config.resetUrl}?token=${resetToken}`;
@@ -310,7 +320,17 @@ Cultivating sustainable futures through smart aquaponics
 // Send account verification email
 const sendVerificationEmail = async (email, verificationToken, username) => {
     try {
-        const config = loadSmtpConfig();
+        let config;
+        try {
+            config = loadSmtpConfig();
+        } catch (configError) {
+            console.error('SMTP configuration not available:', configError.message);
+            return { 
+                success: false, 
+                error: 'Email service not configured. Please contact support.' 
+            };
+        }
+        
         const transporter = createTransporter();
         
         const verificationLink = `${config.verifyUrl || config.resetUrl.replace('reset-password', 'verify-email')}?token=${verificationToken}`;

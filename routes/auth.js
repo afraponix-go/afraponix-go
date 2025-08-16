@@ -230,7 +230,17 @@ router.post('/forgot-password', async (req, res) => {
             });
         } else {
             console.error('Failed to send password reset email:', emailResult.error);
-            res.status(500).json({ error: 'Failed to send password reset email' });
+            // Don't expose internal errors to the client for security
+            if (emailResult.error && emailResult.error.includes('Email service not configured')) {
+                res.json({ 
+                    message: 'Password reset functionality is temporarily unavailable. Please contact support.',
+                    temporaryIssue: true
+                });
+            } else {
+                res.json({ 
+                    message: 'If an account with that email exists, we\'ve sent a password reset link.' 
+                });
+            }
         }
 
     } catch (error) {
@@ -340,7 +350,17 @@ router.post('/resend-verification', async (req, res) => {
             });
         } else {
             console.error('Failed to send verification email:', emailResult.error);
-            res.status(500).json({ error: 'Failed to send verification email' });
+            // Don't expose internal errors to the client for security
+            if (emailResult.error && emailResult.error.includes('Email service not configured')) {
+                res.json({ 
+                    message: 'Email verification is temporarily unavailable. You can still use the application, but some features may be limited.',
+                    temporaryIssue: true
+                });
+            } else {
+                res.json({ 
+                    message: 'If an account with that email exists and is unverified, we\'ve sent a new verification link.' 
+                });
+            }
         }
 
     } catch (error) {
