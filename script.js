@@ -1599,6 +1599,8 @@ class AquaponicsApp {
                 return;
             } else {
                 this.showMessage(result.error, 'error');
+                // Also show as toast notification for visibility on landing page
+                this.showNotification(result.error, 'error');
             }
         }
     }

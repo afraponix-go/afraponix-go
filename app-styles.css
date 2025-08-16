@@ -485,6 +485,27 @@ a:hover {
   box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
+/* Field Error Styling */
+.field-error {
+    color: var(--color-error);
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    display: none;
+    padding: 0.5rem;
+    background: var(--color-error-light);
+    border-left: 3px solid var(--color-error);
+    border-radius: 4px;
+}
+
+.field-error.show {
+    display: block;
+}
+
+.form-input.error {
+    border-color: var(--color-error);
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+}
+
 /* Status Badges */
 .badge {
   display: inline-flex;
