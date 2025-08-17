@@ -453,10 +453,10 @@ function getDatabase() {
     }
 }
 
-function getDatabaseConnection() {
+async function getDatabaseConnection() {
     // For cases where you need a single connection that you manage manually
     if (useMariaDB) {
-        return mysql.createConnection({
+        return await mysql.createConnection({
             host: process.env.DB_HOST,
             user: process.env.DB_USER,
             password: process.env.DB_PASSWORD,
