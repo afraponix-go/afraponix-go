@@ -5851,7 +5851,7 @@ class AquaponicsApp {
                     
                     <div class="tank-actions">
                         <div class="quick-actions-dropdown">
-                            <button class="quick-actions-btn" onclick="app.toggleQuickActions(${i + 1})">
+                            <button class="quick-actions-btn" onclick="app.toggleQuickActions(${i})">
                                 <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
                                     <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
                                 </svg>
@@ -5860,32 +5860,32 @@ class AquaponicsApp {
                                     <path d="M7 10l5 5 5-5z"/>
                                 </svg>
                             </button>
-                            <div class="quick-actions-menu" id="quick-actions-${i + 1}" style="display: none;">
-                                <button class="quick-action-item" onclick="app.showAddFishModal(${i + 1}); app.hideQuickActions(${i + 1})">
+                            <div class="quick-actions-menu" id="quick-actions-${i}" style="display: none;">
+                                <button class="quick-action-item" onclick="app.showAddFishModal(${i}); app.hideQuickActions(${i})">
                                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                         <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                                     </svg>
                                     Add Fish
                                 </button>
-                                <button class="quick-action-item" onclick="app.showMortalityModal(${i + 1}); app.hideQuickActions(${i + 1})">
+                                <button class="quick-action-item" onclick="app.showMortalityModal(${i}); app.hideQuickActions(${i})">
                                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
                                     </svg>
                                     Mortality
                                 </button>
-                                <button class="quick-action-item" onclick="app.showFeedingModal(${i + 1}); app.hideQuickActions(${i + 1})">
+                                <button class="quick-action-item" onclick="app.showFeedingModal(${i}); app.hideQuickActions(${i})">
                                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                         <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7z"/>
                                     </svg>
                                     Feed
                                 </button>
-                                <button class="quick-action-item" onclick="app.showFishSizeModal(${i + 1}); app.hideQuickActions(${i + 1})">
+                                <button class="quick-action-item" onclick="app.showFishSizeModal(${i}); app.hideQuickActions(${i})">
                                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                         <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                                     </svg>
                                     Record Size
                                 </button>
-                                <button class="quick-action-item" onclick="app.showHarvestFishModal(${i + 1}); app.hideQuickActions(${i + 1})">
+                                <button class="quick-action-item" onclick="app.showHarvestFishModal(${i}); app.hideQuickActions(${i})">
                                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                         <path d="M19 7h-3V6a4 4 0 0 0-8 0v1H5a1 1 0 0 0-1 1v11a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V8a1 1 0 0 0-1-1zM10 6a2 2 0 0 1 4 0v1h-4V6zm8 13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9h2v1a1 1 0 0 0 2 0V9h4v1a1 1 0 0 0 2 0V9h2v10z"/>
                                     </svg>
@@ -6030,10 +6030,18 @@ class AquaponicsApp {
     }
     
     hideQuickActions(tankNumber) {
+        // Hide regular dropdown menu
         const menu = document.getElementById(`quick-actions-${tankNumber}`);
         if (menu) {
             menu.style.display = 'none';
         }
+        
+        // Hide floating menu
+        const floatingMenu = document.getElementById(`floating-quick-actions-${tankNumber}`);
+        if (floatingMenu) {
+            floatingMenu.style.display = 'none';
+        }
+        
         document.removeEventListener('click', this.closeQuickActionsOnOutsideClick, true);
     }
     
@@ -26684,6 +26692,9 @@ Generated by Afraponix Go - Aquaponics Management System`;
             
             // Reload tank display with new inventory data
             this.loadTankInformation();
+            
+            // Also refresh fish overview cards to show updated counts
+            await this.loadFishOverview();
             
         } catch (error) {
             console.error('Error adding fish:', error);
