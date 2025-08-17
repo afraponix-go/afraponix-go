@@ -56,14 +56,17 @@ router.post('/register', async (req, res) => {
         // Generate verification token
         const verificationToken = crypto.randomBytes(32).toString('hex');
         const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+        
+        // Generate 6-digit verification code
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
         // Create user with unverified email
-        const [result] = await pool.execute('INSERT INTO users (username, email, first_name, last_name, password_hash, email_verified, verification_token, verification_token_expiry) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', 
-            [username, email, firstName, lastName, passwordHash, 0, verificationToken, formatDateForMySQL(verificationTokenExpiry)]);
+        const [result] = await pool.execute('INSERT INTO users (username, email, first_name, last_name, password_hash, email_verified, verification_token, verification_token_expiry, verification_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+            [username, email, firstName, lastName, passwordHash, 0, verificationToken, formatDateForMySQL(verificationTokenExpiry), verificationCode]);
         
         const userId = result.insertId;
-        // Send verification email
-        const emailResult = await sendVerificationEmail(email, verificationToken, firstName);
+        // Send verification email with the code
+        const emailResult = await sendVerificationEmail(email, verificationToken, firstName, verificationCode);
         
         if (!emailResult.success) {
             console.error('Failed to send verification email:', emailResult.error);
@@ -250,6 +253,97 @@ router.post('/forgot-password', async (req, res) => {
     }
 });
 
+// Verify email with 6-digit code
+router.post('/verify-code', async (req, res) => {
+    const { code, email } = req.body;
+    console.log('🔍 Verification attempt:', { code, email, timestamp: new Date().toISOString() });
+
+    if (!code || !email) {
+        return res.status(400).json({ error: 'Verification code and email are required' });
+    }
+
+    // Validate code format (6 digits)
+    if (!/^\d{6}$/.test(code)) {
+        console.log('❌ Invalid code format:', code);
+        return res.status(400).json({ error: 'Invalid verification code format' });
+    }
+
+    try {
+        const pool = getDatabase();
+        
+        // Find user with valid verification code
+        const [userRows] = await pool.execute(
+            'SELECT * FROM users WHERE email = ? AND verification_code = ? AND verification_token_expiry > ?', 
+            [email, code, formatDateForMySQL(new Date())]
+        );
+        const user = userRows[0];
+
+        // Debug: Check what we found
+        console.log('🔍 Database lookup result:', {
+            email,
+            code,
+            userFound: !!user,
+            userCount: userRows.length
+        });
+
+        // Also check if user exists but with different code
+        const [debugRows] = await pool.execute(
+            'SELECT email, verification_code, verification_token_expiry FROM users WHERE email = ?', 
+            [email]
+        );
+        if (debugRows.length > 0) {
+            console.log('📋 User in database:', {
+                email: debugRows[0].email,
+                storedCode: debugRows[0].verification_code,
+                expiry: debugRows[0].verification_token_expiry,
+                submittedCode: code
+            });
+        }
+
+        if (!user) {
+            return res.status(400).json({ error: 'Invalid or expired verification code' });
+        }
+
+        // Mark email as verified and clear verification tokens
+        await pool.execute(
+            'UPDATE users SET email_verified = 1, verification_token = NULL, verification_token_expiry = NULL, verification_code = NULL WHERE id = ?', 
+            [user.id]
+        );
+
+        // Generate JWT token for automatic login after verification
+        const authToken = jwt.sign(
+            { 
+                userId: user.id, 
+                username: user.username,
+                userRole: user.user_role || 'basic',
+                subscriptionStatus: user.subscription_status || 'basic'
+            }, 
+            process.env.JWT_SECRET, 
+            { expiresIn: '7d' }
+        );
+
+        res.json({ 
+            message: 'Email verified successfully! You can now log in to your account.',
+            verified: true,
+            token: authToken,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                userRole: user.user_role || 'basic',
+                subscriptionStatus: user.subscription_status || 'basic',
+                emailVerified: true
+            }
+        });
+
+    } catch (error) {
+        console.error('Code verification error:', error);
+        res.status(500).json({ error: 'Failed to verify code' });
+    }
+});
+
 // Verify email with token
 router.post('/verify-email', async (req, res) => {
     const { token } = req.body;
@@ -338,13 +432,16 @@ router.post('/resend-verification', async (req, res) => {
         // Generate new verification token
         const verificationToken = crypto.randomBytes(32).toString('hex');
         const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+        
+        // Generate 6-digit verification code
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-        // Update verification token in database
-        await pool.execute('UPDATE users SET verification_token = ?, verification_token_expiry = ? WHERE id = ?', 
-            [verificationToken, formatDateForMySQL(verificationTokenExpiry), user.id]);
-        // Send verification email
+        // Update verification token and code in database
+        await pool.execute('UPDATE users SET verification_token = ?, verification_token_expiry = ?, verification_code = ? WHERE id = ?', 
+            [verificationToken, formatDateForMySQL(verificationTokenExpiry), verificationCode, user.id]);
+        // Send verification email with the code
         const displayName = user.first_name || user.username;
-        const emailResult = await sendVerificationEmail(email, verificationToken, displayName);
+        const emailResult = await sendVerificationEmail(email, verificationToken, displayName, verificationCode);
         
         if (emailResult.success) {
             res.json({ 

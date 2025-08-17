@@ -302,7 +302,7 @@ class AquaponicsApp {
             localStorage.setItem('auth_token', this.token);
             
             this.showAppUI();
-            await this.loadUserData();
+            await this.loadUserData('login');
             this.closeAuthModal();
 
             return { success: true };
@@ -311,9 +311,16 @@ class AquaponicsApp {
             
             // Check if it's an email verification error
             if (error.message.includes('Email not verified') || error.response?.needsVerification) {
-                const email = error.response?.email || '';
+                const email = error.response?.email || username || '';
+                console.log('Email verification needed. Error response:', error.response);
+                console.log('Email from response:', error.response?.email);
+                console.log('Username from input:', username);
+                console.log('Final email to use:', email);
                 if (email) {
                     this.showEmailVerificationMessage(email);
+                } else {
+                    // Fallback notification if email is not available
+                    this.showNotification('Please check your email for verification link', 'warning', 5000);
                 }
                 return { success: false, error: 'Please verify your email before logging in.', needsVerification: true };
             }
@@ -340,7 +347,7 @@ class AquaponicsApp {
                 if (this.token) {
                     localStorage.setItem('auth_token', this.token);
                     this.showAppUI();
-                    await this.loadUserData();
+                    await this.loadUserData('login');
                     this.closeAuthModal();
                 }
             }
@@ -702,19 +709,8 @@ class AquaponicsApp {
                     this.closeAuthModal();
                     this.showAppUI();
                     
-                    // Load user data to check if they have any systems
-                    await this.loadUserData();
-                    
-                    // If user has no systems, show system creation dialog
-                    if (Object.keys(this.systems).length === 0) {
-                        // Show a welcome message and then the system creation dialog
-                        this.showNotification('🎉 Welcome to Afraponix Go! Let\'s set up your first aquaponics system.', 'success');
-                        
-                        // Delay to show notification first
-                        setTimeout(() => {
-                            this.showAddSystemDialog();
-                        }, 1500);
-                    }
+                    // Load user data and show system creation modal for new users
+                    await this.loadUserData('login');
                 });
                 
                 // Add continue to dashboard button handler
@@ -722,19 +718,8 @@ class AquaponicsApp {
                     this.closeAuthModal();
                     this.showAppUI();
                     
-                    // Load user data to check if they have any systems
-                    await this.loadUserData();
-                    
-                    // If user has no systems, show system creation dialog
-                    if (Object.keys(this.systems).length === 0) {
-                        // Show a welcome message and then the system creation dialog
-                        this.showNotification('🎉 Welcome to Afraponix Go! Let\'s set up your first aquaponics system.', 'success');
-                        
-                        // Delay to show notification first
-                        setTimeout(() => {
-                            this.showAddSystemDialog();
-                        }, 1500);
-                    }
+                    // Load user data and show system creation modal for new users
+                    await this.loadUserData('login');
                 });
                 
             } else {
@@ -779,53 +764,65 @@ class AquaponicsApp {
     }
 
     showEmailVerificationMessage(email) {
-        // Hide all auth forms and show verification message
-        this.hideAllAuthForms();
+        // Show the login slideout and replace its content with verification message
+        this.showLoginSlideout();
         
-        const modalContent = document.querySelector('#auth-modal .modal-content');
+        // Get the login slideout content area
+        const loginPanel = document.getElementById('login-slideout-panel');
+        
+        // Add null check for safety
+        if (!loginPanel) {
+            console.error('Login slideout panel not found');
+            // Fallback to showing a regular notification
+            this.showNotification(`Please check your email (${email}) for verification link`, 'info', 8000);
+            return;
+        }
         const verificationHtml = `
-            <span class="close" id="close-modal">&times;</span>
-            <div class="verification-message">
-                <div class="verification-icon">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 8L10.89 13.26C11.2187 13.4793 11.6049 13.5963 12 13.5963C12.3951 13.5963 12.7813 13.4793 13.11 13.26L21 8M5 19H19C19.5304 19 20.0391 18.7893 20.4142 18.4142C20.7893 18.0391 21 17.5304 21 17V7C21 6.46957 20.7893 5.96086 20.4142 5.58579C20.0391 5.21071 19.5304 5 19 5H5C4.46957 5 3.96086 5.21071 3.58579 5.58579C3.21071 5.96086 3 6.46957 3 7V17C3 17.5304 3.21071 18.0391 3.58579 18.4142C3.96086 18.7893 4.46957 19 5 19Z" stroke="#28a745" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
-                <h3>Check Your Email!</h3>
-                <p>We've sent a verification link to:</p>
-                <p class="email-address">${email}</p>
-                <p class="verification-info">Click the link in the email to verify your account and start using Afraponix Go.</p>
-                <div class="verification-actions">
-                    <button onclick="app.showResendVerification('${email}')" class="btn-primary">
-                        📧 Resend Verification Email
-                    </button>
-                    <button onclick="app.showLoginForm()" class="btn-secondary">
-                        Back to Login
-                    </button>
-                </div>
-                <div class="verification-tips">
-                    <p><strong>Tips:</strong></p>
-                    <ul>
-                        <li>Check your spam/junk folder</li>
-                        <li>Verification link expires in 24 hours</li>
-                        <li>Make sure to check the email address is correct</li>
-                    </ul>
+            <div class="slideout-header">
+                <h2>Email Verification Required</h2>
+                <button class="close-slideout" onclick="app.closeAllSlideoutPanels()">&times;</button>
+            </div>
+            <div class="slideout-content">
+                <div class="verification-message">
+                    <div class="verification-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M3 8L10.89 13.26C11.2187 13.4793 11.6049 13.5963 12 13.5963C12.3951 13.5963 12.7813 13.4793 13.11 13.26L21 8M5 19H19C19.5304 19 20.0391 18.7893 20.4142 18.4142C20.7893 18.0391 21 17.5304 21 17V7C21 6.46957 20.7893 5.96086 20.4142 5.58579C20.0391 5.21071 19.5304 5 19 5H5C4.46957 5 3.96086 5.21071 3.58579 5.58579C3.21071 5.96086 3 6.46957 3 7V17C3 17.5304 3.21071 18.0391 3.58579 18.4142C3.96086 18.7893 4.46957 19 5 19Z" stroke="#28a745" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h3>Check Your Email!</h3>
+                    <p>We've sent a verification link to:</p>
+                    <p class="email-address">${email}</p>
+                    <p class="verification-info">Click the link in the email to verify your account and start using Afraponix Go.</p>
+                    <div class="verification-actions">
+                        <button onclick="app.showResendVerification('${email}')" class="btn-success">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="margin-right: 6px; vertical-align: text-bottom;"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                            Resend Verification Email
+                        </button>
+                        <button onclick="app.showLoginForm()" class="btn-secondary">
+                            Back to Login
+                        </button>
+                    </div>
+                    <div class="verification-tips">
+                        <p><strong>Tips:</strong></p>
+                        <ul>
+                            <li>Check your spam/junk folder</li>
+                            <li>Verification link expires in 24 hours</li>
+                            <li>Make sure to check the email address is correct</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         `;
         
-        modalContent.innerHTML = verificationHtml;
+        loginPanel.innerHTML = verificationHtml;
         
-        // Re-attach modal close handler
-        document.getElementById('close-modal').addEventListener('click', () => {
-            this.closeAuthModal();
-        });
+        console.log('Email verification message displayed for:', email);
     }
 
     async showResendVerification(email) {
         try {
             // Show loading notification
-            this.showNotification('📧 Sending verification email...', 'info', 2000);
+            this.showNotification('Sending verification email...', 'info', 2000);
 
             const response = await this.makeApiCall('/auth/resend-verification', {
                 method: 'POST',
@@ -833,23 +830,183 @@ class AquaponicsApp {
             });
 
             // Show success notification with enhanced messaging
-            this.showNotification(`✅ Verification email sent to ${email}! Please check your inbox and spam folder.`, 'success', 6000);
+            this.showNotification(`Verification email sent to ${email}! Please check your inbox and spam folder.`, 'success', 6000);
+            
+            // Show verification code input form
+            this.showVerificationCodeForm(email);
             
         } catch (error) {
             console.error('❌ Resend error:', error);
             
             // Enhanced error messaging based on the error type
-            let errorMessage = '❌ Failed to resend verification email. Please try again.';
+            let errorMessage = 'Failed to resend verification email. Please try again.';
             
             if (error.message.includes('already verified')) {
-                errorMessage = '✅ Your email is already verified! You can now log in to your account.';
+                errorMessage = 'Your email is already verified! You can now log in to your account.';
             } else if (error.message.includes('not found')) {
-                errorMessage = '❌ Email address not found. Please check your email or register a new account.';
+                errorMessage = 'Email address not found. Please check your email or register a new account.';
             } else if (error.message.includes('rate limit')) {
-                errorMessage = '⏱️ Please wait a few minutes before requesting another verification email.';
+                errorMessage = 'Please wait a few minutes before requesting another verification email.';
             }
             
             this.showNotification(errorMessage, 'error', 8000);
+        }
+    }
+
+    showVerificationCodeForm(email) {
+        const loginPanel = document.getElementById('login-slideout-panel');
+        
+        if (!loginPanel) {
+            console.error('Login slideout panel not found');
+            return;
+        }
+
+        const verificationCodeHtml = `
+            <div class="slideout-header">
+                <h2>Enter Verification Code</h2>
+                <button class="close-slideout" onclick="app.closeAllSlideoutPanels()">&times;</button>
+            </div>
+            <div class="slideout-content">
+                <div class="verification-code-form">
+                    <div class="verification-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="#28a745"/>
+                        </svg>
+                    </div>
+                    <p>We've sent a 6-digit verification code to:</p>
+                    <p class="email-address"><strong>${email}</strong></p>
+                    <p>Enter the code below to verify your account:</p>
+                    
+                    <form id="verification-code-form" onsubmit="app.handleVerificationCode(event, '${email}')">
+                        <div class="code-input-container">
+                            <input type="text" class="code-digit form-input" maxlength="1" pattern="[0-9]" autocomplete="off">
+                            <input type="text" class="code-digit form-input" maxlength="1" pattern="[0-9]" autocomplete="off">
+                            <input type="text" class="code-digit form-input" maxlength="1" pattern="[0-9]" autocomplete="off">
+                            <input type="text" class="code-digit form-input" maxlength="1" pattern="[0-9]" autocomplete="off">
+                            <input type="text" class="code-digit form-input" maxlength="1" pattern="[0-9]" autocomplete="off">
+                            <input type="text" class="code-digit form-input" maxlength="1" pattern="[0-9]" autocomplete="off">
+                        </div>
+                        
+                        <div class="verification-actions">
+                            <button type="submit" class="btn-success">
+                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="margin-right: 6px; vertical-align: text-bottom;"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
+                                Verify Account
+                            </button>
+                            <button type="button" onclick="app.showResendVerification('${email}')" class="btn-secondary">
+                                Resend Code
+                            </button>
+                        </div>
+                        
+                        <div class="verification-help">
+                            <p><strong>Having trouble?</strong></p>
+                            <ul>
+                                <li>Check your spam/junk folder</li>
+                                <li>Make sure to enter all 6 digits</li>
+                                <li>Code expires in 24 hours</li>
+                                <li>Click "Resend Code" if you didn't receive it</li>
+                            </ul>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+        
+        loginPanel.innerHTML = verificationCodeHtml;
+        
+        // Setup verification code input handling
+        this.setupVerificationCode();
+        
+        console.log('Verification code form displayed for:', email);
+    }
+
+    async handleVerificationCode(event, email) {
+        event.preventDefault();
+        
+        // Get all code digit inputs
+        const codeInputs = document.querySelectorAll('.code-digit');
+        let verificationCode = '';
+        
+        // Combine all digits into verification code
+        codeInputs.forEach(input => {
+            verificationCode += input.value;
+        });
+        
+        // Validate code length
+        if (verificationCode.length !== 6) {
+            this.showNotification('Please enter all 6 digits of the verification code', 'error');
+            return;
+        }
+        
+        // Validate code contains only numbers
+        if (!/^\d{6}$/.test(verificationCode)) {
+            this.showNotification('Verification code must contain only numbers', 'error');
+            return;
+        }
+        
+        try {
+            // Show loading state
+            const submitButton = event.target.querySelector('button[type="submit"]');
+            const originalText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Verifying...';
+            
+            this.showNotification('Verifying your code...', 'info', 2000);
+            
+            // Call verification API with the code
+            console.log('🔍 Attempting verification with:', { code: verificationCode, email: email });
+            const response = await this.makeApiCall('/auth/verify-code', {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    code: verificationCode,
+                    email: email 
+                })
+            });
+            
+            // Success - store auth token and redirect
+            if (response.token) {
+                localStorage.setItem('auth_token', response.token);
+                localStorage.setItem('user', JSON.stringify(response.user));
+            }
+            
+            this.showNotification('Email verified successfully! Welcome to Afraponix Go!', 'success', 5000);
+            
+            // Close slideout and redirect to dashboard
+            this.closeAllSlideoutPanels();
+            
+            // Reload the page to update authentication state
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+            
+        } catch (error) {
+            console.error('❌ Verification error:', error);
+            
+            // Reset form state
+            const submitButton = event.target.querySelector('button[type="submit"]');
+            submitButton.disabled = false;
+            submitButton.textContent = 'Verify Account';
+            
+            // Handle different error types
+            let errorMessage = 'Invalid verification code. Please try again.';
+            
+            if (error.message.includes('expired')) {
+                errorMessage = 'This verification code has expired. Please request a new one.';
+            } else if (error.message.includes('invalid') || error.message.includes('Invalid')) {
+                errorMessage = 'Invalid verification code. Please check and try again.';
+            }
+            
+            this.showNotification(errorMessage, 'error', 8000);
+            
+            // Clear the form inputs for user to try again
+            const codeInputs = document.querySelectorAll('.code-digit');
+            codeInputs.forEach(input => {
+                input.value = '';
+            });
+            
+            // Focus on first input
+            if (codeInputs.length > 0) {
+                codeInputs[0].focus();
+            }
         }
     }
 
@@ -915,7 +1072,7 @@ class AquaponicsApp {
         return icons[type] || icons.info;
     }
 
-    async loadUserData() {
+    async loadUserData(context = 'default') {
         try {
             // Load systems
             const systems = await this.makeApiCall('/systems');
@@ -939,8 +1096,21 @@ class AquaponicsApp {
                 await this.loadDataRecords();
                 await this.updateDashboardFromData();
                 
-                // Don't auto-show system creation here as it might interfere with email verification flow
-                // Let the email verification handler or other specific triggers handle it
+                // Show system creation modal for new users after successful login
+                if (context === 'login' && systems.length === 0) {
+                    console.log('🎉 NEW USER DETECTED: Showing system creation modal for user with no systems');
+                    
+                    // Show welcome notification first
+                    this.showNotification('🎉 Welcome to Afraponix Go! Let\'s set up your first aquaponics system.', 'success', 4000);
+                    
+                    // Then show the system creation modal after a short delay
+                    setTimeout(() => {
+                        console.log('🎯 Opening system creation modal...');
+                        this.showAddSystemDialog();
+                    }, 1500);
+                } else {
+                    console.log(`ℹ️ loadUserData context: ${context}, systems: ${systems.length}`);
+                }
             }
         } catch (error) {
             console.error('Failed to load user data:', error);
@@ -1296,6 +1466,12 @@ class AquaponicsApp {
         this.closeAllSlideoutPanels();
     }
 
+    openAuthModal() {
+        // This method is deprecated - using slideout panels instead
+        // Fallback to showing login slideout
+        this.showLoginSlideout();
+    }
+
     // Verification code functionality
     setupVerificationCode() {
         // Setup verification code input handling
@@ -1320,7 +1496,13 @@ class AquaponicsApp {
                 
                 // Submit on Enter if all fields filled
                 if (e.key === 'Enter') {
-                    this.verifyEmailCode();
+                    const allFilled = Array.from(codeInputs).every(inp => inp.value);
+                    if (allFilled) {
+                        const form = document.getElementById('verification-code-form');
+                        if (form) {
+                            form.requestSubmit();
+                        }
+                    }
                 }
             });
             
@@ -1329,18 +1511,28 @@ class AquaponicsApp {
                 const pastedData = e.clipboardData.getData('text');
                 const digits = pastedData.replace(/[^0-9]/g, '').split('');
                 
-                // Fill inputs with pasted digits
+                // Clear all inputs first
+                codeInputs.forEach(inp => inp.value = '');
+                
+                // Fill inputs with pasted digits starting from the first input
                 digits.forEach((digit, i) => {
-                    if (index + i < codeInputs.length) {
-                        codeInputs[index + i].value = digit;
+                    if (i < codeInputs.length) {
+                        codeInputs[i].value = digit;
                     }
                 });
                 
-                // Focus last filled input or verify if complete
-                if (digits.length >= 6) {
-                    this.verifyEmailCode();
-                } else if (index + digits.length < codeInputs.length) {
-                    codeInputs[index + digits.length].focus();
+                // Focus on the last filled input or the first empty one
+                const lastFilledIndex = Math.min(digits.length - 1, codeInputs.length - 1);
+                if (lastFilledIndex >= 0) {
+                    codeInputs[lastFilledIndex].focus();
+                }
+                
+                // If we have 6 digits, trigger form submission
+                if (digits.length === 6) {
+                    const form = document.getElementById('verification-code-form');
+                    if (form) {
+                        form.requestSubmit();
+                    }
                 }
             });
         });

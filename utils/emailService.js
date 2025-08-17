@@ -381,7 +381,7 @@ Cultivating sustainable futures through smart aquaponics
 };
 
 // Send account verification email
-const sendVerificationEmail = async (email, verificationToken, username) => {
+const sendVerificationEmail = async (email, verificationToken, username, verificationCode) => {
     try {
         let config;
         try {
@@ -397,6 +397,12 @@ const sendVerificationEmail = async (email, verificationToken, username) => {
         const transporter = createTransporter();
         
         const verificationLink = `${config.verifyUrl || config.resetUrl.replace('reset-password', 'verify-email')}?token=${verificationToken}`;
+        
+        // Use the verification code passed from the database
+        // If not provided, generate one (backward compatibility)
+        if (!verificationCode) {
+            verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        }
         
         const joinDate = new Date().toLocaleDateString('en-US', { 
             year: 'numeric', 
@@ -453,9 +459,10 @@ const sendVerificationEmail = async (email, verificationToken, username) => {
                         align-items: center;
                         justify-content: center;
                     }
-                    .logo-icon::before {
-                        content: "🌱";
-                        font-size: 18px;
+                    .logo-icon svg {
+                        width: 18px;
+                        height: 18px;
+                        fill: white;
                     }
                     .welcome-banner {
                         background: linear-gradient(135deg, #e8fee7 0%, #e8fef5 100%);
@@ -561,48 +568,74 @@ const sendVerificationEmail = async (email, verificationToken, username) => {
                 <div class="container">
                     <div class="header">
                         <div class="logo">
-                            <div class="logo-icon"></div>
+                            <div class="logo-icon">
+                                <svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M12 22c-1.1 0-2-.9-2-2v-7.5c0-.8-.7-1.5-1.5-1.5S7 11.7 7 12.5v2c0 .6-.4 1-1 1s-1-.4-1-1v-2c0-1.9 1.6-3.5 3.5-3.5S12 10.6 12 12.5V20c0 1.1-.9 2-2 2z"/></svg>
+                            </div>
                             Afraponix Go
                         </div>
-                        <h2 style="color: #0f172a; margin: 0;">Welcome to Smart Aquaponics! 🎉</h2>
+                        <h2 style="color: #0f172a; margin: 0;">
+                            Welcome to Smart Aquaponics!
+                            <svg width="24" height="24" fill="#60da5b" viewBox="0 0 24 24" style="vertical-align: text-bottom; margin-left: 8px;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        </h2>
                     </div>
                     
                     <div class="welcome-banner">
-                        <h3 style="margin: 0 0 10px 0; color: #166534; font-size: 20px;">Hello ${username}! 👋</h3>
+                        <h3 style="margin: 0 0 10px 0; color: #166534; font-size: 20px;">Hello ${username}!</h3>
                         <p style="margin: 0; color: #166534; font-size: 16px;">You're one step away from revolutionizing your aquaponics management</p>
                     </div>
                     
                     <p>Thank you for joining the Afraponix Go community! We're excited to help you optimize your aquaponics system with smart monitoring and management tools.</p>
                     
-                    <p><strong>To activate your account and unlock all features, please verify your email address:</strong></p>
+                    <p><strong>To activate your account and unlock all features, please verify your email address using either method:</strong></p>
+                    
+                    <div style="background: #e8fee7; border-radius: 12px; padding: 25px; margin: 25px 0; border-left: 4px solid #60da5b; text-align: center;">
+                        <h4 style="margin: 0 0 15px 0; color: #166534;">Option 1: Enter Verification Code</h4>
+                        <div style="font-size: 32px; font-weight: bold; color: #166534; font-family: 'SF Mono', 'Monaco', 'Consolas', monospace; letter-spacing: 8px; margin: 15px 0;">
+                            ${verificationCode}
+                        </div>
+                        <p style="margin: 0; color: #166534; font-size: 14px;">Enter this code in the verification form</p>
+                    </div>
                     
                     <div style="text-align: center; margin: 35px 0;">
-                        <a href="${verificationLink}" class="verify-btn">✓ Verify My Account</a>
+                        <h4 style="margin: 0 0 15px 0; color: #1e40af;">Option 2: Click Verification Link</h4>
+                        <a href="${verificationLink}" class="verify-btn">Verify My Account</a>
                     </div>
                     
                     <div class="features-grid">
                         <div class="feature-item">
-                            <div class="feature-icon water">💧</div>
+                            <div class="feature-icon water">
+                                <svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M12 3l-6 9h4v6h4v-6h4l-6-9z"/></svg>
+                            </div>
                             <span>Monitor Water Quality</span>
                         </div>
                         <div class="feature-item">
-                            <div class="feature-icon fish">🐟</div>
+                            <div class="feature-icon fish">
+                                <svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M4 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm14-8v16l-6-4-6 4V4h12z"/></svg>
+                            </div>
                             <span>Track Fish Health</span>
                         </div>
                         <div class="feature-item">
-                            <div class="feature-icon plant">🌱</div>
+                            <div class="feature-icon plant">
+                                <svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M12 22c-1.1 0-2-.9-2-2v-7.5c0-.8-.7-1.5-1.5-1.5S7 11.7 7 12.5v2c0 .6-.4 1-1 1s-1-.4-1-1v-2c0-1.9 1.6-3.5 3.5-3.5S12 10.6 12 12.5V20c0 1.1-.9 2-2 2z"/></svg>
+                            </div>
                             <span>Manage Plant Growth</span>
                         </div>
                         <div class="feature-item">
-                            <div class="feature-icon tools">🧮</div>
+                            <div class="feature-icon tools">
+                                <svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M7 2v11h3v9l7-12h-4l4-8H7z"/></svg>
+                            </div>
                             <span>Aquaponics Calculators</span>
                         </div>
                         <div class="feature-item">
-                            <div class="feature-icon analytics">📊</div>
+                            <div class="feature-icon analytics">
+                                <svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M3 18h6l-3-3-3 3zm0-8h12l-6-6-6 6zm10 6h8l-4-4-4 4z"/></svg>
+                            </div>
                             <span>Dashboard Analytics</span>
                         </div>
                         <div class="feature-item">
-                            <div class="feature-icon community">🌿</div>
+                            <div class="feature-icon community">
+                                <svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                            </div>
                             <span>System Optimization</span>
                         </div>
                     </div>
@@ -619,10 +652,10 @@ const sendVerificationEmail = async (email, verificationToken, username) => {
                     
                     <div class="account-details">
                         <strong>Account Information:</strong><br>
-                        👤 Username: ${username}<br>
-                        📧 Email: ${email}<br>
-                        📅 Joined: ${joinDate}<br>
-                        ⏰ Verification link expires in 24 hours
+                        <svg width="14" height="14" fill="#475569" viewBox="0 0 24 24" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Name: ${username}<br>
+                        <svg width="14" height="14" fill="#475569" viewBox="0 0 24 24" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>Email: ${email}<br>
+                        <svg width="14" height="14" fill="#475569" viewBox="0 0 24 24" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.1 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg>Joined: ${joinDate}<br>
+                        <svg width="14" height="14" fill="#475569" viewBox="0 0 24 24" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>Code and link expire in 24 hours
                     </div>
                     
                     <p>Having trouble with the verification button? Copy and paste this link into your browser:</p>
@@ -632,9 +665,18 @@ const sendVerificationEmail = async (email, verificationToken, username) => {
                     
                     <div class="footer">
                         <div class="social-links">
-                            <a href="#" style="text-decoration: none;">📚 Getting Started Guide</a>
-                            <a href="#" style="text-decoration: none;">💬 Community Support</a>
-                            <a href="#" style="text-decoration: none;">🎓 Learning Resources</a>
+                            <a href="#" style="text-decoration: none;">
+                                <svg width="14" height="14" fill="#0051b1" viewBox="0 0 24 24" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z"/></svg>
+                                Getting Started Guide
+                            </a>
+                            <a href="#" style="text-decoration: none;">
+                                <svg width="14" height="14" fill="#0051b1" viewBox="0 0 24 24" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+                                Community Support
+                            </a>
+                            <a href="#" style="text-decoration: none;">
+                                <svg width="14" height="14" fill="#0051b1" viewBox="0 0 24 24" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg>
+                                Learning Resources
+                            </a>
                         </div>
                         <p style="margin: 15px 0 5px 0;">Welcome to the future of sustainable aquaponics management!</p>
                         <p style="margin: 0; font-size: 12px;">© ${new Date().getFullYear()} Afraponix Go. All rights reserved. | Cultivating sustainable futures through smart aquaponics.</p>
@@ -649,15 +691,19 @@ const sendVerificationEmail = async (email, verificationToken, username) => {
             to: email,
             subject: '🌿 Welcome to Afraponix Go - Verify Your Email',
             html: htmlContent,
-            text: `Welcome to Afraponix Go! 🎉
+            text: `Welcome to Afraponix Go!
 
 Hello ${username}!
 
 Thank you for joining the Afraponix Go community! We're excited to help you optimize your aquaponics system with smart monitoring and management tools.
 
-To activate your account and unlock all features, please verify your email address:
+To activate your account and unlock all features, please verify your email address using either method:
 
-VERIFICATION LINK:
+OPTION 1 - VERIFICATION CODE:
+${verificationCode}
+Enter this 6-digit code in the verification form.
+
+OPTION 2 - VERIFICATION LINK:
 ${verificationLink}
 
 Once verified, you'll have access to:
@@ -675,10 +721,10 @@ WHAT HAPPENS AFTER VERIFICATION:
 4. Begin tracking your fish and plant health
 
 ACCOUNT INFORMATION:
-Username: ${username}
+Name: ${username}
 Email: ${email}
 Joined: ${joinDate}
-Verification link expires in 24 hours
+Code and link expire in 24 hours
 
 Welcome to the future of sustainable aquaponics management!
 
@@ -690,8 +736,8 @@ Cultivating sustainable futures through smart aquaponics
         };
 
         const result = await transporter.sendMail(mailOptions);
-        console.log('Verification email sent:', result.messageId);
-        return { success: true, messageId: result.messageId };
+        console.log('Verification email sent:', result.messageId, 'Code:', verificationCode);
+        return { success: true, messageId: result.messageId, verificationCode };
         
     } catch (error) {
         console.error('Failed to send verification email:', error);
