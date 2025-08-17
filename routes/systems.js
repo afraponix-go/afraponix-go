@@ -1,5 +1,5 @@
 const express = require('express');
-const { getDatabase } = require('../database/init-mariadb');
+const { getDatabase, getDatabaseConnection } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -192,13 +192,15 @@ router.post('/create-demo', async (req, res) => {
     let connection;
 
     try {
-        connection = await getDatabase();
+        // Use a dedicated connection for transaction-based operations
+        connection = getDatabaseConnection();
+        await connection.promise().connect();
         
         // Generate new system ID
         const newSystemId = `system_${Date.now()}`;
         
         // Start transaction
-        await connection.execute('START TRANSACTION');
+        await connection.promise().execute('START TRANSACTION');
         
         try {
             let importResult;
@@ -219,10 +221,10 @@ router.post('/create-demo', async (req, res) => {
             }
             
             // Commit transaction
-            await connection.execute('COMMIT');
+            await connection.promise().execute('COMMIT');
             
             // Query for the created system
-            const [createdSystemRows] = await connection.execute(
+            const [createdSystemRows] = await connection.promise().execute(
                 'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
                 [newSystemId, targetUserId]
             );
@@ -248,7 +250,7 @@ router.post('/create-demo', async (req, res) => {
             
         } catch (transactionError) {
             console.error('Transaction error occurred:', transactionError);
-            await connection.execute('ROLLBACK');
+            await connection.promise().execute('ROLLBACK');
             throw transactionError;
         }
         
