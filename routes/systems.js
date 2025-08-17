@@ -194,13 +194,13 @@ router.post('/create-demo', async (req, res) => {
     try {
         // Use a dedicated connection for transaction-based operations
         connection = getDatabaseConnection();
-        await connection.promise().connect();
+        await connection.connect();
         
         // Generate new system ID
         const newSystemId = `system_${Date.now()}`;
         
         // Start transaction
-        await connection.promise().execute('START TRANSACTION');
+        await connection.execute('START TRANSACTION');
         
         try {
             let importResult;
@@ -221,10 +221,10 @@ router.post('/create-demo', async (req, res) => {
             }
             
             // Commit transaction
-            await connection.promise().execute('COMMIT');
+            await connection.execute('COMMIT');
             
             // Query for the created system
-            const [createdSystemRows] = await connection.promise().execute(
+            const [createdSystemRows] = await connection.execute(
                 'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
                 [newSystemId, targetUserId]
             );
@@ -250,7 +250,7 @@ router.post('/create-demo', async (req, res) => {
             
         } catch (transactionError) {
             console.error('Transaction error occurred:', transactionError);
-            await connection.promise().execute('ROLLBACK');
+            await connection.execute('ROLLBACK');
             throw transactionError;
         }
         

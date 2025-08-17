@@ -13,7 +13,7 @@ class SimpleDemoCreator {
     async createDemoSystem(systemId, userId, systemName) {
         try {
             // Create the base system
-            await this.mysql.promise().execute(
+            await this.mysql.execute(
                 `INSERT INTO systems (id, user_id, system_name, system_type, fish_type, 
                  fish_tank_count, total_fish_volume, grow_bed_count, total_grow_volume, 
                  total_grow_area, created_at) 
@@ -22,7 +22,7 @@ class SimpleDemoCreator {
             );
 
             // Create two fish tanks
-            await this.mysql.promise().execute(
+            await this.mysql.execute(
                 `INSERT INTO fish_tanks (system_id, tank_number, name, volume, unit, fish_type) 
                  VALUES 
                  (?, 1, 'Tank 1', 3500, 'liters', 'tilapia'),
@@ -31,7 +31,7 @@ class SimpleDemoCreator {
             );
 
             // Create two grow beds
-            await this.mysql.promise().execute(
+            await this.mysql.execute(
                 `INSERT INTO grow_beds (system_id, bed_number, bed_name, type, area_m2, depth, volume) 
                  VALUES 
                  (?, 1, 'Grow Bed 1', 'media', 2.0, 0.3, 600),
@@ -59,7 +59,7 @@ class SimpleDemoCreator {
             }
 
             if (waterQualityData.length > 0) {
-                await this.mysql.promise().query(
+                await this.mysql.query(
                     `INSERT INTO water_quality 
                      (system_id, date, temperature, ph, dissolved_oxygen, ammonia, nitrite, nitrate) 
                      VALUES ?`,
@@ -68,14 +68,14 @@ class SimpleDemoCreator {
             }
 
             // Add sample fish inventory
-            await this.mysql.promise().execute(
+            await this.mysql.execute(
                 `INSERT INTO fish_inventory (system_id, tank_id, fish_count, average_weight, total_biomass, date) 
                  SELECT ?, id, 100, 250, 25000, NOW() FROM fish_tanks WHERE system_id = ?`,
                 [systemId, systemId]
             );
 
             // Add sample plant allocation
-            await this.mysql.promise().execute(
+            await this.mysql.execute(
                 `INSERT INTO plant_allocations (system_id, grow_bed_id, crop_type, allocated_area, plant_count) 
                  SELECT ?, gb.id, 'lettuce', 1.0, 20 FROM grow_beds gb WHERE gb.system_id = ? AND gb.bed_number = 1
                  UNION ALL
@@ -84,7 +84,7 @@ class SimpleDemoCreator {
             );
 
             // Add some sample plant growth data
-            await this.mysql.promise().execute(
+            await this.mysql.execute(
                 `INSERT INTO plant_data (system_id, grow_bed_id, batch_id, crop_type, plant_date, plant_count, growth_stage) 
                  SELECT ?, gb.id, CONCAT('batch_', UNIX_TIMESTAMP()), 'lettuce', DATE_SUB(NOW(), INTERVAL 14 DAY), 20, 'vegetative' 
                  FROM grow_beds gb WHERE gb.system_id = ? AND gb.bed_number = 1
