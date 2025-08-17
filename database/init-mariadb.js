@@ -56,6 +56,7 @@ async function createTables(connection) {
             email_verified BOOLEAN DEFAULT 0,
             verification_token TEXT,
             verification_token_expiry TIMESTAMP NULL,
+            verification_code VARCHAR(6),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB`,
 

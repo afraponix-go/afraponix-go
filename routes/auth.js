@@ -15,6 +15,8 @@ const formatDateForMySQL = (date) => {
 // Register new user
 router.post('/register', async (req, res) => {
     const { username, email, password, firstName, lastName } = req.body;
+    
+    console.log('📝 Registration attempt:', { username, email, firstName, lastName });
 
     if (!username || !email || !password || !firstName || !lastName) {
         return res.status(400).json({ error: 'All fields are required' });
@@ -90,7 +92,25 @@ router.post('/register', async (req, res) => {
 
     } catch (error) {
         console.error('Registration error:', error);
-        res.status(500).json({ error: 'Failed to create user' });
+        
+        // Provide more specific error information for debugging
+        let errorMessage = 'Failed to create user';
+        if (error.code === 'ER_NO_SUCH_TABLE') {
+            errorMessage = 'Database table not found';
+        } else if (error.code === 'ER_BAD_FIELD_ERROR') {
+            errorMessage = 'Database schema mismatch - missing required columns';
+        } else if (error.code === 'ER_DUP_ENTRY') {
+            errorMessage = 'User already exists';
+        } else if (error.message && error.message.includes('connection')) {
+            errorMessage = 'Database connection error';
+        } else if (error.message && error.message.includes('email')) {
+            errorMessage = 'Email service configuration error';
+        }
+        
+        res.status(500).json({ 
+            error: errorMessage,
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
 
