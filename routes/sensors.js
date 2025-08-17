@@ -63,8 +63,21 @@ router.post('/', async (req, res) => {
             [system_id, sensor_type, device_id]
         );
 
-        if (existingSensors.length > 0) {            return res.status(409).json({ 
-                error: `A ${sensor_type} sensor with this device ID already exists for this system. Each sensor type can only be added once per system.` 
+        if (existingSensors.length > 0) {
+            const existingSensor = existingSensors[0];
+            return res.status(409).json({ 
+                error: `A ${sensor_type} sensor with this device ID already exists for this system. Each sensor type can only be added once per system.`,
+                conflicting_sensor: {
+                    name: existingSensor.sensor_name,
+                    device_id: existingSensor.device_id,
+                    sensor_type: existingSensor.sensor_type,
+                    id: existingSensor.id
+                },
+                suggestions: [
+                    'Use a different device ID for this sensor',
+                    'Update the existing sensor configuration instead',
+                    'Remove the existing sensor first, then add this one'
+                ]
             });
         }
 
