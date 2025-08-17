@@ -194,7 +194,6 @@ router.post('/create-demo', async (req, res) => {
     try {
         // Use a dedicated connection for transaction-based operations
         connection = getDatabaseConnection();
-        await connection.connect();
         
         // Generate new system ID
         const newSystemId = `system_${Date.now()}`;
