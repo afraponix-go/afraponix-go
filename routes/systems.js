@@ -201,10 +201,22 @@ router.post('/create-demo', async (req, res) => {
         await connection.execute('START TRANSACTION');
         
         try {
-            // Use SQLite importer to populate demo system
-            const importer = new SQLiteDemoImporter(connection);
-            const importResult = await importer.importDemoSystem(newSystemId, targetUserId);
+            let importResult;
             
+            try {
+                // Try to use SQLite importer first
+                const importer = new SQLiteDemoImporter(connection);
+                importResult = await importer.importDemoSystem(newSystemId, targetUserId);
+                console.log('✅ Demo system created using SQLite database');
+            } catch (sqliteError) {
+                console.log('⚠️ SQLite demo import failed, using simple demo creator:', sqliteError.message);
+                
+                // Fallback to simple demo creator
+                const SimpleDemoCreator = require('../database/simple-demo-creator');
+                const simpleCreator = new SimpleDemoCreator(connection);
+                importResult = await simpleCreator.createDemoSystem(newSystemId, targetUserId, system_name);
+                console.log('✅ Demo system created using simple creator');
+            }
             
             // Commit transaction
             await connection.execute('COMMIT');
@@ -242,6 +254,11 @@ router.post('/create-demo', async (req, res) => {
         
     } catch (error) {
         console.error('Failed to create demo system:', error);
+        console.error('Error details:', {
+            code: error.code,
+            message: error.message,
+            stack: error.stack
+        });
         
         // Determine error type for better user feedback
         let errorMessage = 'Failed to create demo system';
@@ -250,12 +267,21 @@ router.post('/create-demo', async (req, res) => {
         if (error.code === 'ER_DUP_ENTRY') {
             errorMessage = 'System with this name already exists';
             statusCode = 409;
-        } else if (error.code === 'ENOENT' && error.message.includes('demo-data.sqlite')) {
+        } else if (error.code === 'ENOENT' || (error.message && error.message.includes('demo-data.sqlite'))) {
             errorMessage = 'Demo database not found - please ensure demo-data.sqlite exists';
             statusCode = 404;
+        } else if (error.message && error.message.includes('Failed to open demo database')) {
+            errorMessage = 'Could not open demo database file - check file permissions';
+            statusCode = 500;
+        } else if (error.message && error.message.includes('sqlite3')) {
+            errorMessage = 'SQLite library error - ensure sqlite3 is installed';
+            statusCode = 500;
         } else if (error.code === 'ECONNREFUSED' || error.code === 'ER_ACCESS_DENIED_ERROR') {
             errorMessage = 'Database connection error';
             statusCode = 503;
+        } else if (error.message) {
+            // Include the actual error message for debugging
+            errorMessage = `Failed to create demo system: ${error.message}`;
         }
         
         res.status(statusCode).json({ 

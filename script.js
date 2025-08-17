@@ -18980,8 +18980,12 @@ class AquaponicsApp {
         this.loadSystemConfigToForm();
         this.displaySystemsList();
         this.displayGrowBedStatus();
-        await this.loadGrowBedConfiguration(); // Load grow bed configuration form
-        await this.updateReservoirVolume();
+        
+        // Only load grow bed configuration if we have an active system
+        if (this.activeSystemId && this.activeSystemId !== 'undefined') {
+            await this.loadGrowBedConfiguration(); // Load grow bed configuration form
+            await this.updateReservoirVolume();
+        }
     }
 
     loadSystemConfigToForm() {
