@@ -47,32 +47,38 @@ router.get('/system/:systemId', async (req, res) => {
                 ft.size_m3,
                 ft.fish_type as tank_fish_type,
                 ft.current_fish_count as current_count,
-                -- Calculate average weight from recent fish events
+                -- Use most recent weight from fish events instead of historical average
                 COALESCE(
-                    (SELECT AVG(weight) 
+                    (SELECT weight 
                      FROM fish_events 
                      WHERE system_id = ft.system_id 
                        AND fish_tank_id = ft.id 
                        AND weight IS NOT NULL 
                        AND event_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                     ORDER BY event_date DESC 
+                     LIMIT 1
                      ), 50) as average_weight,
                 (ft.current_fish_count * COALESCE(
-                    (SELECT AVG(weight) 
+                    (SELECT weight 
                      FROM fish_events 
                      WHERE system_id = ft.system_id 
                        AND fish_tank_id = ft.id 
                        AND weight IS NOT NULL 
                        AND event_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                     ORDER BY event_date DESC 
+                     LIMIT 1
                      ), 50)) / 1000.0 as biomass_kg,
                 CASE 
                     WHEN ft.volume_liters > 0 THEN 
                         (ft.current_fish_count * COALESCE(
-                            (SELECT AVG(weight) 
+                            (SELECT weight 
                              FROM fish_events 
                              WHERE system_id = ft.system_id 
                                AND fish_tank_id = ft.id 
                                AND weight IS NOT NULL 
                                AND event_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                             ORDER BY event_date DESC 
+                             LIMIT 1
                              ), 50)) / ft.volume_liters
                     ELSE 0 
                 END as density_kg_m3,

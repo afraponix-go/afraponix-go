@@ -5367,7 +5367,18 @@ class AquaponicsApp {
         const safeWeightKg = isNaN(totalWeightKg) || !isFinite(totalWeightKg) ? 0 : totalWeightKg;
         const safeVolumeM3 = isNaN(fishVolumeM3) || !isFinite(fishVolumeM3) ? 1 : fishVolumeM3; // Default 1m³ to avoid division by zero
         
-        // Current actual density and final harvest density        
+        // Current actual density and final harvest density
+        console.log('🐟 DENSITY DEBUG:', {
+            totalFish: totalFish,
+            averageWeight: averageWeight,
+            totalWeightKg: totalWeightKg,
+            safeWeightKg: safeWeightKg,
+            fishVolumeM3: fishVolumeM3,
+            safeVolumeM3: safeVolumeM3,
+            fishType: fishType,
+            effectiveWeight: effectiveWeight,
+            expectedDensity: `${totalFish} × ${averageWeight}g ÷ 1000 ÷ ${fishVolumeM3}m³ = ${totalFish > 0 && fishVolumeM3 > 0 ? ((totalFish * averageWeight / 1000) / fishVolumeM3).toFixed(2) : 'N/A'} kg/m³`
+        });
         const actualDensity = safeVolumeM3 > 0 ? (safeWeightKg / safeVolumeM3).toFixed(1) : 'N/A';
         const isUsingEstimatedWeight = totalBiomassKg === 0 && effectiveWeight > 0;
         const finalHarvestWeight = this.getFinalHarvestWeight(fishType);
@@ -5376,7 +5387,6 @@ class AquaponicsApp {
         
         // Calculate recommended stocking density based on fish type
         const recommendedMaxDensity = this.getRecommendedStockingDensity(fishType);
-        const stockingDensity = recommendedMaxDensity;
         const densityStatus = actualDensity !== 'N/A' && actualDensity > recommendedMaxDensity ? 'warning' : 'good';
         
         // Get last feeding time
@@ -5421,13 +5431,6 @@ class AquaponicsApp {
                     <div class="metric-value">${lastFeedTime}</div>
                     <div class="metric-label">Last Fed</div>
                     <div class="summary-detail">Feed regularly for optimal health</div>
-                </div>
-                
-                <div class="chart-card metric-card">
-                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_parameters.svg" alt="Stocking Density" class="metric-icon-svg"></div>
-                    <div class="metric-value">${stockingDensity} kg/m³</div>
-                    <div class="metric-label">Stocking Density</div>
-                    <div class="summary-detail">Recommended maximum for ${fishType || 'fish'}</div>
                 </div>
             </div>
             
@@ -5498,7 +5501,7 @@ class AquaponicsApp {
         const lastFeedTime = this.getLastFeedingTime();
         const feedConsumption = this.getCurrentMonthFeedConsumption();
         
-        container.innerHTML = `
+        const cardsHtml = `
             <div class="charts-grid">
                 <div class="chart-card metric-card">
                     <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_fish.svg" alt="Fish" class="metric-icon-svg"></div>
@@ -5532,16 +5535,9 @@ class AquaponicsApp {
                     <div class="metric-label">Last Fed</div>
                     <div class="summary-detail">Feed regularly for optimal health</div>
                 </div>
-                
-                <div class="chart-card metric-card">
-                    <div class="metric-icon"><img src="icons/new-icons/Afraponix Go Icons_parameters.svg" alt="Stocking Density" class="metric-icon-svg"></div>
-                    <div class="metric-value">${stockingDensity} kg/m³</div>
-                    <div class="metric-label">Stocking Density</div>
-                    <div class="summary-detail">Recommended maximum for ${fishType || 'fish'}</div>
-                </div>
             </div>
             
-            ${totalFish > 0 ? `
+            ${actualTankCount > 0 ? `
                 <div class="tank-details">
                     <h4>Tank Details</h4>
                     <div class="tank-details-grid">
@@ -5549,12 +5545,17 @@ class AquaponicsApp {
                     </div>
                 </div>
                 
-                <div class="fish-density-chart-section">
-                    <h4>Fish Density Over Time</h4>
-                    <canvas id="fish-density-chart" width="400" height="200"></canvas>
-                </div>
+                ${totalFish > 0 ? `
+                    <div class="fish-density-chart-section">
+                        <h4>Fish Density Over Time</h4>
+                        <canvas id="fish-density-chart" width="400" height="200"></canvas>
+                    </div>
+                ` : ''}
             ` : ''}
         `;
+        
+        // Set the container HTML
+        container.innerHTML = cardsHtml;
         
         // Initialize fish density chart if fish are present
         if (totalFish > 0) {
@@ -5636,16 +5637,20 @@ class AquaponicsApp {
             entry.feed_consumption && entry.feed_consumption > 0 && entry.date
         );
         
+        
         if (!latestFeedEntry) {
             return 'No recent feeding';
         }
         
         try {
-            const feedDate = new Date(latestFeedEntry.date);
+            // Use created_at for precise timestamp, fallback to date if not available
+            const feedTimestamp = latestFeedEntry.created_at || latestFeedEntry.date;
+            const feedDate = new Date(feedTimestamp);
             const now = new Date();
             const timeDiff = now - feedDate;
             const hoursDiff = Math.floor(timeDiff / (1000 * 60 * 60));
             const daysDiff = Math.floor(hoursDiff / 24);
+            
             
             if (hoursDiff < 1) {
                 return 'Just now';
@@ -5802,6 +5807,14 @@ class AquaponicsApp {
             
             // Calculate actual density for this tank using effective weight
             const tankBiomassKg = (fishCount * effectiveWeight) / 1000; // Convert grams to kg
+            console.log(`🐟 TANK ${i} DENSITY DEBUG:`, {
+                tankNumber: i,
+                fishCount: fishCount,
+                effectiveWeight: effectiveWeight,
+                tankBiomassKg: tankBiomassKg,
+                tankVolumeM3: tankVolumeM3,
+                expectedCalc: `${fishCount} × ${effectiveWeight}g ÷ 1000 ÷ ${tankVolumeM3}m³ = ${tankVolumeM3 > 0 ? ((fishCount * effectiveWeight / 1000) / tankVolumeM3).toFixed(2) : 'N/A'} kg/m³`
+            });
             const actualDensity = tankVolumeM3 > 0 && tankBiomassKg > 0 ? (tankBiomassKg / tankVolumeM3).toFixed(1) : '0.0';
             const maxDensity = this.getRecommendedStockingDensity(systemConfig.fish_type);
             const densityPercentage = Math.min((parseFloat(actualDensity) / maxDensity) * 100, 100);
@@ -5861,31 +5874,31 @@ class AquaponicsApp {
                                 </svg>
                             </button>
                             <div class="quick-actions-menu" id="quick-actions-${i}" style="display: none;">
-                                <button class="quick-action-item" onclick="app.hideQuickActions(${i}); app.showAddFishModal(${i})">
+                                <button class="quick-action-item" onclick="app.showAddFishModal(${i})">
                                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                         <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                                     </svg>
                                     Add Fish
                                 </button>
-                                <button class="quick-action-item" onclick="app.hideQuickActions(${i}); app.showMortalityModal(${i})">
+                                <button class="quick-action-item" onclick="app.showMortalityModal(${i})">
                                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
                                     </svg>
                                     Mortality
                                 </button>
-                                <button class="quick-action-item" onclick="app.hideQuickActions(${i}); app.showFeedingModal(${i})">
+                                <button class="quick-action-item" onclick="app.showFeedingModal(${i})">
                                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                         <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7z"/>
                                     </svg>
                                     Feed
                                 </button>
-                                <button class="quick-action-item" onclick="app.hideQuickActions(${i}); app.showFishSizeModal(${i})">
+                                <button class="quick-action-item" onclick="app.showFishSizeModal(${i})">
                                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                         <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                                     </svg>
                                     Record Size
                                 </button>
-                                <button class="quick-action-item" onclick="app.hideQuickActions(${i}); app.showHarvestFishModal(${i})">
+                                <button class="quick-action-item" onclick="app.showHarvestFishModal(${i})">
                                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                         <path d="M19 7h-3V6a4 4 0 0 0-8 0v1H5a1 1 0 0 0-1 1v11a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V8a1 1 0 0 0-1-1zM10 6a2 2 0 0 1 4 0v1h-4V6zm8 13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9h2v1a1 1 0 0 0 2 0V9h4v1a1 1 0 0 0 2 0V9h2v10z"/>
                                     </svg>
@@ -5978,31 +5991,31 @@ class AquaponicsApp {
         menu.style.display = 'none';
         
         menu.innerHTML = `
-            <button class="quick-action-item" onclick="app.hideQuickActions(${tankNumber}); app.showAddFishModal(${tankNumber})">
+            <button class="quick-action-item" onclick="app.showAddFishModal(${tankNumber})">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                     <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                 </svg>
                 Add Fish
             </button>
-            <button class="quick-action-item" onclick="app.hideQuickActions(${tankNumber}); app.showMortalityModal(${tankNumber})">
+            <button class="quick-action-item" onclick="app.showMortalityModal(${tankNumber})">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
                 </svg>
                 Mortality
             </button>
-            <button class="quick-action-item" onclick="app.hideQuickActions(${tankNumber}); app.showFeedingModal(${tankNumber})">
+            <button class="quick-action-item" onclick="app.showFeedingModal(${tankNumber})">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                     <path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7z"/>
                 </svg>
                 Feed
             </button>
-            <button class="quick-action-item" onclick="app.hideQuickActions(${tankNumber}); app.showFishSizeModal(${tankNumber})">
+            <button class="quick-action-item" onclick="app.showFishSizeModal(${tankNumber})">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                     <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                 </svg>
                 Record Size
             </button>
-            <button class="quick-action-item" onclick="app.hideQuickActions(${tankNumber}); app.showHarvestFishModal(${tankNumber})">
+            <button class="quick-action-item" onclick="app.showHarvestFishModal(${tankNumber})">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                     <path d="M19 7h-3V6a4 4 0 0 0-8 0v1H5a1 1 0 0 0-1 1v11a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V8a1 1 0 0 0-1-1zM10 6a2 2 0 0 1 4 0v1h-4V6zm8 13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9h2v1a1 1 0 0 0 2 0V9h4v1a1 1 0 0 0 2 0V9h2v10z"/>
                 </svg>
@@ -6047,16 +6060,24 @@ class AquaponicsApp {
     
     // Force close all Quick Actions menus (used when opening modals)
     hideAllQuickActions() {
-        // Hide all regular dropdown menus
+        // Hide all regular dropdown menus with aggressive CSS forcing
         const allMenus = document.querySelectorAll('[id^="quick-actions-"]');
         allMenus.forEach(menu => {
-            menu.style.display = 'none';
+            menu.removeAttribute('style');
+            menu.style.setProperty('display', 'none', 'important');
+            menu.style.setProperty('visibility', 'hidden', 'important');
+            menu.style.setProperty('opacity', '0', 'important');
         });
         
-        // Hide all floating menus
+        // Hide all floating menus more aggressively
         const allFloatingMenus = document.querySelectorAll('[id^="floating-quick-actions-"]');
         allFloatingMenus.forEach(menu => {
-            menu.style.display = 'none';
+            menu.style.setProperty('display', 'none', 'important');
+            menu.style.setProperty('visibility', 'hidden', 'important');
+            menu.style.setProperty('opacity', '0', 'important');
+            menu.style.setProperty('pointer-events', 'none', 'important');
+            // Also remove from DOM
+            menu.remove();
         });
         
         // Remove outside click listener
@@ -16506,6 +16527,7 @@ class AquaponicsApp {
         }
 
         try {
+            
             const [waterQuality, fishInventory, fishHealth, plantGrowth, operations, nutrientReadings] = await Promise.all([
                 this.makeApiCall(`/data/water-quality/${this.activeSystemId}`),
                 this.makeApiCall(`/fish-inventory/system/${this.activeSystemId}`).catch(() => ({ tanks: [] })),
@@ -16514,6 +16536,7 @@ class AquaponicsApp {
                 this.makeApiCall(`/data/operations/${this.activeSystemId}`),
                 this.makeApiCall(`/data/nutrients/${this.activeSystemId}`)
             ]);
+
 
             this.dataRecords = {
                 waterQuality,
@@ -20833,6 +20856,9 @@ Generated by Afraponix Go - Aquaponics Management System`;
     }
 
     showHarvestFishModal(tankNumber) {
+        // Force close all Quick Actions menus IMMEDIATELY
+        this.hideAllQuickActions();
+        
         // Set current date as default
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('harvest-date').value = today;
@@ -20850,9 +20876,6 @@ Generated by Afraponix Go - Aquaponics Management System`;
         
         // Show modal
         document.getElementById('harvest-fish-modal').style.display = 'flex';
-        
-        // Force close all Quick Actions menus after modal opens
-        setTimeout(() => this.hideAllQuickActions(), 100);
         
         // Add event listeners for automatic calculation
         this.setupHarvestCalculation();
@@ -25613,6 +25636,7 @@ Generated by Afraponix Go - Aquaponics Management System`;
                 container.innerHTML = '<p class="no-data">No system data available. Please configure your system in Settings.</p>';
                 return;
             }
+            
 
             // Fetch actual fish tank configurations to get real total volume
             let actualTotalVolumeL = systemData.total_fish_volume || 1000;
@@ -26490,6 +26514,9 @@ Generated by Afraponix Go - Aquaponics Management System`;
 
     // Fish Management Modal Functions
     showAddFishModal(preselectedTank = null) {
+        // Force close all Quick Actions menus IMMEDIATELY
+        this.hideAllQuickActions();
+        
         this.populateTankSelects();
         document.getElementById('add-fish-date').value = new Date().toISOString().split('T')[0];
         
@@ -26503,15 +26530,15 @@ Generated by Afraponix Go - Aquaponics Management System`;
         
         document.getElementById('add-fish-modal').classList.add('show');
         
-        // Force close all Quick Actions menus after modal opens
-        setTimeout(() => this.hideAllQuickActions(), 100);
-        
         // Setup form submission
         const form = document.getElementById('add-fish-form');
         form.onsubmit = (e) => this.handleAddFish(e);
     }
 
     showMortalityModal(preselectedTank = null) {
+        // Force close all Quick Actions menus IMMEDIATELY
+        this.hideAllQuickActions();
+        
         this.populateTankSelects();
         document.getElementById('mortality-date').value = new Date().toISOString().split('T')[0];
         
@@ -26525,15 +26552,15 @@ Generated by Afraponix Go - Aquaponics Management System`;
         
         document.getElementById('mortality-modal').classList.add('show');
         
-        // Force close all Quick Actions menus after modal opens
-        setTimeout(() => this.hideAllQuickActions(), 100);
-        
         // Setup form submission
         const form = document.getElementById('mortality-form');
         form.onsubmit = (e) => this.handleMortality(e);
     }
 
     async showFeedingModal(preselectedTank = null) {
+        // Force close all Quick Actions menus IMMEDIATELY
+        this.hideAllQuickActions();
+        
         this.populateTankSelects();
         document.getElementById('feeding-date').value = new Date().toISOString().split('T')[0];
         document.getElementById('feeding-time').value = new Date().toTimeString().slice(0, 5);
@@ -26550,9 +26577,6 @@ Generated by Afraponix Go - Aquaponics Management System`;
         await this.populateRecentFeedingData(preselectedTank);
         
         document.getElementById('feeding-modal').classList.add('show');
-        
-        // Force close all Quick Actions menus after modal opens
-        setTimeout(() => this.hideAllQuickActions(), 100);
         
         // Setup form submission
         const form = document.getElementById('feeding-form');
@@ -26661,6 +26685,9 @@ Generated by Afraponix Go - Aquaponics Management System`;
     }
 
     showFishSizeModal(preselectedTank = null) {
+        // Force close all Quick Actions menus IMMEDIATELY
+        this.hideAllQuickActions();
+        
         this.populateTankSelects();
         document.getElementById('fish-size-date').value = new Date().toISOString().split('T')[0];
         
@@ -26673,9 +26700,6 @@ Generated by Afraponix Go - Aquaponics Management System`;
         }
         
         document.getElementById('fish-size-modal').classList.add('show');
-        
-        // Force close all Quick Actions menus after modal opens
-        setTimeout(() => this.hideAllQuickActions(), 100);
         
         // Setup form submission
         const form = document.getElementById('fish-size-form');
@@ -27413,6 +27437,15 @@ Generated by Afraponix Go - Aquaponics Management System`;
             const healthMonitoringContent = document.getElementById('fish-health-monitoring-content');
             if (healthMonitoringContent && healthMonitoringContent.classList.contains('active')) {
                 this.loadFishHealthMonitoring();
+            }
+            
+            // Refresh data records to include the new fish health entry
+            await this.loadDataRecords();
+            
+            // Refresh fish overview cards to update "Last Fed" information
+            const fishOverviewContent = document.getElementById('fish-overview-content');
+            if (fishOverviewContent && fishOverviewContent.classList.contains('active')) {
+                await this.loadFishOverview();
             }
 
         } catch (error) {
