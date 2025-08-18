@@ -1388,6 +1388,70 @@ a:hover {
   height: 1.25em;
 }
 
+/* =============================================================================
+   TANK CAPACITY DISPLAY - Add Fish Modal Component
+   ============================================================================= */
+
+.tank-capacity-display {
+  background: var(--bg-secondary);
+  border: var(--border-width) solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin: var(--space-4) 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.capacity-header {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  margin-bottom: var(--space-2);
+  border-bottom: var(--border-width) solid var(--border-light);
+  padding-bottom: var(--space-1);
+}
+
+.capacity-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.capacity-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.capacity-label {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-weight: var(--font-medium);
+  margin-bottom: var(--space-1);
+}
+
+.capacity-value {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-deep-blue);
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 480px) {
+  .capacity-stats {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  
+  .capacity-stat {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
 /* Dark Mode Support (Disabled) */
 /* 
 @media (prefers-color-scheme: dark) {
