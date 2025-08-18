@@ -5368,17 +5368,6 @@ class AquaponicsApp {
         const safeVolumeM3 = isNaN(fishVolumeM3) || !isFinite(fishVolumeM3) ? 1 : fishVolumeM3; // Default 1m³ to avoid division by zero
         
         // Current actual density and final harvest density
-        console.log('🐟 DENSITY DEBUG:', {
-            totalFish: totalFish,
-            averageWeight: averageWeight,
-            totalWeightKg: totalWeightKg,
-            safeWeightKg: safeWeightKg,
-            fishVolumeM3: fishVolumeM3,
-            safeVolumeM3: safeVolumeM3,
-            fishType: fishType,
-            effectiveWeight: effectiveWeight,
-            expectedDensity: `${totalFish} × ${averageWeight}g ÷ 1000 ÷ ${fishVolumeM3}m³ = ${totalFish > 0 && fishVolumeM3 > 0 ? ((totalFish * averageWeight / 1000) / fishVolumeM3).toFixed(2) : 'N/A'} kg/m³`
-        });
         const actualDensity = safeVolumeM3 > 0 ? (safeWeightKg / safeVolumeM3).toFixed(1) : 'N/A';
         const isUsingEstimatedWeight = totalBiomassKg === 0 && effectiveWeight > 0;
         const finalHarvestWeight = this.getFinalHarvestWeight(fishType);
@@ -5807,14 +5796,6 @@ class AquaponicsApp {
             
             // Calculate actual density for this tank using effective weight
             const tankBiomassKg = (fishCount * effectiveWeight) / 1000; // Convert grams to kg
-            console.log(`🐟 TANK ${i} DENSITY DEBUG:`, {
-                tankNumber: i,
-                fishCount: fishCount,
-                effectiveWeight: effectiveWeight,
-                tankBiomassKg: tankBiomassKg,
-                tankVolumeM3: tankVolumeM3,
-                expectedCalc: `${fishCount} × ${effectiveWeight}g ÷ 1000 ÷ ${tankVolumeM3}m³ = ${tankVolumeM3 > 0 ? ((fishCount * effectiveWeight / 1000) / tankVolumeM3).toFixed(2) : 'N/A'} kg/m³`
-            });
             const actualDensity = tankVolumeM3 > 0 && tankBiomassKg > 0 ? (tankBiomassKg / tankVolumeM3).toFixed(1) : '0.0';
             const maxDensity = this.getRecommendedStockingDensity(systemConfig.fish_type);
             const densityPercentage = Math.min((parseFloat(actualDensity) / maxDensity) * 100, 100);
