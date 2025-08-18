@@ -5456,16 +5456,7 @@ EOF < /dev/null
     }
 }
 
-.modal-header {
-    background: linear-gradient(135deg, #dc3545, #c82333);
-    color: white;
-    padding: 1.5rem;
-    border-radius: 9px 9px 0 0;
-}
-
-.modal-header h3 {
-    margin: 0;
-    font-size: var(--text-xl);
+/* Removed - using standardized .modal-header from app-styles.css */
     font-weight: 600;
 }
 
@@ -7470,44 +7461,13 @@ input:checked + .toggle-slider:before {
     overflow-y: auto;
 }
 
-.fish-modal .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem 1.5rem 0 1.5rem;
-    border-bottom: 1px solid #e0e6ed;
-    margin-bottom: 0;
-}
+/* Removed - using standardized .modal-header from app-styles.css */
 
-.fish-modal .modal-header h2 {
-    margin: 0;
-    color: var(--text-primary);
-    font-size: 1.5rem;
-    font-weight: 600;
-}
+/* Removed - using standardized .modal-header from app-styles.css */
 
-.fish-modal .modal-header .close {
-    background: none;
-    border: none;
-    font-size: 2rem;
-    font-weight: bold;
-    color: #7f8c8d;
-    cursor: pointer;
-    padding: 0;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: all 0.2s ease;
-}
+/* Removed - using standardized .modal-header from app-styles.css */
 
-.fish-modal .modal-header .close:hover {
-    background: #f8f9fa;
-    color: #e74c3c;
-    transform: scale(1.1);
-}
+/* Removed - using standardized .modal-header from app-styles.css */
 
 .fish-modal .modal-body {
     padding: 1.5rem;
@@ -9981,17 +9941,9 @@ input:checked + .toggle-slider:before {
     width: 90%;
 }
 
-.plant-edit-modal .modal-header {
-    background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
-    border-bottom: 1px solid #28a745;
-    padding: 1.5rem;
-    border-radius: 12px 12px 0 0;
-    margin: -2rem -2rem 1.5rem -2rem;
-}
+/* Removed - using standardized .modal-header from app-styles.css */
 
-.plant-edit-modal .modal-header h3 {
-    margin: 0;
-    color: #155724;
+/* Removed - using standardized .modal-header from app-styles.css */
     font-size: 1.25rem;
     font-weight: 600;
 }
@@ -11039,14 +10991,7 @@ input:checked + .toggle-slider:before {
     overflow: hidden;
 }
 
-.modal-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: none;
+/* Removed - using standardized .modal-header from app-styles.css */
 }
 
 .modal-header h4 {
@@ -11828,15 +11773,9 @@ input:checked + .toggle-slider:before {
     margin: auto;
 }
 
+/* Removed - using standardized .modal-header from app-styles.css */
 .plant-edit-modal .modal-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     flex-shrink: 0;
-    border-radius: 12px 12px 0 0;
 }
 
 .plant-edit-modal .modal-header h3 {
@@ -14195,18 +14134,9 @@ kbd {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.inline-harvest-modal .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem;
-    border-bottom: 1px solid #ddd;
-}
+/* Removed - using standardized .modal-header from app-styles.css */
 
-.inline-harvest-modal .modal-header h3 {
-    margin: 0;
-    color: var(--text-primary);
-}
+/* Removed - using standardized .modal-header from app-styles.css */
 
 .inline-harvest-modal .modal-close {
     background: none;
@@ -14732,16 +14662,7 @@ kbd {
     }
 }
 
-.modal-header {
-    padding: 20px 24px 16px;
-    border-bottom: 1px solid #e5e7eb;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-header h2 {
-    margin: 0;
+/* Removed - using standardized .modal-header from app-styles.css */
     font-size: var(--text-lg);
     font-weight: 600;
     color: #1f2937;
@@ -15941,14 +15862,7 @@ body:not(.admin-user) #admin-settings-tab {
 /* Override all heading inconsistencies with design system standards */
 
 /* Modal headers */
-.modal-header h2,
-.modal-header h3,
-.modal-header h4 {
-    font-size: var(--text-2xl) \!important;
-    font-weight: var(--font-semibold) \!important;
-    color: var(--text-primary) \!important;
-    margin: 0 \!important;
-}
+/* Removed - using standardized .modal-header from app-styles.css */
 
 /* Auth form headers */
 .auth-form h2 {
@@ -16267,22 +16181,9 @@ h1, h2, h3, h4, h5, h6,
     margin: 0 0 var(--space-2) 0 \!important;
 }
 
-/* Plant edit modal headers */
-.plant-edit-modal .modal-header h3,
-.inline-harvest-modal .modal-header h3 {
-    font-size: var(--text-2xl) \!important;
-    font-weight: var(--font-semibold) \!important;
-    color: var(--text-primary) \!important;
-    margin: 0 \!important;
-}
+/* Removed - using standardized .modal-header from app-styles.css */
 
-/* Fish modal headers */
-.fish-modal .modal-header h2 {
-    font-size: var(--text-2xl) \!important;
-    font-weight: var(--font-semibold) \!important;
-    color: var(--text-primary) \!important;
-    margin: 0 \!important;
-}
+/* Removed - using standardized .modal-header from app-styles.css */
 
 /* Confirm header standardization */
 .confirm-header h3 {
@@ -16419,9 +16320,7 @@ h6,
     color: var(--text-primary) \!important;
 }
 
-.modal-header h1, .modal-header h2, .modal-header h3, .modal-header h4, .modal-header h5, .modal-header h6 {
-    color: var(--text-primary) \!important;
-}
+/* Removed - using standardized .modal-header from app-styles.css */
 
 .success-context h1, .success-context h2, .success-context h3, .success-context h4, .success-context h5, .success-context h6 {
     color: var(--status-success) \!important;

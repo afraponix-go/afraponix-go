@@ -1320,6 +1320,74 @@ a:hover {
   margin: 0;
 }
 
+/* =============================================================================
+   MODAL HEADER COMPONENT - Standardized Across All Modals
+   ============================================================================= */
+
+.modal-header {
+  /* Brand-aligned gradient: 80% deep blue, then gradient to blue fish */
+  background: linear-gradient(135deg, var(--color-deep-blue) 0%, var(--color-deep-blue) 80%, var(--color-blue-fish) 100%);
+  color: var(--text-on-dark);
+  padding: var(--space-4) var(--space-4);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: none;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  min-height: 60px;
+}
+
+.modal-header h1,
+.modal-header h2, 
+.modal-header h3,
+.modal-header h4,
+.modal-header h5,
+.modal-header h6 {
+  color: var(--text-on-dark) !important;
+  margin: 0;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.modal-header .close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--text-on-dark) !important;
+  cursor: pointer;
+  padding: var(--space-1);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  opacity: 0.8;
+}
+
+.modal-header .close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.modal-header .close:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.3);
+  outline-offset: 2px;
+}
+
+/* Icon styling in modal headers */
+.modal-header img,
+.modal-header svg {
+  filter: brightness(0) invert(1); /* Makes icons white */
+  width: 1.25em;
+  height: 1.25em;
+}
+
 /* Dark Mode Support (Disabled) */
 /* 
 @media (prefers-color-scheme: dark) {
