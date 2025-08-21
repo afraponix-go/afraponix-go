@@ -1,12 +1,331 @@
-# Afraponix Go - Claude Session Summary
+# Afraponix Go - Frontend Refactoring Guide
 
 ## Project Overview
 Afraponix Go is an aquaponics management application built with:
-- **Frontend**: JavaScript (React-style SPA), HTML, CSS
+- **Frontend**: Vanilla JavaScript (React-style SPA), HTML, CSS
 - **Backend**: Node.js, Express.js
 - **Database**: MariaDB/MySQL
 - **Authentication**: JWT tokens
 - **Architecture**: RESTful API
+
+## Current Monolithic Structure
+
+### script.js (34,744 lines) - Three Main Classes
+
+#### 1. AquaponicsApp (Lines 1-31636)
+**903 methods** managing the entire application:
+- **Core Responsibilities**: Authentication, API calls, navigation, state management
+- **Major Method Groups**:
+  - Authentication: `login()`, `register()`, `logout()`, `checkAuthStatus()`
+  - System Management: `loadSystems()`, `switchToSystem()`, `createSystem()`
+  - Data Loading: `loadDataRecords()`, `loadWaterQuality()`, `loadFishData()`, `loadPlantData()`
+  - UI Management: `showView()`, `hideView()`, `updateDashboard()`, `renderCharts()`
+  - Fish Management: `loadFishOverview()`, `updateFishInventory()`, `handleFishEvents()`
+  - Plant Management: `loadPlantOverview()`, `updateGrowBeds()`, `handlePlantOperations()`
+  - Water Quality: `updateWaterParameters()`, `handleNutrientReadings()`
+  - Charts: `initializeCharts()`, `updateCharts()`, `openChartModal()`
+  - Settings: `loadSettings()`, `updateSystemConfig()`, `handleSensorConfig()`
+  - Utilities: `formatDate()`, `calculateMetrics()`, `showNotification()`
+
+#### 2. GrowBedManager (Lines 31637-32759)
+**1,122 lines** handling grow bed configuration:
+- **Core Responsibilities**: Grow bed types, configurations, calculations
+- **Major Components**:
+  - Bed Types: DWC, Flood & Drain, Media Flow, Vertical, NFT
+  - Configuration UI: `generateGrowBedConfiguration()`, `generateGrowBedItem()`
+  - Calculations: `calculateVolume()`, `calculateArea()`, `calculatePlantSpaces()`
+  - Validation: `validateBedConfiguration()`, `checkDimensions()`
+  - Persistence: `saveBedConfiguration()`, `loadBedConfiguration()`
+
+#### 3. NutrientRatioManager (Lines 32760-34744)
+**1,984 lines** managing nutrient calculations:
+- **Core Responsibilities**: Nutrient ratios, environmental adjustments, deficiency detection
+- **Major Components**:
+  - Ratio Rules: `loadRatioRules()`, `applyRatioRule()`, `calculateOptimalRatios()`
+  - Environmental Adjustments: `loadEnvironmentalAdjustments()`, `applyAdjustments()`
+  - Deficiency Detection: `detectDeficiencies()`, `recommendCorrections()`
+  - UI Management: `displayRatioRules()`, `showRatioRuleModal()`, `filterRatioRules()`
+
+## Target Module Structure
+
+```
+frontend/
+├── src/
+│   ├── app/
+│   │   ├── App.js                    # Main application controller
+│   │   ├── Router.js                 # View routing & navigation
+│   │   ├── StateManager.js           # Global state management
+│   │   └── SystemManager.js          # System selection & switching
+│   │
+│   ├── auth/
+│   │   ├── AuthManager.js            # Authentication logic
+│   │   ├── LoginForm.js              # Login component
+│   │   ├── RegisterForm.js           # Registration component
+│   │   └── PasswordReset.js          # Password reset flow
+│   │
+│   ├── api/
+│   │   ├── ApiClient.js              # Base API client with auth
+│   │   ├── SystemsApi.js             # Systems endpoints
+│   │   ├── DataApi.js                # Data operations
+│   │   ├── FishApi.js                # Fish management
+│   │   ├── PlantsApi.js              # Plant management
+│   │   ├── WaterApi.js               # Water quality
+│   │   └── SettingsApi.js            # Settings & config
+│   │
+│   ├── dashboard/
+│   │   ├── DashboardView.js          # Main dashboard
+│   │   ├── MetricsCards.js           # Metric display cards
+│   │   ├── SystemOverview.js         # System summary
+│   │   ├── QuickActions.js           # Quick action buttons
+│   │   └── ActionsSummary.js         # Actions required
+│   │
+│   ├── plants/
+│   │   ├── PlantManagement.js        # Main plant view
+│   │   ├── GrowBedManager.js         # Grow bed configuration
+│   │   ├── PlantingForm.js           # Plant recording
+│   │   ├── HarvestForm.js            # Harvest recording
+│   │   ├── PlantAllocation.js        # Crop allocation
+│   │   ├── PlantHistory.js           # Plant history table
+│   │   ├── BatchManager.js           # Batch tracking
+│   │   └── CustomCrops.js            # Custom crop management
+│   │
+│   ├── fish/
+│   │   ├── FishManagement.js         # Main fish view
+│   │   ├── FishInventory.js          # Tank inventory
+│   │   ├── FishHealth.js             # Health monitoring
+│   │   ├── FishFeeding.js            # Feeding management
+│   │   ├── FishCalculator.js         # Stocking calculator
+│   │   └── FishEvents.js             # Fish event tracking
+│   │
+│   ├── water/
+│   │   ├── WaterQuality.js           # Water quality view
+│   │   ├── WaterParameters.js        # Parameter display
+│   │   ├── NutrientManager.js        # Nutrient management
+│   │   ├── NutrientRatioManager.js   # Ratio calculations
+│   │   ├── NutrientCalculator.js     # Nutrient calculator
+│   │   └── WaterCharts.js            # Water quality charts
+│   │
+│   ├── charts/
+│   │   ├── ChartManager.js           # Chart.js wrapper
+│   │   ├── DashboardCharts.js        # Dashboard mini charts
+│   │   ├── ModalCharts.js            # Expanded chart modals
+│   │   └── ChartConfig.js            # Chart configurations
+│   │
+│   ├── settings/
+│   │   ├── SettingsView.js           # Main settings view
+│   │   ├── SystemConfig.js           # System configuration
+│   │   ├── UserProfile.js            # User profile
+│   │   ├── SensorConfig.js           # Sensor setup
+│   │   ├── Credentials.js            # Service credentials
+│   │   └── SystemSharing.js          # System sharing
+│   │
+│   ├── components/
+│   │   ├── Modal.js                  # Reusable modal
+│   │   ├── Form.js                   # Form components
+│   │   ├── Table.js                  # Data tables
+│   │   ├── Notification.js           # Toast notifications
+│   │   ├── LoadingScreen.js          # Loading states
+│   │   ├── ConfirmDialog.js          # Confirmation dialogs
+│   │   └── DatePicker.js             # Date selection
+│   │
+│   ├── utils/
+│   │   ├── constants.js              # App constants
+│   │   ├── formatters.js             # Data formatters
+│   │   ├── validators.js             # Input validators
+│   │   ├── calculations.js           # Business calculations
+│   │   ├── storage.js                # LocalStorage wrapper
+│   │   └── icons.js                  # Icon management
+│   │
+│   └── styles/
+│       ├── variables.css             # CSS variables
+│       ├── base.css                  # Base styles
+│       ├── components.css            # Component styles
+│       └── utilities.css             # Utility classes
+│
+├── public/
+│   ├── index.html                    # Main HTML file
+│   ├── manifest.json                 # PWA manifest
+│   └── icons/                        # App icons
+│
+├── dist/                              # Build output
+│   ├── bundle.js                     # Bundled JavaScript
+│   ├── bundle.css                    # Bundled CSS
+│   └── index.html                    # Production HTML
+│
+└── config/
+    ├── webpack.config.js              # Webpack configuration
+    └── jest.config.js                 # Jest configuration
+```
+
+## Build & Bundle Strategy
+
+### Recommended Approach: Native ES Modules (Development) → Webpack (Production)
+
+#### Phase 1: Native ES Modules (Immediate - Development)
+**Why**: No build step needed, can start refactoring immediately
+```html
+<!-- index.html -->
+<script type="module">
+  import { App } from './src/app/App.js';
+  const app = new App();
+  app.init();
+</script>
+```
+
+#### Phase 2: Webpack Bundle (Later - Production)
+**Why**: Optimization, code splitting, tree shaking for production
+```javascript
+// webpack.config.js
+module.exports = {
+  entry: './src/app/App.js',
+  output: {
+    filename: 'bundle.[contenthash].js',
+    path: path.resolve(__dirname, 'dist')
+  },
+  optimization: {
+    splitChunks: {
+      chunks: 'all'
+    }
+  }
+};
+```
+
+## Testing Strategy
+
+### Unit Testing with Jest
+```javascript
+// jest.config.js
+module.exports = {
+  testEnvironment: 'jsdom',
+  collectCoverageFrom: ['src/**/*.js'],
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 70,
+      lines: 70
+    }
+  }
+};
+```
+
+### Test Structure
+```javascript
+// src/api/__tests__/ApiClient.test.js
+describe('ApiClient', () => {
+  it('should add auth token to requests', () => {
+    // Test implementation
+  });
+});
+```
+
+## Browser Compatibility Requirements
+
+### Minimum Support (Based on Current Code)
+- **Chrome/Edge**: Version 90+ (ES6 classes, async/await)
+- **Firefox**: Version 88+
+- **Safari**: Version 14+
+- **Mobile Safari**: iOS 14+
+- **Chrome Android**: Version 90+
+
+### Required Features Already in Use
+- ES6 Classes ✅
+- Async/Await ✅
+- Fetch API ✅
+- Template Literals ✅
+- Arrow Functions ✅
+- LocalStorage ✅
+- Chart.js v3+ ✅
+
+## Migration Plan
+
+### Week 1: Core Extraction
+1. Create `src/api/ApiClient.js` - Extract all API calls
+2. Create `src/auth/AuthManager.js` - Extract authentication
+3. Create `src/utils/` - Extract formatters and validators
+4. Test with native ES modules
+
+### Week 2-3: Component Separation
+1. Extract dashboard components
+2. Extract plant management (including GrowBedManager)
+3. Extract water quality (including NutrientRatioManager)
+4. Extract fish management
+
+### Week 4: State & Routing
+1. Create StateManager for global state
+2. Implement Router for view management
+3. Remove direct DOM manipulation
+
+### Week 5: Build Pipeline
+1. Set up Webpack configuration
+2. Configure development/production builds
+3. Implement code splitting
+
+### Week 6: Testing & Polish
+1. Write unit tests for critical paths
+2. Performance optimization
+3. Documentation
+
+## Quick Start Commands
+
+```bash
+# Development (Native ES Modules)
+npm run dev
+
+# Testing
+npm test
+npm run test:watch
+npm run test:coverage
+
+# Production Build (After Webpack setup)
+npm run build:prod
+
+# Bundle Analysis
+npm run analyze
+```
+
+## File Naming Conventions
+
+- **PascalCase**: Classes and components (`ApiClient.js`, `DashboardView.js`)
+- **camelCase**: Utilities and helpers (`formatters.js`, `validators.js`)
+- **kebab-case**: CSS files (`base-styles.css`, `component-styles.css`)
+
+## Code Style Guidelines
+
+### Module Template
+```javascript
+export class ModuleName {
+  constructor(dependencies = {}) {
+    this.api = dependencies.api;
+    this.state = dependencies.state;
+    this.init();
+  }
+
+  init() {
+    this.attachEventListeners();
+    this.loadInitialData();
+  }
+
+  async loadInitialData() {
+    try {
+      const data = await this.api.getData();
+      this.render(data);
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  destroy() {
+    // Cleanup event listeners
+  }
+}
+```
+
+## Performance Targets
+
+- Initial bundle: < 200KB gzipped
+- Time to Interactive: < 3s
+- First Contentful Paint: < 1.5s
+- Lighthouse Score: > 90
 
 ## Recent Session Work Summary
 
