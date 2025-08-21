@@ -4007,7 +4007,7 @@ EOF < /dev/null
     position: fixed !important;
     top: 70px !important;
     right: 20px !important;
-    z-index: 99999 !important;
+    z-index: 2147483647 !important;
     max-width: 400px;
     width: auto !important;
     pointer-events: none;
@@ -17078,4 +17078,1246 @@ html body .field-error,
         height: 40px !important;
         font-size: 20px !important;
     }
+}
+
+/* ===== ADMIN CROP MANAGEMENT STYLES ===== */
+
+.admin-actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.crop-search-container {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.crop-search-container .form-input {
+    flex: 1;
+    min-width: 200px;
+}
+
+.crop-search-container select {
+    min-width: 180px;
+}
+
+.search-info {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.admin-crops-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.crop-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+
+.crop-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.crop-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.crop-card-title {
+    flex: 1;
+}
+
+.crop-card-title h4 {
+    margin: 0 0 0.25rem 0;
+    color: var(--color-deep-blue);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.crop-card-title .crop-code {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-family: monospace;
+    background: var(--bg-secondary);
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+.crop-card-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.crop-card-actions .btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+}
+
+.crop-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.crop-info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.crop-info-item label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0.2rem;
+    font-weight: 500;
+}
+
+.crop-info-item span {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.crop-category-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
+.crop-category-badge.leafy_greens {
+    background: rgba(128, 251, 123, 0.2);
+    color: var(--color-bio-green);
+    border: 1px solid rgba(128, 251, 123, 0.3);
+}
+
+.crop-category-badge.herbs {
+    background: rgba(141, 251, 204, 0.2);
+    color: var(--color-aqua-green);
+    border: 1px solid rgba(141, 251, 204, 0.3);
+}
+
+.crop-category-badge.fruiting {
+    background: rgba(0, 81, 177, 0.2);
+    color: var(--color-deep-blue);
+    border: 1px solid rgba(0, 81, 177, 0.3);
+}
+
+.crop-category-badge.root_vegetables {
+    background: rgba(123, 170, 238, 0.2);
+    color: var(--color-blue-fish);
+    border: 1px solid rgba(123, 170, 238, 0.3);
+}
+
+.crop-category-badge.brassicas {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.nutrient-targets-summary {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+}
+
+.nutrient-targets-summary strong {
+    color: var(--color-deep-blue);
+}
+
+.large-modal .modal-content {
+    max-width: 800px;
+    width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.nutrient-targets-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.nutrient-target-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.nutrient-target-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.nutrient-target-name {
+    font-weight: 600;
+    color: var(--color-deep-blue);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.nutrient-values-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.75rem;
+}
+
+.nutrient-values-grid .form-field {
+    margin-bottom: 0;
+}
+
+.nutrient-values-grid .form-field label {
+    font-size: 0.8rem;
+    margin-bottom: 0.3rem;
+}
+
+.nutrient-values-grid .form-field input {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
+}
+
+.crop-empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+}
+
+.crop-empty-state img {
+    width: 64px;
+    height: 64px;
+    opacity: 0.5;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .admin-crops-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .crop-search-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .crop-search-container .form-input,
+    .crop-search-container select {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .admin-actions {
+        flex-direction: column;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .crop-info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .nutrient-targets-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .nutrient-values-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* =====================================================
+   SEED VARIETIES MANAGEMENT
+   ===================================================== */
+.seed-varieties-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.seed-variety-item {
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+}
+
+.seed-variety-item:hover {
+    border-color: #80FB7B;
+    box-shadow: 0 2px 8px rgba(128, 251, 123, 0.2);
+}
+
+.seed-variety-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+}
+
+.seed-variety-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+    color: #333;
+}
+
+.seed-variety-name .btn-icon-svg {
+    width: 20px;
+    height: 20px;
+}
+
+.seed-variety-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 14px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .seed-varieties-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+    
+    .seed-variety-content {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+    
+    .seed-variety-actions {
+        justify-content: center;
+    }
+}
+
+/* =====================================================
+   CROP SUBMISSION FORM
+   ===================================================== */
+.crop-submission-form {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.form-section {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.form-section h4 {
+    margin: 0 0 1rem 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.nutrient-preview {
+    border-left: 4px solid #80FB7B !important;
+}
+
+/* Responsive adjustments for form */
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .crop-submission-form {
+        max-height: 60vh;
+    }
+}
+
+/* ======================================== */
+/* NUTRIENT RATIO MANAGEMENT STYLES */
+/* ======================================== */
+
+.ratio-management-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.ratio-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+}
+
+.ratio-tab:hover {
+    color: var(--color-deep-blue);
+    background: var(--bg-secondary);
+}
+
+.ratio-tab.active {
+    color: var(--color-deep-blue);
+    border-bottom-color: var(--color-deep-blue);
+}
+
+.ratio-tab .tab-icon-svg {
+    width: 18px;
+    height: 18px;
+}
+
+.ratio-content {
+    display: none;
+}
+
+.ratio-content.active {
+    display: block;
+}
+
+.ratio-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.ratio-header h4 {
+    margin: 0;
+    color: var(--color-deep-blue);
+}
+
+.ratio-filters {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.ratio-filters select {
+    min-width: 180px;
+}
+
+.ratio-rules-container {
+    display: grid;
+    gap: 1rem;
+}
+
+.ratio-rule-card {
+    padding: 1.5rem;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    transition: all 0.2s ease;
+}
+
+.ratio-rule-card:hover {
+    border-color: var(--color-deep-blue);
+    box-shadow: 0 2px 8px rgba(0, 81, 177, 0.1);
+}
+
+.ratio-rule-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.ratio-rule-info {
+    flex: 1;
+}
+
+.ratio-rule-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-deep-blue);
+    margin-bottom: 0.25rem;
+}
+
+.ratio-rule-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.ratio-rule-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.ratio-rule-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.ratio-detail-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.ratio-detail-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+}
+
+.ratio-detail-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.ratio-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.ratio-badge {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.ratio-badge.default {
+    background: var(--color-bio-green-light);
+    color: var(--color-bio-green-dark);
+}
+
+.ratio-badge.priority {
+    background: var(--color-blue-fish-light);
+    color: var(--color-blue-fish-dark);
+}
+
+.ratio-rule-notes {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    border-left: 3px solid var(--color-aqua-green);
+}
+
+/* Ratio Explanation */
+.ratio-explanation {
+    margin-bottom: 1.5rem;
+}
+
+.explanation-card {
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    border-left: 4px solid var(--color-deep-blue);
+}
+
+.explanation-card h5 {
+    margin: 0 0 0.75rem 0;
+    color: var(--color-deep-blue);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.explanation-card p {
+    margin: 0 0 0.75rem 0;
+    line-height: 1.5;
+}
+
+.formula-example {
+    padding: 0.5rem;
+    background: var(--bg-primary);
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.formula-example code {
+    background: var(--color-aqua-green-light);
+    color: var(--color-deep-blue);
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+}
+
+/* Consolidated Nutrient Cards */
+.consolidated-nutrient-card {
+    padding: 1.5rem;
+    border: 2px solid var(--border-light);
+    border-radius: 12px;
+    background: var(--bg-primary);
+    margin-bottom: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.consolidated-nutrient-card:hover {
+    border-color: var(--color-deep-blue);
+    box-shadow: 0 4px 12px rgba(0, 81, 177, 0.15);
+}
+
+.nutrient-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--border-light);
+}
+
+.nutrient-card-info {
+    flex: 1;
+}
+
+.nutrient-card-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--color-deep-blue);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.fixed-range-badge,
+.ratio-based-badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.fixed-range-badge {
+    background: var(--color-error-light);
+    color: var(--color-error-dark);
+    border: 1px solid var(--color-error);
+}
+
+.ratio-based-badge {
+    background: var(--color-bio-green-light);
+    color: var(--color-bio-green-dark);
+    border: 1px solid var(--color-bio-green);
+}
+
+.nutrient-card-subtitle {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.nutrient-card-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.btn-add-stage {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-bio-green);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-add-stage:hover {
+    background: var(--color-bio-green-dark);
+    transform: translateY(-1px);
+}
+
+.nutrient-stages-container {
+    display: grid;
+    gap: 1rem;
+}
+
+.stage-ratio-entry {
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.stage-ratio-entry:hover {
+    border-color: var(--color-aqua-green);
+    background: rgba(141, 251, 204, 0.05);
+}
+
+.stage-ratio-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.stage-ratio-info {
+    flex: 1;
+}
+
+.stage-ratio-stage {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-deep-blue);
+    margin-bottom: 0.25rem;
+}
+
+.stage-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.25rem;
+}
+
+.stage-ratio-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.btn-edit-small,
+.btn-delete-small {
+    padding: 0.5rem;
+    background: transparent;
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-edit-small:hover {
+    background: var(--color-blue-fish-light);
+    border-color: var(--color-blue-fish);
+}
+
+.btn-delete-small:hover {
+    background: var(--color-error-light);
+    border-color: var(--color-error);
+}
+
+.stage-ratio-details {
+    margin-top: 0.75rem;
+}
+
+.stage-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.stage-detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.stage-detail-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+.stage-detail-value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.stage-notes {
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-primary);
+    border-left: 3px solid var(--color-aqua-green);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+/* Responsive Design for Consolidated Cards */
+@media (max-width: 768px) {
+    .nutrient-card-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .stage-ratio-header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .stage-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Environmental Adjustments */
+.env-adjustments-container {
+    display: grid;
+    gap: 1rem;
+}
+
+.env-adjustment-card {
+    padding: 1.5rem;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    transition: all 0.2s ease;
+}
+
+.env-adjustment-card:hover {
+    border-color: var(--color-deep-blue);
+    box-shadow: 0 2px 8px rgba(0, 81, 177, 0.1);
+}
+
+.env-adjustment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.env-adjustment-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-deep-blue);
+    margin-bottom: 0.25rem;
+}
+
+.env-adjustment-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.env-adjustment-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
+.env-condition-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    background: var(--color-aqua-green-light);
+    color: var(--color-aqua-green-dark);
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.env-operator-badge {
+    padding: 0.25rem 0.5rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: var(--color-deep-blue);
+}
+
+/* Action Buttons */
+.btn-edit, .btn-delete {
+    padding: 0.5rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-edit {
+    background: var(--color-blue-fish-light);
+    color: var(--color-blue-fish-dark);
+}
+
+.btn-edit:hover {
+    background: var(--color-blue-fish);
+    color: var(--bg-primary);
+}
+
+.btn-delete {
+    background: var(--color-error-light);
+    color: var(--color-error-dark);
+}
+
+.btn-delete:hover {
+    background: var(--color-error);
+    color: var(--bg-primary);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .ratio-management-tabs {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .ratio-tab {
+        justify-content: center;
+        border-bottom: 1px solid var(--border-light);
+        border-radius: 0;
+    }
+    
+    .ratio-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .ratio-filters {
+        flex-direction: column;
+    }
+    
+    .ratio-rule-header,
+    .env-adjustment-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .ratio-rule-actions {
+        align-self: flex-end;
+    }
+}
+
+/* ===================================
+   DEFICIENCY IMAGE MODAL STYLES
+   =================================== */
+
+/* Deficiency Image Modal Tabs */
+.upload-method-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--color-deep-blue-light);
+    margin-bottom: 1.5rem;
+}
+
+.method-tab {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    background: #f8f9fa;
+    color: #6c757d;
+    cursor: pointer;
+    font-weight: 500;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+}
+
+.method-tab:hover {
+    background: #e9ecef;
+    color: var(--color-deep-blue);
+}
+
+.method-tab.active {
+    background: white;
+    color: var(--color-deep-blue);
+    border-bottom-color: var(--color-deep-blue);
+    font-weight: 600;
+}
+
+.method-tab .tab-icon-svg {
+    width: 16px;
+    height: 16px;
+}
+
+.upload-method {
+    display: none;
+}
+
+.upload-method.active {
+    display: block;
+}
+
+/* File Upload Area */
+.file-upload-area {
+    position: relative;
+    border: 2px dashed var(--color-deep-blue-light);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+}
+
+.file-upload-area:hover, .file-upload-area.dragover {
+    border-color: var(--color-deep-blue);
+    background: #f8f9ff;
+}
+
+.file-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.upload-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 1rem;
+    opacity: 0.6;
+}
+
+.upload-text {
+    display: block;
+    font-weight: 600;
+    color: var(--color-deep-blue);
+    margin-bottom: 0.5rem;
+}
+
+.upload-info {
+    display: block;
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+/* File Preview */
+.file-preview {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+
+.preview-img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.file-name {
+    font-weight: 500;
+    color: var(--color-deep-blue);
+}
+
+/* Deficiency Images Grid Styling */
+.deficiency-images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.deficiency-image-card {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.deficiency-image-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.deficiency-image-preview {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    background: #f8f9fa;
+}
+
+.deficiency-image-info {
+    padding: 1rem;
+}
+
+.deficiency-image-caption {
+    font-weight: 600;
+    color: var(--color-deep-blue);
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+}
+
+.deficiency-image-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.meta-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.stage-early { background: #fff3cd; color: #856404; }
+.stage-moderate { background: #fdeaa7; color: #b45309; }
+.stage-severe { background: #f8d7da; color: #721c24; }
+
+.plant-type-badge {
+    background: #e7f3ff;
+    color: var(--color-deep-blue);
+}
+
+.deficiency-image-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.action-btn {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #dee2e6;
+    background: white;
+    color: var(--color-deep-blue);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    background: #f8f9fa;
+    border-color: var(--color-deep-blue);
+}
+
+.action-btn.delete:hover {
+    background: #f8d7da;
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+/* DEFICIENCY MODAL BUTTON FIX - Ensure design system buttons work correctly */
+#deficiency-image-modal .modal-actions .btn.btn-secondary {
+    background: #6c757d !important;
+    color: white !important;
+    border: 1px solid #6c757d !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 4px !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+#deficiency-image-modal .modal-actions .btn.btn-secondary:hover {
+    background: #5a6268 !important;
+    border-color: #545b62 !important;
+    color: white !important;
+}
+
+#deficiency-image-modal .modal-actions .btn.btn-success {
+    background: #80FB7B !important;
+    color: white !important;
+    border: 1px solid #80FB7B !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 4px !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+#deficiency-image-modal .modal-actions .btn.btn-success:hover {
+    background: #60da5b !important;
+    border-color: #60da5b !important;
+}
+
+#deficiency-image-modal .btn-icon {
+    width: 16px !important;
+    height: 16px !important;
+    fill: currentColor !important;
 }

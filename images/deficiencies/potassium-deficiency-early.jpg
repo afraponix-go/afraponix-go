@@ -1,0 +1,18 @@
+<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Leaf background -->
+  <ellipse cx="150" cy="100" rx="120" ry="60" fill="#4a5d3a" stroke="#2d3a1f" stroke-width="2"/>
+  
+  <!-- Leaf veins -->
+  <path d="M 50 100 Q 150 80 250 100" stroke="#2d3a1f" stroke-width="2" fill="none"/>
+  <path d="M 80 120 Q 150 100 220 120" stroke="#2d3a1f" stroke-width="1" fill="none"/>
+  <path d="M 80 80 Q 150 100 220 80" stroke="#2d3a1f" stroke-width="1" fill="none"/>
+  
+  <!-- Yellowing edges (early K deficiency) -->
+  <path d="M 50 100 Q 70 70 90 90 Q 110 80 130 85 Q 150 80 170 85 Q 190 80 210 90 Q 230 70 250 100 Q 230 130 210 110 Q 190 120 170 115 Q 150 120 130 115 Q 110 120 90 110 Q 70 130 50 100" 
+        fill="#d4b836" fill-opacity="0.7"/>
+  
+  <!-- Text label -->
+  <text x="150" y="180" text-anchor="middle" font-family="Arial" font-size="14" fill="#333">
+    Early K Deficiency - Yellowing Edges
+  </text>
+</svg>

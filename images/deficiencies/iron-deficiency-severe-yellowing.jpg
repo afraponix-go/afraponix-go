@@ -1,0 +1,27 @@
+<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Severely chlorotic leaf - almost white -->
+  <ellipse cx="150" cy="100" rx="120" ry="60" fill="#f5f5dc" stroke="#2d3a1f" stroke-width="2"/>
+  
+  <!-- Green veins still visible but faint -->
+  <path d="M 50 100 Q 150 80 250 100" stroke="#4a5d3a" stroke-width="3" fill="none"/>
+  <path d="M 80 120 Q 150 100 220 120" stroke="#4a5d3a" stroke-width="2" fill="none"/>
+  <path d="M 80 80 Q 150 100 220 80" stroke="#4a5d3a" stroke-width="2" fill="none"/>
+  <path d="M 100 110 Q 150 100 200 110" stroke="#4a5d3a" stroke-width="1" fill="none"/>
+  <path d="M 100 90 Q 150 100 200 90" stroke="#4a5d3a" stroke-width="1" fill="none"/>
+  
+  <!-- Very faint secondary veins -->
+  <path d="M 120 85 L 130 95" stroke="#6b7d5a" stroke-width="1" fill="none"/>
+  <path d="M 170 85 L 180 95" stroke="#6b7d5a" stroke-width="1" fill="none"/>
+  <path d="M 120 115 L 130 105" stroke="#6b7d5a" stroke-width="1" fill="none"/>
+  <path d="M 170 115 L 180 105" stroke="#6b7d5a" stroke-width="1" fill="none"/>
+  
+  <!-- Severe chlorosis patches -->
+  <circle cx="110" cy="85" r="15" fill="#fffacd" fill-opacity="0.8"/>
+  <circle cx="190" cy="115" r="18" fill="#fffacd" fill-opacity="0.8"/>
+  <circle cx="140" cy="120" r="12" fill="#fffacd" fill-opacity="0.8"/>
+  
+  <!-- Text label -->
+  <text x="150" y="180" text-anchor="middle" font-family="Arial" font-size="14" fill="#333">
+    Severe Iron Deficiency - White/Yellow Leaves
+  </text>
+</svg>

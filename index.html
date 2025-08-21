@@ -2250,6 +2250,18 @@
                         <span class="tab-icon"><span class="icon-placeholder" data-icon="edit"></span></span>
                         <span class="tab-label">Edit Data</span>
                     </button>
+                    <button id="admin-crops-subtab" class="admin-subtab" data-target="admin-crops-subcontent">
+                        <span class="tab-icon"><img src="icons/new-icons/Afraponix Go Icons_growbed.svg" alt="Crops" class="tab-icon-svg"></span>
+                        <span class="tab-label">Crop Knowledge</span>
+                    </button>
+                    <button id="admin-ratios-subtab" class="admin-subtab" data-target="admin-ratios-subcontent">
+                        <span class="tab-icon"><img src="icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="Nutrient Ratios" class="tab-icon-svg"></span>
+                        <span class="tab-label">Nutrient Ratios</span>
+                    </button>
+                    <button id="admin-deficiency-subtab" class="admin-subtab" data-target="admin-deficiency-subcontent">
+                        <span class="tab-icon"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Deficiency Images" class="tab-icon-svg"></span>
+                        <span class="tab-label">Deficiency Images</span>
+                    </button>
                     <button id="admin-stats-subtab" class="admin-subtab" data-target="admin-stats-subcontent">
                         <span class="tab-icon"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Data" class="tab-icon-svg"></span>
                         <span class="tab-label">System Stats</span>
@@ -2353,6 +2365,173 @@
                         
                         <div id="data-edit-container">
                             <!-- Data editing interface will be populated here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Crop Knowledge Management -->
+                <div id="admin-crops-subcontent" class="admin-subcontent">
+                    <div class="form-section">
+                        <h3 class="heading-3">Crop Knowledge Management</h3>
+                        <p class="text-muted" style="margin-bottom: 1rem;">Manage crop information, nutrient targets, and agricultural data.</p>
+                        
+                        <!-- Crop Management Actions -->
+                        <div class="admin-actions">
+                            <button id="add-new-crop-btn" class="btn-success">
+                                <img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Add" class="btn-icon-svg"> Add New Crop
+                            </button>
+                            <button id="import-crops-btn" class="btn-primary">
+                                <img src="icons/new-icons/Afraponix Go Icons_copy.svg" alt="Import" class="btn-icon-svg"> Import Crops
+                            </button>
+                            <button id="export-crops-btn" class="btn-primary">
+                                <img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Export" class="btn-icon-svg"> Export Data
+                            </button>
+                        </div>
+                        
+                        <!-- Crop Search and Filter -->
+                        <div class="crop-search-container">
+                            <input type="text" 
+                                   id="admin-crop-search" 
+                                   class="form-input search-input" 
+                                   placeholder="Search crops by name, code, or category..."
+                                   onkeyup="app.searchAdminCrops(this.value)">
+                            <select id="admin-crop-category-filter" class="form-input" onchange="app.filterCropsByCategory(this.value)">
+                                <option value="">All Categories</option>
+                                <option value="leafy_greens">Leafy Greens</option>
+                                <option value="herbs">Herbs</option>
+                                <option value="fruiting">Fruiting Plants</option>
+                                <option value="root_vegetables">Root Vegetables</option>
+                                <option value="brassicas">Brassicas</option>
+                            </select>
+                            <div class="search-info">
+                                <span id="crop-count-display">Loading crops...</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Crops List -->
+                        <div id="admin-crops-container" class="admin-crops-grid">
+                            <!-- Crops will be populated here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Nutrient Ratio Management -->
+                <div id="admin-ratios-subcontent" class="admin-subcontent">
+                    <div class="form-section">
+                        <h3 class="heading-3">Nutrient Ratio Management</h3>
+                        <p class="text-muted" style="margin-bottom: 1rem;">Manage nutrient ratio rules and environmental adjustments for hydroponic nutrient calculations.</p>
+                        
+                        <div class="ratio-management-tabs">
+                            <button id="ratio-rules-tab" class="ratio-tab active" data-target="ratio-rules-content">
+                                <img src="icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="Ratio Rules" class="tab-icon-svg">
+                                Ratio Rules
+                            </button>
+                            <button id="environmental-adjustments-tab" class="ratio-tab" data-target="environmental-adjustments-content">
+                                <img src="icons/new-icons/Afraponix Go Icons_parameters.svg" alt="Environmental Adjustments" class="tab-icon-svg">
+                                Environmental Adjustments
+                            </button>
+                        </div>
+                        
+                        <!-- Ratio Rules Content -->
+                        <div id="ratio-rules-content" class="ratio-content active">
+                            <div class="ratio-header">
+                                <h4 class="heading-4">Nutrient Ratio Rules</h4>
+                                <button id="add-ratio-rule-btn" class="btn btn-success">
+                                    <img src="icons/new-icons/Afraponix Go Icons_add.svg" alt="Add" class="btn-icon">
+                                    Add Ratio Rule
+                                </button>
+                            </div>
+                            
+                            <div class="ratio-explanation">
+                                <div class="explanation-card">
+                                    <h5 class="heading-5">How Nutrient Ratios Work</h5>
+                                    <p class="text-muted">These ratios define how much of each nutrient should be present relative to nitrogen (N) in your hydroponic solution. For example, a phosphorus ratio of 0.3 means if you have 150 ppm nitrogen, you should have 45 ppm phosphorus (150 × 0.3 = 45).</p>
+                                    <div class="formula-example">
+                                        <strong>Formula:</strong> <code>Nutrient PPM = Nitrogen PPM × Ratio Factor</code>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="ratio-filters">
+                                <select id="ratio-nutrient-filter" class="form-input">
+                                    <option value="">All Nutrients</option>
+                                </select>
+                                <select id="ratio-stage-filter" class="form-input">
+                                    <option value="">All Growth Stages</option>
+                                </select>
+                            </div>
+                            
+                            <div id="ratio-rules-list" class="ratio-rules-container">
+                                <!-- Ratio rules will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Environmental Adjustments Content -->
+                        <div id="environmental-adjustments-content" class="ratio-content">
+                            <div class="ratio-header">
+                                <h4 class="heading-4">Environmental Adjustments</h4>
+                                <button id="add-env-adjustment-btn" class="btn btn-success">
+                                    <img src="icons/new-icons/Afraponix Go Icons_add.svg" alt="Add" class="btn-icon">
+                                    Add Adjustment
+                                </button>
+                            </div>
+                            
+                            <div id="environmental-adjustments-list" class="env-adjustments-container">
+                                <!-- Environmental adjustments will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Deficiency Images Management -->
+                <div id="admin-deficiency-subcontent" class="admin-subcontent">
+                    <div class="form-section">
+                        <h3 class="heading-3">Deficiency Images Management</h3>
+                        <p class="text-muted" style="margin-bottom: 1rem;">Manage nutrient deficiency images for the visual deficiency guide in the comprehensive nutrient information modals.</p>
+                        
+                        <!-- Filtering Controls -->
+                        <div class="deficiency-controls" style="display: flex; align-items: end; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                            <div class="control-group" style="flex: 0 0 250px;">
+                                <label class="form-label">Filter by Nutrient:</label>
+                                <select id="deficiency-nutrient-filter" class="form-input" style="width: 100%;" onchange="window.app && window.app.applyDeficiencyFilters && window.app.applyDeficiencyFilters()">
+                                    <option value="">All nutrients</option>
+                                </select>
+                            </div>
+                            <div class="control-group" style="flex: 0 0 250px;">
+                                <label class="form-label">Filter by Plant:</label>
+                                <select id="deficiency-plant-filter" class="form-input" style="width: 100%;" onchange="window.app && window.app.applyDeficiencyFilters && window.app.applyDeficiencyFilters()">
+                                    <option value="">All plants</option>
+                                </select>
+                            </div>
+                            <button id="refresh-deficiency-images" class="btn btn-secondary" style="background-color: #6c757d !important; border: 1px solid #6c757d !important; color: white !important; padding: 8px 16px !important; border-radius: 4px !important; font-size: 14px !important; font-weight: 500 !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; cursor: pointer !important; transition: all 0.2s ease !important; height: auto !important; line-height: normal !important; min-width: auto !important; width: auto !important;" onclick="window.app && window.app.loadAllDeficiencyImages && window.app.loadAllDeficiencyImages()">
+                                <img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Refresh" class="btn-icon" style="width: 16px; height: 16px;">
+                                Refresh
+                            </button>
+                            <button id="clear-deficiency-filters" class="btn btn-secondary" style="background-color: #6c757d !important; border: 1px solid #6c757d !important; color: white !important; padding: 8px 16px !important; border-radius: 4px !important; font-size: 14px !important; font-weight: 500 !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; cursor: pointer !important; transition: all 0.2s ease !important; height: auto !important; line-height: normal !important; min-width: auto !important; width: auto !important;" onclick="window.app && window.app.clearDeficiencyFilters && window.app.clearDeficiencyFilters()">
+                                <img src="icons/new-icons/Afraponix Go Icons_reset.svg" alt="Clear" class="btn-icon" style="width: 16px; height: 16px;">
+                                Clear Filters
+                            </button>
+                        </div>
+                        
+                        <!-- Add New Image Button -->
+                        <div class="deficiency-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;" id="deficiency-header">
+                            <h4 class="heading-4" id="selected-nutrient-title">All Deficiency Images</h4>
+                            <button id="add-deficiency-image-btn" class="btn btn-success" style="background-color: #28a745 !important; border: 1px solid #28a745 !important; color: white !important; padding: 8px 16px !important; border-radius: 4px !important; font-size: 14px !important; font-weight: 500 !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; cursor: pointer !important; transition: all 0.2s ease !important; height: auto !important; line-height: normal !important; min-width: auto !important; width: auto !important;">
+                                <img src="icons/new-icons/Afraponix Go Icons_add.svg" alt="Add" class="btn-icon" style="width: 16px; height: 16px;">
+                                Add Deficiency Image
+                            </button>
+                        </div>
+                        
+                        <!-- Images Grid -->
+                        <div id="deficiency-images-grid" class="deficiency-images-grid" style="display: block;">
+                            <!-- Images will be populated here -->
+                        </div>
+                        
+                        <!-- No Selection State -->
+                        <div id="no-nutrient-selected" class="no-data-message">
+                            <img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Select Nutrient" class="no-data-icon">
+                            <h4 class="heading-4">Select a Nutrient</h4>
+                            <p class="text-muted">Choose a nutrient from the dropdown above to view and manage its deficiency images.</p>
                         </div>
                     </div>
                 </div>
@@ -3799,7 +3978,595 @@
         </div>
     </div>
 
+    <!-- Crop Management Modal -->
+    <div id="crop-management-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3 class="heading-3" id="crop-modal-title">
+                    <img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Crop" class="heading-icon"> Add New Crop
+                </h3>
+                <button class="modal-close" onclick="app.closeCropManagementModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="crop-management-form">
+                    <!-- Basic Crop Information -->
+                    <div class="form-section">
+                        <h4 class="heading-4">Basic Information</h4>
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label for="crop-code" class="form-label">Crop Code *</label>
+                                <input type="text" id="crop-code" class="form-input" required placeholder="e.g., lettuce">
+                            </div>
+                            <div class="form-field">
+                                <label for="crop-name" class="form-label">Crop Name *</label>
+                                <input type="text" id="crop-name" class="form-input" required placeholder="e.g., Lettuce">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label for="crop-scientific-name" class="form-label">Scientific Name</label>
+                                <input type="text" id="crop-scientific-name" class="form-input" placeholder="e.g., Lactuca sativa">
+                            </div>
+                            <div class="form-field">
+                                <label for="crop-category" class="form-label">Category *</label>
+                                <select id="crop-category" class="form-input" required>
+                                    <option value="">Select Category</option>
+                                    <option value="leafy_greens">Leafy Greens</option>
+                                    <option value="herbs">Herbs</option>
+                                    <option value="fruiting">Fruiting Plants</option>
+                                    <option value="root_vegetables">Root Vegetables</option>
+                                    <option value="brassicas">Brassicas</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Growing Parameters -->
+                    <div class="form-section">
+                        <h4 class="heading-4">Growing Parameters</h4>
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label for="crop-ec-min" class="form-label">EC Min (mS/cm)</label>
+                                <input type="number" id="crop-ec-min" class="form-input" step="0.1" placeholder="1.0">
+                            </div>
+                            <div class="form-field">
+                                <label for="crop-ec-max" class="form-label">EC Max (mS/cm)</label>
+                                <input type="number" id="crop-ec-max" class="form-input" step="0.1" placeholder="1.5">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label for="crop-ph-min" class="form-label">pH Min</label>
+                                <input type="number" id="crop-ph-min" class="form-input" step="0.1" placeholder="6.0">
+                            </div>
+                            <div class="form-field">
+                                <label for="crop-ph-max" class="form-label">pH Max</label>
+                                <input type="number" id="crop-ph-max" class="form-input" step="0.1" placeholder="6.8">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label for="crop-days-harvest" class="form-label">Days to Harvest</label>
+                                <input type="number" id="crop-days-harvest" class="form-input" placeholder="30">
+                            </div>
+                            <div class="form-field">
+                                <label for="crop-plant-spacing" class="form-label">Plant Spacing (cm)</label>
+                                <input type="number" id="crop-plant-spacing" class="form-input" placeholder="15">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Information -->
+                    <div class="form-section">
+                        <h4 class="heading-4">Additional Information</h4>
+                        <div class="form-field">
+                            <label for="crop-light-requirements" class="form-label">Light Requirements</label>
+                            <select id="crop-light-requirements" class="form-input">
+                                <option value="">Select Light Requirements</option>
+                                <option value="low">Low Light</option>
+                                <option value="medium">Medium Light</option>
+                                <option value="high">High Light</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="crop-growing-notes" class="form-label">Growing Notes</label>
+                            <textarea id="crop-growing-notes" class="form-input" rows="3" placeholder="Special growing requirements, tips, or notes..."></textarea>
+                        </div>
+                        <div class="form-field">
+                            <label for="crop-research-source" class="form-label">Research Source</label>
+                            <input type="text" id="crop-research-source" class="form-input" placeholder="Source of agricultural data">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="app.closeCropManagementModal()">Cancel</button>
+                <button type="button" class="btn-success" onclick="app.saveCrop()" id="save-crop-btn">Save Crop</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nutrient Targets Management Modal -->
+    <div id="nutrient-targets-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3 class="heading-3">
+                    <img src="icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="Nutrients" class="heading-icon"> Manage Nutrient Targets
+                </h3>
+                <button class="modal-close" onclick="app.closeNutrientTargetsModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="nutrient-targets-header">
+                    <p class="text-muted">Crop: <strong id="nutrient-crop-name"></strong></p>
+                    <button class="btn-success" onclick="app.addNutrientTarget()">
+                        <img src="icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="Add" class="btn-icon-svg"> Add Nutrient Target
+                    </button>
+                </div>
+                <div id="nutrient-targets-container">
+                    <!-- Nutrient targets will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="app.closeNutrientTargetsModal()">Close</button>
+                <button type="button" class="btn-success" onclick="app.saveNutrientTargets()">Save All Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seed Varieties Management Modal -->
+    <div id="seed-varieties-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3 class="heading-3">
+                    <img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Varieties" class="heading-icon"> Manage Seed Varieties
+                </h3>
+                <button class="modal-close" onclick="app.closeSeedVarietiesModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="seed-varieties-header">
+                    <p class="text-muted">Crop: <strong id="varieties-crop-name"></strong></p>
+                    <button class="btn-success" onclick="app.addSeedVariety()">
+                        <img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Add" class="btn-icon-svg"> Add New Variety
+                    </button>
+                </div>
+                <div id="seed-varieties-container">
+                    <!-- Seed varieties will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="app.closeSeedVarietiesModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ratio Rule Management Modal -->
+    <div id="ratio-rule-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content medium-modal">
+            <div class="modal-header">
+                <h3 class="heading-3" id="ratio-rule-modal-title">
+                    <img src="icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="Ratio Rule" class="heading-icon"> Add Ratio Rule
+                </h3>
+                <button class="modal-close" onclick="app.closeRatioRuleModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="ratio-rule-form">
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label for="rule-nutrient" class="form-label">Nutrient *</label>
+                            <select id="rule-nutrient" class="form-input" required>
+                                <option value="">Select Nutrient</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="rule-growth-stage" class="form-label">Growth Stage</label>
+                            <select id="rule-growth-stage" class="form-input">
+                                <option value="">All Stages (General)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label for="rule-min-factor" class="form-label">Minimum Ratio (to Nitrogen) *</label>
+                            <input type="number" id="rule-min-factor" class="form-input" step="0.0001" min="0" required 
+                                   placeholder="e.g., 0.25">
+                            <small class="text-muted">Multiply nitrogen ppm by this factor</small>
+                        </div>
+                        <div class="form-field">
+                            <label for="rule-max-factor" class="form-label">Maximum Ratio (to Nitrogen) *</label>
+                            <input type="number" id="rule-max-factor" class="form-input" step="0.0001" min="0" required 
+                                   placeholder="e.g., 0.35">
+                            <small class="text-muted">Multiply nitrogen ppm by this factor</small>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label for="rule-priority" class="form-label">Priority</label>
+                            <input type="number" id="rule-priority" class="form-input" min="0" value="0" 
+                                   placeholder="Higher numbers take priority">
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">
+                                <input type="checkbox" id="rule-is-default" class="form-checkbox">
+                                Default Rule
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label for="rule-notes" class="form-label">Notes</label>
+                        <textarea id="rule-notes" class="form-input" rows="3" 
+                                  placeholder="Optional notes about this rule"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="app.closeRatioRuleModal()">Cancel</button>
+                <button type="button" class="btn-success" onclick="app.saveRatioRule()">Save Rule</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Environmental Adjustment Modal -->
+    <div id="env-adjustment-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content medium-modal">
+            <div class="modal-header">
+                <h3 class="heading-3" id="env-adjustment-modal-title">
+                    <img src="icons/new-icons/Afraponix Go Icons_parameters.svg" alt="Environmental Adjustment" class="heading-icon"> Add Environmental Adjustment
+                </h3>
+                <button class="modal-close" onclick="app.closeEnvAdjustmentModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="env-adjustment-form">
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label for="adjustment-parameter" class="form-label">Environmental Parameter *</label>
+                            <select id="adjustment-parameter" class="form-input" required>
+                                <option value="">Select Parameter</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="adjustment-condition" class="form-label">Condition Name *</label>
+                            <input type="text" id="adjustment-condition" class="form-input" required 
+                                   placeholder="e.g., high, low, optimal">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label for="adjustment-operator" class="form-label">Operator *</label>
+                            <select id="adjustment-operator" class="form-input" required>
+                                <option value="">Select Operator</option>
+                                <option value=">">Greater than (>)</option>
+                                <option value="<">Less than (<)</option>
+                                <option value=">=">Greater than or equal (≥)</option>
+                                <option value="<=">Less than or equal (≤)</option>
+                                <option value="=">Equal to (=)</option>
+                                <option value="between">Between (range)</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="adjustment-threshold" class="form-label">Threshold Value *</label>
+                            <input type="number" id="adjustment-threshold" class="form-input" step="0.01" required 
+                                   placeholder="e.g., 7.5">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label for="adjustment-threshold-max" class="form-label">Max Threshold (for ranges)</label>
+                            <input type="number" id="adjustment-threshold-max" class="form-input" step="0.01" 
+                                   placeholder="Only for 'between' operator">
+                        </div>
+                        <div class="form-field">
+                            <label for="adjustment-factor" class="form-label">Adjustment Factor *</label>
+                            <input type="number" id="adjustment-factor" class="form-input" step="0.01" required 
+                                   placeholder="e.g., 0.9 (90%), 1.1 (110%)">
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">
+                            <input type="checkbox" id="adjustment-applies-all" class="form-checkbox" checked>
+                            Apply to all nutrients
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="app.closeEnvAdjustmentModal()">Cancel</button>
+                <button type="button" class="btn-success" onclick="app.saveEnvAdjustment()">Save Adjustment</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comprehensive Nutrient Information Modal -->
+    <div id="comprehensive-nutrient-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content large-modal nutrient-info-modal">
+            <div class="modal-header">
+                <h3 class="heading-3" id="nutrient-modal-title">
+                    <img src="icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="Nutrient Information" class="heading-icon">
+                    <span id="nutrient-modal-name">Nutrient Information</span>
+                </h3>
+                <button class="modal-close" onclick="app.closeComprehensiveNutrientModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <!-- Loading State -->
+                <div id="nutrient-modal-loading" style="display: none;">
+                    <div class="loading-spinner">
+                        <div class="spinner-dot"></div>
+                        <div class="spinner-dot"></div>
+                        <div class="spinner-dot"></div>
+                    </div>
+                    <p>Loading nutrient information...</p>
+                </div>
+
+                <!-- Error State -->
+                <div id="nutrient-modal-error" class="error-message" style="display: none;">
+                    <p>Failed to load nutrient information. Please try again.</p>
+                </div>
+
+                <!-- Content Container -->
+                <div id="nutrient-modal-content" style="display: none;">
+                    <!-- Basic Information Section -->
+                    <div class="nutrient-info-section">
+                        <h4 class="section-header">Basic Information</h4>
+                        <div class="nutrient-basic-info">
+                            <div class="info-row">
+                                <div class="info-item">
+                                    <span class="info-label">Chemical Symbol:</span>
+                                    <span class="info-value" id="nutrient-symbol"></span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Measurement Unit:</span>
+                                    <span class="info-value" id="nutrient-unit"></span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Mobility:</span>
+                                    <span class="info-value mobility-badge" id="nutrient-mobility"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="nutrient-description">
+                            <p id="nutrient-description"></p>
+                        </div>
+                    </div>
+
+                    <!-- Current System Context -->
+                    <div id="system-context-section" class="nutrient-info-section" style="display: none;">
+                        <h4 class="section-header">Current System Recommendations</h4>
+                        <div id="system-crop-recommendations"></div>
+                    </div>
+
+                    <!-- Ratio Information Section -->
+                    <div id="ratio-info-section" class="nutrient-info-section">
+                        <h4 class="section-header">Concentration Guidelines</h4>
+                        <div id="ratio-info-content"></div>
+                    </div>
+
+                    <!-- Primary Functions Section -->
+                    <div class="nutrient-info-section">
+                        <h4 class="section-header">Primary Functions</h4>
+                        <div class="functions-content">
+                            <p id="nutrient-functions"></p>
+                        </div>
+                    </div>
+
+                    <!-- Deficiency & Toxicity Symptoms -->
+                    <div class="nutrient-info-section">
+                        <h4 class="section-header">Deficiency & Toxicity Symptoms</h4>
+                        <div class="symptoms-grid">
+                            <div class="symptom-card deficiency-symptoms">
+                                <h5>Deficiency Symptoms</h5>
+                                <p id="deficiency-symptoms"></p>
+                            </div>
+                            <div class="symptom-card toxicity-symptoms">
+                                <h5>Toxicity Symptoms</h5>
+                                <p id="toxicity-symptoms"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deficiency Images Section -->
+                    <div id="deficiency-images-section" class="nutrient-info-section" style="display: none;">
+                        <h4 class="section-header">Visual Deficiency Guide</h4>
+                        <div id="deficiency-images-grid" class="deficiency-images-grid"></div>
+                    </div>
+
+                    <!-- Nutrient Interactions -->
+                    <div id="interactions-section" class="nutrient-info-section" style="display: none;">
+                        <h4 class="section-header">Nutrient Interactions</h4>
+                        <div class="interactions-content">
+                            <div class="uptake-interactions">
+                                <h5>General Uptake Interactions</h5>
+                                <p id="uptake-interactions"></p>
+                            </div>
+                            <div id="competition-interactions" class="competition-interactions"></div>
+                        </div>
+                    </div>
+
+                    <!-- pH Availability Chart -->
+                    <div id="ph-availability-section" class="nutrient-info-section" style="display: none;">
+                        <h4 class="section-header">pH Availability Profile</h4>
+                        <div class="ph-availability-chart">
+                            <canvas id="ph-availability-canvas" width="400" height="200"></canvas>
+                        </div>
+                        <div id="ph-availability-data" class="ph-data-grid"></div>
+                    </div>
+
+                    <!-- Common Sources -->
+                    <div class="nutrient-info-section">
+                        <h4 class="section-header">Common Sources</h4>
+                        <div class="sources-content">
+                            <p id="common-sources"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="app.closeComprehensiveNutrientModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script src="utils/logger.js"></script>
     <script src="script.js"></script>
+<!-- Deficiency Image Management Modal -->
+<div id="deficiency-image-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content medium-modal">
+        <div class="modal-header">
+            <h3 class="heading-3" id="deficiency-modal-title">Add Deficiency Image</h3>
+            <button class="modal-close" onclick="closeDeficiencyImageModal()">
+                <img src="icons/new-icons/Afraponix Go Icons_close.svg" alt="Close" class="close-icon">
+            </button>
+        </div>
+        <div class="modal-body">
+            <!-- Upload Method Selection -->
+            <div class="upload-method-tabs">
+                <button type="button" class="method-tab active" data-method="upload">
+                    <img src="icons/new-icons/Afraponix Go Icons_add.svg" alt="Upload" class="tab-icon-svg">
+                    Upload File
+                </button>
+                <button type="button" class="method-tab" data-method="url">
+                    <img src="icons/new-icons/Afraponix Go Icons_edit.svg" alt="URL" class="tab-icon-svg">
+                    Enter URL
+                </button>
+            </div>
+            
+            <!-- Upload Form -->
+            <form id="deficiency-image-upload-form" class="upload-method active" data-method="upload">
+                <input type="hidden" id="upload-nutrient-code" value="">
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Nutrient Deficiency:</label>
+                        <select id="upload-nutrient-select" class="form-input" required>
+                            <option value="">Select nutrient...</option>
+                            <!-- Nutrients will be populated dynamically -->
+                        </select>
+                    </div>
+                    
+                    <div class="form-group span-2">
+                        <label class="form-label">Select Image File:</label>
+                        <div class="file-upload-area">
+                            <input type="file" id="deficiency-file-input" class="file-input" accept="image/*" required>
+                            <div class="file-upload-label">
+                                <img src="icons/new-icons/Afraponix Go Icons_add.svg" alt="Upload" class="upload-icon">
+                                <span class="upload-text">Choose image file or drag & drop</span>
+                                <span class="upload-info">Supports JPEG, PNG, GIF, WebP (max 5MB)</span>
+                            </div>
+                        </div>
+                        <div id="file-preview" class="file-preview" style="display: none;">
+                            <img id="preview-image" src="" alt="Preview" class="preview-img">
+                            <span id="file-name" class="file-name"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Deficiency Stage:</label>
+                        <select id="upload-deficiency-stage" class="form-input" required>
+                            <option value="">Select stage...</option>
+                            <option value="early">Early</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="severe">Severe</option>
+                        </select>
+                    </div>
+                    
+                    
+                    <div class="form-group">
+                        <label class="form-label">Link to Crop:</label>
+                        <select id="upload-crop-id" class="form-input">
+                            <option value="">No specific crop</option>
+                            <!-- Crops will be populated dynamically -->
+                        </select>
+                    </div>
+                    
+                    <div class="form-group span-2">
+                        <label class="form-label">Caption/Description:</label>
+                        <textarea id="upload-caption" class="form-input" rows="3" placeholder="Describe what the image shows (leave empty for auto-generation)"></textarea>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeDeficiencyImageModal()">Cancel</button>
+                    <button type="button" class="btn btn-success" id="upload-deficiency-image" onclick="event.preventDefault(); app.uploadDeficiencyImage(); return false;">
+                        <img src="icons/new-icons/Afraponix Go Icons_save.svg" alt="Upload" class="btn-icon">
+                        Upload Image
+                    </button>
+                </div>
+            </form>
+            
+            <!-- URL Form -->
+            <form id="deficiency-image-form" class="upload-method" data-method="url">
+                <input type="hidden" id="deficiency-image-id" value="">
+                <input type="hidden" id="deficiency-nutrient-code" value="">
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Nutrient Deficiency:</label>
+                        <select id="edit-nutrient-select" class="form-input" required>
+                            <option value="">Select nutrient...</option>
+                            <!-- Nutrients will be populated dynamically -->
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Image Filename:</label>
+                        <input type="text" id="deficiency-filename" class="form-input" placeholder="e.g., iron-deficiency-severe.jpg" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Deficiency Stage:</label>
+                        <select id="deficiency-stage" class="form-input" required>
+                            <option value="">Select stage...</option>
+                            <option value="early">Early</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="severe">Severe</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group span-2">
+                        <label class="form-label">Image URL/Path:</label>
+                        <input type="text" id="deficiency-url" class="form-input" placeholder="/images/deficiencies/iron-deficiency-severe.jpg" required>
+                    </div>
+                    
+                    
+                    <div class="form-group">
+                        <label class="form-label">Link to Crop:</label>
+                        <select id="deficiency-crop-id" class="form-input">
+                            <option value="">No specific crop</option>
+                            <!-- Crops will be populated dynamically -->
+                        </select>
+                    </div>
+                    
+                    <div class="form-group span-2">
+                        <label class="form-label">Caption/Description:</label>
+                        <textarea id="deficiency-caption" class="form-input" rows="3" placeholder="Describe what the image shows (e.g., 'Classic iron deficiency showing interveinal chlorosis in young leaves')" required></textarea>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeDeficiencyImageModal()">Cancel</button>
+                    <button type="button" class="btn btn-success" id="save-deficiency-image" onclick="event.preventDefault(); app.saveDeficiencyImage(); return false;">
+                        <img src="icons/new-icons/Afraponix Go Icons_save.svg" alt="Save" class="btn-icon">
+                        Save Image
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Image Lightbox Modal -->
+<div id="image-lightbox" class="lightbox-overlay" style="display: none;">
+    <div class="lightbox-container">
+        <button class="lightbox-close" onclick="app.closeLightbox()">&times;</button>
+        <img id="lightbox-image" class="lightbox-image" src="" alt="">
+        <div class="lightbox-info">
+            <h4 id="lightbox-title" class="lightbox-title"></h4>
+            <p id="lightbox-description" class="lightbox-description"></p>
+        </div>
+        <div class="lightbox-nav">
+            <button id="lightbox-prev" class="lightbox-nav-btn" onclick="app.previousImage()" style="display: none;">❮</button>
+            <button id="lightbox-next" class="lightbox-nav-btn" onclick="app.nextImage()" style="display: none;">❯</button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

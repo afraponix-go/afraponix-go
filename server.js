@@ -20,6 +20,7 @@ const sprayProgrammeRoutes = require('./routes/spray-programmes');
 const sensorRoutes = require('./routes/sensors');
 const credentialsRoutes = require('./routes/credentials');
 const seedVarietiesRoutes = require('./routes/seed-varieties');
+const cropKnowledgeRoutes = require('./routes/crop-knowledge');
 const { initializeDatabase, initializeConnectionPool, closeConnectionPool } = require('./database/init-mariadb');
 const sensorCollector = require('./services/sensor-collector');
 
@@ -63,7 +64,7 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 1000, // limit each IP to 1000 requests per windowMs (increased from 100)
+    max: 5000, // limit each IP to 5000 requests per windowMs (increased for development)
     message: 'Too many requests from this IP, please try again later.'
 });
 app.use('/api/', limiter);
@@ -98,6 +99,7 @@ app.use('/api/spray-programmes', sprayProgrammeRoutes);
 app.use('/api/sensors', sensorRoutes);
 app.use('/api/credentials', credentialsRoutes);
 app.use('/api/seed-varieties', seedVarietiesRoutes);
+app.use('/api/crop-knowledge', cropKnowledgeRoutes);
 
 // Email verification route - serve main page with token parameter
 app.get('/verify-email', (req, res) => {

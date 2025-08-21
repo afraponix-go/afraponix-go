@@ -362,20 +362,33 @@ a:hover {
   background-color: var(--color-primary-active);
 }
 
-/* Secondary Button - Bio Green */
+/* Secondary Button - Neutral Gray */
 .btn-secondary {
-  background-color: var(--color-secondary);
-  color: var(--text-on-primary);
+  background-color: #6c757d;
+  border-color: #6c757d;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid #6c757d;
 }
 
 .btn-secondary:hover {
-  background-color: var(--color-secondary-hover);
-  color: var(--text-on-primary);
+  background-color: #5a6268;
+  border-color: #545b62;
+  color: white;
 }
 
 .btn-secondary:active {
-  background-color: var(--color-secondary-active);
-  color: var(--text-on-primary);
+  background-color: #545b62;
+  border-color: #4e555b;
+  color: white;
 }
 
 /* Success Button - Bio Green Dark */
@@ -2081,4 +2094,976 @@ a:hover {
     height: 40px;
     font-size: var(--text-base);
   }
+}
+
+/* =====================================================
+   COMPREHENSIVE NUTRIENT INFORMATION MODAL
+   ===================================================== */
+
+.nutrient-info-modal {
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.nutrient-info-modal .modal-body {
+  max-height: calc(90vh - 120px);
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
+.nutrient-info-section {
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--bg-tertiary);
+  padding-bottom: var(--space-4);
+}
+
+.nutrient-info-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.nutrient-basic-info {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.info-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.info-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.info-value {
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.mobility-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  text-transform: capitalize;
+}
+
+.mobility-badge[data-mobility="mobile"] {
+  background: var(--color-bio-green-lightest);
+  color: var(--color-bio-green-darker);
+  border: 1px solid var(--color-bio-green-light);
+}
+
+.mobility-badge[data-mobility="immobile"] {
+  background: var(--color-blue-fish-lightest);
+  color: var(--color-blue-fish-darker);
+  border: 1px solid var(--color-blue-fish-light);
+}
+
+.nutrient-description {
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.functions-content p {
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* System Context Section */
+.system-crop-recommendations {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.crop-recommendation-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.crop-recommendation-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.crop-recommendation-name {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.stage-recommendations {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+
+.stage-recommendation {
+  background: var(--bg-primary);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+}
+
+.stage-name {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-1);
+}
+
+.stage-values {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.target-value {
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  color: var(--color-deep-blue);
+}
+
+.range-values {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* Ratio Information Section */
+.ratio-info-content {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.ratio-explanation {
+  background: var(--color-deep-blue-lightest);
+  border: 1px solid var(--color-deep-blue-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.ratio-explanation-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-deep-blue-darker);
+}
+
+.ratio-stages {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-3);
+}
+
+.ratio-stage-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.stage-header {
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.ratio-values {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ratio-range {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.ratio-average {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--color-deep-blue);
+}
+
+.fixed-range-explanation {
+  background: var(--color-bio-green-lightest);
+  border: 1px solid var(--color-bio-green-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.fixed-range-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-bio-green-darker);
+}
+
+/* Symptoms Grid */
+.symptoms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-4);
+}
+
+.symptom-card {
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.symptom-card h5 {
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  margin-bottom: var(--space-2);
+}
+
+.symptom-card p {
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.deficiency-symptoms {
+  background: var(--color-orange-lightest);
+  border: 1px solid var(--color-orange-light);
+}
+
+.deficiency-symptoms h5 {
+  color: var(--color-orange-darker);
+}
+
+.deficiency-symptoms p {
+  color: var(--color-orange-dark);
+}
+
+.toxicity-symptoms {
+  background: var(--color-red-lightest);
+  border: 1px solid var(--color-red-light);
+}
+
+.toxicity-symptoms h5 {
+  color: var(--color-red-darker);
+}
+
+.toxicity-symptoms p {
+  color: var(--color-red-dark);
+}
+
+/* Deficiency Images Grid */
+.deficiency-images-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.deficiency-image-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  transition: var(--transition-smooth);
+}
+
+.deficiency-image-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.deficiency-image {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-2);
+}
+
+.image-caption {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.deficiency-stage-badge {
+  display: inline-block;
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: var(--space-1);
+}
+
+.deficiency-stage-badge.early {
+  background: var(--color-green-lightest);
+  color: var(--color-green-darker);
+}
+
+.deficiency-stage-badge.moderate {
+  background: var(--color-orange-lightest);
+  color: var(--color-orange-darker);
+}
+
+.deficiency-stage-badge.severe {
+  background: var(--color-red-lightest);
+  color: var(--color-red-darker);
+}
+
+/* Interactions Section */
+.interactions-content {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.uptake-interactions {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.uptake-interactions h5 {
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.uptake-interactions p {
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.competition-interactions {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.competition-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.competition-header {
+  display: flex;
+  align-items: center;
+  justify-content: between;
+  margin-bottom: var(--space-2);
+}
+
+.competition-nutrient {
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+}
+
+.competition-type-badge {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.competition-type-badge.antagonistic {
+  background: var(--color-red-lightest);
+  color: var(--color-red-darker);
+}
+
+.competition-type-badge.synergistic {
+  background: var(--color-green-lightest);
+  color: var(--color-green-darker);
+}
+
+.competition-type-badge.inhibitive {
+  background: var(--color-orange-lightest);
+  color: var(--color-orange-darker);
+}
+
+.competition-strength {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: var(--font-medium);
+  margin-left: var(--space-2);
+}
+
+.competition-description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* pH Availability Section */
+.ph-availability-chart {
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.ph-data-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+.ph-data-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  text-align: center;
+}
+
+.ph-range {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.availability-percentage {
+  font-size: var(--text-lg);
+  font-weight: var(--font-bold);
+  color: var(--color-deep-blue);
+}
+
+.availability-bar {
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  margin-top: var(--space-2);
+  overflow: hidden;
+}
+
+.availability-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-red), var(--color-orange), var(--color-green));
+  border-radius: var(--radius-full);
+  transition: var(--transition-smooth);
+}
+
+/* Sources Content */
+.sources-content {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.sources-content p {
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .nutrient-info-modal {
+    max-width: 95vw;
+    max-height: 95vh;
+  }
+  
+  .symptoms-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .ratio-stages {
+    grid-template-columns: 1fr;
+  }
+  
+  .info-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .deficiency-images-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+  
+  .ph-data-grid {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+}
+
+/* =====================================================
+   CLICKABLE NUTRIENT CARDS
+   ===================================================== */
+
+.clickable-nutrient-card {
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  position: relative;
+}
+
+.clickable-nutrient-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  background: var(--bg-secondary);
+}
+
+.clickable-nutrient-card:active {
+  transform: translateY(0px);
+  box-shadow: var(--shadow-md);
+}
+
+.clickable-nutrient-card::after {
+  content: '📊';
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  font-size: var(--text-sm);
+  opacity: 0;
+  transition: var(--transition-smooth);
+}
+
+.clickable-nutrient-card:hover::after {
+  opacity: 0.6;
+}
+
+.clickable-nutrient-card:hover h4 {
+  color: var(--color-primary);
+}
+
+/* =============================================
+   DEFICIENCY IMAGES MANAGEMENT STYLES
+   ============================================= */
+
+/* Deficiency Controls */
+.deficiency-controls {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    flex-wrap: wrap;
+}
+
+.deficiency-controls .control-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.deficiency-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--border-light);
+}
+
+/* Deficiency Images Grid */
+.deficiency-images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-md);
+}
+
+.deficiency-image-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition-smooth);
+}
+
+.deficiency-image-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.deficiency-image-preview {
+    width: 100%;
+    height: 200px;
+    object-fit: contain;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.deficiency-image-info {
+    padding: var(--spacing-md);
+}
+
+.deficiency-stage-badge {
+    display: inline-block;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: var(--spacing-xs);
+}
+
+.deficiency-stage-badge.early {
+    background-color: var(--color-bio-green-light);
+    color: var(--color-deep-blue);
+}
+
+.deficiency-stage-badge.moderate {
+    background-color: var(--warning-light);
+    color: var(--warning-dark);
+}
+
+.deficiency-stage-badge.severe {
+    background-color: var(--error-light);
+    color: var(--error-dark);
+}
+
+.deficiency-image-caption {
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+    margin: var(--spacing-xs) 0;
+    line-height: 1.4;
+}
+
+.deficiency-image-meta {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+    margin: var(--spacing-sm) 0;
+    font-size: var(--font-xs);
+    color: var(--text-muted);
+}
+
+.deficiency-meta-item {
+    background: var(--bg-secondary);
+    padding: 2px var(--spacing-xs);
+    border-radius: var(--radius-sm);
+}
+
+.deficiency-image-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-sm);
+}
+
+.deficiency-image-actions .btn {
+    flex: 1;
+    justify-content: center;
+    font-size: var(--font-xs);
+    padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+/* No Data Message for Deficiency */
+.no-data-message {
+    text-align: center;
+    padding: var(--spacing-xl);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    margin-top: var(--spacing-md);
+}
+
+.no-data-icon {
+    width: 64px;
+    height: 64px;
+    opacity: 0.5;
+    margin-bottom: var(--spacing-md);
+}
+
+/* Upload Method Tabs */
+.upload-method-tabs {
+    display: flex;
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--border-light);
+}
+
+.method-tab {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.method-tab.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+
+.method-tab:hover {
+    color: var(--color-primary);
+    background: var(--bg-secondary);
+}
+
+.tab-icon-svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Upload Method Forms */
+.upload-method {
+    display: none;
+}
+
+.upload-method.active {
+    display: block;
+}
+
+/* File Upload Area */
+.file-upload-area {
+    position: relative;
+    border: 2px dashed var(--border-light);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    text-align: center;
+    background: var(--bg-secondary);
+    transition: var(--transition-smooth);
+    cursor: pointer;
+}
+
+.file-upload-area:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+}
+
+.file-upload-area.dragover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-light);
+}
+
+.file-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.file-upload-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.upload-icon {
+    width: 32px;
+    height: 32px;
+    opacity: 0.6;
+}
+
+.upload-text {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.upload-info {
+    font-size: var(--font-xs);
+    color: var(--text-muted);
+}
+
+/* File Preview */
+.file-preview {
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.preview-img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+}
+
+.file-name {
+    flex: 1;
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .deficiency-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .deficiency-header {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+        align-items: stretch;
+    }
+    
+    .deficiency-images-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .upload-method-tabs {
+        flex-direction: column;
+    }
+    
+    .method-tab {
+        justify-content: center;
+    }
+}
+
+/* Lightbox Styles */
+.lightbox-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.lightbox-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.lightbox-container {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.lightbox-image {
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.lightbox-close {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 30px;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.lightbox-close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.lightbox-info {
+    margin-top: 15px;
+    text-align: center;
+    color: white;
+    max-width: 600px;
+}
+
+.lightbox-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--color-bio-green);
+}
+
+.lightbox-description {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.4;
+}
+
+.lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+}
+
+.lightbox-nav-btn {
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    color: white;
+    font-size: 24px;
+    padding: 15px 20px;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+    pointer-events: all;
+}
+
+.lightbox-nav-btn:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.lightbox-nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Make deficiency images clickable */
+.deficiency-image-preview {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.deficiency-image-preview:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }

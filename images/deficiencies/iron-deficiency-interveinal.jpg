@@ -1,0 +1,22 @@
+<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Leaf background - yellowed from iron deficiency -->
+  <ellipse cx="150" cy="100" rx="120" ry="60" fill="#e6d836" stroke="#2d3a1f" stroke-width="2"/>
+  
+  <!-- Green veins (characteristic of iron deficiency) -->
+  <path d="M 50 100 Q 150 80 250 100" stroke="#2d5a1f" stroke-width="3" fill="none"/>
+  <path d="M 80 120 Q 150 100 220 120" stroke="#2d5a1f" stroke-width="2" fill="none"/>
+  <path d="M 80 80 Q 150 100 220 80" stroke="#2d5a1f" stroke-width="2" fill="none"/>
+  <path d="M 100 110 Q 150 100 200 110" stroke="#2d5a1f" stroke-width="1" fill="none"/>
+  <path d="M 100 90 Q 150 100 200 90" stroke="#2d5a1f" stroke-width="1" fill="none"/>
+  
+  <!-- Secondary veins -->
+  <path d="M 120 85 L 130 95" stroke="#2d5a1f" stroke-width="1" fill="none"/>
+  <path d="M 170 85 L 180 95" stroke="#2d5a1f" stroke-width="1" fill="none"/>
+  <path d="M 120 115 L 130 105" stroke="#2d5a1f" stroke-width="1" fill="none"/>
+  <path d="M 170 115 L 180 105" stroke="#2d5a1f" stroke-width="1" fill="none"/>
+  
+  <!-- Text label -->
+  <text x="150" y="180" text-anchor="middle" font-family="Arial" font-size="14" fill="#333">
+    Iron Deficiency - Interveinal Chlorosis
+  </text>
+</svg>

@@ -1,0 +1,20 @@
+<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Yellowed leaf from nitrogen deficiency -->
+  <ellipse cx="150" cy="100" rx="120" ry="60" fill="#c4b836" stroke="#8a7a1f" stroke-width="2"/>
+  
+  <!-- Faded veins -->
+  <path d="M 50 100 Q 150 80 250 100" stroke="#8a7a1f" stroke-width="2" fill="none"/>
+  <path d="M 80 120 Q 150 100 220 120" stroke="#8a7a1f" stroke-width="1" fill="none"/>
+  <path d="M 80 80 Q 150 100 220 80" stroke="#8a7a1f" stroke-width="1" fill="none"/>
+  
+  <!-- Uniform yellowing pattern -->
+  <circle cx="100" cy="85" r="8" fill="#b4a426" fill-opacity="0.6"/>
+  <circle cx="200" cy="115" r="10" fill="#b4a426" fill-opacity="0.6"/>
+  <circle cx="130" cy="120" r="6" fill="#b4a426" fill-opacity="0.6"/>
+  <circle cx="180" cy="80" r="7" fill="#b4a426" fill-opacity="0.6"/>
+  
+  <!-- Text label -->
+  <text x="150" y="180" text-anchor="middle" font-family="Arial" font-size="14" fill="#333">
+    Nitrogen Deficiency - Uniform Yellowing
+  </text>
+</svg>

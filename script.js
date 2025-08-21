@@ -9,39 +9,12 @@ class AquaponicsApp {
         this.user = null;
         this.token = localStorage.getItem('auth_token');
         this.charts = {};
-        // Dynamic API base URL - use current origin for production, localhost for development
-        this.API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-            ? 'http://127.0.0.1:8000/api' 
-            : '/api';
+        // Use relative API URLs to avoid CSP issues
+        this.API_BASE = '/api';
         this.isLoading = true; // Track loading state to suppress notifications
         this.plantOverviewRendering = false; // Prevent concurrent renders
         this.plantOverviewRenderTimeout = null; // Debounce multiple render requests
-        
-        // Shared crop nutrient targets from dosing calculator
-        this.cropTargets = {
-            // LEAFY GREENS
-            lettuce: { n: 73, p: 19, k: 90, ca: 67, mg: 13, fe: 1.8, ec: 1.1, ph_min: 6.0, ph_max: 6.8, notes: "Achieved highest yields with P and K supplementation" },
-            spinach: { n: 65, p: 16, k: 75, ca: 65, mg: 15, fe: 1.6, ec: 1.05, ph_min: 6.5, ph_max: 7.2, notes: "Tolerates cooler temperatures well" },
-            kale: { n: 75, p: 21, k: 95, ca: 80, mg: 18, fe: 2.0, ec: 1.3, ph_min: 6.0, ph_max: 6.8, notes: "PPM over 600 but below 900 for optimal growth" },
-            swiss_chard: { n: 70, p: 19, k: 82, ca: 70, mg: 14, fe: 1.75, ec: 1.2, ph_min: 6.0, ph_max: 6.5, notes: "EC around 2.0 mS/cm for optimal yield" },
-            arugula: { n: 60, p: 14, k: 65, ca: 57, mg: 11, fe: 1.6, ec: 0.85, ph_min: 6.0, ph_max: 6.5, notes: "EC between 0.5 and 2.0 mS/cm" },
-            pac_choi: { n: 65, p: 17, k: 80, ca: 65, mg: 14, fe: 1.75, ec: 1.25, ph_min: 6.0, ph_max: 6.8, notes: "Same EC range as arugula" },
-            
-            // HERBS
-            basil: { n: 95, p: 25, k: 150, ca: 95, mg: 22, fe: 2.05, ec: 1.3, ph_min: 5.5, ph_max: 6.5, notes: "Highest production in micronutrient supplemented systems" },
-            mint: { n: 80, p: 21, k: 130, ca: 80, mg: 18, fe: 1.85, ec: 1.3, ph_min: 5.5, ph_max: 6.5, notes: "Shows stress response without supplementation" },
-            parsley: { n: 70, p: 17, k: 110, ca: 72, mg: 15, fe: 1.65, ec: 1.1, ph_min: 6.0, ph_max: 7.0, notes: "Prefers cooler water temperatures" },
-            cilantro: { n: 65, p: 15, k: 100, ca: 65, mg: 13, fe: 1.5, ec: 1.05, ph_min: 6.0, ph_max: 6.8, notes: "Fast-growing, harvest in 2-3 weeks" },
-            chives: { n: 55, p: 14, k: 85, ca: 55, mg: 11, fe: 1.3, ec: 1.0, ph_min: 6.0, ph_max: 7.0, notes: "Low nutrient requirements" },
-            oregano: { n: 62, p: 16, k: 95, ca: 65, mg: 14, fe: 1.5, ec: 1.15, ph_min: 6.0, ph_max: 7.0, notes: "Mediterranean herb, drought tolerant" },
-            thyme: { n: 57, p: 14, k: 90, ca: 60, mg: 12, fe: 1.4, ec: 1.05, ph_min: 6.5, ph_max: 7.5, notes: "Prefers slightly alkaline conditions" },
-            
-            // FRUITING VEGETABLES
-            tomatoes: { n: 150, p: 45, k: 275, ca: 150, mg: 37, fe: 2.5, ec: 2.0, ph_min: 5.8, ph_max: 6.5, notes: "K accumulates in fruits; Ca decreases during fruiting" },
-            peppers: { n: 115, p: 37, k: 225, ca: 120, mg: 30, fe: 2.3, ec: 1.85, ph_min: 5.8, ph_max: 6.5, notes: "Require warmer water temperatures" },
-            cucumbers: { n: 135, p: 41, k: 250, ca: 135, mg: 33, fe: 2.15, ec: 2.0, ph_min: 5.8, ph_max: 6.8, notes: "High water content, need good aeration" },
-            eggplant: { n: 122, p: 36, k: 225, ca: 127, mg: 31, fe: 2.3, ec: 2.05, ph_min: 5.5, ph_max: 6.0, notes: "PPM range of 1750-2450 recommended" }
-        };
+        this.cropKnowledgeCache = null; // Cache for crop knowledge from API
         this.fishData = {
             tilapia: {
                 name: 'Tilapia',
@@ -2665,6 +2638,27 @@ class AquaponicsApp {
         } catch (error) {
         }
         
+        // Add admin crops from global database
+        try {
+            const adminCrops = await this.makeApiCall('/crop-knowledge/crops');
+            if (adminCrops && adminCrops.success && adminCrops.data && adminCrops.data.length > 0) {
+                let adminOptionsHtml = '<optgroup label="Global Crop Database">';
+                adminCrops.data.forEach(crop => {
+                    // Skip if this crop is already in custom crops to avoid duplicates
+                    const isDuplicate = customCrops && customCrops.some(customCrop => 
+                        customCrop.crop_name.toLowerCase() === crop.code.toLowerCase()
+                    );
+                    if (!isDuplicate) {
+                        adminOptionsHtml += `<option value="${crop.code}">${crop.name}</option>`;
+                    }
+                });
+                adminOptionsHtml += '</optgroup>';
+                plantCropSelect.innerHTML += adminOptionsHtml;
+            }
+        } catch (error) {
+            console.log('Global crop database not available:', error);
+        }
+        
         plantCropSelect.innerHTML += '<option value="other">Other</option>';
     }
 
@@ -3918,6 +3912,12 @@ class AquaponicsApp {
                         this.loadSmtpConfig();
                     } else if (targetContent === 'admin-data-subcontent') {
                         this.loadDataEditInterface();
+                    } else if (targetContent === 'admin-crops-subcontent') {
+                        this.loadAdminCrops();
+                    } else if (targetContent === 'admin-ratios-subcontent') {
+                        if (this.nutrientRatioManager) {
+                            this.nutrientRatioManager.loadRatioManagement();
+                        }
                     } else if (targetContent === 'admin-stats-subcontent') {
                         this.loadAdminStats();
                     }
@@ -7502,12 +7502,12 @@ class AquaponicsApp {
         
         // Update plant nutrient displays with latest readings and status indicators
         this.updateNutrientStatus('nitrate', recentNutrients.nitrate.value, this.analyzeNitrate(recentNutrients.nitrate.value, crops), recentNutrients.nitrate.source);
-        this.updateNutrientStatus('phosphorus', recentNutrients.phosphorus.value, this.analyzePhosphorus(recentNutrients.phosphorus.value, crops), recentNutrients.phosphorus.source);
-        this.updateNutrientStatus('potassium', recentNutrients.potassium.value, this.analyzePotassium(recentNutrients.potassium.value, crops), recentNutrients.potassium.source);
-        this.updateNutrientStatus('iron', recentNutrients.iron.value, this.analyzeIron(recentNutrients.iron.value, crops), recentNutrients.iron.source);
-        this.updateNutrientStatus('calcium', recentNutrients.calcium.value, this.analyzeCalcium(recentNutrients.calcium.value, crops), recentNutrients.calcium.source);
+        this.updateNutrientStatus('phosphorus', recentNutrients.phosphorus.value, await this.analyzePhosphorus(recentNutrients.phosphorus.value, crops), recentNutrients.phosphorus.source);
+        this.updateNutrientStatus('potassium', recentNutrients.potassium.value, await this.analyzePotassium(recentNutrients.potassium.value, crops), recentNutrients.potassium.source);
+        this.updateNutrientStatus('iron', recentNutrients.iron.value, await this.analyzeIron(recentNutrients.iron.value, crops), recentNutrients.iron.source);
+        this.updateNutrientStatus('calcium', recentNutrients.calcium.value, await this.analyzeCalcium(recentNutrients.calcium.value, crops), recentNutrients.calcium.source);
         this.updateNutrientStatus('ec', recentNutrients.ec?.value, this.analyzeEC(recentNutrients.ec?.value, crops), recentNutrients.ec?.source);
-        this.updateNutrientStatus('ph', recentNutrients.ph.value, this.analyzePH(recentNutrients.ph.value, crops), recentNutrients.ph.source);
+        this.updateNutrientStatus('ph', recentNutrients.ph.value, await this.analyzePH(recentNutrients.ph.value, crops), recentNutrients.ph.source);
         this.updateNutrientStatus('humidity', recentNutrients.humidity.value, this.analyzeHumidity(recentNutrients.humidity.value, crops), recentNutrients.humidity.source);
         this.updateNutrientStatus('salinity', recentNutrients.salinity.value, this.analyzeSalinity(recentNutrients.salinity.value, crops), recentNutrients.salinity.source);
         
@@ -8239,7 +8239,7 @@ class AquaponicsApp {
 
     }
 
-    updateNutrientRecommendations() {
+    async updateNutrientRecommendations() {
         const container = document.getElementById('nutrient-recommendations-container');
         if (!container) return;
 
@@ -8263,7 +8263,7 @@ class AquaponicsApp {
 
         // Get current crops from recent plant data
         const currentCrops = this.getCurrentCrops(plantData);
-        const recommendations = this.generateNutrientRecommendations(latestData, currentCrops);
+        const recommendations = await this.generateNutrientRecommendations(latestData, currentCrops);
 
         container.innerHTML = `
             <div class="nutrient-recommendations-grid">
@@ -8285,32 +8285,39 @@ class AquaponicsApp {
         return cropTypes.length > 0 ? cropTypes : ['general'];
     }
 
-    generateNutrientRecommendations(data, crops) {
+    async generateNutrientRecommendations(data, crops) {
         const recommendations = [];
         
-        // pH Recommendations
-        const pHRec = this.analyzePH(data.ph, crops);
+        // pH Recommendations (highest priority as it affects all nutrient uptake)
+        const pHRec = await this.analyzePH(data.ph, crops);
         if (pHRec) recommendations.push(pHRec);
         
-        // Nitrate Recommendations
-        const nitrateRec = this.analyzeNitrate(data.nitrate, crops);
-        if (nitrateRec) recommendations.push(nitrateRec);
+        // Nitrogen Recommendations (baseline for ratio calculations)
+        const nitrogenRec = await this.analyzeNitrogen(data.nitrogen || data.nitrate, crops, data);
+        if (nitrogenRec) recommendations.push(nitrogenRec);
+        
+        // Ratio-based nutrient recommendations (use nitrogen as baseline)
+        const nitrogenLevel = data.nitrogen || data.nitrate || 100; // Default for ratio calculations
         
         // Phosphorus Recommendations
-        const phosphorusRec = this.analyzePhosphorus(data.phosphorus, crops);
+        const phosphorusRec = await this.analyzePhosphorus(data.phosphorus, crops, data, nitrogenLevel);
         if (phosphorusRec) recommendations.push(phosphorusRec);
         
         // Potassium Recommendations
-        const potassiumRec = this.analyzePotassium(data.potassium, crops);
+        const potassiumRec = await this.analyzePotassium(data.potassium, crops, data, nitrogenLevel);
         if (potassiumRec) recommendations.push(potassiumRec);
         
         // Iron Recommendations
-        const ironRec = this.analyzeIron(data.iron, crops);
+        const ironRec = await this.analyzeIron(data.iron, crops, data, nitrogenLevel);
         if (ironRec) recommendations.push(ironRec);
         
         // Calcium Recommendations
-        const calciumRec = this.analyzeCalcium(data.calcium, crops);
+        const calciumRec = await this.analyzeCalcium(data.calcium, crops, data, nitrogenLevel);
         if (calciumRec) recommendations.push(calciumRec);
+        
+        // Magnesium Recommendations  
+        const magnesiumRec = await this.analyzeMagnesium(data.magnesium, crops, data, nitrogenLevel);
+        if (magnesiumRec) recommendations.push(magnesiumRec);
         
         // Overall system recommendation
         const systemRec = this.generateSystemRecommendation(data, crops);
@@ -8319,14 +8326,14 @@ class AquaponicsApp {
         return recommendations;
     }
 
-    analyzePH(ph, crops) {
+    async analyzePH(ph, crops) {
         if (!ph) return null;
         
         // Convert to number and validate
         const phValue = parseFloat(ph);
         if (isNaN(phValue)) return null;
         
-        const cropOptimal = this.getOptimalPH(crops);
+        const cropOptimal = await this.getOptimalPH(crops);
         let status, icon, action, content;
         
         if (phValue < 5.5) {
@@ -8362,36 +8369,90 @@ class AquaponicsApp {
         };
     }
 
-    analyzeIron(iron, crops) {
+    async analyzeNitrogen(nitrogen, crops, environmentalData) {
+        if (nitrogen === null || nitrogen === undefined) return null;
+        
+        // Convert to number and validate
+        const nitrogenValue = parseFloat(nitrogen);
+        if (isNaN(nitrogenValue)) return null;
+        
+        // Get optimal nitrogen range for crops (baseline for ratio calculations)
+        const optimalRange = await this.getCropNutrientRange(crops, 'nitrogen');
+        let status, icon, action, content;
+        
+        if (nitrogenValue < optimalRange.min * 0.6) {
+            status = 'critical';
+            icon = '🔴';
+            action = 'Increase fish feeding or add nitrogen supplement';
+            content = `Nitrogen is critically low at ${nitrogenValue.toFixed(0)} ppm. This serves as the baseline for all other nutrient ratios. Target: ${optimalRange.min}-${optimalRange.max} ppm.`;
+        } else if (nitrogenValue < optimalRange.min) {
+            status = 'warning';
+            icon = '🟡';
+            action = 'Gradually increase nitrogen levels';
+            content = `Nitrogen is below optimal at ${nitrogenValue.toFixed(0)} ppm. All other nutrients are calculated as ratios to nitrogen. Target: ${optimalRange.min}-${optimalRange.max} ppm.`;
+        } else if (nitrogenValue > optimalRange.max * 1.5) {
+            status = 'caution';
+            icon = '🟠';
+            action = 'Reduce feeding or increase plant density';
+            content = `Nitrogen is high at ${nitrogenValue.toFixed(0)} ppm. High nitrogen can promote excessive leaf growth at expense of fruiting. Target: ${optimalRange.min}-${optimalRange.max} ppm.`;
+        } else {
+            status = 'optimal';
+            icon = '✅';
+            action = 'Maintain current levels';
+            content = `Nitrogen is optimal at ${nitrogenValue.toFixed(0)} ppm. This provides a good baseline for calculating all other nutrient requirements.`;
+        }
+        
+        return {
+            title: 'Nitrogen (N) - Baseline',
+            status,
+            icon,
+            level: `Current: ${nitrogenValue.toFixed(0)} ppm`,
+            content,
+            action,
+            cropNote: `Target for your crops: ${optimalRange.min}-${optimalRange.max} ppm • Base for all nutrient ratios`
+        };
+    }
+
+    async analyzeIron(iron, crops, environmentalData, nitrogenLevel) {
         if (iron === null || iron === undefined) return null;
         
         // Convert to number and validate
         const ironValue = parseFloat(iron);
         if (isNaN(ironValue)) return null;
         
-        const optimalRange = this.getCropNutrientRange(crops, 'fe');
+        const optimalRange = await this.getCropNutrientRange(crops, 'iron');
+        
+        // Calculate ratio-based recommendation if nitrogen level is available
+        let ratioNote = '';
+        if (nitrogenLevel && nitrogenLevel > 0) {
+            const currentRatio = ironValue / nitrogenLevel;
+            const expectedMinRatio = optimalRange.min / nitrogenLevel;
+            const expectedMaxRatio = optimalRange.max / nitrogenLevel;
+            ratioNote = ` • Current ratio: ${currentRatio.toFixed(3)}:1 (Fe:N)`;
+        }
+        
         let status, icon, action, content;
         
         if (ironValue < optimalRange.min * 0.5) {
             status = 'critical';
             icon = '🔴';
-            action = 'Add iron chelate supplement';
-            content = `Iron is critically low at ${ironValue.toFixed(1)} mg/L. Plants will show yellowing leaves (chlorosis). Target: ${optimalRange.min}-${optimalRange.max} mg/L.`;
+            action = 'Add iron chelate supplement immediately';
+            content = `Iron is critically low at ${ironValue.toFixed(1)} mg/L. Plants will show yellowing leaves (chlorosis) and stunted growth. Target: ${optimalRange.min.toFixed(1)}-${optimalRange.max.toFixed(1)} mg/L.`;
         } else if (ironValue < optimalRange.min) {
             status = 'warning';
             icon = '🟡';
-            action = 'Consider iron supplementation';
-            content = `Iron is low at ${ironValue.toFixed(1)} mg/L. Target range for your crops: ${optimalRange.min}-${optimalRange.max} mg/L.`;
+            action = 'Consider iron chelate supplementation';
+            content = `Iron is below optimal at ${ironValue.toFixed(1)} mg/L. Essential for chlorophyll synthesis and enzyme function. Target: ${optimalRange.min.toFixed(1)}-${optimalRange.max.toFixed(1)} mg/L.`;
         } else if (ironValue > optimalRange.max * 2) {
             status = 'caution';
             icon = '🟠';
-            action = 'Reduce iron inputs';
-            content = `Iron is high at ${ironValue.toFixed(1)} mg/L. Excessive iron can block other nutrient uptake. Target: ${optimalRange.min}-${optimalRange.max} mg/L.`;
+            action = 'Reduce iron inputs to prevent toxicity';
+            content = `Iron is high at ${ironValue.toFixed(1)} mg/L. Excessive iron can block phosphorus and zinc uptake. Target: ${optimalRange.min.toFixed(1)}-${optimalRange.max.toFixed(1)} mg/L.`;
         } else {
             status = 'optimal';
             icon = '✅';
             action = 'Maintain current levels';
-            content = `Iron is optimal at ${ironValue.toFixed(1)} mg/L for your crop mix. Plants have good access for chlorophyll synthesis.`;
+            content = `Iron is optimal at ${ironValue.toFixed(1)} mg/L. Plants have adequate iron for healthy chlorophyll synthesis and enzyme function.`;
         }
         
         return {
@@ -8401,59 +8462,48 @@ class AquaponicsApp {
             level: `Current: ${ironValue.toFixed(1)} mg/L`,
             content,
             action,
-            cropNote: `Target for your crops: ${optimalRange.min}-${optimalRange.max} mg/L`
+            cropNote: `Target: ${optimalRange.min.toFixed(1)}-${optimalRange.max.toFixed(1)} mg/L${ratioNote}`
         };
     }
 
-    analyzePotassium(potassium, crops) {
+    async analyzePotassium(potassium, crops, environmentalData, nitrogenLevel) {
         if (potassium === null || potassium === undefined) return null;
         
         // Convert to number and validate
         const potassiumValue = parseFloat(potassium);
         if (isNaN(potassiumValue)) return null;
         
-        // Use proper aquaponics potassium ranges (10-50 mg/L is typical for aquaponics)
-        // These ranges are based on aquaponics best practices
-        let optimalMin = 10;  // Minimum for plant growth
-        let optimalMax = 40;  // Maximum before potential issues
+        const optimalRange = await this.getCropNutrientRange(crops, 'potassium');
         
-        // Adjust range slightly based on crop types
-        const fruitingPlants = ['tomato', 'cucumber', 'pepper', 'strawberry', 'eggplant'];
-        const hasFruitingPlants = crops.some(crop => fruitingPlants.includes(crop.toLowerCase()));
-        
-        if (hasFruitingPlants) {
-            // Fruiting plants need more potassium for fruit development
-            optimalMin = 15;
-            optimalMax = 50;
+        // Calculate ratio-based recommendation if nitrogen level is available
+        let ratioNote = '';
+        if (nitrogenLevel && nitrogenLevel > 0) {
+            const currentRatio = potassiumValue / nitrogenLevel;
+            ratioNote = ` • Current ratio: ${currentRatio.toFixed(2)}:1 (K:N)`;
         }
         
         let status, icon, action, content;
         
-        if (potassiumValue < 5) {
+        if (potassiumValue < optimalRange.min * 0.6) {
             status = 'critical';
             icon = '🔴';
             action = 'Add potassium supplement or increase fish feeding';
-            content = `Potassium is critically low at ${potassiumValue.toFixed(0)} mg/L. Plants need K for fruit development and disease resistance.`;
-        } else if (potassiumValue < optimalMin) {
+            content = `Potassium is critically low at ${potassiumValue.toFixed(0)} mg/L. Essential for fruit development, disease resistance, and water regulation. Target: ${optimalRange.min.toFixed(0)}-${optimalRange.max.toFixed(0)} mg/L.`;
+        } else if (potassiumValue < optimalRange.min) {
             status = 'warning';
             icon = '🟡';
-            action = 'Increase potassium gradually';
-            content = `Potassium is low at ${potassiumValue.toFixed(0)} mg/L. Target range is ${optimalMin}-${optimalMax} mg/L for your crops.`;
-        } else if (potassiumValue > 80) {
+            action = 'Increase potassium gradually with supplementation';
+            content = `Potassium is below optimal at ${potassiumValue.toFixed(0)} mg/L. Important for fruit quality and plant vigor. Target: ${optimalRange.min.toFixed(0)}-${optimalRange.max.toFixed(0)} mg/L.`;
+        } else if (potassiumValue > optimalRange.max * 1.5) {
             status = 'caution';
             icon = '🟠';
-            action = 'Reduce potassium inputs';
-            content = `Potassium is high at ${potassiumValue.toFixed(0)} mg/L. Excessive K can interfere with calcium and magnesium uptake.`;
-        } else if (potassiumValue > optimalMax) {
-            status = 'caution';
-            icon = '⚠️';
-            action = 'Monitor potassium levels';
-            content = `Potassium is slightly high at ${potassiumValue.toFixed(0)} mg/L. Consider reducing supplementation.`;
+            action = 'Reduce potassium inputs to prevent nutrient imbalance';
+            content = `Potassium is high at ${potassiumValue.toFixed(0)} mg/L. Excessive K can interfere with calcium and magnesium uptake. Target: ${optimalRange.min.toFixed(0)}-${optimalRange.max.toFixed(0)} mg/L.`;
         } else {
             status = 'optimal';
             icon = '✅';
             action = 'Maintain current levels';
-            content = `Potassium is optimal at ${potassiumValue.toFixed(0)} mg/L for your crop mix. Plants have good access for metabolism and fruit quality.`;
+            content = `Potassium is optimal at ${potassiumValue.toFixed(0)} mg/L. Plants have adequate K for metabolism, fruit development, and disease resistance.`;
         }
         
         return {
@@ -8463,59 +8513,48 @@ class AquaponicsApp {
             level: `Current: ${potassiumValue.toFixed(0)} mg/L`,
             content,
             action,
-            cropNote: `Target range: ${optimalMin}-${optimalMax} mg/L for ${crops.join(', ')}`
+            cropNote: `Target: ${optimalRange.min.toFixed(0)}-${optimalRange.max.toFixed(0)} mg/L${ratioNote}`
         };
     }
 
-    analyzeCalcium(calcium, crops) {
+    async analyzeCalcium(calcium, crops, environmentalData, nitrogenLevel) {
         if (calcium === null || calcium === undefined) return null;
         
         // Convert to number and validate
         const calciumValue = parseFloat(calcium);
         if (isNaN(calciumValue)) return null;
         
-        // Use proper aquaponics calcium ranges (20-80 mg/L is typical for aquaponics)
-        // These ranges are based on aquaponics best practices
-        let optimalMin = 20;  // Minimum for plant growth
-        let optimalMax = 60;  // Maximum before potential issues
+        const optimalRange = await this.getCropNutrientRange(crops, 'calcium');
         
-        // Adjust range slightly based on crop types
-        const fruitingPlants = ['tomato', 'cucumber', 'pepper', 'strawberry', 'eggplant'];
-        const hasFruitingPlants = crops.some(crop => fruitingPlants.includes(crop.toLowerCase()));
-        
-        if (hasFruitingPlants) {
-            // Fruiting plants need more calcium to prevent blossom end rot
-            optimalMin = 30;
-            optimalMax = 80;
+        // Calculate ratio-based recommendation if nitrogen level is available
+        let ratioNote = '';
+        if (nitrogenLevel && nitrogenLevel > 0) {
+            const currentRatio = calciumValue / nitrogenLevel;
+            ratioNote = ` • Current ratio: ${currentRatio.toFixed(2)}:1 (Ca:N)`;
         }
         
         let status, icon, action, content;
         
-        if (calciumValue < 10) {
+        if (calciumValue < optimalRange.min * 0.5) {
             status = 'critical';
             icon = '🔴';
             action = 'Add calcium supplement immediately';
-            content = `Calcium is critically low at ${calciumValue.toFixed(0)} mg/L. Plants will develop weak cell walls and blossom end rot.`;
-        } else if (calciumValue < optimalMin) {
+            content = `Calcium is critically low at ${calciumValue.toFixed(0)} mg/L. Plants will develop weak cell walls and blossom end rot. Target: ${optimalRange.min.toFixed(0)}-${optimalRange.max.toFixed(0)} mg/L.`;
+        } else if (calciumValue < optimalRange.min) {
             status = 'warning';
             icon = '🟡';
-            action = 'Increase calcium levels';
-            content = `Calcium is low at ${calciumValue.toFixed(0)} mg/L. Target range is ${optimalMin}-${optimalMax} mg/L for your crops.`;
-        } else if (calciumValue > 120) {
+            action = 'Increase calcium levels with supplementation';
+            content = `Calcium is below optimal at ${calciumValue.toFixed(0)} mg/L. Essential for cell wall strength and preventing disorders. Target: ${optimalRange.min.toFixed(0)}-${optimalRange.max.toFixed(0)} mg/L.`;
+        } else if (calciumValue > optimalRange.max * 1.8) {
             status = 'caution';
             icon = '🟠';
-            action = 'Reduce calcium inputs';
-            content = `Calcium is high at ${calciumValue.toFixed(0)} mg/L. Very high Ca can reduce uptake of magnesium and other nutrients.`;
-        } else if (calciumValue > optimalMax) {
-            status = 'caution';
-            icon = '⚠️';
-            action = 'Monitor calcium levels';
-            content = `Calcium is slightly high at ${calciumValue.toFixed(0)} mg/L. Consider reducing supplementation.`;
+            action = 'Reduce calcium inputs to prevent nutrient lockout';
+            content = `Calcium is very high at ${calciumValue.toFixed(0)} mg/L. Excessive Ca can reduce magnesium and iron uptake. Target: ${optimalRange.min.toFixed(0)}-${optimalRange.max.toFixed(0)} mg/L.`;
         } else {
             status = 'optimal';
             icon = '✅';
             action = 'Maintain current levels';
-            content = `Calcium is optimal at ${calciumValue.toFixed(0)} mg/L for your crop mix. Plants have strong cell wall development.`;
+            content = `Calcium is optimal at ${calciumValue.toFixed(0)} mg/L. Plants have adequate Ca for strong cell walls and disease resistance.`;
         }
         
         return {
@@ -8525,7 +8564,7 @@ class AquaponicsApp {
             level: `Current: ${calciumValue.toFixed(0)} mg/L`,
             content,
             action,
-            cropNote: `Target range: ${optimalMin}-${optimalMax} mg/L for ${crops.join(', ')}`
+            cropNote: `Target: ${optimalRange.min.toFixed(0)}-${optimalRange.max.toFixed(0)} mg/L${ratioNote}`
         };
     }
 
@@ -8666,41 +8705,44 @@ class AquaponicsApp {
         };
     }
 
-    analyzePhosphorus(phosphorus, crops) {
+    async analyzePhosphorus(phosphorus, crops, environmentalData, nitrogenLevel) {
         if (phosphorus === null || phosphorus === undefined) return null;
         
         // Convert to number and validate
         const phosphorusValue = parseFloat(phosphorus);
         if (isNaN(phosphorusValue)) return null;
         
-        const optimalRange = this.getCropNutrientRange(crops, 'p');
+        const optimalRange = await this.getCropNutrientRange(crops, 'phosphorus');
+        
+        // Calculate ratio-based recommendation if nitrogen level is available
+        let ratioNote = '';
+        if (nitrogenLevel && nitrogenLevel > 0) {
+            const currentRatio = phosphorusValue / nitrogenLevel;
+            ratioNote = ` • Current ratio: ${currentRatio.toFixed(3)}:1 (P:N)`;
+        }
+        
         let status, icon, action, content;
         
         if (phosphorusValue < optimalRange.min * 0.5) {
             status = 'critical';
             icon = '🔴';
-            action = 'Add phosphorus supplement';
-            content = `Phosphorus is critically low at ${phosphorusValue.toFixed(1)} mg/L. Plants will have poor root development and flowering.`;
+            action = 'Add phosphorus supplement immediately';
+            content = `Phosphorus is critically low at ${phosphorusValue.toFixed(1)} mg/L. Essential for root development, flowering, and energy transfer. Target: ${optimalRange.min.toFixed(1)}-${optimalRange.max.toFixed(1)} mg/L.`;
         } else if (phosphorusValue < optimalRange.min) {
             status = 'warning';
             icon = '🟡';
-            action = 'Increase phosphorus levels';
-            content = `Phosphorus is below optimal at ${phosphorusValue.toFixed(1)} mg/L. Target range is ${optimalRange.min}-${optimalRange.max} mg/L for your crops.`;
+            action = 'Increase phosphorus levels with supplementation';
+            content = `Phosphorus is below optimal at ${phosphorusValue.toFixed(1)} mg/L. Important for root growth and flower/fruit development. Target: ${optimalRange.min.toFixed(1)}-${optimalRange.max.toFixed(1)} mg/L.`;
         } else if (phosphorusValue > optimalRange.max * 1.5) {
-            status = 'warning';
-            icon = '🟠';
-            action = 'Reduce phosphorus input';
-            content = `Phosphorus is excessively high at ${phosphorusValue.toFixed(1)} mg/L. This can cause nutrient lockout and algae growth.`;
-        } else if (phosphorusValue > optimalRange.max) {
             status = 'caution';
-            icon = '⚠️';
-            action = 'Monitor phosphorus levels';
-            content = `Phosphorus is slightly high at ${phosphorusValue.toFixed(1)} mg/L. Monitor for potential nutrient imbalances.`;
+            icon = '🟠';
+            action = 'Reduce phosphorus input to prevent algae growth';
+            content = `Phosphorus is high at ${phosphorusValue.toFixed(1)} mg/L. Excess P can cause algae blooms and nutrient lockout. Target: ${optimalRange.min.toFixed(1)}-${optimalRange.max.toFixed(1)} mg/L.`;
         } else {
             status = 'optimal';
             icon = '✅';
             action = 'Maintain current levels';
-            content = `Phosphorus is optimal at ${phosphorusValue.toFixed(1)} mg/L. Plants have strong root and flower development.`;
+            content = `Phosphorus is optimal at ${phosphorusValue.toFixed(1)} mg/L. Plants have adequate P for energy transfer and development.`;
         }
         
         return {
@@ -8710,7 +8752,7 @@ class AquaponicsApp {
             level: `Current: ${phosphorusValue.toFixed(1)} mg/L`,
             content,
             action,
-            cropNote: `Optimal range: ${optimalRange.min}-${optimalRange.max} mg/L for ${crops.join(', ')}`
+            cropNote: `Target: ${optimalRange.min.toFixed(1)}-${optimalRange.max.toFixed(1)} mg/L${ratioNote}`
         };
     }
 
@@ -8806,35 +8848,218 @@ class AquaponicsApp {
         };
     }
 
-    getCropNutrientRange(crops, nutrient) {
+    async analyzeMagnesium(magnesium, crops, environmentalData, nitrogenLevel) {
+        if (magnesium === null || magnesium === undefined) return null;
+        
+        // Convert to number and validate
+        const magnesiumValue = parseFloat(magnesium);
+        if (isNaN(magnesiumValue)) return null;
+        
+        const optimalRange = await this.getCropNutrientRange(crops, 'magnesium');
+        
+        // Calculate ratio-based recommendation if nitrogen level is available
+        let ratioNote = '';
+        if (nitrogenLevel && nitrogenLevel > 0) {
+            const currentRatio = magnesiumValue / nitrogenLevel;
+            ratioNote = ` • Current ratio: ${currentRatio.toFixed(3)}:1 (Mg:N)`;
+        }
+        
+        let status, icon, action, content;
+        
+        if (magnesiumValue < optimalRange.min * 0.5) {
+            status = 'critical';
+            icon = '🔴';
+            action = 'Add magnesium supplement immediately';
+            content = `Magnesium is critically low at ${magnesiumValue.toFixed(1)} mg/L. Essential for chlorophyll production and enzyme activation. Target: ${optimalRange.min.toFixed(1)}-${optimalRange.max.toFixed(1)} mg/L.`;
+        } else if (magnesiumValue < optimalRange.min) {
+            status = 'warning';
+            icon = '🟡';
+            action = 'Increase magnesium levels with supplementation';
+            content = `Magnesium is below optimal at ${magnesiumValue.toFixed(1)} mg/L. Important for photosynthesis and nutrient transport. Target: ${optimalRange.min.toFixed(1)}-${optimalRange.max.toFixed(1)} mg/L.`;
+        } else if (magnesiumValue > optimalRange.max * 1.8) {
+            status = 'caution';
+            icon = '🟠';
+            action = 'Reduce magnesium inputs to prevent imbalance';
+            content = `Magnesium is high at ${magnesiumValue.toFixed(1)} mg/L. Excessive Mg can interfere with calcium uptake. Target: ${optimalRange.min.toFixed(1)}-${optimalRange.max.toFixed(1)} mg/L.`;
+        } else {
+            status = 'optimal';
+            icon = '✅';
+            action = 'Maintain current levels';
+            content = `Magnesium is optimal at ${magnesiumValue.toFixed(1)} mg/L. Plants have adequate Mg for chlorophyll synthesis and enzyme function.`;
+        }
+        
+        return {
+            title: 'Magnesium (Mg)',
+            status,
+            icon,
+            level: `Current: ${magnesiumValue.toFixed(1)} mg/L`,
+            content,
+            action,
+            cropNote: `Target: ${optimalRange.min.toFixed(1)}-${optimalRange.max.toFixed(1)} mg/L${ratioNote}`
+        };
+    }
+
+    async getCropNutrientRange(crops, nutrient) {
+        try {
+            // Create cache key based on crops and nutrient
+            const cacheKey = `${JSON.stringify(crops)}_${nutrient}`;
+            
+            // Check if we have a cached result (valid for 5 minutes)
+            if (this.nutrientRangeCache && this.nutrientRangeCache[cacheKey]) {
+                const cached = this.nutrientRangeCache[cacheKey];
+                if (Date.now() - cached.timestamp < 300000) { // 5 minutes
+                    return cached.data;
+                }
+            }
+            
+            // Initialize cache if it doesn't exist
+            if (!this.nutrientRangeCache) {
+                this.nutrientRangeCache = {};
+            }
+            
+            // Get current water quality data for environmental factors
+            const latestData = this.getLatestWaterQualityData();
+            const environmentalParams = {
+                temperature: latestData?.temperature || 22,  // Default 22°C
+                ph: latestData?.ph || 6.5,                 // Default 6.5 pH
+                ec: latestData?.ec || 1.2                  // Default 1.2 EC
+            };
+
+            // Determine nitrogen baseline (assume 100 ppm as default for ratio calculations)
+            const nitrogenBaseline = latestData?.nitrogen || 100;
+
+            let minValues = [];
+            let maxValues = [];
+            
+            // Calculate ratio-based nutrient concentrations for each crop
+            for (const crop of crops) {
+                try {
+                    const response = await fetch(`/api/crop-knowledge/calculate/nutrient-ratios`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.authToken || ''}`
+                        },
+                        body: JSON.stringify({
+                            base_nitrate_ppm: nitrogenBaseline,
+                            crop_code: crop.toLowerCase(),
+                            growth_stage: 'general',
+                            environmental_conditions: environmentalParams
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success && data.calculations && data.calculations[nutrient]) {
+                            const calc = data.calculations[nutrient];
+                            
+                            // Use the ratio-based calculated ranges from the API
+                            if (calc.min_range && calc.max_range) {
+                                minValues.push(calc.min_range);
+                                maxValues.push(calc.max_range);
+                            } else if (calc.calculated_ppm) {
+                                // Fallback: use calculated value with ±15% tolerance
+                                const adjustedConcentration = calc.calculated_ppm * (calc.environmental_adjustment || 1.0);
+                                minValues.push(adjustedConcentration * 0.85);
+                                maxValues.push(adjustedConcentration * 1.15);
+                            }
+                        }
+                    }
+                } catch (cropError) {
+                    console.warn(`Failed to fetch ratio calculation for crop: ${crop}`, cropError);
+                }
+            }
+            
+            // If no ratio data found, fallback to simple API ranges
+            if (minValues.length === 0) {
+                return await this.getFallbackNutrientRangeFromAPI(crops, nutrient);
+            }
+            
+            const result = {
+                min: Math.min(...minValues),
+                max: Math.max(...maxValues)
+            };
+            
+            // Cache the result
+            this.nutrientRangeCache[cacheKey] = {
+                data: result,
+                timestamp: Date.now()
+            };
+            
+            return result;
+            
+        } catch (error) {
+            console.warn('Failed to fetch ratio-based nutrient ranges, using fallback:', error);
+            return this.getFallbackNutrientRange(nutrient);
+        }
+    }
+
+    getCachedNutrientRange(crops, nutrient) {
         let minValues = [];
         let maxValues = [];
         
         crops.forEach(crop => {
-            const cropData = this.cropTargets[crop.toLowerCase()];
-            if (cropData && cropData[nutrient]) {
-                minValues.push(cropData[nutrient] * 0.8); // 80% of target as minimum
-                maxValues.push(cropData[nutrient] * 1.2); // 120% of target as maximum
+            const cropData = this.cropKnowledgeCache.crops[crop.toLowerCase()];
+            if (cropData && cropData.nutrients[nutrient]) {
+                minValues.push(cropData.nutrients[nutrient].min);
+                maxValues.push(cropData.nutrients[nutrient].max);
             }
         });
         
-        // If no specific crop data found, use general ranges
         if (minValues.length === 0) {
-            const generalRanges = {
-                n: { min: 50, max: 100 },
-                p: { min: 15, max: 30 },
-                k: { min: 80, max: 180 },
-                ca: { min: 60, max: 120 },
-                mg: { min: 12, max: 25 },
-                fe: { min: 1.0, max: 2.5 }
-            };
-            return generalRanges[nutrient] || { min: 0, max: 100 };
+            return this.getFallbackNutrientRange(nutrient);
         }
         
         return {
             min: Math.min(...minValues),
             max: Math.max(...maxValues)
         };
+    }
+
+    async getFallbackNutrientRangeFromAPI(crops, nutrient) {
+        try {
+            let minValues = [];
+            let maxValues = [];
+            
+            // Fetch data for each crop from simple API
+            for (const crop of crops) {
+                const response = await fetch(`/api/crop-knowledge/crops/${crop.toLowerCase()}/nutrient-ranges?stage=general`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.ranges[nutrient]) {
+                        const range = data.ranges[nutrient];
+                        minValues.push(range.min);
+                        maxValues.push(range.max);
+                    }
+                }
+            }
+            
+            // If no API data found, fallback to hardcoded ranges
+            if (minValues.length === 0) {
+                return this.getFallbackNutrientRange(nutrient);
+            }
+            
+            return {
+                min: Math.min(...minValues),
+                max: Math.max(...maxValues)
+            };
+            
+        } catch (error) {
+            console.warn('Failed to fetch fallback nutrient range from API:', error);
+            return this.getFallbackNutrientRange(nutrient);
+        }
+    }
+
+    getFallbackNutrientRange(nutrient) {
+        const generalRanges = {
+            nitrogen: { min: 50, max: 100 },
+            phosphorus: { min: 15, max: 30 },
+            potassium: { min: 80, max: 180 },
+            calcium: { min: 60, max: 120 },
+            magnesium: { min: 12, max: 25 },
+            iron: { min: 1.0, max: 2.5 }
+        };
+        return generalRanges[nutrient] || { min: 0, max: 100 };
     }
 
     generateSystemRecommendation(data, crops) {
@@ -8882,17 +9107,27 @@ class AquaponicsApp {
         };
     }
 
-    getOptimalPH(crops) {
+    async getOptimalPH(crops) {
         let minValues = [];
         let maxValues = [];
         
-        crops.forEach(crop => {
-            const cropData = this.cropTargets[crop.toLowerCase()];
-            if (cropData && cropData.ph_min && cropData.ph_max) {
-                minValues.push(cropData.ph_min);
-                maxValues.push(cropData.ph_max);
+        for (const crop of crops) {
+            try {
+                const response = await fetch(`/api/crop-knowledge/crops/${crop.toLowerCase()}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.data.crop) {
+                        const cropData = data.data.crop;
+                        if (cropData.default_ph_min && cropData.default_ph_max) {
+                            minValues.push(cropData.default_ph_min);
+                            maxValues.push(cropData.default_ph_max);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn(`Failed to fetch pH data for crop: ${crop}`, error);
             }
-        });
+        }
         
         if (minValues.length === 0) {
             // Default aquaponics pH range
@@ -9736,7 +9971,7 @@ class AquaponicsApp {
                     Real-time nutrient levels and plant health indicators for optimal growth conditions.
                 </p>
                 <div class="nutrient-cards-grid">
-                    <div class="nutrient-card">
+                    <div class="nutrient-card clickable-nutrient-card" onclick="app.openComprehensiveNutrientModal('nitrate')" title="Click for detailed nutrient information">
                         <h4>Nitrate (NO₃)</h4>
                         <div class="nutrient-status" id="nitrate-status">
                             <span class="status-indicator" id="nitrate-indicator">●</span>
@@ -9745,7 +9980,7 @@ class AquaponicsApp {
                         <div class="stat-value" id="plant-nitrate">Loading...</div>
                         <div class="chart-timestamp" id="plant-nitrate-chart-timestamp">Last updated: Loading...</div>
                     </div>
-                    <div class="nutrient-card">
+                    <div class="nutrient-card clickable-nutrient-card" onclick="app.openComprehensiveNutrientModal('phosphorus')" title="Click for detailed nutrient information">
                         <h4>Phosphorus (P)</h4>
                         <div class="nutrient-status" id="phosphorus-status">
                             <span class="status-indicator" id="phosphorus-indicator">●</span>
@@ -9754,7 +9989,7 @@ class AquaponicsApp {
                         <div class="stat-value" id="plant-phosphorus">Loading...</div>
                         <div class="chart-timestamp" id="plant-phosphorus-chart-timestamp">Last updated: Loading...</div>
                     </div>
-                    <div class="nutrient-card">
+                    <div class="nutrient-card clickable-nutrient-card" onclick="app.openComprehensiveNutrientModal('potassium')" title="Click for detailed nutrient information">
                         <h4>Potassium (K)</h4>
                         <div class="nutrient-status" id="potassium-status">
                             <span class="status-indicator" id="potassium-indicator">●</span>
@@ -9763,7 +9998,7 @@ class AquaponicsApp {
                         <div class="stat-value" id="plant-potassium">Loading...</div>
                         <div class="chart-timestamp" id="plant-potassium-chart-timestamp">Last updated: Loading...</div>
                     </div>
-                    <div class="nutrient-card">
+                    <div class="nutrient-card clickable-nutrient-card" onclick="app.openComprehensiveNutrientModal('iron')" title="Click for detailed nutrient information">
                         <h4>Iron (Fe)</h4>
                         <div class="nutrient-status" id="iron-status">
                             <span class="status-indicator" id="iron-indicator">●</span>
@@ -9772,7 +10007,7 @@ class AquaponicsApp {
                         <div class="stat-value" id="plant-iron">Loading...</div>
                         <div class="chart-timestamp" id="plant-iron-chart-timestamp">Last updated: Loading...</div>
                     </div>
-                    <div class="nutrient-card">
+                    <div class="nutrient-card clickable-nutrient-card" onclick="app.openComprehensiveNutrientModal('calcium')" title="Click for detailed nutrient information">
                         <h4>Calcium (Ca)</h4>
                         <div class="nutrient-status" id="calcium-status">
                             <span class="status-indicator" id="calcium-indicator">●</span>
@@ -15031,7 +15266,7 @@ class AquaponicsApp {
         container.innerHTML = `<div class="plant-history-list">${historyHtml}</div>`;
     }
 
-    updatePlantRecommendations() {
+    async updatePlantRecommendations() {
         const container = document.getElementById('plant-recommendations');
         if (!container) return;
 
@@ -16840,6 +17075,9 @@ class AquaponicsApp {
 
     async switchToSystem(systemId) {
         
+        // Clear nutrient range cache when switching systems
+        this.nutrientRangeCache = {};
+        
         if (systemId === '' || systemId === undefined || systemId === 'undefined') {
             this.activeSystemId = null;
             localStorage.removeItem('activeSystemId');
@@ -16960,6 +17198,331 @@ class AquaponicsApp {
     closeNewSystemModal() {
         const modal = document.getElementById('new-system-modal');
         modal.classList.remove('show');
+    }
+    
+    // =====================================================
+    // COMPREHENSIVE NUTRIENT INFORMATION MODAL
+    // =====================================================
+    
+    async showComprehensiveNutrientInfo(nutrientCode) {
+        const modal = document.getElementById('comprehensive-nutrient-modal');
+        const loadingDiv = document.getElementById('nutrient-modal-loading');
+        const errorDiv = document.getElementById('nutrient-modal-error');
+        const contentDiv = document.getElementById('nutrient-modal-content');
+        
+        try {
+            // Show modal with loading state
+            modal.style.display = 'flex';
+            loadingDiv.style.display = 'block';
+            errorDiv.style.display = 'none';
+            contentDiv.style.display = 'none';
+            
+            // Get current system ID for context
+            const systemId = this.activeSystemId;
+            
+            // Fetch comprehensive nutrient data
+            const url = `/api/crop-knowledge/nutrients/${nutrientCode}/detailed${systemId ? `?systemId=${systemId}` : ''}`;
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to fetch nutrient information');
+            }
+            
+            const nutrientData = result.data;
+            
+            // Hide loading, show content
+            loadingDiv.style.display = 'none';
+            contentDiv.style.display = 'block';
+            
+            // Populate modal with nutrient data
+            this.populateNutrientModal(nutrientData);
+            
+        } catch (error) {
+            console.error('Error loading comprehensive nutrient info:', error);
+            
+            // Show error state
+            loadingDiv.style.display = 'none';
+            contentDiv.style.display = 'none';
+            errorDiv.style.display = 'block';
+            errorDiv.querySelector('p').textContent = error.message || 'Failed to load nutrient information';
+        }
+    }
+    
+    populateNutrientModal(nutrientData) {
+        // Update modal title and basic info
+        document.getElementById('nutrient-modal-name').textContent = `${nutrientData.name} (${nutrientData.symbol})`;
+        document.getElementById('nutrient-symbol').textContent = nutrientData.symbol;
+        document.getElementById('nutrient-unit').textContent = nutrientData.unit;
+        
+        const mobilityElement = document.getElementById('nutrient-mobility');
+        mobilityElement.textContent = nutrientData.mobility;
+        mobilityElement.setAttribute('data-mobility', nutrientData.mobility);
+        
+        document.getElementById('nutrient-description').textContent = nutrientData.description || 'No description available.';
+        document.getElementById('nutrient-functions').textContent = nutrientData.primary_functions || 'No function information available.';
+        document.getElementById('deficiency-symptoms').textContent = nutrientData.deficiency_symptoms || 'No deficiency information available.';
+        document.getElementById('toxicity-symptoms').textContent = nutrientData.toxicity_symptoms || 'No toxicity information available.';
+        document.getElementById('uptake-interactions').textContent = nutrientData.uptake_interactions || 'No interaction information available.';
+        document.getElementById('common-sources').textContent = nutrientData.common_sources || 'No source information available.';
+        
+        // Populate system context if available
+        this.populateSystemContext(nutrientData.system_context);
+        
+        // Populate ratio information
+        this.populateRatioInformation(nutrientData.ratio_info);
+        
+        // Populate deficiency images
+        this.populateDeficiencyImages(nutrientData.deficiency_images);
+        
+        // Populate competition interactions
+        this.populateCompetitionInteractions(nutrientData.competitions);
+        
+        // Populate pH availability chart
+        this.populatePHAvailability(nutrientData.ph_availability);
+    }
+    
+    populateSystemContext(systemContext) {
+        const contextSection = document.getElementById('system-context-section');
+        const contextContainer = document.getElementById('system-crop-recommendations');
+        
+        if (!systemContext || !systemContext.current_crops || systemContext.current_crops.length === 0) {
+            contextSection.style.display = 'none';
+            return;
+        }
+        
+        contextSection.style.display = 'block';
+        
+        let contextHTML = '<p class="context-intro">Based on crops currently growing in your system:</p>';
+        
+        Object.entries(systemContext.crop_ranges).forEach(([cropCode, cropData]) => {
+            contextHTML += `
+                <div class="crop-recommendation-card">
+                    <div class="crop-recommendation-header">
+                        <h5 class="crop-recommendation-name">${cropData.crop_name}</h5>
+                    </div>
+                    <div class="stage-recommendations">
+                        ${Object.entries(cropData.stages).map(([stageCode, stageData]) => `
+                            <div class="stage-recommendation">
+                                <div class="stage-name">${stageData.stage_name}</div>
+                                <div class="stage-values">
+                                    <span class="target-value">${stageData.target} ppm</span>
+                                    <span class="range-values">(${stageData.min} - ${stageData.max})</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        });
+        
+        contextContainer.innerHTML = contextHTML;
+    }
+    
+    populateRatioInformation(ratioInfo) {
+        const ratioContainer = document.getElementById('ratio-info-content');
+        
+        if (!ratioInfo) {
+            ratioContainer.innerHTML = '<p>No ratio information available for this nutrient.</p>';
+            return;
+        }
+        
+        let ratioHTML = '';
+        
+        if (ratioInfo.is_ratio_based) {
+            // Ratio-based nutrient
+            ratioHTML = `
+                <div class="ratio-explanation">
+                    <div class="ratio-explanation-title">
+                        📊 Ratio-Based Nutrient
+                    </div>
+                    <p>This nutrient concentration is calculated as a ratio relative to ${ratioInfo.base_nutrient} levels in your system.</p>
+                </div>
+                <div class="ratio-stages">
+                    ${Object.entries(ratioInfo.stages).map(([stageCode, stageData]) => `
+                        <div class="ratio-stage-card">
+                            <div class="stage-header">${stageData.stage_name}</div>
+                            <div class="ratio-values">
+                                <div class="ratio-average">${stageData.avg_ratio}:1</div>
+                                <div class="ratio-range">Range: ${stageData.min_ratio} - ${stageData.max_ratio}</div>
+                                ${stageData.notes ? `<div class="ratio-notes">${stageData.notes}</div>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } else if (ratioInfo.fixed_ranges) {
+            // Fixed-range nutrient
+            ratioHTML = `
+                <div class="fixed-range-explanation">
+                    <div class="fixed-range-title">
+                        📏 Fixed Concentration Range
+                    </div>
+                    <p>This nutrient uses absolute concentration values (ppm) rather than ratios.</p>
+                </div>
+                <div class="ratio-stages">
+                    ${Object.entries(ratioInfo.fixed_ranges).map(([stageCode, stageData]) => `
+                        <div class="ratio-stage-card">
+                            <div class="stage-header">${stageData.stage_name}</div>
+                            <div class="ratio-values">
+                                <div class="ratio-average">${stageData.avg_ppm} ppm</div>
+                                <div class="ratio-range">Range: ${stageData.min_ppm} - ${stageData.max_ppm} ppm</div>
+                                ${stageData.notes ? `<div class="ratio-notes">${stageData.notes}</div>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+        ratioContainer.innerHTML = ratioHTML;
+    }
+    
+    populateDeficiencyImages(deficiencyImages) {
+        const imagesSection = document.getElementById('deficiency-images-section');
+        const imagesGrid = document.getElementById('deficiency-images-grid');
+        
+        if (!deficiencyImages || deficiencyImages.length === 0) {
+            imagesSection.style.display = 'none';
+            return;
+        }
+        
+        imagesSection.style.display = 'block';
+        
+        const imagesHTML = deficiencyImages.map(image => `
+            <div class="deficiency-image-card">
+                <img src="${image.image_url || image.image_filename}" alt="${image.caption}" class="deficiency-image">
+                <div class="image-caption">${image.caption || 'Deficiency symptoms'}</div>
+                <span class="deficiency-stage-badge ${image.deficiency_stage}">${image.deficiency_stage}</span>
+                ${image.plant_type ? `<div class="plant-type">Plant: ${image.plant_type}</div>` : ''}
+            </div>
+        `).join('');
+        
+        imagesGrid.innerHTML = imagesHTML;
+    }
+    
+    populateCompetitionInteractions(competitions) {
+        const interactionsSection = document.getElementById('interactions-section');
+        const competitionContainer = document.getElementById('competition-interactions');
+        
+        if (!competitions || competitions.length === 0) {
+            interactionsSection.style.display = 'none';
+            return;
+        }
+        
+        interactionsSection.style.display = 'block';
+        
+        const competitionsHTML = competitions.map(comp => `
+            <div class="competition-card">
+                <div class="competition-header">
+                    <div class="competition-nutrient">${comp.competing_name} (${comp.competing_symbol})</div>
+                    <div>
+                        <span class="competition-type-badge ${comp.competition_type}">${comp.competition_type}</span>
+                        <span class="competition-strength">${comp.competition_strength}</span>
+                    </div>
+                </div>
+                <div class="competition-description">${comp.competition_description}</div>
+                ${comp.optimal_ratio_notes ? `<div class="optimal-ratio-notes">Optimal ratio: ${comp.optimal_ratio_notes}</div>` : ''}
+            </div>
+        `).join('');
+        
+        competitionContainer.innerHTML = competitionsHTML;
+    }
+    
+    populatePHAvailability(phRanges) {
+        const phSection = document.getElementById('ph-availability-section');
+        const phDataGrid = document.getElementById('ph-availability-data');
+        
+        if (!phRanges || phRanges.length === 0) {
+            phSection.style.display = 'none';
+            return;
+        }
+        
+        phSection.style.display = 'block';
+        
+        const phDataHTML = phRanges.map(range => `
+            <div class="ph-data-item">
+                <div class="ph-range">pH ${range.ph_min} - ${range.ph_max}</div>
+                <div class="availability-percentage">${range.availability_percentage}%</div>
+                <div class="availability-bar">
+                    <div class="availability-fill" style="width: ${range.availability_percentage}%"></div>
+                </div>
+            </div>
+        `).join('');
+        
+        phDataGrid.innerHTML = phDataHTML;
+        
+        // Create simple pH availability chart
+        this.createPHAvailabilityChart(phRanges);
+    }
+    
+    createPHAvailabilityChart(phRanges) {
+        const canvas = document.getElementById('ph-availability-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Set up chart dimensions
+        const padding = 40;
+        const chartWidth = canvas.width - 2 * padding;
+        const chartHeight = canvas.height - 2 * padding;
+        
+        // Draw axis
+        ctx.strokeStyle = '#666';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        // X-axis
+        ctx.moveTo(padding, canvas.height - padding);
+        ctx.lineTo(canvas.width - padding, canvas.height - padding);
+        // Y-axis
+        ctx.moveTo(padding, padding);
+        ctx.lineTo(padding, canvas.height - padding);
+        ctx.stroke();
+        
+        // Draw pH availability bars
+        const barWidth = chartWidth / phRanges.length;
+        
+        phRanges.forEach((range, index) => {
+            const barHeight = (range.availability_percentage / 100) * chartHeight;
+            const x = padding + index * barWidth;
+            const y = canvas.height - padding - barHeight;
+            
+            // Color based on availability
+            if (range.availability_percentage >= 80) {
+                ctx.fillStyle = '#80FB7B';
+            } else if (range.availability_percentage >= 50) {
+                ctx.fillStyle = '#f59e0b';
+            } else {
+                ctx.fillStyle = '#ef4444';
+            }
+            
+            ctx.fillRect(x + 2, y, barWidth - 4, barHeight);
+            
+            // Draw pH range labels
+            ctx.fillStyle = '#333';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${range.ph_min}-${range.ph_max}`, x + barWidth/2, canvas.height - padding + 15);
+        });
+        
+        // Draw labels
+        ctx.fillStyle = '#333';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('pH Range', canvas.width / 2, canvas.height - 5);
+        
+        ctx.save();
+        ctx.translate(15, canvas.height / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.textAlign = 'center';
+        ctx.fillText('Availability %', 0, 0);
+        ctx.restore();
     }
     
     updateWizardUI() {
@@ -19195,31 +19758,6 @@ class AquaponicsApp {
             }
         ];
 
-        // Aquaponics-specific target values (optimized for fish waste supplementation)
-        this.cropTargets = {
-            // LEAFY GREENS
-            lettuce: { n: 73, p: 19, k: 90, ca: 67, mg: 13, fe: 1.8, ec: 1.1, ph_min: 6.0, ph_max: 6.8, notes: "Achieved highest yields with P and K supplementation" },
-            spinach: { n: 65, p: 16, k: 75, ca: 65, mg: 15, fe: 1.6, ec: 1.05, ph_min: 6.5, ph_max: 7.2, notes: "Tolerates cooler temperatures well" },
-            kale: { n: 75, p: 21, k: 95, ca: 80, mg: 18, fe: 2.0, ec: 1.3, ph_min: 6.0, ph_max: 6.8, notes: "PPM over 600 but below 900 for optimal growth" },
-            swiss_chard: { n: 70, p: 19, k: 82, ca: 70, mg: 14, fe: 1.75, ec: 1.2, ph_min: 6.0, ph_max: 6.5, notes: "EC around 2.0 mS/cm for optimal yield" },
-            arugula: { n: 60, p: 14, k: 65, ca: 57, mg: 11, fe: 1.6, ec: 0.85, ph_min: 6.0, ph_max: 6.5, notes: "EC between 0.5 and 2.0 mS/cm" },
-            pac_choi: { n: 65, p: 17, k: 80, ca: 65, mg: 14, fe: 1.75, ec: 1.25, ph_min: 6.0, ph_max: 6.8, notes: "Same EC range as arugula" },
-            
-            // HERBS
-            basil: { n: 95, p: 25, k: 150, ca: 95, mg: 22, fe: 2.05, ec: 1.3, ph_min: 5.5, ph_max: 6.5, notes: "Highest production in micronutrient supplemented systems" },
-            mint: { n: 80, p: 21, k: 130, ca: 80, mg: 18, fe: 1.85, ec: 1.3, ph_min: 5.5, ph_max: 6.5, notes: "Shows stress response without supplementation" },
-            parsley: { n: 70, p: 17, k: 110, ca: 72, mg: 15, fe: 1.65, ec: 1.1, ph_min: 6.0, ph_max: 7.0, notes: "Prefers cooler water temperatures" },
-            cilantro: { n: 65, p: 15, k: 100, ca: 65, mg: 13, fe: 1.5, ec: 1.05, ph_min: 6.0, ph_max: 6.8, notes: "Fast-growing, harvest in 2-3 weeks" },
-            chives: { n: 55, p: 14, k: 85, ca: 55, mg: 11, fe: 1.3, ec: 1.0, ph_min: 6.0, ph_max: 7.0, notes: "Low nutrient requirements" },
-            oregano: { n: 62, p: 16, k: 95, ca: 65, mg: 14, fe: 1.5, ec: 1.15, ph_min: 6.0, ph_max: 7.0, notes: "Mediterranean herb, drought tolerant" },
-            thyme: { n: 57, p: 14, k: 90, ca: 60, mg: 12, fe: 1.4, ec: 1.05, ph_min: 6.5, ph_max: 7.5, notes: "Prefers slightly alkaline conditions" },
-            
-            // FRUITING VEGETABLES
-            tomatoes: { n: 150, p: 45, k: 275, ca: 150, mg: 37, fe: 2.5, ec: 2.0, ph_min: 5.8, ph_max: 6.5, notes: "K accumulates in fruits; Ca decreases during fruiting" },
-            peppers: { n: 115, p: 37, k: 225, ca: 120, mg: 30, fe: 2.3, ec: 1.85, ph_min: 5.8, ph_max: 6.5, notes: "Require warmer water temperatures" },
-            cucumbers: { n: 135, p: 41, k: 250, ca: 135, mg: 33, fe: 2.15, ec: 2.0, ph_min: 5.8, ph_max: 6.8, notes: "High water content, need good aeration" },
-            eggplant: { n: 122, p: 36, k: 225, ca: 127, mg: 31, fe: 2.3, ec: 2.05, ph_min: 5.5, ph_max: 6.0, notes: "PPM range of 1750-2450 recommended" }
-        };
 
         // Core water quality parameters for aquaponics
         this.systemParameters = {
@@ -21776,6 +22314,763 @@ Generated by Afraponix Go - Aquaponics Management System`;
         container.innerHTML = html;
     }
 
+    // =====================================================
+    // ADMIN CROP KNOWLEDGE MANAGEMENT
+    // =====================================================
+
+    async loadAdminCrops() {
+        try {
+            const response = await fetch('/api/crop-knowledge/crops');
+            const data = await response.json();
+            
+            if (data.success) {
+                this.displayAdminCrops(data.data);
+            } else {
+                throw new Error(data.error || 'Failed to load crops');
+            }
+        } catch (error) {
+            console.error('Error loading admin crops:', error);
+            this.showMessage('Failed to load crops', 'error');
+        }
+    }
+
+    displayAdminCrops(crops) {
+        const container = document.getElementById('admin-crops-container');
+        const countDisplay = document.getElementById('crop-count-display');
+        
+        if (!container) return;
+
+        // Store crops for searching/filtering
+        this.allAdminCrops = crops;
+        
+        // Update count display
+        if (countDisplay) {
+            countDisplay.textContent = `${crops.length} crop${crops.length !== 1 ? 's' : ''} found`;
+        }
+
+        if (crops.length === 0) {
+            container.innerHTML = `
+                <div class="crop-empty-state">
+                    <img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="No Crops">
+                    <h4>No crops found</h4>
+                    <p>Start building your crop knowledge database by adding your first crop.</p>
+                    <button class="btn-success" onclick="app.openCropManagementModal()">
+                        <img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Add" class="btn-icon-svg"> Add First Crop
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        crops.forEach(crop => {
+            const categoryName = this.formatCategoryName(crop.category_code || 'uncategorized');
+            
+            html += `
+                <div class="crop-card" data-crop="${crop.code}">
+                    <div class="crop-card-header">
+                        <div class="crop-card-title">
+                            <h4>${crop.name}</h4>
+                            <span class="crop-code">${crop.code}</span>
+                        </div>
+                        <div class="crop-card-actions">
+                            <button class="btn-primary" onclick="app.openNutrientTargetsModal('${crop.code}', '${crop.name}')" 
+                                    title="Manage Nutrient Targets">
+                                <img src="icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="Nutrients" class="btn-icon-svg">
+                            </button>
+                            <button class="btn-success" onclick="app.openSeedVarietiesModal('${crop.code}', '${crop.name}')" 
+                                    title="Manage Seed Varieties">
+                                <img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Varieties" class="btn-icon-svg">
+                            </button>
+                            <button class="btn-secondary" onclick="app.editCrop('${crop.code}')" title="Edit Crop">
+                                <img src="icons/new-icons/Afraponix Go Icons_settings.svg" alt="Edit" class="btn-icon-svg">
+                            </button>
+                            <button class="btn-danger" onclick="app.deleteCrop('${crop.code}', '${crop.name}')" title="Delete Crop">
+                                ×
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="crop-category-badge ${crop.category_code || 'uncategorized'}">
+                        ${categoryName}
+                    </div>
+                    
+                    <div class="crop-info-grid">
+                        <div class="crop-info-item">
+                            <label>Scientific Name:</label>
+                            <span>${crop.scientific_name || 'Not specified'}</span>
+                        </div>
+                        <div class="crop-info-item">
+                            <label>Days to Harvest:</label>
+                            <span>${crop.days_to_harvest || 'Variable'} days</span>
+                        </div>
+                        <div class="crop-info-item">
+                            <label>EC Range:</label>
+                            <span>${this.formatRange(crop.default_ec_min, crop.default_ec_max, 'mS/cm')}</span>
+                        </div>
+                        <div class="crop-info-item">
+                            <label>pH Range:</label>
+                            <span>${this.formatRange(crop.default_ph_min, crop.default_ph_max)}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="nutrient-targets-summary">
+                        <strong>${crop.nutrient_targets_count || 0}</strong> nutrient targets configured
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    formatCategoryName(categoryCode) {
+        const categoryNames = {
+            'leafy_greens': 'Leafy Greens',
+            'herbs': 'Herbs',
+            'fruiting': 'Fruiting Plants',
+            'root_vegetables': 'Root Vegetables',
+            'brassicas': 'Brassicas',
+            'uncategorized': 'Uncategorized'
+        };
+        return categoryNames[categoryCode] || categoryCode;
+    }
+
+    formatRange(min, max, unit = '') {
+        if (!min && !max) return 'Not specified';
+        if (!min) return `≤ ${max}${unit}`;
+        if (!max) return `≥ ${min}${unit}`;
+        if (min === max) return `${min}${unit}`;
+        return `${min} - ${max}${unit}`;
+    }
+
+    searchAdminCrops(searchTerm) {
+        if (!this.allAdminCrops) return;
+
+        const filtered = this.allAdminCrops.filter(crop => {
+            return crop.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                   crop.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                   (crop.scientific_name && crop.scientific_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                   (crop.category_name && crop.category_name.toLowerCase().includes(searchTerm.toLowerCase()));
+        });
+
+        this.displayAdminCrops(filtered);
+    }
+
+    filterCropsByCategory(categoryCode) {
+        if (!this.allAdminCrops) return;
+
+        let filtered = this.allAdminCrops;
+        if (categoryCode) {
+            filtered = this.allAdminCrops.filter(crop => crop.category_code === categoryCode);
+        }
+
+        this.displayAdminCrops(filtered);
+    }
+
+    openCropManagementModal(cropCode = null) {
+        const modal = document.getElementById('crop-management-modal');
+        const title = document.getElementById('crop-modal-title');
+        const form = document.getElementById('crop-management-form');
+        
+        if (!modal) return;
+
+        // Reset form
+        form.reset();
+        
+        if (cropCode) {
+            // Edit mode
+            title.innerHTML = '<img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Crop" class="heading-icon"> Edit Crop';
+            document.getElementById('save-crop-btn').textContent = 'Update Crop';
+            this.currentEditingCrop = cropCode;
+            this.loadCropForEdit(cropCode);
+        } else {
+            // Add mode
+            title.innerHTML = '<img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Crop" class="heading-icon"> Add New Crop';
+            document.getElementById('save-crop-btn').textContent = 'Save Crop';
+            this.currentEditingCrop = null;
+        }
+
+        modal.style.display = 'block';
+    }
+
+    async loadCropForEdit(cropCode) {
+        try {
+            const response = await fetch(`/api/crop-knowledge/crops/${cropCode}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                const crop = data.data.crop;
+                
+                // Populate form fields
+                document.getElementById('crop-code').value = crop.code;
+                document.getElementById('crop-name').value = crop.name;
+                document.getElementById('crop-scientific-name').value = crop.scientific_name || '';
+                document.getElementById('crop-category').value = crop.category_code || '';
+                document.getElementById('crop-ec-min').value = crop.default_ec_min || '';
+                document.getElementById('crop-ec-max').value = crop.default_ec_max || '';
+                document.getElementById('crop-ph-min').value = crop.default_ph_min || '';
+                document.getElementById('crop-ph-max').value = crop.default_ph_max || '';
+                document.getElementById('crop-days-harvest').value = crop.days_to_harvest || '';
+                document.getElementById('crop-plant-spacing').value = crop.plant_spacing_cm || '';
+                document.getElementById('crop-light-requirements').value = crop.light_requirements || '';
+                document.getElementById('crop-growing-notes').value = crop.growing_notes || '';
+                document.getElementById('crop-research-source').value = crop.research_source || '';
+                
+                // Disable code field in edit mode
+                document.getElementById('crop-code').disabled = true;
+            }
+        } catch (error) {
+            console.error('Error loading crop for edit:', error);
+            this.showMessage('Failed to load crop details', 'error');
+        }
+    }
+
+    closeCropManagementModal() {
+        const modal = document.getElementById('crop-management-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            this.currentEditingCrop = null;
+            
+            // Re-enable code field
+            const codeField = document.getElementById('crop-code');
+            if (codeField) codeField.disabled = false;
+        }
+    }
+
+    async saveCrop() {
+        const form = document.getElementById('crop-management-form');
+        const formData = new FormData(form);
+        
+        // Validate required fields
+        const requiredFields = ['crop-code', 'crop-name', 'crop-category'];
+        for (const fieldId of requiredFields) {
+            const field = document.getElementById(fieldId);
+            if (!field.value.trim()) {
+                field.focus();
+                this.showMessage(`${field.labels[0].textContent} is required`, 'error');
+                return;
+            }
+        }
+
+        // Collect form data
+        const cropData = {
+            code: document.getElementById('crop-code').value.trim(),
+            name: document.getElementById('crop-name').value.trim(),
+            scientific_name: document.getElementById('crop-scientific-name').value.trim(),
+            category_code: document.getElementById('crop-category').value,
+            default_ec_min: parseFloat(document.getElementById('crop-ec-min').value) || null,
+            default_ec_max: parseFloat(document.getElementById('crop-ec-max').value) || null,
+            default_ph_min: parseFloat(document.getElementById('crop-ph-min').value) || null,
+            default_ph_max: parseFloat(document.getElementById('crop-ph-max').value) || null,
+            days_to_harvest: parseInt(document.getElementById('crop-days-harvest').value) || null,
+            plant_spacing_cm: parseInt(document.getElementById('crop-plant-spacing').value) || null,
+            light_requirements: document.getElementById('crop-light-requirements').value,
+            growing_notes: document.getElementById('crop-growing-notes').value.trim(),
+            research_source: document.getElementById('crop-research-source').value.trim()
+        };
+
+        try {
+            let response;
+            if (this.currentEditingCrop) {
+                // Update existing crop
+                response = await fetch(`/api/crop-knowledge/admin/crops/${this.currentEditingCrop}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${this.token}`
+                    },
+                    body: JSON.stringify(cropData)
+                });
+            } else {
+                // Create new crop
+                response = await fetch('/api/crop-knowledge/admin/crops', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${this.token}`
+                    },
+                    body: JSON.stringify(cropData)
+                });
+            }
+
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showMessage(result.message || 'Crop saved successfully', 'success');
+                this.closeCropManagementModal();
+                this.loadAdminCrops(); // Refresh the crops list
+            } else {
+                throw new Error(result.error || 'Failed to save crop');
+            }
+
+        } catch (error) {
+            console.error('Error saving crop:', error);
+            this.showMessage(error.message || 'Failed to save crop', 'error');
+        }
+    }
+
+    editCrop(cropCode) {
+        this.openCropManagementModal(cropCode);
+    }
+
+    async deleteCrop(cropCode, cropName) {
+        if (!confirm(`Are you sure you want to delete "${cropName}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/crop-knowledge/admin/crops/${cropCode}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`
+                }
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showMessage(`Crop "${cropName}" deleted successfully`, 'success');
+                this.loadAdminCrops(); // Refresh the crops list
+            } else {
+                throw new Error(result.error || 'Failed to delete crop');
+            }
+
+        } catch (error) {
+            console.error('Error deleting crop:', error);
+            this.showMessage(error.message || 'Failed to delete crop', 'error');
+        }
+    }
+
+    async openNutrientTargetsModal(cropCode, cropName) {
+        const modal = document.getElementById('nutrient-targets-modal');
+        const cropNameSpan = document.getElementById('nutrient-crop-name');
+        
+        if (!modal) return;
+
+        cropNameSpan.textContent = cropName;
+        this.currentNutrientCrop = cropCode;
+        
+        modal.style.display = 'block';
+        await this.loadNutrientTargets(cropCode);
+    }
+
+    async loadNutrientTargets(cropCode) {
+        try {
+            const response = await fetch(`/api/crop-knowledge/admin/crops/${cropCode}/targets`, {
+                headers: {
+                    'Authorization': `Bearer ${this.token}`
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.displayNutrientTargets(data.data);
+            } else {
+                throw new Error(data.error || 'Failed to load nutrient targets');
+            }
+
+        } catch (error) {
+            console.error('Error loading nutrient targets:', error);
+            this.showMessage('Failed to load nutrient targets', 'error');
+        }
+    }
+
+    displayNutrientTargets(targets) {
+        const container = document.getElementById('nutrient-targets-container');
+        if (!container) return;
+
+        if (targets.length === 0) {
+            container.innerHTML = `
+                <div class="crop-empty-state">
+                    <img src="icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="No Targets">
+                    <h4>No nutrient targets configured</h4>
+                    <p>Add nutrient targets to define the optimal growing conditions.</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        targets.forEach(target => {
+            html += `
+                <div class="nutrient-target-item" data-target-id="${target.id}">
+                    <div class="nutrient-target-header">
+                        <div class="nutrient-target-name">
+                            <img src="icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="Nutrient" class="btn-icon-svg">
+                            ${target.nutrient_name} (${target.symbol}) - ${target.stage_name}
+                        </div>
+                        <button class="btn-danger" onclick="app.deleteNutrientTarget(${target.id})" title="Delete Target">
+                            ×
+                        </button>
+                    </div>
+                    <div class="nutrient-values-grid">
+                        <div class="form-field">
+                            <label>Target Value</label>
+                            <input type="number" step="0.1" value="${target.target_value}" 
+                                   onchange="app.updateNutrientTarget(${target.id}, 'target_value', this.value)">
+                            <small>${target.unit}</small>
+                        </div>
+                        <div class="form-field">
+                            <label>Min Value</label>
+                            <input type="number" step="0.1" value="${target.min_value || ''}" 
+                                   onchange="app.updateNutrientTarget(${target.id}, 'min_value', this.value)">
+                            <small>${target.unit}</small>
+                        </div>
+                        <div class="form-field">
+                            <label>Max Value</label>
+                            <input type="number" step="0.1" value="${target.max_value || ''}" 
+                                   onchange="app.updateNutrientTarget(${target.id}, 'max_value', this.value)">
+                            <small>${target.unit}</small>
+                        </div>
+                    </div>
+                    <div class="form-field">
+                        <label>Notes</label>
+                        <textarea rows="2" placeholder="Optional notes about this nutrient target..."
+                                  onchange="app.updateNutrientTarget(${target.id}, 'notes', this.value)">${target.notes || ''}</textarea>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    closeNutrientTargetsModal() {
+        const modal = document.getElementById('nutrient-targets-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            this.currentNutrientCrop = null;
+        }
+    }
+
+    async updateNutrientTarget(targetId, field, value) {
+        try {
+            const updateData = {};
+            updateData[field] = value === '' ? null : (field === 'notes' ? value : parseFloat(value));
+            
+            const response = await fetch(`/api/crop-knowledge/admin/targets/${targetId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
+                },
+                body: JSON.stringify(updateData)
+            });
+
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to update nutrient target');
+            }
+
+        } catch (error) {
+            console.error('Error updating nutrient target:', error);
+            this.showMessage('Failed to update nutrient target', 'error');
+        }
+    }
+
+    async addNutrientTarget() {
+        const cropCode = this.currentNutrientCrop;
+        if (!cropCode) return;
+
+        try {
+            // Show a form to add a new nutrient target
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'block';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Add Nutrient Target</h2>
+                        <button class="close-btn" onclick="this.parentElement.parentElement.parentElement.remove()">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Nutrient</label>
+                            <select id="new-nutrient-code" class="form-input">
+                                <option value="nitrogen">Nitrogen (N)</option>
+                                <option value="phosphorus">Phosphorus (P)</option>
+                                <option value="potassium">Potassium (K)</option>
+                                <option value="calcium">Calcium (Ca)</option>
+                                <option value="magnesium">Magnesium (Mg)</option>
+                                <option value="iron">Iron (Fe)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Growth Stage</label>
+                            <select id="new-growth-stage" class="form-input">
+                                <option value="seedling">Seedling</option>
+                                <option value="vegetative">Vegetative</option>
+                                <option value="flowering">Flowering</option>
+                                <option value="fruiting">Fruiting</option>
+                                <option value="general">General</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Target Value</label>
+                            <input type="number" id="new-target-value" class="form-input" step="0.1" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Min Value</label>
+                            <input type="number" id="new-min-value" class="form-input" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label>Max Value</label>
+                            <input type="number" id="new-max-value" class="form-input" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label>Notes</label>
+                            <textarea id="new-notes" class="form-input" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="this.parentElement.parentElement.parentElement.remove()">Cancel</button>
+                        <button class="btn btn-primary" onclick="app.saveNewNutrientTarget()">Save Target</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        } catch (error) {
+            console.error('Error showing add nutrient target form:', error);
+            this.showMessage('Failed to show add nutrient target form', 'error');
+        }
+    }
+
+    async saveNewNutrientTarget() {
+        try {
+            const cropCode = this.currentNutrientCrop;
+            const nutrientCode = document.getElementById('new-nutrient-code').value;
+            const growthStage = document.getElementById('new-growth-stage').value;
+            const targetValue = parseFloat(document.getElementById('new-target-value').value);
+            const minValue = document.getElementById('new-min-value').value ? parseFloat(document.getElementById('new-min-value').value) : null;
+            const maxValue = document.getElementById('new-max-value').value ? parseFloat(document.getElementById('new-max-value').value) : null;
+            const notes = document.getElementById('new-notes').value || null;
+
+            if (!targetValue) {
+                this.showMessage('Target value is required', 'error');
+                return;
+            }
+
+            const response = await fetch(`/api/crop-knowledge/admin/crops/${cropCode}/targets`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
+                },
+                body: JSON.stringify({
+                    nutrient_code: nutrientCode,
+                    growth_stage: growthStage,
+                    target_value: targetValue,
+                    min_value: minValue,
+                    max_value: maxValue,
+                    notes: notes
+                })
+            });
+
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to add nutrient target');
+            }
+
+            // Close the add modal
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (modal.innerHTML.includes('Add Nutrient Target')) {
+                    modal.remove();
+                }
+            });
+
+            // Reload the nutrient targets
+            await this.loadNutrientTargets(cropCode);
+            this.showMessage('Nutrient target added successfully', 'success');
+
+        } catch (error) {
+            console.error('Error saving nutrient target:', error);
+            this.showMessage('Failed to save nutrient target', 'error');
+        }
+    }
+
+    async deleteNutrientTarget(targetId) {
+        if (!confirm('Are you sure you want to delete this nutrient target?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/crop-knowledge/admin/targets/${targetId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`
+                }
+            });
+
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to delete nutrient target');
+            }
+
+            // Reload the nutrient targets
+            await this.loadNutrientTargets(this.currentNutrientCrop);
+            this.showMessage('Nutrient target deleted successfully', 'success');
+
+        } catch (error) {
+            console.error('Error deleting nutrient target:', error);
+            this.showMessage('Failed to delete nutrient target', 'error');
+        }
+    }
+
+    // Seed Varieties Management Methods
+    async openSeedVarietiesModal(cropCode, cropName) {
+        const modal = document.getElementById('seed-varieties-modal');
+        const cropNameSpan = document.getElementById('varieties-crop-name');
+        
+        if (!modal) return;
+
+        cropNameSpan.textContent = cropName;
+        this.currentVarietiesCrop = cropCode;
+        
+        modal.style.display = 'block';
+        await this.loadSeedVarieties(cropCode);
+    }
+
+    async loadSeedVarieties(cropCode) {
+        try {
+            const response = await fetch(`/api/seed-varieties/crop/${cropCode}`, {
+                headers: {
+                    'Authorization': `Bearer ${this.token}`
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to load seed varieties');
+            }
+
+            this.displaySeedVarieties(data.varieties || []);
+
+        } catch (error) {
+            console.error('Error loading seed varieties:', error);
+            this.showMessage('Failed to load seed varieties', 'error');
+        }
+    }
+
+    displaySeedVarieties(varieties) {
+        const container = document.getElementById('seed-varieties-container');
+        if (!container) return;
+
+        if (varieties.length === 0) {
+            container.innerHTML = `
+                <div class="crop-empty-state">
+                    <img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="No Varieties">
+                    <h4>No seed varieties configured</h4>
+                    <p>Add seed varieties to make them available for planting.</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        varieties.forEach(variety => {
+            html += `
+                <div class="seed-variety-item" data-variety-id="${variety.id}">
+                    <div class="seed-variety-content">
+                        <div class="seed-variety-name">
+                            <img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Variety" class="btn-icon-svg">
+                            ${variety.variety_name}
+                        </div>
+                        <div class="seed-variety-actions">
+                            <button class="btn-danger btn-small" onclick="app.deleteSeedVariety(${variety.id}, '${variety.variety_name}')" title="Delete Variety">
+                                ×
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    closeSeedVarietiesModal() {
+        const modal = document.getElementById('seed-varieties-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            this.currentVarietiesCrop = null;
+        }
+    }
+
+    async addSeedVariety() {
+        const cropCode = this.currentVarietiesCrop;
+        if (!cropCode) return;
+
+        try {
+            // Show a simple prompt for the variety name
+            const varietyName = prompt('Enter the name of the new seed variety:');
+            if (!varietyName || varietyName.trim() === '') {
+                return;
+            }
+
+            const response = await fetch('/api/seed-varieties', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
+                },
+                body: JSON.stringify({
+                    crop_type: cropCode,
+                    variety_name: varietyName.trim()
+                })
+            });
+
+            const result = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to add seed variety');
+            }
+
+            // Reload the varieties
+            await this.loadSeedVarieties(cropCode);
+            this.showMessage(`Seed variety "${varietyName}" added successfully`, 'success');
+
+        } catch (error) {
+            console.error('Error adding seed variety:', error);
+            this.showMessage('Failed to add seed variety', 'error');
+        }
+    }
+
+    async deleteSeedVariety(varietyId, varietyName) {
+        if (!confirm(`Are you sure you want to delete the seed variety "${varietyName}"?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/seed-varieties/${varietyId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${this.token}`
+                }
+            });
+
+            const result = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to delete seed variety');
+            }
+
+            // Reload the varieties
+            await this.loadSeedVarieties(this.currentVarietiesCrop);
+            this.showMessage(`Seed variety "${varietyName}" deleted successfully`, 'success');
+
+        } catch (error) {
+            console.error('Error deleting seed variety:', error);
+            this.showMessage('Failed to delete seed variety', 'error');
+        }
+    }
+
     // Plant Management Methods
     async loadPlantAllocations() {
         if (!this.activeSystemId) return;
@@ -22592,10 +23887,17 @@ Generated by Afraponix Go - Aquaponics Management System`;
         }
 
         let html = `
-            <div class="custom-crops-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h3 style="margin: 0; color: #2c3e50;">Your Custom Crops</h3>
+            <div class="custom-crops-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; padding: 1rem; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 8px; border-left: 4px solid #80FB7B;">
+                <div>
+                    <h3 style="margin: 0 0 0.5rem 0; color: #2c3e50;">Your Custom Crops</h3>
+                    <p style="margin: 0; color: #6c757d; font-size: 0.9rem;">
+                        <img src="icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="Info" style="width: 1em; height: 1em; vertical-align: middle; margin-right: 0.25em;">
+                        Create your own crops with custom nutrient targets. Submit successful crops to the global database to share with the community!
+                    </p>
+                </div>
                 <button onclick="app.showAddCustomCropModal()" class="btn-primary">
-                    <span>+</span> Add Custom Crop
+                    <img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Add" class="btn-icon-svg" style="width: 1em; height: 1em; vertical-align: middle; margin-right: 0.25em;">
+                    Add Custom Crop
                 </button>
             </div>
             <div class="custom-crops-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem;">
@@ -22654,6 +23956,18 @@ Generated by Afraponix Go - Aquaponics Management System`;
                     <div class="ec-display" style="margin-top: 0.75rem; padding: 0.5rem; background: #fff3cd; border-radius: 6px; text-align: center;">
                         <span style="color: #856404;">Target EC:</span>
                         <strong style="color: #856404; margin-left: 0.5rem;">${crop.target_ec || 0} mS/cm</strong>
+                    </div>
+                    
+                    <div class="crop-integration-actions" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e9ecef; text-align: center;">
+                        <button onclick="app.submitToGlobalDatabase(${crop.id}, '${cleanCropName}')" 
+                                class="btn-success" 
+                                style="background: #80FB7B; color: #333; border: none; padding: 0.6rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: all 0.3s ease;"
+                                onmouseover="this.style.background='#60da5b'" 
+                                onmouseout="this.style.background='#80FB7B'"
+                                title="Submit this crop to the global admin database">
+                            <img src="icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="Submit" class="btn-icon-svg" style="width: 1em; height: 1em; vertical-align: middle; margin-right: 0.5em;">
+                            Submit to Global Database
+                        </button>
                     </div>
                 </div>
             `;
@@ -22950,6 +24264,256 @@ Generated by Afraponix Go - Aquaponics Management System`;
         } catch (error) {
             console.error('Error deleting custom crop:', error);
             this.showMessage('Failed to delete custom crop', 'error');
+        }
+    }
+
+    // Custom Crop Integration with Global Database
+    async submitToGlobalDatabase(customCropId, cropName) {
+        try {
+            // Get the custom crop data first
+            const customCrops = await this.makeApiCall('/plants/custom-crops');
+            const customCrop = customCrops.find(crop => crop.id === customCropId);
+            
+            if (!customCrop) {
+                throw new Error('Custom crop not found');
+            }
+
+            // Show detailed submission form
+            this.showCropSubmissionForm(customCrop, cropName);
+
+        } catch (error) {
+            console.error('Error preparing crop submission:', error);
+            this.showMessage(`Failed to prepare "${cropName}" for submission: ${error.message}`, 'error');
+        }
+    }
+
+    showCropSubmissionForm(customCrop, cropName) {
+        // Create submission modal
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.display = 'block';
+        modal.innerHTML = `
+            <div class="modal-content large-modal">
+                <div class="modal-header">
+                    <h3 class="heading-3">
+                        <img src="icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="Submit" class="heading-icon"> Submit "${cropName}" to Global Database
+                    </h3>
+                    <button class="modal-close" onclick="this.parentElement.parentElement.parentElement.remove()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="crop-submission-form">
+                        <div class="form-section">
+                            <h4 class="heading-4">Basic Information</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Crop Name *</label>
+                                    <input type="text" id="submit-crop-name" class="form-input" value="${this.cleanCustomCropName(customCrop.crop_name)}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Scientific Name</label>
+                                    <input type="text" id="submit-scientific-name" class="form-input" placeholder="e.g., Lactuca sativa">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Category *</label>
+                                    <select id="submit-category" class="form-input" required>
+                                        <option value="">Select category...</option>
+                                        <option value="leafy_greens">Leafy Greens</option>
+                                        <option value="herbs">Herbs</option>
+                                        <option value="fruiting_plants">Fruiting Plants</option>
+                                        <option value="root_vegetables">Root Vegetables</option>
+                                        <option value="brassicas">Brassicas</option>
+                                        <option value="user_submitted">User Submitted</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4 class="heading-4">Growing Parameters</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Days to Harvest</label>
+                                    <input type="number" id="submit-days-harvest" class="form-input" placeholder="30-120" min="1" max="365">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Plant Spacing (cm)</label>
+                                    <input type="number" id="submit-plant-spacing" class="form-input" placeholder="10-30" min="1" max="100">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Light Requirements</label>
+                                    <select id="submit-light-requirements" class="form-input">
+                                        <option value="">Select...</option>
+                                        <option value="low">Low (100-200 μmol/m²/s)</option>
+                                        <option value="medium">Medium (200-400 μmol/m²/s)</option>
+                                        <option value="high">High (400+ μmol/m²/s)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4 class="heading-4">pH & EC Ranges</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">pH Min</label>
+                                    <input type="number" id="submit-ph-min" class="form-input" step="0.1" min="4" max="8" placeholder="5.5">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">pH Max</label>
+                                    <input type="number" id="submit-ph-max" class="form-input" step="0.1" min="4" max="8" placeholder="7.0">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">EC Min (mS/cm)</label>
+                                    <input type="number" id="submit-ec-min" class="form-input" step="0.1" min="0.5" max="5" placeholder="1.2">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">EC Max (mS/cm)</label>
+                                    <input type="number" id="submit-ec-max" class="form-input" step="0.1" min="0.5" max="5" placeholder="2.0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4 class="heading-4">Growing Notes & Experience</h4>
+                            <div class="form-group">
+                                <label class="form-label">Growing Notes</label>
+                                <textarea id="submit-growing-notes" class="form-input" rows="4" placeholder="Share your experience growing this crop: best practices, challenges, tips for success..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Research Source (Optional)</label>
+                                <input type="text" id="submit-research-source" class="form-input" placeholder="Books, papers, or online resources you used">
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4 class="heading-4">Current Nutrient Targets (from your custom crop)</h4>
+                            <div class="nutrient-preview" style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #e9ecef;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem;">
+                                    <div><strong>N:</strong> ${customCrop.target_n || 0} ppm</div>
+                                    <div><strong>P:</strong> ${customCrop.target_p || 0} ppm</div>
+                                    <div><strong>K:</strong> ${customCrop.target_k || 0} ppm</div>
+                                    <div><strong>Ca:</strong> ${customCrop.target_ca || 0} ppm</div>
+                                    <div><strong>Mg:</strong> ${customCrop.target_mg || 0} ppm</div>
+                                    <div><strong>Fe:</strong> ${customCrop.target_fe || 0} ppm</div>
+                                </div>
+                                <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #6c757d;">These nutrient targets will be included with your submission.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="this.parentElement.parentElement.parentElement.remove()">Cancel</button>
+                    <button type="button" class="btn-success" onclick="app.submitCropToGlobalDatabase(${customCrop.id})">
+                        <img src="icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="Submit" class="btn-icon-svg"> Submit to Global Database
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+
+    async submitCropToGlobalDatabase(customCropId) {
+        try {
+            // Get the custom crop data
+            const customCrops = await this.makeApiCall('/plants/custom-crops');
+            const customCrop = customCrops.find(crop => crop.id === customCropId);
+            
+            if (!customCrop) {
+                throw new Error('Custom crop not found');
+            }
+
+            // Collect form data
+            const formData = {
+                name: document.getElementById('submit-crop-name').value.trim(),
+                code: document.getElementById('submit-crop-name').value.toLowerCase().trim().replace(/[^a-z0-9]/g, '_'),
+                scientific_name: document.getElementById('submit-scientific-name').value.trim() || null,
+                category_code: document.getElementById('submit-category').value,
+                days_to_harvest: parseInt(document.getElementById('submit-days-harvest').value) || null,
+                plant_spacing_cm: parseInt(document.getElementById('submit-plant-spacing').value) || null,
+                light_requirements: document.getElementById('submit-light-requirements').value || null,
+                default_ph_min: parseFloat(document.getElementById('submit-ph-min').value) || null,
+                default_ph_max: parseFloat(document.getElementById('submit-ph-max').value) || null,
+                default_ec_min: parseFloat(document.getElementById('submit-ec-min').value) || null,
+                default_ec_max: parseFloat(document.getElementById('submit-ec-max').value) || null,
+                growing_notes: document.getElementById('submit-growing-notes').value.trim() || null,
+                research_source: document.getElementById('submit-research-source').value.trim() || null
+            };
+
+            // Validate required fields
+            if (!formData.name || !formData.category_code) {
+                this.showMessage('Please fill in the crop name and category', 'error');
+                return;
+            }
+
+            // Create the crop in the admin system
+            const response = await fetch('/api/crop-knowledge/admin/crops', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.token}`
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const result = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to submit crop to global database');
+            }
+
+            // Now add the nutrient targets from the custom crop
+            const nutrientTargets = [
+                { nutrient_code: 'nitrogen', target_value: customCrop.target_n, growth_stage: 'general' },
+                { nutrient_code: 'phosphorus', target_value: customCrop.target_p, growth_stage: 'general' },
+                { nutrient_code: 'potassium', target_value: customCrop.target_k, growth_stage: 'general' },
+                { nutrient_code: 'calcium', target_value: customCrop.target_ca, growth_stage: 'general' },
+                { nutrient_code: 'magnesium', target_value: customCrop.target_mg, growth_stage: 'general' },
+                { nutrient_code: 'iron', target_value: customCrop.target_fe, growth_stage: 'general' }
+            ];
+
+            // Add each nutrient target that has a value > 0
+            for (const target of nutrientTargets) {
+                if (target.target_value > 0) {
+                    try {
+                        await fetch(`/api/crop-knowledge/admin/crops/${formData.code}/targets`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${this.token}`
+                            },
+                            body: JSON.stringify(target)
+                        });
+                    } catch (error) {
+                        console.warn(`Failed to add ${target.nutrient_code} target:`, error);
+                    }
+                }
+            }
+
+            // Close the submission modal
+            document.querySelectorAll('.modal-overlay').forEach(modal => {
+                if (modal.innerHTML.includes('Submit to Global Database')) {
+                    modal.remove();
+                }
+            });
+
+            // Show success message with instructions
+            this.showNotification(`✅ "${formData.name}" submitted to global database successfully!\n\n🔹 It's now available in the admin crop management system\n🔹 Admin can review and adjust the data\n🔹 Will appear in global crop selections once approved`, 'success');
+
+            // Offer to navigate to admin panel
+            setTimeout(() => {
+                if (confirm('Would you like to view the crop in the admin panel now?')) {
+                    // Switch to admin panel
+                    document.querySelector('[data-target="admin-content"]')?.click();
+                    setTimeout(() => {
+                        document.querySelector('#admin-crops-subtab')?.click();
+                    }, 100);
+                }
+            }, 2000);
+
+        } catch (error) {
+            console.error('Error submitting crop to global database:', error);
+            this.showMessage(`Failed to submit crop to global database: ${error.message}`, 'error');
         }
     }
 
@@ -29630,6 +31194,347 @@ Generated by Afraponix Go - Aquaponics Management System`;
     editBatch(batchId) {
         this.showNotification(`Edit batch ${batchId} - coming soon!`, 'info');
     }
+    
+    // ========== DEFICIENCY IMAGE FILTERING SYSTEM ==========
+
+    // Load all deficiency images (default state)
+    async loadAllDeficiencyImages() {
+        console.log('📸 Loading all deficiency images...');
+        
+        try {
+            const url = `/api/crop-knowledge/admin/deficiency-images?nocache=${Date.now()}`;
+            console.log('🌐 Fetching deficiency images from:', url);
+            
+            const response = await fetch(url, {
+                cache: 'no-cache',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            });
+            
+            console.log('🌐 API response status:', response.status);
+            console.log('🌐 API response ok:', response.ok);
+            
+            const data = await response.json();
+            console.log('🌐 API response data:', data);
+            
+            if (data.success) {
+                // Update header to show all images
+                const header = document.getElementById('deficiency-header');
+                const grid = document.getElementById('deficiency-images-grid');
+                const noSelection = document.getElementById('no-nutrient-selected');
+                const title = document.getElementById('selected-nutrient-title');
+                
+                if (header) header.style.display = 'flex';
+                if (grid) grid.style.display = 'grid';
+                if (noSelection) noSelection.style.display = 'none';
+                if (title) title.textContent = `All Deficiency Images (${data.count})`;
+                
+                // Store all images for filtering
+                this.allDeficiencyImages = data.data || [];
+                
+                // Display all images
+                this.populateDeficiencyImagesGrid(this.allDeficiencyImages);
+                
+                // Populate filter dropdowns
+                await this.populateDeficiencyFilters(this.allDeficiencyImages);
+                
+            } else {
+                this.showNotification('Failed to load deficiency images', 'error');
+            }
+            
+        } catch (error) {
+            console.error('Error loading all deficiency images:', error);
+            this.showNotification('Error loading deficiency images', 'error');
+        }
+    }
+
+    // Populate filter dropdowns with available options
+    async populateDeficiencyFilters(images) {
+        const nutrientFilter = document.getElementById('deficiency-nutrient-filter');
+        const plantFilter = document.getElementById('deficiency-plant-filter');
+        
+        if (!nutrientFilter || !plantFilter) return;
+        
+        console.log('🔍 Debug: All images data:', images);
+        console.log('🔍 Debug: Sample image structure:', images[0]);
+        if (images[0]) {
+            console.log('🔍 Debug: crop_name field value:', images[0].crop_name);
+            console.log('🔍 Debug: plant_id field value:', images[0].plant_id);
+        }
+        
+        // Get unique nutrients from images
+        const nutrients = [...new Set(images.map(img => ({
+            code: img.nutrient_code,
+            name: img.nutrient_name
+        })).filter(n => n.code))];
+        
+        // Populate nutrient dropdown
+        nutrientFilter.innerHTML = '<option value="">All nutrients</option>';
+        nutrients.forEach(nutrient => {
+            const option = document.createElement('option');
+            option.value = nutrient.code;
+            option.textContent = `${nutrient.code} - ${nutrient.name}`;
+            nutrientFilter.appendChild(option);
+        });
+        
+        // Load all available plants from crops API (same as modal dropdown)
+        try {
+            console.log('🌱 Loading all crops for plant filter...');
+            const response = await fetch('/api/crop-knowledge/crops');
+            
+            if (response.ok) {
+                const cropsData = await response.json();
+                
+                if (cropsData.success && cropsData.data) {
+                    // Populate plant dropdown with all available crops
+                    plantFilter.innerHTML = '<option value="">All plants</option>';
+                    cropsData.data.forEach(crop => {
+                        const option = document.createElement('option');
+                        option.value = crop.id;
+                        option.textContent = crop.name;
+                        plantFilter.appendChild(option);
+                    });
+                    
+                    console.log(`📊 Filter options: ${nutrients.length} nutrients, ${cropsData.data.length} plants`);
+                } else {
+                    console.warn('⚠️ No crops data received from API');
+                    plantFilter.innerHTML = '<option value="">No plants available</option>';
+                }
+            } else {
+                console.warn(`Failed to fetch crops: ${response.status} ${response.statusText}`);
+                plantFilter.innerHTML = '<option value="">Error loading plants</option>';
+            }
+        } catch (error) {
+            console.error('Error loading crops for plant filter:', error);
+            plantFilter.innerHTML = '<option value="">Error loading plants</option>';
+        }
+    }
+
+    // Apply filters to deficiency images
+    applyDeficiencyFilters() {
+        if (!this.allDeficiencyImages) {
+            console.log('⚠️ No images loaded yet');
+            return;
+        }
+        
+        const nutrientFilter = document.getElementById('deficiency-nutrient-filter');
+        const plantFilter = document.getElementById('deficiency-plant-filter');
+        
+        const selectedNutrient = nutrientFilter?.value || '';
+        const selectedPlant = plantFilter?.value || '';
+        
+        console.log('🔍 Applying filters:', { selectedNutrient, selectedPlant });
+        console.log('🗂️ All images count:', this.allDeficiencyImages?.length || 0);
+        console.log('🗂️ Sample image data (keys):', Object.keys(this.allDeficiencyImages?.[0] || {}));
+        console.log('🗂️ All plant_id values:', this.allDeficiencyImages?.map(img => ({ filename: img.image_filename, plant_id: img.plant_id, has_plant_id: 'plant_id' in img })));
+        
+        let filteredImages = this.allDeficiencyImages;
+        
+        // Apply nutrient filter
+        if (selectedNutrient) {
+            const beforeCount = filteredImages.length;
+            filteredImages = filteredImages.filter(img => img.nutrient_code === selectedNutrient);
+            console.log(`🧪 Nutrient filter '${selectedNutrient}': ${beforeCount} → ${filteredImages.length}`);
+        }
+        
+        // Apply plant filter
+        if (selectedPlant) {
+            const beforeCount = filteredImages.length;
+            console.log('🌱 Plant filter images before:', filteredImages.map(img => ({ filename: img.image_filename, plant_id: img.plant_id, crop_name: img.crop_name })));
+            console.log('🔍 Selected plant value:', selectedPlant, 'type:', typeof selectedPlant);
+            console.log('🔍 Plant IDs in images:', filteredImages.map(img => ({ plant_id: img.plant_id, type: typeof img.plant_id })));
+            filteredImages = filteredImages.filter(img => {
+                const match = img.plant_id == selectedPlant;
+                console.log(`🔍 Comparing img.plant_id(${img.plant_id}) == selectedPlant(${selectedPlant}): ${match}`);
+                return match;
+            });
+            console.log(`🌱 Plant filter '${selectedPlant}': ${beforeCount} → ${filteredImages.length}`);
+        }
+        
+        // Update title to reflect filtering
+        const title = document.getElementById('selected-nutrient-title');
+        let titleText = 'All Deficiency Images';
+        
+        if (selectedNutrient && selectedPlant) {
+            const nutrientName = nutrientFilter.options[nutrientFilter.selectedIndex].text;
+            const plantName = plantFilter.options[plantFilter.selectedIndex].text;
+            titleText = `${nutrientName} + ${plantName} (${filteredImages.length})`;
+        } else if (selectedNutrient) {
+            const nutrientName = nutrientFilter.options[nutrientFilter.selectedIndex].text;
+            titleText = `${nutrientName} (${filteredImages.length})`;
+        } else if (selectedPlant) {
+            const plantName = plantFilter.options[plantFilter.selectedIndex].text;
+            titleText = `${plantName} Images (${filteredImages.length})`;
+        } else {
+            titleText = `All Deficiency Images (${filteredImages.length})`;
+        }
+        
+        if (title) title.textContent = titleText;
+        
+        // Display filtered images
+        this.populateDeficiencyImagesGrid(filteredImages);
+        
+        console.log(`🔍 Filtered to ${filteredImages.length} images (nutrient: ${selectedNutrient || 'all'}, plant: ${selectedPlant || 'all'})`);
+    }
+
+    // Clear all filters
+    clearDeficiencyFilters() {
+        const nutrientFilter = document.getElementById('deficiency-nutrient-filter');
+        const plantFilter = document.getElementById('deficiency-plant-filter');
+        
+        if (nutrientFilter) nutrientFilter.value = '';
+        if (plantFilter) plantFilter.value = '';
+        
+        // Reapply filters (which will show all images)
+        this.applyDeficiencyFilters();
+        
+        console.log('🧹 Filters cleared, showing all images');
+    }
+
+    // Lightbox functionality for deficiency images
+    openLightbox(imageUrl, caption, nutrientName, cropName) {
+        console.log('🖼️ Opening lightbox for:', imageUrl);
+        
+        // Get all deficiency images currently displayed for navigation
+        const imageElements = document.querySelectorAll('.deficiency-image-preview');
+        this.lightboxImages = Array.from(imageElements).map(img => ({
+            url: img.src,
+            caption: img.alt,
+            nutrientName: img.getAttribute('onclick')?.match(/'([^']*)', '[^']*', '([^']*)'/)?.[2] || 'Unknown Nutrient',
+            cropName: img.getAttribute('onclick')?.match(/'[^']*', '[^']*', '[^']*', '([^']*)'/)?.[1] || 'No specific crop'
+        }));
+        
+        // Find current image index
+        this.currentImageIndex = this.lightboxImages.findIndex(img => img.url === imageUrl);
+        if (this.currentImageIndex === -1) this.currentImageIndex = 0;
+        
+        // Set lightbox content
+        const lightbox = document.getElementById('image-lightbox');
+        const lightboxImage = document.getElementById('lightbox-image');
+        const lightboxTitle = document.getElementById('lightbox-title');
+        const lightboxDescription = document.getElementById('lightbox-description');
+        
+        if (lightbox && lightboxImage && lightboxTitle && lightboxDescription) {
+            lightboxImage.src = imageUrl;
+            lightboxImage.alt = caption;
+            lightboxTitle.textContent = `${nutrientName} Deficiency`;
+            lightboxDescription.innerHTML = `
+                <div><strong>Description:</strong> ${caption}</div>
+                <div><strong>Crop:</strong> ${cropName}</div>
+            `;
+            
+            // Show/hide navigation buttons
+            const prevBtn = document.getElementById('lightbox-prev');
+            const nextBtn = document.getElementById('lightbox-next');
+            
+            if (prevBtn && nextBtn) {
+                if (this.lightboxImages.length > 1) {
+                    prevBtn.style.display = 'block';
+                    nextBtn.style.display = 'block';
+                    prevBtn.disabled = this.currentImageIndex === 0;
+                    nextBtn.disabled = this.currentImageIndex === this.lightboxImages.length - 1;
+                } else {
+                    prevBtn.style.display = 'none';
+                    nextBtn.style.display = 'none';
+                }
+            }
+            
+            // Show lightbox with animation
+            lightbox.style.display = 'flex';
+            setTimeout(() => {
+                lightbox.style.opacity = '1';
+                lightbox.style.visibility = 'visible';
+            }, 10);
+            
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
+            
+            // Add escape key listener
+            this.lightboxKeydownHandler = this.handleLightboxKeydown.bind(this);
+            document.addEventListener('keydown', this.lightboxKeydownHandler);
+        }
+    }
+
+    closeLightbox() {
+        console.log('❌ Closing lightbox');
+        
+        const lightbox = document.getElementById('image-lightbox');
+        if (lightbox) {
+            // Hide with animation
+            lightbox.style.opacity = '0';
+            lightbox.style.visibility = 'hidden';
+            
+            setTimeout(() => {
+                lightbox.style.display = 'none';
+            }, 300);
+            
+            // Restore body scroll
+            document.body.style.overflow = 'auto';
+            
+            // Remove escape key listener
+            if (this.lightboxKeydownHandler) {
+                document.removeEventListener('keydown', this.lightboxKeydownHandler);
+                this.lightboxKeydownHandler = null;
+            }
+        }
+    }
+
+    nextImage() {
+        if (this.currentImageIndex < this.lightboxImages.length - 1) {
+            this.currentImageIndex++;
+            this.updateLightboxImage();
+        }
+    }
+
+    previousImage() {
+        if (this.currentImageIndex > 0) {
+            this.currentImageIndex--;
+            this.updateLightboxImage();
+        }
+    }
+
+    updateLightboxImage() {
+        const currentImage = this.lightboxImages[this.currentImageIndex];
+        if (!currentImage) return;
+        
+        const lightboxImage = document.getElementById('lightbox-image');
+        const lightboxTitle = document.getElementById('lightbox-title');
+        const lightboxDescription = document.getElementById('lightbox-description');
+        const prevBtn = document.getElementById('lightbox-prev');
+        const nextBtn = document.getElementById('lightbox-next');
+        
+        if (lightboxImage && lightboxTitle && lightboxDescription) {
+            lightboxImage.src = currentImage.url;
+            lightboxImage.alt = currentImage.caption;
+            lightboxTitle.textContent = `${currentImage.nutrientName} Deficiency`;
+            lightboxDescription.innerHTML = `
+                <div><strong>Description:</strong> ${currentImage.caption}</div>
+                <div><strong>Crop:</strong> ${currentImage.cropName}</div>
+            `;
+            
+            // Update navigation buttons
+            if (prevBtn && nextBtn) {
+                prevBtn.disabled = this.currentImageIndex === 0;
+                nextBtn.disabled = this.currentImageIndex === this.lightboxImages.length - 1;
+            }
+        }
+    }
+
+    handleLightboxKeydown(event) {
+        switch(event.key) {
+            case 'Escape':
+                this.closeLightbox();
+                break;
+            case 'ArrowLeft':
+                this.previousImage();
+                break;
+            case 'ArrowRight':
+                this.nextImage();
+                break;
+        }
+    }
 }
 
 let app;
@@ -29661,8 +31566,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         Notification.requestPermission();
     }
     
+    // Ensure all modals are hidden on page load
+    const modals = document.querySelectorAll('.modal-overlay');
+    modals.forEach(modal => {
+        modal.style.display = 'none';
+    });
+    
     app = new AquaponicsApp();
     window.app = app;
+    
+    // Add lightbox click-outside-to-close functionality
+    document.addEventListener('click', function(event) {
+        const lightbox = document.getElementById('image-lightbox');
+        if (lightbox && event.target === lightbox) {
+            app.closeLightbox();
+        }
+    });
     
     // Debug: Check if Quick Action functions exist
     
@@ -30833,3 +32752,1994 @@ const SVGIcons = {
 document.addEventListener('DOMContentLoaded', () => {
     SVGIcons.preloadIcons();
 });
+
+// =====================================================
+// NUTRIENT RATIO MANAGEMENT SYSTEM
+// =====================================================
+
+class NutrientRatioManager {
+    constructor() {
+        this.ratioRules = [];
+        this.environmentalAdjustments = [];
+        this.nutrients = [];
+        this.growthStages = [];
+        this.environmentalParameters = [];
+        this.currentEditingRule = null;
+        this.currentEditingAdjustment = null;
+        
+        this.initializeEventListeners();
+    }
+
+    initializeEventListeners() {
+        // Ratio management tabs
+        document.querySelectorAll('.ratio-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => this.switchRatioTab(e.target.dataset.target));
+        });
+
+        // Add buttons
+        document.getElementById('add-ratio-rule-btn')?.addEventListener('click', () => this.showRatioRuleModal());
+        document.getElementById('add-env-adjustment-btn')?.addEventListener('click', () => this.showEnvAdjustmentModal());
+
+        // Filter dropdowns
+        document.getElementById('ratio-nutrient-filter')?.addEventListener('change', (e) => this.filterRatioRules());
+        document.getElementById('ratio-stage-filter')?.addEventListener('change', (e) => this.filterRatioRules());
+
+        // Note: Admin subtab handling is now integrated directly into the main setupAdminSubTabs function
+    }
+
+    async loadRatioManagement() {
+        console.log('🔄 Loading nutrient ratio management...');
+        try {
+            // Load all required data
+            await Promise.all([
+                this.loadNutrients(),
+                this.loadGrowthStages(),
+                this.loadEnvironmentalParameters(),
+                this.loadRatioRules(),
+                this.loadEnvironmentalAdjustments()
+            ]);
+
+            // Populate dropdowns
+            this.populateFilterDropdowns();
+            this.populateModalDropdowns();
+
+            // Display current data
+            this.displayRatioRules();
+            this.displayEnvironmentalAdjustments();
+
+            console.log('📊 Nutrient ratio management system loaded successfully');
+            console.log(`📊 Loaded ${this.ratioRules.length} ratio rules`);
+            console.log(`🌡️ Loaded ${this.environmentalAdjustments.length} environmental adjustments`);
+        } catch (error) {
+            console.error('❌ Error loading ratio management:', error);
+            app.showMessage('Failed to load ratio management system', 'error');
+        }
+    }
+
+    switchRatioTab(targetTab) {
+        // Switch active tab
+        document.querySelectorAll('.ratio-tab').forEach(tab => tab.classList.remove('active'));
+        document.querySelector(`[data-target="${targetTab}"]`).classList.add('active');
+
+        // Switch active content
+        document.querySelectorAll('.ratio-content').forEach(content => content.classList.remove('active'));
+        document.getElementById(targetTab).classList.add('active');
+    }
+
+    // =====================================================
+    // DATA LOADING FUNCTIONS
+    // =====================================================
+
+    async loadRatioRules() {
+        try {
+            const response = await fetch('/api/crop-knowledge/admin/ratio-rules');
+            const data = await response.json();
+            
+            if (data.success) {
+                this.ratioRules = data.data;
+                console.log(`📊 Loaded ${data.count} ratio rules`);
+            } else {
+                throw new Error(data.error || 'Failed to load ratio rules');
+            }
+        } catch (error) {
+            console.error('Error loading ratio rules:', error);
+            throw error;
+        }
+    }
+
+    async loadEnvironmentalAdjustments() {
+        try {
+            const response = await fetch('/api/crop-knowledge/admin/environmental-adjustments');
+            const data = await response.json();
+            
+            if (data.success) {
+                this.environmentalAdjustments = data.data;
+                console.log(`🌡️ Loaded ${data.count} environmental adjustments`);
+            } else {
+                throw new Error(data.error || 'Failed to load environmental adjustments');
+            }
+        } catch (error) {
+            console.error('Error loading environmental adjustments:', error);
+            throw error;
+        }
+    }
+
+    async loadNutrients() {
+        try {
+            const response = await fetch('/api/crop-knowledge/nutrients');
+            const data = await response.json();
+            
+            if (data.success) {
+                this.nutrients = data.data;
+                console.log(`🧪 Loaded ${data.count} nutrients`);
+            } else {
+                throw new Error(data.error || 'Failed to load nutrients');
+            }
+        } catch (error) {
+            console.error('Error loading nutrients:', error);
+            throw error;
+        }
+    }
+
+    async loadGrowthStages() {
+        try {
+            const response = await fetch('/api/crop-knowledge/stages');
+            const data = await response.json();
+            
+            if (data.success) {
+                this.growthStages = data.data;
+                console.log(`🌱 Loaded ${data.count} growth stages`);
+            } else {
+                throw new Error(data.error || 'Failed to load growth stages');
+            }
+        } catch (error) {
+            console.error('Error loading growth stages:', error);
+            throw error;
+        }
+    }
+
+    async loadEnvironmentalParameters() {
+        // Use the existing environmental_parameters table from our schema
+        this.environmentalParameters = [
+            { code: 'ec', name: 'Electrical Conductivity', unit: 'mS/cm' },
+            { code: 'ph', name: 'pH', unit: '' },
+            { code: 'temperature', name: 'Temperature', unit: '°C' },
+            { code: 'humidity', name: 'Relative Humidity', unit: '%' },
+            { code: 'ppfd', name: 'Light Intensity', unit: 'μmol/m²/s' }
+        ];
+        console.log(`🌡️ Loaded ${this.environmentalParameters.length} environmental parameters`);
+    }
+
+    // =====================================================
+    // UI POPULATION FUNCTIONS
+    // =====================================================
+
+    populateFilterDropdowns() {
+        // Populate nutrient filter
+        const nutrientFilter = document.getElementById('ratio-nutrient-filter');
+        if (nutrientFilter) {
+            nutrientFilter.innerHTML = '<option value="">All Nutrients</option>';
+            this.nutrients.forEach(nutrient => {
+                const option = document.createElement('option');
+                option.value = nutrient.code;
+                option.textContent = `${nutrient.name} (${nutrient.symbol})`;
+                nutrientFilter.appendChild(option);
+            });
+        }
+
+        // Populate stage filter
+        const stageFilter = document.getElementById('ratio-stage-filter');
+        if (stageFilter) {
+            stageFilter.innerHTML = '<option value="">All Growth Stages</option>';
+            this.growthStages.forEach(stage => {
+                const option = document.createElement('option');
+                option.value = stage.code;
+                option.textContent = stage.name;
+                stageFilter.appendChild(option);
+            });
+        }
+    }
+
+    populateModalDropdowns() {
+        // Ratio rule modal - nutrients
+        const ruleNutrient = document.getElementById('rule-nutrient');
+        if (ruleNutrient) {
+            ruleNutrient.innerHTML = '<option value="">Select Nutrient</option>';
+            this.nutrients.forEach(nutrient => {
+                const option = document.createElement('option');
+                option.value = nutrient.code;
+                option.textContent = `${nutrient.name} (${nutrient.symbol})`;
+                ruleNutrient.appendChild(option);
+            });
+        }
+
+        // Ratio rule modal - growth stages
+        const ruleStage = document.getElementById('rule-growth-stage');
+        if (ruleStage) {
+            ruleStage.innerHTML = '<option value="">All Stages (General)</option>';
+            this.growthStages.forEach(stage => {
+                const option = document.createElement('option');
+                option.value = stage.code;
+                option.textContent = stage.name;
+                ruleStage.appendChild(option);
+            });
+        }
+
+        // Environmental adjustment modal - parameters
+        const adjustmentParameter = document.getElementById('adjustment-parameter');
+        if (adjustmentParameter) {
+            adjustmentParameter.innerHTML = '<option value="">Select Parameter</option>';
+            this.environmentalParameters.forEach(param => {
+                const option = document.createElement('option');
+                option.value = param.code;
+                option.textContent = `${param.name}${param.unit ? ` (${param.unit})` : ''}`;
+                adjustmentParameter.appendChild(option);
+            });
+        }
+    }
+
+    // =====================================================
+    // DISPLAY FUNCTIONS
+    // =====================================================
+
+    displayRatioRules() {
+        const container = document.getElementById('ratio-rules-list');
+        if (!container) return;
+
+        if (this.ratioRules.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <p>No ratio rules found. Add your first rule to get started.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Group rules by nutrient
+        const nutrientGroups = {};
+        this.ratioRules.forEach(rule => {
+            const key = rule.nutrient_code;
+            if (!nutrientGroups[key]) {
+                nutrientGroups[key] = {
+                    nutrient: {
+                        code: rule.nutrient_code,
+                        name: rule.nutrient_name,
+                        symbol: rule.symbol,
+                        unit: rule.unit
+                    },
+                    stages: []
+                };
+            }
+            nutrientGroups[key].stages.push(rule);
+        });
+
+        // Generate consolidated nutrient cards
+        const nutrientCards = Object.values(nutrientGroups).map(group => 
+            this.generateConsolidatedNutrientCard(group)
+        ).join('');
+
+        container.innerHTML = nutrientCards;
+    }
+
+    generateRatioRuleCard(rule) {
+        const badges = [];
+        if (rule.is_default) badges.push('<span class="ratio-badge default">Default</span>');
+        if (rule.priority > 0) badges.push(`<span class="ratio-badge priority">Priority: ${rule.priority}</span>`);
+
+        // Calculate example values for 150 ppm nitrogen base
+        const exampleBase = 150;
+        const minExample = (exampleBase * parseFloat(rule.min_factor)).toFixed(1);
+        const maxExample = (exampleBase * parseFloat(rule.max_factor)).toFixed(1);
+
+        return `
+            <div class="ratio-rule-card" data-rule-id="${rule.id}">
+                <div class="ratio-rule-header">
+                    <div class="ratio-rule-info">
+                        <div class="ratio-rule-title">${rule.nutrient_name} (${rule.symbol})</div>
+                        <div class="ratio-rule-subtitle">${rule.stage_name || 'All Stages'} • Ratio to Nitrogen (N)</div>
+                    </div>
+                    <div class="ratio-rule-actions">
+                        <button class="btn-edit" onclick="app.nutrientRatioManager.editRatioRule(${rule.id})" title="Edit Rule">
+                            <img src="icons/new-icons/Afraponix Go Icons_edit.svg" alt="Edit" style="width: 16px; height: 16px;">
+                        </button>
+                        <button class="btn-delete" onclick="app.nutrientRatioManager.deleteRatioRule(${rule.id})" title="Delete Rule">
+                            <img src="icons/new-icons/Afraponix Go Icons_delete.svg" alt="Delete" style="width: 16px; height: 16px;">
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="ratio-rule-details">
+                    <div class="ratio-detail-item">
+                        <div class="ratio-detail-label">Ratio Range</div>
+                        <div class="ratio-detail-value">${parseFloat(rule.min_factor)} - ${parseFloat(rule.max_factor)}</div>
+                    </div>
+                    <div class="ratio-detail-item">
+                        <div class="ratio-detail-label">Example (150 ppm N)</div>
+                        <div class="ratio-detail-value">${minExample} - ${maxExample} ${rule.unit}</div>
+                    </div>
+                    <div class="ratio-detail-item">
+                        <div class="ratio-detail-label">Formula</div>
+                        <div class="ratio-detail-value">${rule.symbol} = N × ratio</div>
+                    </div>
+                </div>
+                
+                ${badges.length > 0 ? `<div class="ratio-badges">${badges.join('')}</div>` : ''}
+                
+                ${rule.notes ? `<div class="ratio-rule-notes">${rule.notes}</div>` : ''}
+            </div>
+        `;
+    }
+
+    generateConsolidatedNutrientCard(group) {
+        const { nutrient, stages } = group;
+        
+        // Smart detection: Only iron uses fixed-range ppm values
+        // All others (including calcium, potassium with small ratios) are ratio-based
+        const isFixedRange = (nutrient.code === 'iron');
+        
+        // Sort stages by priority: vegetative, flowering, fruiting, general/all
+        const stageOrder = { 'vegetative': 1, 'flowering': 2, 'fruiting': 3, 'general': 4 };
+        stages.sort((a, b) => {
+            const orderA = stageOrder[a.stage_code] || 999;
+            const orderB = stageOrder[b.stage_code] || 999;
+            return orderA - orderB;
+        });
+
+        // Generate stage entries
+        const stageEntries = stages.map(stage => {
+            const badges = [];
+            if (stage.is_default) badges.push('<span class="ratio-badge default">Default</span>');
+            if (stage.priority > 0) badges.push(`<span class="ratio-badge priority">Priority: ${stage.priority}</span>`);
+
+            let detailsContent;
+            
+            if (isFixedRange) {
+                // For fixed-range nutrients like iron, show absolute ranges
+                const minRange = parseFloat(stage.min_factor).toFixed(1);
+                const maxRange = parseFloat(stage.max_factor).toFixed(1);
+                
+                detailsContent = `
+                    <div class="stage-detail-grid">
+                        <div class="stage-detail-item">
+                            <span class="stage-detail-label">Fixed Range:</span>
+                            <span class="stage-detail-value">${minRange} - ${maxRange} ${nutrient.unit}</span>
+                        </div>
+                        <div class="stage-detail-item">
+                            <span class="stage-detail-label">Type:</span>
+                            <span class="stage-detail-value">Absolute concentration</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // For ratio-based nutrients, show ratios and examples
+                const exampleBase = 150;
+                const minExample = (exampleBase * parseFloat(stage.min_factor)).toFixed(1);
+                const maxExample = (exampleBase * parseFloat(stage.max_factor)).toFixed(1);
+                
+                detailsContent = `
+                    <div class="stage-detail-grid">
+                        <div class="stage-detail-item">
+                            <span class="stage-detail-label">Ratio:</span>
+                            <span class="stage-detail-value">${parseFloat(stage.min_factor)} - ${parseFloat(stage.max_factor)}</span>
+                        </div>
+                        <div class="stage-detail-item">
+                            <span class="stage-detail-label">Example (150 ppm N):</span>
+                            <span class="stage-detail-value">${minExample} - ${maxExample} ${nutrient.unit}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="stage-ratio-entry" data-rule-id="${stage.id}">
+                    <div class="stage-ratio-header">
+                        <div class="stage-ratio-info">
+                            <div class="stage-ratio-stage">${stage.stage_name || 'All Stages'}</div>
+                            ${badges.length > 0 ? `<div class="stage-badges">${badges.join('')}</div>` : ''}
+                        </div>
+                        <div class="stage-ratio-actions">
+                            <button class="btn-edit-small" onclick="app.nutrientRatioManager.editRatioRule(${stage.id})" title="Edit Rule">
+                                <img src="icons/new-icons/Afraponix Go Icons_edit.svg" alt="Edit" style="width: 14px; height: 14px;">
+                            </button>
+                            <button class="btn-delete-small" onclick="app.nutrientRatioManager.deleteRatioRule(${stage.id})" title="Delete Rule">
+                                <img src="icons/new-icons/Afraponix Go Icons_delete.svg" alt="Delete" style="width: 14px; height: 14px;">
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="stage-ratio-details">
+                        ${detailsContent}
+                        ${stage.notes ? `<div class="stage-notes">${stage.notes}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Different subtitle and formula for fixed-range vs ratio-based nutrients
+        const subtitle = isFixedRange 
+            ? 'Fixed absolute concentrations independent of nitrogen levels'
+            : 'Ratios relative to Nitrogen (N) • Formula: ' + nutrient.symbol + ' = N × ratio';
+
+        return `
+            <div class="consolidated-nutrient-card ${isFixedRange ? 'fixed-range-nutrient' : 'ratio-based-nutrient'}">
+                <div class="nutrient-card-header">
+                    <div class="nutrient-card-info">
+                        <div class="nutrient-card-title">
+                            ${nutrient.name} (${nutrient.symbol})
+                            ${isFixedRange ? '<span class="fixed-range-badge">Fixed Range</span>' : '<span class="ratio-based-badge">Ratio Based</span>'}
+                        </div>
+                        <div class="nutrient-card-subtitle">${subtitle}</div>
+                    </div>
+                    <div class="nutrient-card-actions">
+                        <button class="btn-add-stage" onclick="app.nutrientRatioManager.addRatioRuleForNutrient('${nutrient.code}')" title="Add Stage Rule">
+                            <img src="icons/new-icons/Afraponix Go Icons_add.svg" alt="Add" style="width: 16px; height: 16px;">
+                            Add Stage
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="nutrient-stages-container">
+                    ${stageEntries}
+                </div>
+            </div>
+        `;
+    }
+
+    displayEnvironmentalAdjustments() {
+        const container = document.getElementById('environmental-adjustments-list');
+        if (!container) return;
+
+        if (this.environmentalAdjustments.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <p>No environmental adjustments found. Add your first adjustment to get started.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = this.environmentalAdjustments.map(adj => this.generateEnvironmentalAdjustmentCard(adj)).join('');
+    }
+
+    generateEnvironmentalAdjustmentCard(adjustment) {
+        const operatorDisplay = {
+            '>': 'greater than',
+            '<': 'less than',
+            '>=': 'greater than or equal',
+            '<=': 'less than or equal',
+            '=': 'equal to',
+            'between': 'between'
+        };
+
+        const thresholdText = adjustment.operator === 'between' && adjustment.threshold_value_max 
+            ? `${adjustment.threshold_value} - ${adjustment.threshold_value_max}`
+            : adjustment.threshold_value;
+
+        const adjustmentPercent = Math.round(parseFloat(adjustment.adjustment_factor) * 100);
+
+        return `
+            <div class="env-adjustment-card" data-adjustment-id="${adjustment.id}">
+                <div class="env-adjustment-header">
+                    <div class="env-adjustment-info">
+                        <div class="env-adjustment-title">${adjustment.parameter_name}</div>
+                        <div class="env-adjustment-subtitle">
+                            <span class="env-condition-badge">${adjustment.condition_name}</span>
+                        </div>
+                    </div>
+                    <div class="ratio-rule-actions">
+                        <button class="btn-edit" onclick="app.nutrientRatioManager.editEnvironmentalAdjustment(${adjustment.id})" title="Edit Adjustment">
+                            <img src="icons/new-icons/Afraponix Go Icons_edit.svg" alt="Edit" style="width: 16px; height: 16px;">
+                        </button>
+                        <button class="btn-delete" onclick="app.nutrientRatioManager.deleteEnvironmentalAdjustment(${adjustment.id})" title="Delete Adjustment">
+                            <img src="icons/new-icons/Afraponix Go Icons_delete.svg" alt="Delete" style="width: 16px; height: 16px;">
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="env-adjustment-details">
+                    <div class="ratio-detail-item">
+                        <div class="ratio-detail-label">Condition</div>
+                        <div class="ratio-detail-value">
+                            <span class="env-operator-badge">${operatorDisplay[adjustment.operator] || adjustment.operator}</span>
+                            ${thresholdText}${adjustment.parameter_unit ? ` ${adjustment.parameter_unit}` : ''}
+                        </div>
+                    </div>
+                    <div class="ratio-detail-item">
+                        <div class="ratio-detail-label">Adjustment</div>
+                        <div class="ratio-detail-value">${adjustmentPercent}% (×${adjustment.adjustment_factor})</div>
+                    </div>
+                    <div class="ratio-detail-item">
+                        <div class="ratio-detail-label">Scope</div>
+                        <div class="ratio-detail-value">${adjustment.applies_to_all_nutrients ? 'All Nutrients' : 'Specific Nutrients'}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    filterRatioRules() {
+        const nutrientFilter = document.getElementById('ratio-nutrient-filter')?.value;
+        const stageFilter = document.getElementById('ratio-stage-filter')?.value;
+
+        let filteredRules = this.ratioRules;
+
+        if (nutrientFilter) {
+            filteredRules = filteredRules.filter(rule => rule.nutrient_code === nutrientFilter);
+        }
+
+        if (stageFilter) {
+            filteredRules = filteredRules.filter(rule => rule.stage_code === stageFilter);
+        }
+
+        const container = document.getElementById('ratio-rules-list');
+        if (container) {
+            container.innerHTML = filteredRules.map(rule => this.generateRatioRuleCard(rule)).join('');
+        }
+    }
+
+    // =====================================================
+    // MODAL FUNCTIONS
+    // =====================================================
+
+    addRatioRuleForNutrient(nutrientCode) {
+        // Pre-populate the modal with the selected nutrient
+        this.showRatioRuleModal();
+        
+        // Set the nutrient dropdown to the specified nutrient
+        const nutrientSelect = document.getElementById('ratio-nutrient-id');
+        if (nutrientSelect) {
+            nutrientSelect.value = this.nutrients.find(n => n.code === nutrientCode)?.id || '';
+        }
+    }
+
+    showRatioRuleModal(rule = null) {
+        this.currentEditingRule = rule;
+        const modal = document.getElementById('ratio-rule-modal');
+        const title = document.getElementById('ratio-rule-modal-title');
+        
+        if (rule) {
+            title.innerHTML = '<img src="icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="Ratio Rule" class="heading-icon"> Edit Ratio Rule';
+            this.populateRatioRuleForm(rule);
+        } else {
+            title.innerHTML = '<img src="icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="Ratio Rule" class="heading-icon"> Add Ratio Rule';
+            this.clearRatioRuleForm();
+        }
+        
+        modal.style.display = 'flex';
+    }
+
+    closeRatioRuleModal() {
+        document.getElementById('ratio-rule-modal').style.display = 'none';
+        this.currentEditingRule = null;
+        this.clearRatioRuleForm();
+    }
+
+    showEnvAdjustmentModal(adjustment = null) {
+        this.currentEditingAdjustment = adjustment;
+        const modal = document.getElementById('env-adjustment-modal');
+        const title = document.getElementById('env-adjustment-modal-title');
+        
+        if (adjustment) {
+            title.innerHTML = '<img src="icons/new-icons/Afraponix Go Icons_parameters.svg" alt="Environmental Adjustment" class="heading-icon"> Edit Environmental Adjustment';
+            this.populateEnvAdjustmentForm(adjustment);
+        } else {
+            title.innerHTML = '<img src="icons/new-icons/Afraponix Go Icons_parameters.svg" alt="Environmental Adjustment" class="heading-icon"> Add Environmental Adjustment';
+            this.clearEnvAdjustmentForm();
+        }
+        
+        modal.style.display = 'flex';
+    }
+
+    closeEnvAdjustmentModal() {
+        document.getElementById('env-adjustment-modal').style.display = 'none';
+        this.currentEditingAdjustment = null;
+        this.clearEnvAdjustmentForm();
+    }
+
+    // =====================================================
+    // FORM FUNCTIONS
+    // =====================================================
+
+    clearRatioRuleForm() {
+        document.getElementById('ratio-rule-form').reset();
+    }
+
+    clearEnvAdjustmentForm() {
+        document.getElementById('env-adjustment-form').reset();
+        document.getElementById('adjustment-applies-all').checked = true;
+    }
+
+    populateRatioRuleForm(rule) {
+        document.getElementById('rule-nutrient').value = rule.nutrient_code;
+        document.getElementById('rule-growth-stage').value = rule.stage_code || '';
+        document.getElementById('rule-min-factor').value = rule.min_factor;
+        document.getElementById('rule-max-factor').value = rule.max_factor;
+        document.getElementById('rule-priority').value = rule.priority;
+        document.getElementById('rule-is-default').checked = rule.is_default;
+        document.getElementById('rule-notes').value = rule.notes || '';
+    }
+
+    populateEnvAdjustmentForm(adjustment) {
+        document.getElementById('adjustment-parameter').value = adjustment.parameter_code;
+        document.getElementById('adjustment-condition').value = adjustment.condition_name;
+        document.getElementById('adjustment-operator').value = adjustment.operator;
+        document.getElementById('adjustment-threshold').value = adjustment.threshold_value;
+        document.getElementById('adjustment-threshold-max').value = adjustment.threshold_value_max || '';
+        document.getElementById('adjustment-factor').value = adjustment.adjustment_factor;
+        document.getElementById('adjustment-applies-all').checked = adjustment.applies_to_all_nutrients;
+    }
+
+    async saveRatioRule() {
+        try {
+            const formData = {
+                nutrient_code: document.getElementById('rule-nutrient').value,
+                growth_stage_code: document.getElementById('rule-growth-stage').value || null,
+                min_factor: parseFloat(document.getElementById('rule-min-factor').value),
+                max_factor: parseFloat(document.getElementById('rule-max-factor').value),
+                priority: parseInt(document.getElementById('rule-priority').value) || 0,
+                is_default: document.getElementById('rule-is-default').checked,
+                notes: document.getElementById('rule-notes').value || null
+            };
+
+            // Validation
+            if (!formData.nutrient_code || !formData.min_factor || !formData.max_factor) {
+                throw new Error('Please fill in all required fields');
+            }
+
+            if (formData.min_factor >= formData.max_factor) {
+                throw new Error('Maximum factor must be greater than minimum factor');
+            }
+
+            const isEdit = this.currentEditingRule !== null;
+            const url = isEdit 
+                ? `/api/crop-knowledge/admin/ratio-rules/${this.currentEditingRule.id}`
+                : '/api/crop-knowledge/admin/ratio-rules';
+            
+            const method = isEdit ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                app.showMessage(`Ratio rule ${isEdit ? 'updated' : 'created'} successfully`, 'success');
+                this.closeRatioRuleModal();
+                await this.loadRatioRules();
+                this.displayRatioRules();
+                this.filterRatioRules(); // Reapply filters
+            } else {
+                throw new Error(result.error || `Failed to ${isEdit ? 'update' : 'create'} ratio rule`);
+            }
+        } catch (error) {
+            console.error('Error saving ratio rule:', error);
+            app.showMessage(error.message, 'error');
+        }
+    }
+
+    async saveEnvAdjustment() {
+        try {
+            const formData = {
+                parameter_code: document.getElementById('adjustment-parameter').value,
+                condition_name: document.getElementById('adjustment-condition').value,
+                operator: document.getElementById('adjustment-operator').value,
+                threshold_value: parseFloat(document.getElementById('adjustment-threshold').value),
+                threshold_value_max: document.getElementById('adjustment-threshold-max').value 
+                    ? parseFloat(document.getElementById('adjustment-threshold-max').value) : null,
+                adjustment_factor: parseFloat(document.getElementById('adjustment-factor').value),
+                applies_to_all_nutrients: document.getElementById('adjustment-applies-all').checked
+            };
+
+            // Validation
+            if (!formData.parameter_code || !formData.condition_name || !formData.operator || 
+                !formData.threshold_value || !formData.adjustment_factor) {
+                throw new Error('Please fill in all required fields');
+            }
+
+            if (formData.operator === 'between' && !formData.threshold_value_max) {
+                throw new Error('Max threshold is required for "between" operator');
+            }
+
+            const isEdit = this.currentEditingAdjustment !== null;
+            
+            if (isEdit) {
+                // For editing, we'd need an update endpoint
+                throw new Error('Editing environmental adjustments not yet implemented');
+            } else {
+                const response = await fetch('/api/crop-knowledge/admin/environmental-adjustments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    app.showMessage('Environmental adjustment created successfully', 'success');
+                    this.closeEnvAdjustmentModal();
+                    await this.loadEnvironmentalAdjustments();
+                    this.displayEnvironmentalAdjustments();
+                } else {
+                    throw new Error(result.error || 'Failed to create environmental adjustment');
+                }
+            }
+        } catch (error) {
+            console.error('Error saving environmental adjustment:', error);
+            app.showMessage(error.message, 'error');
+        }
+    }
+
+    // =====================================================
+    // CRUD FUNCTIONS
+    // =====================================================
+
+    async editRatioRule(ruleId) {
+        const rule = this.ratioRules.find(r => r.id === ruleId);
+        if (rule) {
+            this.showRatioRuleModal(rule);
+        }
+    }
+
+    async deleteRatioRule(ruleId) {
+        if (!confirm('Are you sure you want to delete this ratio rule?')) return;
+
+        try {
+            const response = await fetch(`/api/crop-knowledge/admin/ratio-rules/${ruleId}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                app.showMessage('Ratio rule deleted successfully', 'success');
+                await this.loadRatioRules();
+                this.displayRatioRules();
+                this.filterRatioRules(); // Reapply filters
+            } else {
+                throw new Error(result.error || 'Failed to delete ratio rule');
+            }
+        } catch (error) {
+            console.error('Error deleting ratio rule:', error);
+            app.showMessage(error.message, 'error');
+        }
+    }
+
+    async editEnvironmentalAdjustment(adjustmentId) {
+        const adjustment = this.environmentalAdjustments.find(a => a.id === adjustmentId);
+        if (adjustment) {
+            this.showEnvAdjustmentModal(adjustment);
+        }
+    }
+
+    async deleteEnvironmentalAdjustment(adjustmentId) {
+        if (!confirm('Are you sure you want to delete this environmental adjustment?')) return;
+
+        try {
+            // Note: We'd need a DELETE endpoint for environmental adjustments
+            app.showMessage('Delete environmental adjustment functionality not yet implemented', 'warning');
+        } catch (error) {
+            console.error('Error deleting environmental adjustment:', error);
+            app.showMessage(error.message, 'error');
+        }
+    }
+}
+
+// Initialize the nutrient ratio manager when the app loads
+document.addEventListener('DOMContentLoaded', () => {
+    // Wait for app to be initialized
+    setTimeout(() => {
+        if (window.app) {
+            app.nutrientRatioManager = new NutrientRatioManager();
+            
+            // Add global functions for modal callbacks
+            app.closeRatioRuleModal = () => app.nutrientRatioManager.closeRatioRuleModal();
+            app.closeEnvAdjustmentModal = () => app.nutrientRatioManager.closeEnvAdjustmentModal();
+            app.saveRatioRule = () => app.nutrientRatioManager.saveRatioRule();
+            app.saveEnvAdjustment = () => app.nutrientRatioManager.saveEnvAdjustment();
+            
+            console.log('✅ Nutrient Ratio Manager initialized');
+            
+            // Add global function for manual testing
+            window.testNutrientRatios = () => {
+                console.log('🧪 Manual test: Loading nutrient ratios...');
+                app.nutrientRatioManager.loadRatioManagement();
+            };
+            
+            // Add comprehensive nutrient modal functions
+            app.openComprehensiveNutrientModal = (nutrientCode) => {
+                console.log(`🔍 Opening comprehensive nutrient modal for: ${nutrientCode}`);
+                app.showComprehensiveNutrientInfo(nutrientCode);
+            };
+            
+            app.closeComprehensiveNutrientModal = () => {
+                const modal = document.getElementById('comprehensive-nutrient-modal');
+                modal.style.display = 'none';
+            };
+            
+            // ========================
+            // DEFICIENCY IMAGES MANAGEMENT
+            // ========================
+            
+            app.initializeDeficiencyImagesManagement = async () => {
+                console.log('🖼️ Initializing deficiency images management...');
+                
+                try {
+                    // Load all deficiency images by default
+                    console.log('🔄 Loading all deficiency images...');
+                    await app.loadAllDeficiencyImages();
+                    
+                    // Setup event listeners for filtering
+                    console.log('🔄 Setting up filter event listeners...');
+                    app.setupDeficiencyFilterEventListeners();
+                    
+                    console.log('✅ Deficiency images management initialized successfully!');
+                } catch (error) {
+                    console.error('❌ Error initializing deficiency images management:', error);
+                }
+            };
+            
+            app.loadDeficiencyNutrientsDropdown = async () => {
+                console.log('🔄 Loading nutrients for deficiency dropdown...');
+                try {
+                    const response = await fetch('/api/crop-knowledge/nutrients');
+                    const data = await response.json();
+                    
+                    console.log('📊 Nutrients API response:', data);
+                    
+                    const select = document.getElementById('deficiency-nutrient-select');
+                    if (!select) {
+                        console.error('❌ Deficiency nutrient select element not found');
+                        return;
+                    }
+                    
+                    select.innerHTML = '<option value="">Choose a nutrient...</option>';
+                    
+                    if (data.success && data.data) {
+                        console.log(`✅ Found ${data.data.length} nutrients for dropdown`);
+                        data.data.forEach(nutrient => {
+                            const option = document.createElement('option');
+                            option.value = nutrient.code;
+                            option.textContent = `${nutrient.name} (${nutrient.code})`;
+                            select.appendChild(option);
+                            console.log(`  ➕ Added nutrient: ${nutrient.name} (${nutrient.code})`);
+                        });
+                    } else {
+                        console.warn('⚠️ No nutrients data received or API call failed');
+                        select.innerHTML = '<option value="">No nutrients available</option>';
+                    }
+                } catch (error) {
+                    console.error('❌ Error loading nutrients dropdown:', error);
+                    const select = document.getElementById('deficiency-nutrient-select');
+                    if (select) {
+                        select.innerHTML = '<option value="">Error loading nutrients</option>';
+                    }
+                }
+            };
+            
+            app.setupDeficiencyImageEventListeners = () => {
+                // Nutrient selection change
+                const nutrientSelect = document.getElementById('deficiency-nutrient-select');
+                if (nutrientSelect) {
+                    nutrientSelect.addEventListener('change', (e) => {
+                        const nutrientCode = e.target.value;
+                        if (nutrientCode) {
+                            app.loadDeficiencyImagesForNutrient(nutrientCode);
+                        } else {
+                            app.showNoNutrientSelected();
+                        }
+                    });
+                }
+                
+                // Refresh button
+                const refreshBtn = document.getElementById('refresh-deficiency-images');
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', () => {
+                        const selectedNutrient = nutrientSelect?.value;
+                        if (selectedNutrient) {
+                            app.loadDeficiencyImagesForNutrient(selectedNutrient);
+                        }
+                    });
+                }
+                
+                // Add new image button
+                const addBtn = document.getElementById('add-deficiency-image-btn');
+                if (addBtn) {
+                    console.log('✅ Found add deficiency image button');
+                    
+                    // Add visual feedback on hover when no nutrient selected
+                    const updateButtonState = () => {
+                        const selectedNutrient = nutrientSelect?.value;
+                        if (!selectedNutrient) {
+                            addBtn.title = 'Please select a nutrient from the dropdown first';
+                            addBtn.style.opacity = '0.6';
+                        } else {
+                            addBtn.title = 'Add deficiency image for ' + selectedNutrient;
+                            addBtn.style.opacity = '1';
+                        }
+                    };
+                    
+                    // Update button state initially and when nutrient changes
+                    updateButtonState();
+                    if (nutrientSelect) {
+                        nutrientSelect.addEventListener('change', updateButtonState);
+                    }
+                    
+                    addBtn.addEventListener('click', () => {
+                        const selectedNutrient = nutrientSelect?.value;
+                        console.log('🔄 Add button clicked, selected nutrient:', selectedNutrient);
+                        console.log('🔄 Button element:', addBtn);
+                        console.log('🔄 Nutrient select element:', nutrientSelect);
+                        
+                        if (selectedNutrient) {
+                            console.log('✅ Opening modal for nutrient:', selectedNutrient);
+                            app.openDeficiencyImageModal(selectedNutrient);
+                        } else {
+                            console.log('⚠️ No nutrient selected - showing warning');
+                            app.showNotification('Please select a nutrient from the dropdown first', 'warning');
+                        }
+                    });
+                } else {
+                    console.log('❌ Add deficiency image button not found');
+                }
+                
+                // Method tab switching
+                const methodTabs = document.querySelectorAll('.method-tab');
+                methodTabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const method = tab.dataset.method;
+                        app.switchUploadMethod(method);
+                    });
+                });
+
+                // Form submission handlers (now redundant since buttons use onclick)
+                const deficiencyUploadForm = document.getElementById('deficiency-image-upload-form');
+                if (deficiencyUploadForm) {
+                    console.log('✅ Found upload form, adding event listener');
+                    deficiencyUploadForm.addEventListener('submit', (e) => {
+                        console.log('🔄 Upload form submitted - PREVENTING DEFAULT');
+                        e.preventDefault();
+                        e.stopPropagation();
+                        app.uploadDeficiencyImage();
+                        return false;
+                    });
+                } else {
+                    console.log('❌ Upload form not found');
+                }
+
+                const deficiencyUrlForm = document.getElementById('deficiency-image-form');
+                if (deficiencyUrlForm) {
+                    console.log('✅ Found URL form, adding event listener');
+                    deficiencyUrlForm.addEventListener('submit', (e) => {
+                        console.log('🔄 URL form submitted - PREVENTING DEFAULT');
+                        e.preventDefault();
+                        e.stopPropagation();
+                        app.saveDeficiencyImage();
+                        return false;
+                    });
+                } else {
+                    console.log('❌ URL form not found');
+                }
+                
+                // File input change
+                const fileInput = document.getElementById('deficiency-file-input');
+                if (fileInput) {
+                    fileInput.addEventListener('change', (e) => {
+                        app.handleFileSelection(e.target.files[0]);
+                    });
+                    console.log('✅ File input change listener attached');
+                } else {
+                    console.log('❌ File input not found');
+                }
+                
+                // Click handler for file upload area to trigger hidden file input
+                const uploadArea = document.querySelector('.file-upload-area');
+                
+                const triggerFileInput = (e) => {
+                    console.log('🔄 Upload area clicked, triggering file input...');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (fileInput) {
+                        fileInput.click();
+                    } else {
+                        console.log('❌ File input not available');
+                    }
+                };
+                
+                if (uploadArea) {
+                    uploadArea.addEventListener('click', triggerFileInput);
+                    uploadArea.style.cursor = 'pointer';
+                    console.log('✅ Upload area click listener attached');
+                }
+                
+                // Drag and drop for file upload (using existing uploadArea variable)
+                if (uploadArea) {
+                    uploadArea.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        uploadArea.classList.add('dragover');
+                    });
+                    
+                    uploadArea.addEventListener('dragleave', (e) => {
+                        e.preventDefault();
+                        uploadArea.classList.remove('dragover');
+                    });
+                    
+                    uploadArea.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        uploadArea.classList.remove('dragover');
+                        const files = e.dataTransfer.files;
+                        if (files.length > 0) {
+                            app.handleFileSelection(files[0]);
+                        }
+                    });
+                }
+                
+                // Form submissions
+                const uploadForm = document.getElementById('deficiency-image-upload-form');
+                if (uploadForm) {
+                    uploadForm.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        app.uploadDeficiencyImage();
+                    });
+                }
+                
+                const urlForm = document.getElementById('deficiency-image-form');
+                if (urlForm) {
+                    urlForm.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        app.saveDeficiencyImage();
+                    });
+                }
+            };
+            
+            // ========== NEW FILTERING EVENT LISTENERS ==========
+            app.setupDeficiencyFilterEventListeners = () => {
+                console.log('🔄 Setting up deficiency filter event listeners...');
+                
+                // Filter dropdown change listeners
+                const nutrientFilter = document.getElementById('deficiency-nutrient-filter');
+                const plantFilter = document.getElementById('deficiency-plant-filter');
+                const clearFiltersBtn = document.getElementById('clear-deficiency-filters');
+                
+                if (nutrientFilter) {
+                    nutrientFilter.addEventListener('change', () => {
+                        console.log('🔍 Nutrient filter changed:', nutrientFilter.value);
+                        app.applyDeficiencyFilters();
+                    });
+                    console.log('✅ Nutrient filter listener attached');
+                }
+                
+                if (plantFilter) {
+                    plantFilter.addEventListener('change', () => {
+                        console.log('🔍 Plant filter changed:', plantFilter.value);
+                        app.applyDeficiencyFilters();
+                    });
+                    console.log('✅ Plant filter listener attached');
+                }
+                
+                if (clearFiltersBtn) {
+                    clearFiltersBtn.addEventListener('click', () => {
+                        console.log('🧹 Clear filters clicked');
+                        app.clearDeficiencyFilters();
+                    });
+                    console.log('✅ Clear filters button listener attached');
+                }
+                
+                // Add new image button (now always available)
+                const addBtn = document.getElementById('add-deficiency-image-btn');
+                if (addBtn) {
+                    console.log('✅ Found add deficiency image button');
+                    
+                    // Remove old restrictions - button is now always available
+                    addBtn.style.opacity = '1';
+                    addBtn.title = 'Add a new deficiency image';
+                    
+                    // Remove any existing listeners
+                    const newBtn = addBtn.cloneNode(true);
+                    addBtn.parentNode.replaceChild(newBtn, addBtn);
+                    
+                    // Add click listener
+                    newBtn.addEventListener('click', (e) => {
+                        console.log('📸 Add deficiency image button clicked');
+                        e.preventDefault();
+                        app.openDeficiencyImageModal(''); // Empty nutrient code for new image
+                    });
+                    
+                    console.log('✅ Add button listener attached (always available)');
+                } else {
+                    console.log('❌ Add deficiency image button not found');
+                }
+                
+                // Refresh button
+                const refreshBtn = document.getElementById('refresh-deficiency-images');
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', () => {
+                        console.log('🔄 Refresh button clicked - reloading all images');
+                        app.loadAllDeficiencyImages();
+                    });
+                    console.log('✅ Refresh button listener attached');
+                }
+                
+                // File input and upload area handlers (reuse from old function)
+                const fileInput = document.getElementById('deficiency-file-input');
+                if (fileInput) {
+                    fileInput.addEventListener('change', (e) => {
+                        app.handleFileSelection(e.target.files[0]);
+                    });
+                    console.log('✅ File input change listener attached');
+                }
+                
+                const uploadArea = document.querySelector('.file-upload-area');
+                if (uploadArea && fileInput) {
+                    console.log('🔍 Upload area found:', uploadArea);
+                    console.log('🔍 File input found:', fileInput);
+                    
+                    console.log('✅ File input positioned for direct clicking');
+                }
+                
+                // Form submission handlers
+                const uploadForm = document.getElementById('deficiency-image-upload-form');
+                if (uploadForm) {
+                    uploadForm.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        app.uploadDeficiencyImage();
+                    });
+                    console.log('✅ Upload form listener attached');
+                }
+                
+                const urlForm = document.getElementById('deficiency-image-form');
+                if (urlForm) {
+                    urlForm.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        app.saveDeficiencyImage();
+                    });
+                    console.log('✅ URL form listener attached');
+                }
+                
+                console.log('✅ All deficiency filter event listeners attached');
+            };
+            
+            app.loadDeficiencyImagesForNutrient = async (nutrientCode) => {
+                console.log('📸 Loading deficiency images for:', nutrientCode);
+                
+                try {
+                    const response = await fetch(`/api/crop-knowledge/admin/nutrients/${nutrientCode}/deficiency-images`);
+                    const data = await response.json();
+                    
+                    // Show header and grid
+                    const header = document.getElementById('deficiency-header');
+                    const grid = document.getElementById('deficiency-images-grid');
+                    const noSelection = document.getElementById('no-nutrient-selected');
+                    const title = document.getElementById('selected-nutrient-title');
+                    
+                    if (header) header.style.display = 'flex';
+                    if (grid) grid.style.display = 'grid';
+                    if (noSelection) noSelection.style.display = 'none';
+                    if (title) title.textContent = `${data.nutrient_code} Deficiency Images (${data.count})`;
+                    
+                    // Populate images grid
+                    app.populateDeficiencyImagesGrid(data.data || []);
+                    
+                } catch (error) {
+                    console.error('Error loading deficiency images:', error);
+                    app.showNotification('Error loading deficiency images', 'error');
+                }
+            };
+            
+            app.showNoNutrientSelected = () => {
+                const header = document.getElementById('deficiency-header');
+                const grid = document.getElementById('deficiency-images-grid');
+                const noSelection = document.getElementById('no-nutrient-selected');
+                
+                if (header) header.style.display = 'none';
+                if (grid) grid.style.display = 'none';
+                if (noSelection) noSelection.style.display = 'block';
+            };
+            
+            app.populateDeficiencyImagesGrid = (images) => {
+                const grid = document.getElementById('deficiency-images-grid');
+                if (!grid) return;
+                
+                if (images.length === 0) {
+                    grid.innerHTML = `
+                        <div class="no-data-message">
+                            <img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="No Images" class="no-data-icon">
+                            <h4 class="heading-4">No Images Found</h4>
+                            <p class="text-muted">No deficiency images have been added for this nutrient yet. Click "Add Deficiency Image" to get started.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                grid.innerHTML = images.map(image => `
+                    <div class="deficiency-image-card">
+                        <img src="${image.image_url}" alt="${image.caption}" class="deficiency-image-preview" 
+                             onclick="app.openLightbox('${image.image_url}', '${image.caption}', '${image.nutrient_name}', '${image.crop_name || 'No specific crop'}')"
+                             onerror="this.src='data:image/svg+xml,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 200 200\\'><rect fill=\\'%23f3f4f6\\' width=\\'200\\' height=\\'200\\'/><text x=\\'100\\' y=\\'100\\' text-anchor=\\'middle\\' dy=\\'.3em\\' fill=\\'%236b7280\\'>No Image</text></svg>'">
+                        <div class="deficiency-image-info">
+                            <div class="deficiency-stage-badge ${image.deficiency_stage}">${image.deficiency_stage.toUpperCase()}</div>
+                            <div class="deficiency-image-caption">${image.caption}</div>
+                            <div class="deficiency-image-meta">
+                                ${image.crop_name && image.crop_name.trim() ? `<span class="deficiency-meta-item">🌱 ${image.crop_name}</span>` : '<span class="deficiency-meta-item text-muted">No specific crop</span>'}
+                                <span class="deficiency-meta-item">${image.image_filename}</span>
+                            </div>
+                            <div class="deficiency-image-actions">
+                                <button class="btn btn-primary" style="background-color: #007bff !important; border: 1px solid #007bff !important; color: white !important; padding: 6px 12px !important; border-radius: 4px !important; font-size: 13px !important; font-weight: 500 !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; cursor: pointer !important; height: auto !important; line-height: normal !important; min-width: auto !important; width: auto !important;" onclick="app.editDeficiencyImage(${image.id})">
+                                    <img src="icons/new-icons/Afraponix Go Icons_edit.svg" alt="Edit" class="btn-icon" style="width: 14px; height: 14px;">
+                                    Edit
+                                </button>
+                                <button class="btn btn-danger" style="background-color: #dc3545 !important; border: 1px solid #dc3545 !important; color: white !important; padding: 6px 12px !important; border-radius: 4px !important; font-size: 13px !important; font-weight: 500 !important; display: inline-flex !important; align-items: center !important; gap: 6px !important; cursor: pointer !important; height: auto !important; line-height: normal !important; min-width: auto !important; width: auto !important;" onclick="app.deleteDeficiencyImage(${image.id}, '${image.nutrient_code}')">
+                                    <img src="icons/new-icons/Afraponix Go Icons_delete.svg" alt="Delete" class="btn-icon" style="width: 14px; height: 14px;">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            };
+            
+            app.switchUploadMethod = (method) => {
+                console.log('🔄 Switching upload method to:', method);
+                
+                // Save current shared form data before switching
+                const sharedData = {
+                    caption: document.getElementById('deficiency-caption')?.value || '',
+                    stage: document.getElementById('deficiency-stage')?.value || '',
+                    cropId: document.getElementById('deficiency-crop-id')?.value || '',
+                    nutrientCode: document.getElementById('deficiency-nutrient-code')?.value || '',
+                    imageId: document.getElementById('deficiency-image-id')?.value || ''
+                };
+                
+                console.log('💾 Preserving shared data:', sharedData);
+                
+                // Update tabs
+                document.querySelectorAll('.method-tab').forEach(tab => {
+                    tab.classList.toggle('active', tab.dataset.method === method);
+                });
+                
+                // Update forms
+                document.querySelectorAll('.upload-method').forEach(form => {
+                    form.classList.toggle('active', form.dataset.method === method);
+                });
+                
+                // Restore shared data after a brief delay to ensure elements are visible
+                setTimeout(() => {
+                    if (document.getElementById('deficiency-caption')) {
+                        document.getElementById('deficiency-caption').value = sharedData.caption;
+                    }
+                    if (document.getElementById('deficiency-stage')) {
+                        document.getElementById('deficiency-stage').value = sharedData.stage;
+                    }
+                    if (document.getElementById('deficiency-crop-id')) {
+                        document.getElementById('deficiency-crop-id').value = sharedData.cropId;
+                    }
+                    if (document.getElementById('deficiency-nutrient-code')) {
+                        document.getElementById('deficiency-nutrient-code').value = sharedData.nutrientCode;
+                    }
+                    if (document.getElementById('deficiency-image-id')) {
+                        document.getElementById('deficiency-image-id').value = sharedData.imageId;
+                    }
+                    console.log('✅ Shared data restored after tab switch');
+                }, 50);
+            };
+            
+            app.handleFileSelection = (file) => {
+                if (!file) return;
+                
+                // Validate file type
+                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+                if (!allowedTypes.includes(file.type)) {
+                    app.showNotification('Please select an image file (JPEG, PNG, GIF, WebP)', 'error');
+                    return;
+                }
+                
+                // Validate file size (5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    app.showNotification('File size must be less than 5MB', 'error');
+                    return;
+                }
+                
+                // Show file preview
+                const preview = document.getElementById('file-preview');
+                const previewImg = document.getElementById('preview-image');
+                const fileName = document.getElementById('file-name');
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewImg.src = e.target.result;
+                    fileName.textContent = file.name;
+                    preview.style.display = 'flex';
+                };
+                reader.readAsDataURL(file);
+            };
+            
+            app.uploadDeficiencyImage = async () => {
+                const nutrientCode = document.getElementById('upload-nutrient-select').value;
+                const fileInput = document.getElementById('deficiency-file-input');
+                const file = fileInput.files[0];
+                
+                if (!nutrientCode) {
+                    app.showNotification('Please select a nutrient deficiency', 'error');
+                    return;
+                }
+                
+                if (!file) {
+                    app.showNotification('Please select an image file', 'error');
+                    return;
+                }
+                
+                const deficiencyStage = document.getElementById('upload-deficiency-stage').value;
+                if (!deficiencyStage) {
+                    app.showNotification('Please select a deficiency stage', 'error');
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('deficiency_image', file);
+                formData.append('deficiency_stage', deficiencyStage);
+                formData.append('caption', document.getElementById('upload-caption').value);
+                formData.append('plant_id', document.getElementById('upload-crop-id').value || ''); // Actually crop_id from master crops table
+                
+                try {
+                    const response = await fetch(`/api/crop-knowledge/admin/nutrients/${nutrientCode}/deficiency-images/upload`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        app.showNotification('Image uploaded successfully', 'success');
+                        app.closeDeficiencyImageModal();
+                        app.loadAllDeficiencyImages(); // Refresh all images to show new addition
+                    } else {
+                        app.showNotification(result.error || 'Failed to upload image', 'error');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error uploading deficiency image:', error);
+                    app.showNotification('Error uploading image', 'error');
+                }
+            };
+            
+            app.openDeficiencyImageModal = async (nutrientCode, imageData = null) => {
+                console.log('🔄 Opening deficiency image modal for:', nutrientCode, imageData ? 'EDIT MODE' : 'ADD MODE');
+                
+                const modal = document.getElementById('deficiency-image-modal');
+                const title = document.getElementById('deficiency-modal-title');
+                
+                console.log('🔍 Modal element found:', modal);
+                console.log('🔍 Title element found:', title);
+                
+                if (!modal) {
+                    console.error('❌ Modal element not found');
+                    app.showNotification('Modal element not found - please refresh the page', 'error');
+                    return;
+                }
+                
+                if (!title) {
+                    console.error('❌ Modal title element not found');
+                    app.showNotification('Modal title element not found - please refresh the page', 'error');
+                    return;
+                }
+                
+                // Load plants and nutrients for both dropdowns
+                console.log('🔄 Loading plants and nutrients for modal...');
+                try {
+                    await app.loadPlantsForDeficiencyModal();
+                    await app.loadNutrientsForDeficiencyModal();
+                    console.log('✅ Plants and nutrients loaded successfully');
+                } catch (error) {
+                    console.error('❌ Error loading dropdown data:', error);
+                    app.showNotification('Warning: Could not load dropdown data', 'warning');
+                }
+                
+                if (imageData) {
+                    // Edit mode - set ALL form values BEFORE switching method to preserve them
+                    title.textContent = 'Edit Deficiency Image';
+                    document.getElementById('deficiency-image-id').value = imageData.id;
+                    document.getElementById('deficiency-nutrient-code').value = nutrientCode;
+                    document.getElementById('deficiency-filename').value = imageData.image_filename;
+                    document.getElementById('deficiency-url').value = imageData.image_url;
+                    document.getElementById('deficiency-caption').value = imageData.caption;
+                    document.getElementById('deficiency-stage').value = imageData.deficiency_stage;
+                    
+                    // Set crop dropdown BEFORE switching method to preserve it
+                    const cropDropdown = document.getElementById('deficiency-crop-id');
+                    const plantId = imageData.plant_id || imageData.crop_id || null;
+                    console.log('🔧 Available plant/crop ID fields:', {
+                        plant_id: imageData.plant_id,
+                        crop_id: imageData.crop_id,
+                        resolved: plantId
+                    });
+                    
+                    if (cropDropdown && plantId) {
+                        cropDropdown.value = plantId;
+                        console.log('🔧 Crop ID set BEFORE switchUploadMethod:', plantId);
+                    } else {
+                        console.log('🔧 No crop ID to set - cropDropdown:', !!cropDropdown, 'plantId:', plantId);
+                    }
+                    
+                    console.log('🔧 Image ID set BEFORE switchUploadMethod:', imageData.id);
+                    
+                    app.switchUploadMethod('url');
+                    
+                    // Verify form values after switchUploadMethod
+                    setTimeout(() => {
+                        const finalImageId = document.getElementById('deficiency-image-id').value;
+                        const finalCropId = document.getElementById('deficiency-crop-id').value;
+                        console.log('🔧 Image ID AFTER switchUploadMethod:', finalImageId);
+                        console.log('🔧 Crop ID AFTER switchUploadMethod:', finalCropId);
+                    }, 100);
+                    
+                    // Set nutrient dropdown in edit form
+                    const nutrientDropdown = document.getElementById('edit-nutrient-select');
+                    if (nutrientDropdown && nutrientCode) {
+                        nutrientDropdown.value = nutrientCode;
+                        console.log('📋 Nutrient dropdown set to:', nutrientCode);
+                    }
+                } else {
+                    // Add mode - switch to upload method
+                    title.textContent = 'Add Deficiency Image';
+                    app.switchUploadMethod('upload');
+                    
+                    // Reset specific fields instead of entire forms to preserve shared data
+                    document.getElementById('deficiency-image-upload-form').reset();
+                    document.getElementById('deficiency-image-form').reset();
+                    
+                    // Clear dropdowns for new image
+                    const uploadNutrientDropdown = document.getElementById('upload-nutrient-select');
+                    const editNutrientDropdown = document.getElementById('edit-nutrient-select');
+                    if (uploadNutrientDropdown) uploadNutrientDropdown.value = '';
+                    if (editNutrientDropdown) editNutrientDropdown.value = '';
+                    
+                    // Set common values for both forms (legacy hidden fields)
+                    document.getElementById('upload-nutrient-code').value = '';
+                    document.getElementById('deficiency-nutrient-code').value = '';
+                    document.getElementById('deficiency-image-id').value = '';
+                    
+                    // Hide file preview
+                    document.getElementById('file-preview').style.display = 'none';
+                }
+                
+                console.log('🔄 Setting modal display to flex...');
+                
+                // Force modal to be visible with aggressive styling
+                modal.style.display = 'flex';
+                modal.style.position = 'fixed';
+                modal.style.top = '0';
+                modal.style.left = '0';
+                modal.style.width = '100%';
+                modal.style.height = '100%';
+                modal.style.zIndex = '99999';
+                modal.style.background = 'rgba(0, 0, 0, 0.7)';
+                modal.style.alignItems = 'center';
+                modal.style.justifyContent = 'center';
+                modal.style.visibility = 'visible';
+                modal.style.opacity = '1';
+                
+                console.log('✅ Modal display set to:', modal.style.display);
+                console.log('🔍 Modal computed style display:', window.getComputedStyle(modal).display);
+                console.log('🔍 Modal visibility:', window.getComputedStyle(modal).visibility);
+                console.log('🔍 Modal z-index:', window.getComputedStyle(modal).zIndex);
+                
+                // Also force the modal content to be visible
+                const modalContent = modal.querySelector('.modal-content');
+                if (modalContent) {
+                    modalContent.style.display = 'block';
+                    modalContent.style.visibility = 'visible';
+                    modalContent.style.opacity = '1';
+                    console.log('✅ Modal content made visible');
+                } else {
+                    console.error('❌ Modal content element not found');
+                }
+            };
+            
+            app.loadPlantsForDeficiencyModal = async () => {
+                try {
+                    console.log('🌱 Loading crops for deficiency modal...');
+                    
+                    // Fetch crops data from the master crops table
+                    const response = await fetch('/api/crop-knowledge/crops');
+                    
+                    if (!response.ok) {
+                        console.warn(`Failed to fetch crops: ${response.status} ${response.statusText}`);
+                        // Still populate empty dropdowns
+                        const uploadSelect = document.getElementById('upload-crop-id');
+                        const editSelect = document.getElementById('deficiency-crop-id');
+                        [uploadSelect, editSelect].forEach(select => {
+                            if (select) select.innerHTML = '<option value="">No specific crop</option>';
+                        });
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    
+                    const uploadSelect = document.getElementById('upload-crop-id');
+                    const editSelect = document.getElementById('deficiency-crop-id');
+                    
+                    if (!uploadSelect || !editSelect) {
+                        console.warn('Crop select elements not found');
+                        return;
+                    }
+                    
+                    // Clear existing options (except default)
+                    [uploadSelect, editSelect].forEach(select => {
+                        select.innerHTML = '<option value="">No specific crop</option>';
+                    });
+                    
+                    if (data.success && data.data && data.data.length > 0) {
+                        console.log(`✅ Found ${data.data.length} crops`);
+                        
+                        // Group crops by category
+                        const cropsByCategory = {};
+                        data.data.forEach(crop => {
+                            const categoryKey = crop.category_name || 'Other';
+                            if (!cropsByCategory[categoryKey]) cropsByCategory[categoryKey] = [];
+                            cropsByCategory[categoryKey].push(crop);
+                        });
+                        
+                        // Add options for each crop, grouped by category
+                        Object.keys(cropsByCategory).sort().forEach(categoryName => {
+                            const crops = cropsByCategory[categoryName];
+                            
+                            [uploadSelect, editSelect].forEach(select => {
+                                // Add category header if more than one category
+                                if (Object.keys(cropsByCategory).length > 1) {
+                                    const categoryHeader = document.createElement('optgroup');
+                                    categoryHeader.label = categoryName;
+                                    
+                                    crops.forEach(crop => {
+                                        const option = document.createElement('option');
+                                        option.value = crop.id;
+                                        option.textContent = `${crop.name} (${crop.code})`;
+                                        categoryHeader.appendChild(option);
+                                    });
+                                    
+                                    select.appendChild(categoryHeader);
+                                } else {
+                                    // If only one category, add crops directly
+                                    crops.forEach(crop => {
+                                        const option = document.createElement('option');
+                                        option.value = crop.id;
+                                        option.textContent = `${crop.name} (${crop.code})`;
+                                        select.appendChild(option);
+                                    });
+                                }
+                            });
+                        });
+                        
+                        console.log('✅ Crop dropdowns populated successfully');
+                    } else {
+                        console.log('ℹ️ No crops found in master database');
+                        [uploadSelect, editSelect].forEach(select => {
+                            const option = document.createElement('option');
+                            option.value = '';
+                            option.textContent = 'No crops available';
+                            option.disabled = true;
+                            select.appendChild(option);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error loading crops for deficiency modal:', error);
+                    // Still populate empty dropdowns on error
+                    const uploadSelect = document.getElementById('upload-crop-id');
+                    const editSelect = document.getElementById('deficiency-crop-id');
+                    [uploadSelect, editSelect].forEach(select => {
+                        if (select) select.innerHTML = '<option value="">No specific crop</option>';
+                    });
+                }
+            };
+            
+            app.loadNutrientsForDeficiencyModal = async () => {
+                try {
+                    console.log('🔄 Loading nutrients for deficiency modal...');
+                    
+                    const response = await fetch('/api/crop-knowledge/nutrients');
+                    const data = await response.json();
+                    
+                    if (data.success && data.data) {
+                        console.log(`✅ Found ${data.data.length} nutrients for modal`);
+                        
+                        // Populate both upload and edit form nutrient dropdowns
+                        const uploadSelect = document.getElementById('upload-nutrient-select');
+                        const editSelect = document.getElementById('edit-nutrient-select');
+                        
+                        [uploadSelect, editSelect].forEach(select => {
+                            if (select) {
+                                select.innerHTML = '<option value="">Select nutrient...</option>';
+                                data.data.forEach(nutrient => {
+                                    const option = document.createElement('option');
+                                    option.value = nutrient.code;
+                                    option.textContent = `${nutrient.name} (${nutrient.code})`;
+                                    select.appendChild(option);
+                                });
+                                console.log(`✅ Populated ${select.id} with ${data.data.length} nutrients`);
+                            }
+                        });
+                    } else {
+                        console.warn('⚠️ No nutrients data received or API call failed');
+                        const uploadSelect = document.getElementById('upload-nutrient-select');
+                        const editSelect = document.getElementById('edit-nutrient-select');
+                        [uploadSelect, editSelect].forEach(select => {
+                            if (select) select.innerHTML = '<option value="">No nutrients available</option>';
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error loading nutrients for deficiency modal:', error);
+                    // Still populate empty dropdowns on error
+                    const uploadSelect = document.getElementById('upload-nutrient-select');
+                    const editSelect = document.getElementById('edit-nutrient-select');
+                    [uploadSelect, editSelect].forEach(select => {
+                        if (select) select.innerHTML = '<option value="">Error loading nutrients</option>';
+                    });
+                }
+            };
+            
+            app.editDeficiencyImage = async (imageId) => {
+                console.log('🔄 editDeficiencyImage called for ID:', imageId);
+                
+                try {
+                    // Find image data from our stored array
+                    if (!app.allDeficiencyImages) {
+                        console.log('❌ No images loaded yet, loading all images first...');
+                        await app.loadAllDeficiencyImages();
+                    }
+                    
+                    const imageData = app.allDeficiencyImages.find(img => img.id === imageId);
+                    
+                    if (imageData) {
+                        console.log('✅ Found image data:', imageData);
+                        console.log('🔍 Full imageData object:', imageData);
+                        console.log('🔍 Nutrient code:', imageData.nutrient_code);
+                        console.log('🔍 Plant ID in image data:', imageData.plant_id);
+                        console.log('🔍 All imageData keys:', Object.keys(imageData));
+                        
+                        app.openDeficiencyImageModal(imageData.nutrient_code, imageData);
+                    } else {
+                        console.log('❌ No image found with ID:', imageId);
+                        app.showNotification('Image not found', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error loading image for edit:', error);
+                    app.showNotification('Error loading image data', 'error');
+                }
+            };
+            
+            app.saveDeficiencyImage = async () => {
+                console.log('🔄 saveDeficiencyImage called');
+                
+                const imageIdElement = document.getElementById('deficiency-image-id');
+                const imageId = imageIdElement ? imageIdElement.value : null;
+                const nutrientCode = document.getElementById('edit-nutrient-select').value;
+                const isEdit = !!imageId;
+                
+                console.log('🔍 Image ID element:', imageIdElement);
+                console.log('🔍 Image ID value:', imageId, 'type:', typeof imageId);
+                console.log('🔍 IsEdit calculation:', !!imageId);
+                
+                if (!nutrientCode) {
+                    app.showNotification('Please select a nutrient deficiency', 'error');
+                    return;
+                }
+                
+                console.log('📋 Form data:', { imageId, nutrientCode, isEdit });
+                
+                const plantId = document.getElementById('deficiency-crop-id').value;
+                const cropDropdown = document.getElementById('deficiency-crop-id');
+                console.log('🌱 Crop dropdown element:', cropDropdown);
+                console.log('🌱 Crop ID from dropdown:', plantId, 'type:', typeof plantId);
+                console.log('🌱 Dropdown selected index:', cropDropdown?.selectedIndex);
+                console.log('🌱 Selected option text:', cropDropdown?.options[cropDropdown.selectedIndex]?.text);
+                
+                const imageData = {
+                    image_filename: document.getElementById('deficiency-filename').value,
+                    image_url: document.getElementById('deficiency-url').value,
+                    caption: document.getElementById('deficiency-caption').value,
+                    deficiency_stage: document.getElementById('deficiency-stage').value,
+                    plant_type: null,
+                    crop_specific: null,
+                    plant_id: plantId || null, // Actually crop_id from master crops table
+                    system_id: null, // Not needed for master crop association
+                    grow_bed_id: null // Not needed for master crop association
+                };
+                
+                console.log('📤 Image data to save:', imageData);
+                
+                try {
+                    const url = isEdit 
+                        ? `/api/crop-knowledge/admin/deficiency-images/${imageId}`
+                        : `/api/crop-knowledge/admin/nutrients/${nutrientCode}/deficiency-images`;
+                    
+                    const method = isEdit ? 'PUT' : 'POST';
+                    
+                    console.log('🌐 Making HTTP request:', {
+                        url,
+                        method,
+                        imageData
+                    });
+                    
+                    const response = await fetch(url, {
+                        method,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(imageData)
+                    });
+                    
+                    console.log('🌐 HTTP response status:', response.status);
+                    console.log('🌐 HTTP response ok:', response.ok);
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        app.showNotification(isEdit ? 'Image updated successfully' : 'Image added successfully', 'success');
+                        app.closeDeficiencyImageModal();
+                        // Force refresh with cache bust to ensure we get updated data
+                        app.loadAllDeficiencyImages(); // Refresh all images to show changes
+                    } else {
+                        app.showNotification(result.error || 'Failed to save image', 'error');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error saving deficiency image:', error);
+                    app.showNotification('Error saving image', 'error');
+                }
+            };
+            
+            app.deleteDeficiencyImage = async (imageId, nutrientCode) => {
+                if (!confirm('Are you sure you want to delete this deficiency image? This action cannot be undone.')) {
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/crop-knowledge/admin/deficiency-images/${imageId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        app.showNotification('Image deleted successfully', 'success');
+                        app.loadAllDeficiencyImages(); // Refresh all images to show deletion
+                    } else {
+                        app.showNotification(result.error || 'Failed to delete image', 'error');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error deleting deficiency image:', error);
+                    app.showNotification('Error deleting image', 'error');
+                }
+            };
+            
+            window.closeDeficiencyImageModal = () => {
+                app.closeDeficiencyImageModal();
+            };
+            
+            app.closeDeficiencyImageModal = () => {
+                const modal = document.getElementById('deficiency-image-modal');
+                modal.style.display = 'none';
+            };
+            
+            // Initialize deficiency management when the admin deficiency tab is clicked
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('🔄 DOM loaded, setting up deficiency tab listeners...');
+                
+                // Ensure modal is hidden on page load
+                const modal = document.getElementById('deficiency-image-modal');
+                if (modal) {
+                    modal.style.display = 'none';
+                    console.log('✅ Modal hidden on page load');
+                }
+                
+                const deficiencySubtab = document.getElementById('admin-deficiency-subtab');
+                console.log('🔍 Looking for deficiency subtab:', deficiencySubtab);
+                
+                if (deficiencySubtab) {
+                    console.log('✅ Found deficiency subtab, attaching click listener...');
+                    deficiencySubtab.addEventListener('click', () => {
+                        console.log('🖼️ Deficiency Images tab clicked');
+                        
+                        // Try multiple times with increasing delays to ensure tab content is loaded
+                        const attemptInit = (attempt = 1, maxAttempts = 5) => {
+                            setTimeout(() => {
+                                const subcontent = document.getElementById('admin-deficiency-subcontent');
+                                const dropdown = document.getElementById('deficiency-nutrient-select');
+                                
+                                console.log(`🔄 Attempt ${attempt}: subcontent active: ${subcontent?.classList.contains('active')}, dropdown exists: ${!!dropdown}`);
+                                
+                                if (subcontent && dropdown) {
+                                    console.log('✅ Deficiency content ready, initializing...');
+                                    app.initializeDeficiencyImagesManagement();
+                                } else if (attempt < maxAttempts) {
+                                    console.log(`⏳ Retrying initialization (${attempt}/${maxAttempts})...`);
+                                    attemptInit(attempt + 1, maxAttempts);
+                                } else {
+                                    console.log('❌ Max attempts reached, trying backup auto-init...');
+                                    setTimeout(() => window.autoInitDeficiencyImages(), 500);
+                                }
+                            }, attempt * 200); // Increasing delay: 200ms, 400ms, 600ms, etc.
+                        };
+                        
+                        attemptInit();
+                    });
+                } else {
+                    console.log('❌ Deficiency subtab element not found');
+                    // Try again later in case DOM isn't fully ready
+                    setTimeout(() => {
+                        const laterSubtab = document.getElementById('admin-deficiency-subtab');
+                        console.log('🔄 Retrying subtab search later:', laterSubtab);
+                        if (laterSubtab) {
+                            console.log('✅ Found subtab on retry, attaching listener...');
+                            laterSubtab.addEventListener('click', () => {
+                                console.log('🖼️ Deficiency Images tab clicked (retry listener)');
+                                window.forceInitDeficiencyImages();
+                            });
+                        }
+                    }, 3000);
+                }
+                
+                // Also try auto-init when page loads if we're already on deficiency tab
+                setTimeout(() => {
+                    if (window.autoInitDeficiencyImages()) {
+                        console.log('✅ Auto-initialized deficiency images on page load');
+                    }
+                }, 2000);
+            });
+
+            // Also try immediate setup in case DOM is already loaded
+            if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                console.log('🔄 DOM already ready, trying immediate setup...');
+                setTimeout(() => {
+                    const immediateSubtab = document.getElementById('admin-deficiency-subtab');
+                    console.log('🔍 Immediate subtab search:', immediateSubtab);
+                    if (immediateSubtab && !immediateSubtab.dataset.listenerAttached) {
+                        console.log('✅ Attaching immediate listener...');
+                        immediateSubtab.addEventListener('click', () => {
+                            console.log('🖼️ Deficiency Images tab clicked (immediate listener)');
+                            window.forceInitDeficiencyImages();
+                        });
+                        immediateSubtab.dataset.listenerAttached = 'true';
+                    }
+                }, 500);
+            }
+            
+        }
+    }, 100);
+});
+
+// Global test function for deficiency images (available immediately)
+window.testDeficiencyImages = () => {
+    console.log('🧪 Manual test: Initializing deficiency images management...');
+    setTimeout(() => {
+        if (window.app && window.app.initializeDeficiencyImagesManagement) {
+            window.app.initializeDeficiencyImagesManagement();
+        } else {
+            console.error('❌ App or initializeDeficiencyImagesManagement not available yet. Try again in a few seconds.');
+        }
+    }, 1000);
+};
+
+// Also trigger automatically when on deficiency page
+window.autoInitDeficiencyImages = () => {
+    const deficiencySelect = document.getElementById('deficiency-nutrient-select');
+    if (deficiencySelect && window.app && window.app.initializeDeficiencyImagesManagement) {
+        console.log('🔄 Auto-initializing deficiency images on page...');
+        window.app.initializeDeficiencyImagesManagement();
+        return true;
+    }
+    return false;
+};
+
+// Quick test function - call this from browser console
+window.testDeficiencyButton = () => {
+    console.log('🧪 Testing deficiency button functionality...');
+    const button = document.getElementById('add-deficiency-image-btn');
+    const dropdown = document.getElementById('deficiency-nutrient-select');
+    
+    if (!button) {
+        console.log('❌ Button not found - run window.forceInitDeficiencyImages() first');
+        return;
+    }
+    
+    if (!dropdown || !dropdown.value) {
+        console.log('⚠️ No nutrient selected - selecting first option...');
+        if (dropdown && dropdown.options.length > 1) {
+            dropdown.selectedIndex = 1; // Select first non-empty option
+            dropdown.dispatchEvent(new Event('change'));
+        }
+    }
+    
+    console.log('🔄 Clicking button...');
+    button.click();
+};
+
+// Manual testing function - call from browser console if needed
+window.forceInitDeficiencyImages = () => {
+    console.log('🔧 FORCE: Manually initializing deficiency images...');
+    console.log('🔍 Current tab location:', window.location.hash);
+    
+    // Check if elements exist
+    const dropdown = document.getElementById('deficiency-nutrient-select');
+    const button = document.getElementById('add-deficiency-image-btn');
+    const subcontent = document.getElementById('admin-deficiency-subcontent');
+    
+    console.log('🔍 Elements found:');
+    console.log('  - Dropdown:', !!dropdown);
+    console.log('  - Add Button:', !!button);
+    console.log('  - Subcontent:', !!subcontent);
+    console.log('  - Subcontent active:', subcontent?.classList.contains('active'));
+    
+    if (window.app && window.app.initializeDeficiencyImagesManagement) {
+        console.log('✅ Forcing initialization...');
+        window.app.initializeDeficiencyImagesManagement();
+        
+        // Also test button click after initialization
+        setTimeout(() => {
+            if (button) {
+                console.log('🧪 Testing button click...');
+                button.click();
+            }
+        }, 1000);
+    } else {
+        console.log('❌ App or initialization function not available');
+    }
+};
+
+
+// Simple dropdown population function for immediate use
+window.populateNutrientDropdown = async () => {
+    console.log('🔄 Direct dropdown population...');
+    try {
+        const response = await fetch('/api/crop-knowledge/nutrients');
+        const data = await response.json();
+        
+        const select = document.getElementById('deficiency-nutrient-select');
+        if (!select) {
+            console.error('❌ Deficiency nutrient select element not found');
+            return;
+        }
+        
+        select.innerHTML = '<option value="">Choose a nutrient...</option>';
+        
+        if (data.success && data.data) {
+            console.log(`✅ Found ${data.data.length} nutrients for dropdown`);
+            data.data.forEach(nutrient => {
+                const option = document.createElement('option');
+                option.value = nutrient.code;
+                option.textContent = `${nutrient.name} (${nutrient.code})`;
+                select.appendChild(option);
+                console.log(`  ➕ Added nutrient: ${nutrient.name} (${nutrient.code})`);
+            });
+            console.log('✅ Dropdown populated successfully!');
+        } else {
+            console.warn('⚠️ No nutrients data received');
+            select.innerHTML = '<option value="">No nutrients available</option>';
+        }
+    } catch (error) {
+        console.error('❌ Error loading nutrients:', error);
+        const select = document.getElementById('deficiency-nutrient-select');
+        if (select) {
+            select.innerHTML = '<option value="">Error loading nutrients</option>';
+        }
+    }
+};
+
+// Auto-trigger when deficiency dropdown is visible
+setInterval(() => {
+    const select = document.getElementById('deficiency-nutrient-select');
+    if (select && select.style.display !== 'none' && select.offsetParent !== null) {
+        // Element is visible
+        if (select.children.length <= 1 && !select.dataset.populated) {
+            console.log('🔍 Deficiency dropdown detected empty and visible - auto-populating...');
+            select.dataset.populated = 'true';
+            window.populateNutrientDropdown();
+        }
+    }
+}, 2000); // Check every 2 seconds

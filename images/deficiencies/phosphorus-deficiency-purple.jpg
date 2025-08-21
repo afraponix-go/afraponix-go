@@ -1,0 +1,26 @@
+<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Leaf with purple/reddish coloration from phosphorus deficiency -->
+  <ellipse cx="150" cy="100" rx="120" ry="60" fill="#8B3A8B" stroke="#5D1F5D" stroke-width="2"/>
+  
+  <!-- Dark purple veins -->
+  <path d="M 50 100 Q 150 80 250 100" stroke="#4B0F4B" stroke-width="3" fill="none"/>
+  <path d="M 80 120 Q 150 100 220 120" stroke="#4B0F4B" stroke-width="2" fill="none"/>
+  <path d="M 80 80 Q 150 100 220 80" stroke="#4B0F4B" stroke-width="2" fill="none"/>
+  <path d="M 100 110 Q 150 100 200 110" stroke="#4B0F4B" stroke-width="1" fill="none"/>
+  <path d="M 100 90 Q 150 100 200 90" stroke="#4B0F4B" stroke-width="1" fill="none"/>
+  
+  <!-- Reddish-purple patches -->
+  <circle cx="100" cy="85" r="18" fill="#A0522D" fill-opacity="0.6"/>
+  <circle cx="200" cy="115" r="22" fill="#A0522D" fill-opacity="0.6"/>
+  <circle cx="140" cy="120" r="15" fill="#A0522D" fill-opacity="0.6"/>
+  <circle cx="180" cy="80" r="16" fill="#A0522D" fill-opacity="0.6"/>
+  
+  <!-- Some areas with bronze coloration -->
+  <circle cx="130" cy="90" r="10" fill="#CD853F" fill-opacity="0.7"/>
+  <circle cx="170" cy="110" r="12" fill="#CD853F" fill-opacity="0.7"/>
+  
+  <!-- Text label -->
+  <text x="150" y="180" text-anchor="middle" font-family="Arial" font-size="14" fill="#333">
+    Phosphorus Deficiency - Purple/Reddish Coloration
+  </text>
+</svg>

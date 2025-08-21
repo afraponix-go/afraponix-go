@@ -1,0 +1,25 @@
+<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Tomato fruit with blossom end rot -->
+  <circle cx="150" cy="100" r="50" fill="#DC143C" stroke="#8B0000" stroke-width="2"/>
+  
+  <!-- Highlight on tomato -->
+  <ellipse cx="130" cy="85" rx="15" ry="10" fill="#FF6B6B" fill-opacity="0.6"/>
+  
+  <!-- Dark brown/black blossom end rot patch -->
+  <ellipse cx="150" cy="140" rx="25" ry="15" fill="#2F1B14" stroke="#1C0F0A" stroke-width="1"/>
+  
+  <!-- Darker center of the rot -->
+  <ellipse cx="150" cy="145" rx="15" ry="8" fill="#0F0A08"/>
+  
+  <!-- Sunken appearance lines -->
+  <path d="M 125 135 Q 150 140 175 135" stroke="#1C0F0A" stroke-width="1" fill="none"/>
+  <path d="M 130 145 Q 150 150 170 145" stroke="#1C0F0A" stroke-width="1" fill="none"/>
+  
+  <!-- Small stem area -->
+  <rect x="145" y="50" width="10" height="8" fill="#228B22" stroke="#006400" stroke-width="1"/>
+  
+  <!-- Text label -->
+  <text x="150" y="180" text-anchor="middle" font-family="Arial" font-size="14" fill="#333">
+    Calcium Deficiency - Blossom End Rot
+  </text>
+</svg>

@@ -1,0 +1,5 @@
+# Fallback for missing JPG files
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_URI} \.jpg$
+RewriteRule ^(.+)\.jpg$ $1.svg [L,R=302]

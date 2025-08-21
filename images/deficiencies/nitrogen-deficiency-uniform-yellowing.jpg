@@ -1,0 +1,26 @@
+<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Uniformly yellowed leaf from advanced nitrogen deficiency -->
+  <ellipse cx="150" cy="100" rx="120" ry="60" fill="#b8a836" stroke="#8a7a1f" stroke-width="2"/>
+  
+  <!-- Faded, barely visible veins -->
+  <path d="M 50 100 Q 150 80 250 100" stroke="#7a6a1f" stroke-width="2" fill="none" opacity="0.7"/>
+  <path d="M 80 120 Q 150 100 220 120" stroke="#7a6a1f" stroke-width="1" fill="none" opacity="0.6"/>
+  <path d="M 80 80 Q 150 100 220 80" stroke="#7a6a1f" stroke-width="1" fill="none" opacity="0.6"/>
+  
+  <!-- Advanced yellowing patches -->
+  <circle cx="90" cy="80" r="20" fill="#a49826" fill-opacity="0.8"/>
+  <circle cx="210" cy="120" r="25" fill="#a49826" fill-opacity="0.8"/>
+  <circle cx="150" cy="100" r="30" fill="#a49826" fill-opacity="0.6"/>
+  <circle cx="120" cy="125" r="15" fill="#a49826" fill-opacity="0.7"/>
+  <circle cx="180" cy="75" r="18" fill="#a49826" fill-opacity="0.7"/>
+  
+  <!-- Some brown spots indicating progression -->
+  <circle cx="100" cy="85" r="4" fill="#8B7355" fill-opacity="0.8"/>
+  <circle cx="200" cy="115" r="5" fill="#8B7355" fill-opacity="0.8"/>
+  <circle cx="160" cy="90" r="3" fill="#8B7355" fill-opacity="0.8"/>
+  
+  <!-- Text label -->
+  <text x="150" y="180" text-anchor="middle" font-family="Arial" font-size="14" fill="#333">
+    Advanced Nitrogen Deficiency - Uniform Yellowing
+  </text>
+</svg>

@@ -1,0 +1,26 @@
+<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Green leaf background -->
+  <ellipse cx="150" cy="100" rx="120" ry="60" fill="#4a7d3a" stroke="#2d3a1f" stroke-width="2"/>
+  
+  <!-- Leaf veins -->
+  <path d="M 50 100 Q 150 80 250 100" stroke="#2d3a1f" stroke-width="2" fill="none"/>
+  <path d="M 80 120 Q 150 100 220 120" stroke="#2d3a1f" stroke-width="1" fill="none"/>
+  <path d="M 80 80 Q 150 100 220 80" stroke="#2d3a1f" stroke-width="1" fill="none"/>
+  
+  <!-- Brown necrotic spots (calcium deficiency) -->
+  <circle cx="110" cy="85" r="8" fill="#8B4513" stroke="#5D2F0A" stroke-width="1"/>
+  <circle cx="190" cy="115" r="10" fill="#8B4513" stroke="#5D2F0A" stroke-width="1"/>
+  <circle cx="140" cy="120" r="6" fill="#8B4513" stroke="#5D2F0A" stroke-width="1"/>
+  <circle cx="180" cy="80" r="7" fill="#8B4513" stroke="#5D2F0A" stroke-width="1"/>
+  <circle cx="160" cy="90" r="5" fill="#8B4513" stroke="#5D2F0A" stroke-width="1"/>
+  
+  <!-- Yellowing around spots -->
+  <circle cx="110" cy="85" r="12" fill="#d4b836" fill-opacity="0.4"/>
+  <circle cx="190" cy="115" r="15" fill="#d4b836" fill-opacity="0.4"/>
+  <circle cx="140" cy="120" r="10" fill="#d4b836" fill-opacity="0.4"/>
+  
+  <!-- Text label -->
+  <text x="150" y="180" text-anchor="middle" font-family="Arial" font-size="14" fill="#333">
+    Calcium Deficiency - Brown Necrotic Spots
+  </text>
+</svg>
