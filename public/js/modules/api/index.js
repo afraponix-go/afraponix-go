@@ -1,6 +1,12 @@
 // API Module Exports
 // Handles all API communication with the backend
 
+// Base API client for standardized patterns
+export { BaseApiClient, apiClient } from './baseApiClient.js';
+
+// API client examples and specialized clients
+export * from './apiClientExample.js';
+
 // Core API modules organized by resource domain
 export * as SystemsAPI from './systemsAPI.js';
 export * as GrowBedsAPI from './growBedsAPI.js';

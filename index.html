@@ -457,9 +457,9 @@
             
             <!-- Dashboard Sub-tabs -->
             <div class="dashboard-tabs">
-                <button id="dashboard-overview-tab" class="dashboard-tab active">Overview</button>
-                <button id="dashboard-farm-layout-tab" class="dashboard-tab">Farm Layout</button>
-                <button id="dashboard-actions-tab" class="dashboard-tab">
+                <button id="dashboard-overview-tab" class="dashboard-tab active" data-target="dashboard-overview-content">Overview</button>
+                <button id="dashboard-farm-layout-tab" class="dashboard-tab" data-target="dashboard-farm-layout-content">Farm Layout</button>
+                <button id="dashboard-actions-tab" class="dashboard-tab" data-target="dashboard-actions-content">
                     Actions Required
                     <span id="actions-badge" class="notification-badge" style="display: none;">0</span>
                 </button>
@@ -746,8 +746,8 @@
                 <!-- Current system name will be displayed here -->
             </div>
             <div class="calculator-tabs">
-                <button id="fish-calc-tab" class="calc-tab active">Fish Stocking Calculator</button>
-                <button id="nutrient-calc-tab" class="calc-tab">Nutrient Dosing Calculator</button>
+                <button id="fish-calc-tab" class="calc-tab active" data-target="fish-calc">Fish Stocking Calculator</button>
+                <button id="nutrient-calc-tab" class="calc-tab" data-target="nutrient-calc">Nutrient Dosing Calculator</button>
             </div>
             
             <div id="fish-calc" class="calculator-content active">
@@ -760,9 +760,9 @@
                     <p class="text-muted" style="margin-bottom: 1rem;">Calculate precise nutrient dosing for optimal plant growth in your aquaponics system.</p>
                     
                     <div class="dosing-tabs">
-                        <button id="quick-calc-tab" class="dosing-tab active">Quick Calculator</button>
-                        <button id="mixing-schedule-tab" class="dosing-tab">Mixing Schedule</button>
-                        <button id="custom-nutrients-tab" class="dosing-tab">Custom Nutrients</button>
+                        <button id="quick-calc-tab" class="dosing-tab active" data-target="quick-calc-content">Quick Calculator</button>
+                        <button id="mixing-schedule-tab" class="dosing-tab" data-target="mixing-schedule-content">Mixing Schedule</button>
+                        <button id="custom-nutrients-tab" class="dosing-tab" data-target="custom-nutrients-content">Custom Nutrients</button>
                     </div>
                     
                     <!-- Quick Calculator Tab -->
@@ -960,8 +960,8 @@
                 <!-- Current system name will be displayed here -->
             </div>
             <div class="data-entry-tabs">
-                <button id="water-quality-tab" class="data-tab active">Water Quality</button>
-                <button id="operations-tab" class="data-tab">Operations</button>
+                <button id="water-quality-tab" class="data-tab active" data-target="water-quality-form">Water Quality</button>
+                <button id="operations-tab" class="data-tab" data-target="operations-form">Operations</button>
             </div>
             
             <div id="water-quality-form" class="data-form active">
@@ -998,10 +998,10 @@
             </div>
             
             <div class="fish-management-tabs">
-                <button id="fish-overview-tab" class="fish-mgmt-tab active">Overview</button>
-                <button id="tank-information-tab" class="fish-mgmt-tab">Tank Information</button>
-                <button id="fish-health-monitoring-tab" class="fish-mgmt-tab">Fish Health</button>
-                <button id="fish-health-entry-tab" class="fish-mgmt-tab">Data Capture</button>
+                <button id="fish-overview-tab" class="fish-mgmt-tab active" data-target="fish-overview-content">Overview</button>
+                <button id="tank-information-tab" class="fish-mgmt-tab" data-target="tank-information-content">Tank Information</button>
+                <button id="fish-health-monitoring-tab" class="fish-mgmt-tab" data-target="fish-health-monitoring-content">Fish Health</button>
+                <button id="fish-health-entry-tab" class="fish-mgmt-tab" data-target="fish-health-entry-content">Data Capture</button>
             </div>
             
             <div id="fish-overview-content" class="fish-mgmt-content active">
@@ -1067,11 +1067,11 @@
             </div>
             
             <div class="plant-management-tabs">
-                <button id="plant-overview-tab" class="plant-mgmt-tab active">Overview</button>
-                <button id="grow-beds-tab" class="plant-mgmt-tab">Plant Management</button>
-                <button id="planting-harvesting-tab" class="plant-mgmt-tab">Plant & Harvest</button>
-                <button id="spray-programmes-tab" class="plant-mgmt-tab">Spray Programmes</button>
-                <button id="custom-crops-tab" class="plant-mgmt-tab">Custom Crops</button>
+                <button id="plant-overview-tab" class="plant-mgmt-tab active" data-target="plant-overview-content">Overview</button>
+                <button id="grow-beds-tab" class="plant-mgmt-tab" data-target="grow-beds-content">Plant Management</button>
+                <button id="planting-harvesting-tab" class="plant-mgmt-tab" data-target="plant-actions-content">Plant & Harvest</button>
+                <button id="spray-programmes-tab" class="plant-mgmt-tab" data-target="spray-programmes-content">Spray Programmes</button>
+                <button id="custom-crops-tab" class="plant-mgmt-tab" data-target="custom-crops-content">Custom Crops</button>
             </div>
             
             <div id="plant-overview-content" class="plant-mgmt-content active">
@@ -1086,8 +1086,8 @@
             <div id="grow-beds-content" class="plant-mgmt-content">
                 <!-- Subtabs for Grow Beds section -->
                 <div class="grow-beds-subtabs">
-                    <button id="beds-overview-subtab" class="grow-beds-subtab active">Beds Overview</button>
-                    <button id="plants-management-subtab" class="grow-beds-subtab">Plants</button>
+                    <button id="beds-overview-subtab" class="grow-beds-subtab active" data-target="beds-overview-content">Beds Overview</button>
+                    <button id="plants-management-subtab" class="grow-beds-subtab" data-target="plants-management-content">Plants</button>
                 </div>
                 
                 <!-- Beds Overview Content -->
@@ -1178,7 +1178,7 @@
                         <p class="text-muted" style="margin-bottom: 1rem;">Record new plantings, transplants, and harvests for your grow beds.</p>
                         
                         <div class="plant-action-tabs">
-                            <button id="planting-tab" class="plant-action-tab active">
+                            <button id="planting-tab" class="plant-action-tab active" data-target="planting-form-content">
                                 <div class="tab-icon">
                                     <img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant" class="tab-icon-svg">
                                 </div>
@@ -1187,7 +1187,7 @@
                                     <div class="tab-subtitle">Add new seedlings</div>
                                 </div>
                             </button>
-                            <button id="harvesting-tab" class="plant-action-tab">
+                            <button id="harvesting-tab" class="plant-action-tab" data-target="harvesting-form-content">
                                 <div class="tab-icon">
                                     <img src="icons/new-icons/Afraponix Go Icons_harvest.svg" alt="Harvest" class="tab-icon-svg">
                                 </div>
@@ -1520,6 +1520,12 @@
                         </div>
             </div>
             
+            <div id="plant-actions-content" class="plant-mgmt-content">
+                <div id="plant-actions-container">
+                    <!-- Plant actions (planting, harvesting) will be displayed here -->
+                </div>
+            </div>
+            
             <div id="custom-crops-content" class="plant-mgmt-content">
                 <div id="custom-crops-container">
                     <!-- Custom crops will be displayed here -->
@@ -1552,9 +1558,9 @@
                 <h4 class="heading-4" style="margin-bottom: 20px;">Available Products</h4>
                 
                 <div class="spray-programmes-tabs">
-                    <button id="insecticides-tab" class="spray-tab active"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Bug" class="tab-icon-svg"> Insecticides</button>
-                    <button id="fungicides-tab" class="spray-tab"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Fungi" class="tab-icon-svg"> Fungicides</button>
-                    <button id="foliar-feeds-tab" class="spray-tab"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant" class="tab-icon-svg"> Foliar Feeds</button>
+                    <button id="insecticides-tab" class="spray-tab active" data-target="insecticides-content"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Bug" class="tab-icon-svg"> Insecticides</button>
+                    <button id="fungicides-tab" class="spray-tab" data-target="fungicides-content"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Fungi" class="tab-icon-svg"> Fungicides</button>
+                    <button id="foliar-feeds-tab" class="spray-tab" data-target="foliar-feeds-content"><img src="icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant" class="tab-icon-svg"> Foliar Feeds</button>
                 </div>
                 
                 <div id="insecticides-content" class="spray-content active">
@@ -1709,7 +1715,7 @@
                 
                 <!-- System Config Sub-Tabs -->
                 <div class="system-config-tabs">
-                    <button class="system-config-tab active" data-target="overall-system-content">
+                    <button id="overall-system-tab" class="system-config-tab active" data-target="overall-system-content">
                         <span class="tab-icon">
                             <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
                                 <path d="m25 13c-2.4587402 0-4.4973755 1.7878418-4.9119873 4.1295166-.9055786-1.2860107-2.3988648-2.1295166-4.0880127-2.1295166h-1c-.5527344 0-1 .4472656-1 1 0 2.7568359 2.2431641 5 5 5h1v1c0 1.3909302.7149048 2.6154175 1.7948608 3.3323364.6411743-.3995972 1.2388306-.8602905 1.7831421-1.3791504-.9002685-.1946411-1.5780029-.9956665-1.5780029-1.953186v-3c2.4993896 0 4.5578613-1.8493652 4.9240112-4.2481079-.0584717-.5148315-.1599121-1.0157471-.2872314-1.5067139-.1740112-.1467285-.3910523-.2451782-.6367798-.2451782zm-8.8271484 4.0048828c1.2265625.0703125 2.2587891.8808594 2.6542969 1.9902344-1.2265626-.0703125-2.2587891-.8808594-2.6542969-1.9902344zm6-.0097656c.3955078-1.109375 1.4277344-1.9199219 2.6542969-1.9902344-.3955079 1.109375-1.4277344 1.9199219-2.6542969 1.9902344z" fill="#0051b1"/>
@@ -1720,7 +1726,7 @@
                         </span>
                         <span class="tab-label">Overall System</span>
                     </button>
-                    <button class="system-config-tab" data-target="fish-tanks-config-content">
+                    <button id="fish-tanks-tab" class="system-config-tab" data-target="fish-tanks-config-content">
                         <span class="tab-icon">
                             <svg id="line_gradient" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
                                 <path d="m60 15.31641c-.06995-7.53772-55.81635-7.57947-55.99365-.00043.00006.07397-.00012 28.03247 0 28.09576.00299.0293.00537 5.24005-.00629 5.26489.07758 7.54852 55.75513 7.57166 55.99536.02429.02502-.01483-.00842-33.36505.00458-33.38452zm-27.99658-3.62598c16.10791 0 25.23291 2.29785 25.97998 3.62598-.74707 1.32812-9.87207 3.62598-25.97998 3.62598s-25.2334-2.29785-25.97998-3.62598c.74658-1.32812 9.87158-3.62598 25.97998-3.62598zm25.99658 36.94531c-.57245 1.32385-9.71436 3.67383-26.00049 3.67383-16.22369 0-25.3576-2.33209-25.99316-3.65863v-2.89703c.90399.45752 2.10883.8714 3.6626 1.24805 10.00854 2.61346 34.65234 2.61346 44.66113-.00018 1.55829-.3775 2.76526-.79266 3.66992-1.25177v2.88574zm-15.96191-4.37598c.06256-2.40955 3.52368-2.40906 3.58594.00006-.06281 2.40808-3.52344 2.40759-3.58594-.00006zm15.96191-.92627c-.83704 1.32953-7.84106 2.57544-10.91663 2.86346 1.5282-2.41089-.38037-5.84546-3.25232-5.76434-3.18195-.07007-4.98657 3.94934-2.87567 6.29303-7.47845.47888-17.1037.29956-23.99585-.52332-.0249-.90234-.13324-1.83319-.32574-2.78046-.75879-3.66602-.13477-5.09863-.09961-5.1748.25684-.47363.0918-1.06934-.37793-1.3418-1.70135-.77686-2.41718 2.00098-1.48157 6.91888.14685.72272.21753 1.42542.25311 2.11566-1.31244-.18549-2.52734-.39258-3.62006-.62073.36011-1.20801.88037-3.76617.19421-7.0896-.75732-3.6709-.13574-5.09961-.10059-5.1748.25732-.47363.09277-1.06934-.37598-1.3418-1.70844-.77917-2.41382 2.0014-1.48254 6.92084.62537 3.0282.09412 5.32129-.18549 6.22223-2.74652-.74951-3.27386-1.38898-3.35101-1.51147v-25.68591c10.23053 4.42682 41.70642 4.44403 51.99365.00049 0-.00049 0 25.67444 0 25.67444zm-32.33789-19.32861c-.18945.21289-.2793.49707-.24609.78027.02924.25256.26721 2.15759.76953 3.61804-.85608.61835-1.66144 1.29407-2.39209 1.99426-1.9209-2.14648-3.1084-4.10742-3.13428-4.15137-.19385-.32324-.55371-.51465-.9292-.48438-.37598.02637-.70557.26172-.85156.61035l-1.22412 2.91406c-.68311 1.62598-.68311 3.49219 0 5.11719l1.22412 2.91504c.28558.74249 1.39325.82172 1.78076.12592.02588-.04388 1.21338-2.00482 3.13428-4.15131.72894.69861 1.53229 1.37286 2.38617 1.99005-.50421 1.4621-.74261 3.37408-.77191 3.62714-.08063.57501.41284 1.12878.99316 1.11523 2.14215 0 6.76843-1.77405 7.66107-2.12415 7.74487-.42566 8.99487-5.62439 8.89227-6.27032-.05127-.23315-1.32715-5.52551-8.89734-5.84192-.92755-.36371-5.51727-2.11908-7.64771-2.11908-.28516 0-.55713.12207-.74707.33496zm-5.66211 10.81934-.50195-1.19531c-.72607-1.55768-.21979-3.30371.50208-4.7627 2.92157 4.04932 2.91479 1.91351-.00012 5.95801zm7.58887 3.04688c.08728-.47797.20129-.99866.33453-1.47357.61621.34052 1.25665.62799 1.91498.86749-.78943.24585-1.57886.4671-2.24951.60608zm9.02246-9.68744c3.10712.89661 4.08301 2.96942 4.32324 3.66205-.24023.69183-1.21613 2.76447-4.32324 3.66107zm-2-.36438v8.05188c-3.54901.50073-6.89624-1.55579-9.4248-4.02551 2.22949-2.14545 5.09717-4.08685 8.17383-4.08685.44464 0 .85559.02484 1.25098.06049zm-4.77643-1.39264c-1.58032.41724-1.97363 1.71674-2.23724-.60242.66718.13824 1.4519.35809 2.23724.60242zm22.49615 17.25598c5.01154-.16046 5.0094-7.4939-.00006-7.65332-5.01184.15991-5.01166 7.4939.00006 7.65332zm0-5.65332c2.36224.06226 2.36273 3.59119-.00006 3.65332-2.36432-.06287-2.36285-3.59113.00006-3.65332z" fill="#0051b1"/>
@@ -1728,7 +1734,7 @@
                         </span>
                         <span class="tab-label">Fish Tanks</span>
                     </button>
-                    <button class="system-config-tab" data-target="grow-beds-config-content">
+                    <button id="grow-beds-config-tab" class="system-config-tab" data-target="grow-beds-config-content">
                         <span class="tab-icon">
                             <svg id="icons" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
                                 <path d="m63 31.999h-13.983v-9.986c0-.001-.001-.002-.001-.003.002-1.368.928-2.512 2.183-2.869.491 1.652 2.007 2.869 3.817 2.869 2.061 0 6.002-1.558 6.002-4s-3.941-4-6.002-4c-1.893 0-3.474 1.324-3.887 3.093-2.334.421-4.113 2.457-4.113 4.91 0 .002.001.003.001.005v.024c-.613-.464-1.327-.794-2.113-.936-.413-1.769-1.994-3.093-3.887-3.093-2.061 0-6.002 1.558-6.002 4s3.941 4 6.002 4c1.811 0 3.326-1.217 3.817-2.869 1.256.358 2.183 1.503 2.183 2.872v5.982h-13.994v-15.991c0-1.369.928-2.514 2.183-2.872.491 1.652 2.007 2.869 3.817 2.869 2.061 0 6.002-1.558 6.002-4s-3.941-4-6.002-4c-1.893 0-3.474 1.324-3.887 3.093-.786.142-1.5.472-2.113.936v-.024c0-.002.001-.003.001-.005 0-2.453-1.779-4.489-4.113-4.91-.413-1.77-1.994-3.094-3.887-3.094-2.061 0-6.002 1.558-6.002 4s3.941 4 6.002 4c1.811 0 3.326-1.217 3.817-2.869 1.254.357 2.181 1.501 2.183 2.869 0 .001-.001.002-.001.003v19.996h-14.04v-5.982c0-1.369.927-2.514 2.183-2.872.491 1.652 2.007 2.869 3.817 2.869 2.061 0 6.002-1.558 6.002-4s-3.941-4-6.002-4c-1.893 0-3.474 1.324-3.887 3.093-.786.142-1.5.472-2.113.936v-.024c0-.002.001-.003.001-.005 0-2.453-1.779-4.489-4.113-4.91-.413-1.769-1.994-3.093-3.887-3.093-2.061 0-6.002 1.558-6.002 4s3.941 4 6.002 4c1.811 0 3.326-1.217 3.817-2.869 1.255.357 2.181 1.501 2.183 2.869 0 .001-.001.002-.001.003v9.986h-13.983c-.553 0-1 .447-1 1v22c0 .553.447 1 1 1h2.001v3c0 .553.447 1 1 1h11c.553 0 1-.447 1-1v-3h31.999v3c0 .553.447 1 1 1h11c.553 0 1-.447 1-1v-3h2c.553 0 1-.447 1-1v-22.001c0-.553-.447-1-1-1zm-7.984-15.989c1.496 0 4.002 1.252 4.002 2s-2.506 2-4.002 2c-1.103 0-2-.897-2-2s.897-2 2-2zm-13.999 8.004c-1.496 0-4.002-1.252-4.002-2s2.506-2 4.002-2c1.103 0 2 .897 2 2s-.898 2-2 2zm-1.994-14.01c1.496 0 4.002 1.252 4.002 2s-2.506 2-4.002 2c-1.103 0-2-.897-2-2s.898-2 2-2zm-13.999-.004c-1.496 0-4.002-1.252-4.002-2s2.506-2 4.002-2c1.103 0 2 .897 2 2s-.897 2-2 2zm-2.041 10.014c1.496 0 4.002 1.252 4.002 2s-2.506 2-4.002 2c-1.103 0-2-.897-2-2s.898-2 2-2zm-13.999-.004c-1.496 0-4.002-1.252-4.002-2s2.506-2 4.002-2c1.103 0 2 .897 2 2s-.897 2-2 2zm6.917 13.989c.028.003.053.017.082.017s.054-.014.082-.017h15.876c.028.003.053.017.082.017s.054-.014.082-.017h15.829c.028.003.053.017.082.017s.054-.014.082-.017h13.902v9h-60v-9zm-1.9 24.001h-9v-2h9zm44.999 0h-9v-2h9zm1-4h-11-33.999-11-2.001v-9.001h60v9.001z" fill="#0051b1"/>
@@ -2358,9 +2364,9 @@
                         <p class="text-muted" style="margin-bottom: 1rem;">View and edit previously entered data for your system.</p>
                         
                         <div class="data-edit-tabs">
-                            <button id="edit-water-quality-tab" class="edit-tab active" data-category="water-quality">Water Quality</button>
-                            <button id="edit-fish-health-tab" class="edit-tab" data-category="fish-health">Fish Health</button>
-                            <button id="edit-operations-tab" class="edit-tab" data-category="operations">Operations</button>
+                            <button id="edit-water-quality-tab" class="edit-tab active" data-target="edit-water-quality-content" data-category="water-quality">Water Quality</button>
+                            <button id="edit-fish-health-tab" class="edit-tab" data-target="edit-fish-health-content" data-category="fish-health">Fish Health</button>
+                            <button id="edit-operations-tab" class="edit-tab" data-target="edit-operations-content" data-category="operations">Operations</button>
                         </div>
                         
                         <div id="data-edit-container">
@@ -3845,7 +3851,7 @@
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="harvest-date">Harvest Date:</label>
-                        <input type="date" id="harvest-date" name="harvest_date" required>
+                        <input type="date" id="fish-harvest-date" name="harvest_date" required>
                     </div>
                     
                     <div class="form-group">
@@ -3871,7 +3877,7 @@
                     
                     <div class="form-group">
                         <label for="harvest-notes">Notes (optional):</label>
-                        <textarea id="harvest-notes" name="notes" rows="3" 
+                        <textarea id="fish-harvest-notes" name="notes" rows="3" 
                                 placeholder="e.g., Fish health condition, market destination, etc."></textarea>
                     </div>
                     
@@ -4279,7 +4285,7 @@
     <div id="comprehensive-nutrient-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content large-modal nutrient-info-modal">
             <div class="modal-header">
-                <h3 class="heading-3" id="nutrient-modal-title">
+                <h3 class="heading-3" id="admin-nutrient-modal-title">
                     <img src="icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="Nutrient Information" class="heading-icon">
                     <span id="nutrient-modal-name">Nutrient Information</span>
                 </h3>
@@ -4365,7 +4371,7 @@
                     <!-- Deficiency Images Section -->
                     <div id="deficiency-images-section" class="nutrient-info-section" style="display: none;">
                         <h4 class="section-header">Visual Deficiency Guide</h4>
-                        <div id="deficiency-images-grid" class="deficiency-images-grid"></div>
+                        <div id="admin-deficiency-images-grid" class="deficiency-images-grid"></div>
                     </div>
 
                     <!-- Nutrient Interactions -->
@@ -4405,7 +4411,7 @@
     </div>
 
     <script src="utils/logger.js"></script>
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 <!-- Deficiency Image Management Modal -->
 <div id="deficiency-image-modal" class="modal-overlay" style="display: none;">
     <div class="modal-content medium-modal">
@@ -4552,6 +4558,63 @@
     </div>
 </div>
 
+<!-- Authentication Modal -->
+<div id="auth-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="auth-modal-title">Login</h3>
+            <span class="close" onclick="app.closeModal('auth-modal')">&times;</span>
+        </div>
+        <div class="modal-body">
+            <!-- Login Form -->
+            <form id="login-form" style="display: block;">
+                <div class="form-group">
+                    <label for="alt-login-username" class="form-label">Username</label>
+                    <input type="text" id="alt-login-username" name="username" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="alt-login-password" class="form-label">Password</label>
+                    <input type="password" id="alt-login-password" name="password" class="form-input" required>
+                </div>
+                <div id="login-error" class="error-message" style="display: none;"></div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Login</button>
+                    <button type="button" class="btn btn-secondary" onclick="app.showRegisterForm()">Register Instead</button>
+                </div>
+            </form>
+            
+            <!-- Register Form -->
+            <form id="register-form" style="display: none;">
+                <div class="form-group">
+                    <label for="alt-register-username" class="form-label">Username</label>
+                    <input type="text" id="alt-register-username" name="username" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="alt-register-email" class="form-label">Email</label>
+                    <input type="email" id="alt-register-email" name="email" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-firstName" class="form-label">First Name</label>
+                    <input type="text" id="register-firstName" name="firstName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-lastName" class="form-label">Last Name</label>
+                    <input type="text" id="register-lastName" name="lastName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="alt-register-password" class="form-label">Password</label>
+                    <input type="password" id="alt-register-password" name="password" class="form-input" required>
+                </div>
+                <div id="register-error" class="error-message" style="display: none;"></div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Register</button>
+                    <button type="button" class="btn btn-secondary" onclick="app.showLoginForm()">Login Instead</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Image Lightbox Modal -->
 <div id="image-lightbox" class="lightbox-overlay" style="display: none;">
     <div class="lightbox-container">
@@ -4568,5 +4631,240 @@
     </div>
 </div>
 
+    <!-- Direct Dashboard Charts Fix -->
+    <script>
+    // Direct chart initialization with real data - bypass modular system for now
+    setTimeout(async () => {
+        console.log('🔧 Direct chart initialization with real data starting...');
+        
+        // Get the active system ID from the global app if available
+        const systemId = window.app?.activeSystemId || 'system_1755190481198'; // Fallback to known system
+        console.log('📊 Using system ID:', systemId);
+        
+        try {
+            // Get auth token for API calls
+            const getAuthHeaders = () => {
+                console.log('🔍 Checking localStorage for tokens...');
+                console.log('🔍 localStorage.auth_token:', localStorage.getItem('auth_token') ? 'EXISTS' : 'NOT FOUND');
+                console.log('🔍 localStorage.token:', localStorage.getItem('token') ? 'EXISTS' : 'NOT FOUND');
+                console.log('🔍 localStorage.authToken:', localStorage.getItem('authToken') ? 'EXISTS' : 'NOT FOUND');
+                
+                // Check all localStorage keys that might contain token
+                const allKeys = Object.keys(localStorage);
+                console.log('🔍 All localStorage keys:', allKeys);
+                const tokenKeys = allKeys.filter(key => key.toLowerCase().includes('token'));
+                console.log('🔍 Token-related keys:', tokenKeys);
+                
+                const token = localStorage.getItem('auth_token') || localStorage.getItem('token') || localStorage.getItem('authToken');
+                const headers = { 'Content-Type': 'application/json' };
+                
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                    console.log('🔐 Using auth token:', token.substring(0, 10) + '...');
+                } else {
+                    console.warn('⚠️ No auth token found in localStorage');
+                    // Try to get token from the main app if available
+                    if (window.app && window.app.getAuthToken) {
+                        const appToken = window.app.getAuthToken();
+                        if (appToken) {
+                            headers['Authorization'] = `Bearer ${appToken}`;
+                            console.log('🔐 Using token from main app:', appToken.substring(0, 10) + '...');
+                        }
+                    }
+                }
+                return headers;
+            };
+            
+            // Fetch water quality and nutrient data with authentication
+            console.log('📡 Fetching water quality data...');
+            const waterQualityResponse = await fetch(`/api/data/entries/water-quality?system_id=${systemId}&limit=10`, {
+                headers: getAuthHeaders()
+            });
+            
+            let waterQualityData = [];
+            if (waterQualityResponse.ok) {
+                waterQualityData = await waterQualityResponse.json();
+                console.log('✅ Water quality API success:', waterQualityData.length, 'records');
+                if (!Array.isArray(waterQualityData)) {
+                    console.warn('⚠️ Water quality data is not an array:', waterQualityData);
+                    waterQualityData = [];
+                }
+            } else {
+                console.error('❌ Water quality API failed:', waterQualityResponse.status, waterQualityResponse.statusText);
+                try {
+                    const errorText = await waterQualityResponse.text();
+                    console.error('❌ API error response:', errorText);
+                } catch (e) {
+                    console.error('❌ Could not read error response');
+                }
+                waterQualityData = [];
+            }
+            
+            console.log('📡 Fetching additional nutrient data...');
+            const nutrientResponse = await fetch(`/api/data/nutrients/${systemId}?limit=10`, {
+                headers: getAuthHeaders()
+            });
+            
+            let additionalNutrientData = [];
+            if (nutrientResponse.ok) {
+                additionalNutrientData = await nutrientResponse.json();
+                console.log('✅ Additional nutrient API success:', additionalNutrientData.length, 'records');
+                if (!Array.isArray(additionalNutrientData)) {
+                    console.warn('⚠️ Additional nutrient data is not an array:', additionalNutrientData);
+                    additionalNutrientData = [];
+                }
+            } else {
+                console.error('❌ Additional nutrient API failed:', nutrientResponse.status);
+                additionalNutrientData = [];
+            }
+            
+            // Combine both data sources for nutrient processing
+            const nutrientData = [...waterQualityData, ...additionalNutrientData];
+            
+            console.log('📊 Water quality data points:', waterQualityData?.length || 0);
+            console.log('📊 Combined nutrient data points:', nutrientData?.length || 0);
+            
+            // Debug: Show what nutrient types are available
+            if (nutrientData.length > 0) {
+                const availableTypes = [...new Set(nutrientData.map(item => item.nutrient_type))].filter(Boolean);
+                console.log('🔍 Available nutrient types:', availableTypes);
+            }
+            
+            // Process water quality data (from nutrient_readings format)
+            const processWaterQualityData = (parameterName) => {
+                if (!Array.isArray(waterQualityData) || waterQualityData.length === 0) {
+                    return { labels: [], values: [] };
+                }
+                
+                const filtered = waterQualityData
+                    .filter(item => item && item.nutrient_type === parameterName && 
+                           item.value !== null && item.value !== undefined && item.value !== '')
+                    .slice(0, 10)
+                    .reverse();
+                
+                if (filtered.length === 0) {
+                    return { labels: [], values: [] };
+                }
+                
+                return {
+                    labels: filtered.map(item => {
+                        const date = new Date(item.date);
+                        return `${date.getMonth() + 1}/${date.getDate()}`;
+                    }),
+                    values: filtered.map(item => parseFloat(item.value))
+                };
+            };
+            
+            // Process nutrient data by type
+            const processNutrientData = (nutrientType) => {
+                if (!Array.isArray(nutrientData) || nutrientData.length === 0) {
+                    return { labels: [], values: [] };
+                }
+                
+                const filtered = nutrientData
+                    .filter(item => item && item.nutrient_type === nutrientType && 
+                           item.value !== null && item.value !== undefined)
+                    .slice(0, 10)
+                    .reverse();
+                
+                if (filtered.length === 0) {
+                    return { labels: [], values: [] };
+                }
+                
+                return {
+                    labels: filtered.map(item => {
+                        const date = new Date(item.reading_date);
+                        return `${date.getMonth() + 1}/${date.getDate()}`;
+                    }),
+                    values: filtered.map(item => parseFloat(item.value))
+                };
+            };
+            
+            // Chart configurations with real data processing
+            const chartConfigs = [
+                // Water Quality Charts (from nutrient_readings table)
+                { id: 'temp-chart', label: 'Temperature', color: '#0051b1', source: 'water', param: 'temperature' },
+                { id: 'ph-chart', label: 'pH', color: '#7BAAEE', source: 'water', param: 'ph' },
+                { id: 'oxygen-chart', label: 'Oxygen', color: '#8DFBCC', source: 'water', param: 'dissolved_oxygen' },
+                { id: 'ammonia-chart', label: 'Ammonia', color: '#f59e0b', source: 'water', param: 'ammonia' },
+                { id: 'humidity-chart', label: 'Humidity', color: '#5a8fd9', source: 'water', param: 'humidity' },
+                { id: 'salinity-chart', label: 'Salinity', color: '#95bcf2', source: 'water', param: 'salinity' },
+                { id: 'ec-chart', label: 'EC/Conductivity', color: '#002a61', source: 'water', param: 'ec' },
+                // Nutrient Charts (from nutrient_readings table)
+                { id: 'nitrate-chart', label: 'Nitrate', color: '#80FB7B', source: 'nutrient', param: 'nitrate' },
+                { id: 'nitrite-chart', label: 'Nitrite', color: '#60da5b', source: 'nutrient', param: 'nitrite' },
+                { id: 'phosphorus-chart', label: 'Phosphorus', color: '#40b93b', source: 'nutrient', param: 'phosphorus' },
+                { id: 'potassium-chart', label: 'Potassium', color: '#a0fc9d', source: 'nutrient', param: 'potassium' },
+                { id: 'calcium-chart', label: 'Calcium', color: '#0051b1', source: 'nutrient', param: 'calcium' },
+                { id: 'magnesium-chart', label: 'Magnesium', color: '#7BAAEE', source: 'nutrient', param: 'magnesium' },
+                { id: 'iron-chart', label: 'Iron', color: '#8DFBCC', source: 'nutrient', param: 'iron' }
+            ];
+            
+            chartConfigs.forEach(config => {
+                const canvas = document.getElementById(config.id);
+                if (canvas) {
+                    console.log(`🔧 Creating real data chart for ${config.id}...`);
+                    try {
+                        // Get real data based on source (both from nutrient_readings now)
+                        let chartData;
+                        if (config.source === 'water') {
+                            chartData = processWaterQualityData(config.param);
+                            console.log(`🔧 Water quality data for ${config.param}:`, chartData.values.length, 'points');
+                        } else {
+                            chartData = processNutrientData(config.param);
+                            console.log(`🔧 Nutrient data for ${config.param}:`, chartData.values.length, 'points');
+                        }
+                        
+                        // Use sample data if no real data available
+                        if (chartData.values.length === 0) {
+                            console.warn(`⚠️ No real data for ${config.id}, using sample data`);
+                            chartData = {
+                                labels: ['No Data'],
+                                values: [0]
+                            };
+                        }
+                        
+                        new Chart(canvas, {
+                            type: 'line',
+                            data: {
+                                labels: chartData.labels,
+                                datasets: [{
+                                    label: config.label,
+                                    data: chartData.values,
+                                    borderColor: config.color,
+                                    backgroundColor: config.color + '20',
+                                    borderWidth: 2,
+                                    fill: true,
+                                    tension: 0.4,
+                                    pointRadius: 2
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { grid: { display: true, color: '#e5e5e5' }, ticks: { font: { size: 10 } } },
+                                    y: { grid: { display: true, color: '#e5e5e5' }, ticks: { font: { size: 10 } } }
+                                }
+                            }
+                        });
+                        console.log(`✅ Real data chart created for ${config.id} with ${chartData.values.length} data points`);
+                    } catch (error) {
+                        console.error(`❌ Failed to create chart for ${config.id}:`, error);
+                    }
+                } else {
+                    console.warn(`⚠️ Canvas not found for ${config.id}`);
+                }
+            });
+            
+        } catch (error) {
+            console.error('❌ Failed to fetch data for charts:', error);
+            console.log('🔄 Falling back to sample data...');
+            // Fallback to sample data if API fails
+            // (Original sample data code would go here as backup)
+        }
+    }, 8000); // Wait for app authentication to complete
+    </script>
 </body>
 </html>

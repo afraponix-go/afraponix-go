@@ -1377,6 +1377,150 @@ router.post('/calculate/nutrient-ratios', async (req, res) => {
     }
 });
 
+// Batched nutrient ratio calculations (performance optimized)
+router.post('/calculate/nutrient-ratios/batch', async (req, res) => {
+    try {
+        const {
+            base_nitrate_ppm,
+            crop_codes,
+            growth_stage = 'general',
+            environmental_conditions = {}
+        } = req.body;
+
+        if (!base_nitrate_ppm) {
+            return res.status(400).json({
+                success: false,
+                error: 'Base nitrate PPM is required'
+            });
+        }
+
+        if (!crop_codes || !Array.isArray(crop_codes) || crop_codes.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'Crop codes array is required'
+            });
+        }
+
+        const pool = getDatabase();
+        const results = {};
+        
+        // Process all crops in a single database query
+        const cropPlaceholders = crop_codes.map(() => '?').join(',');
+        
+        // Get ratio rules for ALL crops at once using the correct table
+        // Note: Unlike the single endpoint, we'll use a simplified query for all crops
+        const [ratioRules] = await pool.execute(`
+            SELECT 
+                n.code as nutrient_code,
+                n.name as nutrient_name,
+                n.symbol,
+                n.unit,
+                n.is_ratio_based,
+                nrr.min_factor,
+                nrr.max_factor,
+                nrr.is_default,
+                nrr.priority
+            FROM nutrient_ratio_rules nrr
+            JOIN nutrients n ON nrr.nutrient_id = n.id
+            LEFT JOIN growth_stages gs ON nrr.growth_stage_id = gs.id
+            WHERE (gs.code = ? OR gs.code IS NULL)
+            ORDER BY n.code, nrr.priority DESC, nrr.is_default DESC
+        `, [growth_stage]);
+
+        // Calculate environmental adjustment factor once
+        const { temperature = 22, ph = 6.5, ec = 1.2 } = environmental_conditions;
+        const tempFactor = Math.max(0.1, Math.min(3.0, 1 + (temperature - 22) * 0.02));
+        const phFactor = Math.max(0.1, Math.min(3.0, 1 - Math.abs(ph - 6.5) * 0.1));
+        const ecFactor = Math.max(0.1, Math.min(3.0, 1 + (ec - 1.2) * 0.1));
+        const adjustmentFactor = (tempFactor + phFactor + ecFactor) / 3;
+
+        // Group rules by nutrient (using highest priority)
+        const nutrientRules = {};
+        for (const rule of ratioRules) {
+            if (!nutrientRules[rule.nutrient_code]) {
+                nutrientRules[rule.nutrient_code] = rule;
+            }
+        }
+
+        // Calculate for each crop (all crops get same calculations since no crop-specific rules)
+        for (const cropCode of crop_codes) {
+            const calculations = {};
+
+            for (const [nutrientCode, rule] of Object.entries(nutrientRules)) {
+                const isRatioBased = rule.is_ratio_based === 1;
+                
+                if (isRatioBased) {
+                    // Ratio-based nutrients (calculated from nitrate)
+                    const avgFactor = (rule.min_factor + rule.max_factor) / 2;
+                    let calculatedValue = base_nitrate_ppm * avgFactor * adjustmentFactor;
+                    
+                    calculations[nutrientCode] = {
+                        symbol: rule.symbol,
+                        name: rule.nutrient_name,
+                        unit: rule.unit,
+                        base_ratio: avgFactor,
+                        calculated_ppm: parseFloat(calculatedValue.toFixed(3)),
+                        min_range: parseFloat((base_nitrate_ppm * rule.min_factor * adjustmentFactor).toFixed(3)),
+                        max_range: parseFloat((base_nitrate_ppm * rule.max_factor * adjustmentFactor).toFixed(3)),
+                        environmental_adjustment: adjustmentFactor,
+                        rule_source: rule.is_default ? 'default' : 'custom',
+                        calculation_type: 'ratio'
+                    };
+                } else {
+                    // Fixed-range nutrients (absolute values)
+                    const minRange = parseFloat(rule.min_factor);
+                    const maxRange = parseFloat(rule.max_factor);
+                    const avgValue = (minRange + maxRange) / 2;
+                    
+                    calculations[nutrientCode] = {
+                        symbol: rule.symbol,
+                        name: rule.nutrient_name,
+                        unit: rule.unit,
+                        base_ratio: null,
+                        calculated_ppm: parseFloat((avgValue * adjustmentFactor).toFixed(3)),
+                        min_range: parseFloat((minRange * adjustmentFactor).toFixed(3)),
+                        max_range: parseFloat((maxRange * adjustmentFactor).toFixed(3)),
+                        environmental_adjustment: adjustmentFactor,
+                        rule_source: rule.is_default ? 'default' : 'custom',
+                        calculation_type: 'fixed'
+                    };
+                }
+            }
+
+            results[cropCode] = {
+                crop_code: cropCode,
+                calculations,
+                total_nutrients: Object.keys(calculations).length
+            };
+        }
+
+        res.json({
+            success: true,
+            input: {
+                base_nitrate_ppm,
+                crop_codes,
+                growth_stage,
+                environmental_conditions
+            },
+            results,
+            total_crops: crop_codes.length,
+            performance: {
+                single_query: true,
+                crops_processed: crop_codes.length,
+                total_calculations: Object.values(results).reduce((sum, crop) => sum + crop.total_nutrients, 0)
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error calculating batched nutrient ratios:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to calculate batched nutrient ratios',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
 // =====================================================
 // COMPREHENSIVE NUTRIENT INFORMATION ENDPOINTS
 // =====================================================

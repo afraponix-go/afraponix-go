@@ -899,9 +899,10 @@ main {
     margin-top: 8px;
     max-width: 100%;
     width: 100% !important;
-    height: 70px !important;
-    max-height: 70px !important;
+    height: 120px !important;
+    max-height: 120px !important;
     display: block;
+    min-height: 120px;
 }
 
 /* Chart timestamp styling */
@@ -15607,13 +15608,9 @@ button[type="button"].btn.btn-secondary:hover {
 }
 
 /* Ensure admin tab visibility when user is admin */
+/* Admin settings tab now visible to all users */
 #admin-settings-tab {
-    display: flex \!important;
-}
-
-/* Hide admin tab for non-admin users - controlled by JavaScript */
-body:not(.admin-user) #admin-settings-tab {
-    display: none \!important;
+    display: flex !important;
 }
 
 /* ===== PLANT MANAGEMENT TABS MOBILE GRID ===== */
@@ -16841,6 +16838,726 @@ h6,
 
 .quick-action-item:active {
     background-color: #e9ecef;
+}
+
+/* Tank Grid Layout */
+.tank-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+    margin-bottom: 40px;
+}
+
+/* Tank Details Grid Layout - Overview specific */
+.tank-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+/* Modern Tank Cards - Clean Professional Design */
+.modern-tank-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    margin-bottom: 24px;
+}
+
+.modern-tank-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modern-tank-card .card-header {
+    background: linear-gradient(135deg, var(--color-deep-blue) 0%, var(--color-blue-fish) 100%);
+    color: white;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.modern-tank-card .card-header::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.modern-tank-card .tank-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 2;
+    position: relative;
+}
+
+.modern-tank-card .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.modern-tank-card .status-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--color-bio-green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(128, 251, 123, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(128, 251, 123, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(128, 251, 123, 0);
+    }
+}
+
+.modern-tank-card .volume-info {
+    font-size: 14px;
+    opacity: 0.9;
+    z-index: 2;
+    position: relative;
+}
+
+.modern-tank-card .card-body {
+    padding: 24px;
+}
+
+.modern-tank-card .primary-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.modern-tank-card .metric {
+    text-align: center;
+    padding: 16px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    transition: background 0.2s ease;
+}
+
+.modern-tank-card .metric:hover {
+    background: #f1f5f9;
+}
+
+.modern-tank-card .metric-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.modern-tank-card .metric-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modern-tank-card .secondary-metrics {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.modern-tank-card .metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.modern-tank-card .metric-row:hover {
+    background: #f1f5f9;
+    border-left-color: var(--color-deep-blue);
+}
+
+.modern-tank-card .metric-row-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modern-tank-card .metric-row-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.modern-tank-card .icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.6;
+}
+
+.modern-tank-card .density-indicator {
+    position: relative;
+    width: 100%;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    margin-top: 8px;
+    overflow: hidden;
+}
+
+.modern-tank-card .density-fill {
+    height: 100%;
+    background: linear-gradient(to right, var(--color-bio-green), #22c55e);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.modern-tank-card .density-warning {
+    background: linear-gradient(to right, #f59e0b, #ef4444);
+}
+
+.modern-tank-card .recommendation {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.modern-tank-card .tank-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.modern-tank-card .action-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.modern-tank-card .action-btn.primary {
+    background: var(--color-deep-blue);
+    color: white;
+}
+
+.modern-tank-card .action-btn.primary:hover {
+    background: var(--color-deep-blue-dark);
+    transform: translateY(-1px);
+}
+
+.modern-tank-card .action-btn.warning {
+    background: #f59e0b;
+    color: white;
+}
+
+.modern-tank-card .action-btn.warning:hover {
+    background: #d97706;
+    transform: translateY(-1px);
+}
+
+.modern-tank-card .action-btn.success {
+    background: var(--color-bio-green);
+    color: white;
+}
+
+.modern-tank-card .action-btn.success:hover {
+    background: #22c55e;
+    transform: translateY(-1px);
+}
+
+.modern-tank-card .action-btn.info {
+    background: #06b6d4;
+    color: white;
+}
+
+.modern-tank-card .action-btn.info:hover {
+    background: #0891b2;
+    transform: translateY(-1px);
+}
+
+.modern-tank-card .action-btn.harvest {
+    background: #059669;
+    color: white;
+}
+
+.modern-tank-card .action-btn.harvest:hover {
+    background: #047857;
+    transform: translateY(-1px);
+}
+
+/* Overview Tank Card Specific Styles */
+.modern-tank-card.overview-tank .card-header {
+    position: relative;
+}
+
+.modern-tank-card.overview-tank .tank-actions-header {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    z-index: 3;
+}
+
+.modern-tank-card.overview-tank .quick-action-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 6px;
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modern-tank-card.overview-tank .quick-action-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+.modern-tank-card.overview-tank .quick-action-btn img {
+    filter: brightness(0) invert(1);
+}
+
+/* Bulk Fish Health Data Entry Form Styles */
+.bulk-data-form {
+    background: white;
+    border-radius: 8px;
+    padding: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.bulk-data-form .form-header {
+    background: linear-gradient(135deg, var(--color-deep-blue) 0%, var(--color-blue-fish) 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.bulk-data-form .form-header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.bulk-data-form .form-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.bulk-data-form .date-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.bulk-data-form .date-field label {
+    color: white;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.bulk-data-form .date-field input {
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-size: 14px;
+}
+
+.bulk-data-form .date-field input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
+
+.bulk-table-container {
+    overflow-x: auto;
+    max-height: 60vh;
+    border: 1px solid #e2e8f0;
+    border-top: none;
+    border-bottom: none;
+}
+
+.bulk-data-table {
+    width: 100%;
+    min-width: 1000px;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.bulk-data-table thead {
+    position: sticky;
+    top: 0;
+    background: var(--bg-secondary);
+    z-index: 10;
+}
+
+.bulk-data-table th {
+    padding: 12px 8px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.bulk-data-table td {
+    padding: 8px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.tank-row:hover {
+    background: #fafbfc;
+}
+
+.tank-row.has-data {
+    background: #f0f9ff;
+}
+
+.tank-row.modified {
+    background: #fef3cd;
+    border-left: 3px solid var(--color-bio-green);
+}
+
+.tank-row.validation-warning {
+    background: #fff3cd;
+    border-left: 3px solid #ffc107;
+}
+
+.tank-row.validation-error {
+    background: #f8d7da;
+    border-left: 3px solid #dc3545;
+}
+
+.tank-identifier {
+    font-weight: 600;
+    color: var(--color-deep-blue);
+    min-width: 60px;
+}
+
+.bulk-input, .bulk-select, .bulk-textarea {
+    width: 100%;
+    min-width: 80px;
+    padding: 6px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.bulk-input:focus, .bulk-select:focus, .bulk-textarea:focus {
+    outline: none;
+    border-color: var(--color-deep-blue);
+    box-shadow: 0 0 0 2px rgba(0, 81, 177, 0.1);
+}
+
+.bulk-input[type="number"] {
+    text-align: right;
+}
+
+.bulk-textarea {
+    resize: vertical;
+    min-height: 32px;
+    font-family: inherit;
+}
+
+.suggested-feed {
+    display: block;
+    text-align: center;
+    font-size: 12px;
+    padding: 4px;
+}
+
+.tank-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.status-indicator {
+    font-size: 14px;
+}
+
+.status-text {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.summary-section {
+    padding: 20px;
+    background: var(--bg-secondary);
+    border-top: 1px solid #e2e8f0;
+}
+
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.summary-card {
+    background: white;
+    padding: 16px;
+    border-radius: 6px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.summary-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-deep-blue);
+    margin-bottom: 4px;
+}
+
+.summary-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 0 20px 20px 20px;
+}
+
+.form-actions button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.form-actions button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Enhanced Bulk Data Form Styles for Simplified Form */
+.bulk-data-table .tank-name {
+    min-width: 120px;
+}
+
+.bulk-data-table .fish-count-display {
+    display: block;
+    font-size: 0.75rem;
+    color: #666;
+    font-weight: normal;
+    margin-top: 2px;
+}
+
+.bulk-data-table .suggested-feed-cell {
+    min-width: 120px;
+    text-align: center;
+}
+
+.bulk-data-table .suggested-feed {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+}
+
+.bulk-data-table .suggested-feed strong {
+    color: var(--color-bio-green) !important;
+}
+
+.bulk-data-table .bulk-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease;
+}
+
+.bulk-data-table .bulk-input:focus {
+    outline: none;
+    border-color: var(--color-deep-blue);
+    box-shadow: 0 0 0 2px rgba(0, 81, 177, 0.1);
+}
+
+.bulk-data-table .bulk-select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background-color: white;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.bulk-data-table .bulk-select:focus {
+    outline: none;
+    border-color: var(--color-deep-blue);
+    box-shadow: 0 0 0 2px rgba(0, 81, 177, 0.1);
+}
+
+.bulk-data-table .tank-row.has-data {
+    background-color: rgba(128, 251, 123, 0.05);
+}
+
+.bulk-data-table .tank-row.modified {
+    border-left: 3px solid var(--color-bio-green);
+    background-color: rgba(128, 251, 123, 0.08);
+}
+
+.bulk-data-table .tank-row.validation-warning {
+    background-color: rgba(245, 158, 11, 0.1);
+    border-left: 3px solid #f59e0b;
+}
+
+/* Responsive Design for Tablets and Mobile */
+@media (max-width: 1024px) {
+    .bulk-data-form .form-header {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+    
+    .bulk-data-form .form-controls {
+        justify-content: center;
+    }
+    
+    .bulk-table-container {
+        max-height: 50vh;
+    }
+    
+    .summary-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .bulk-data-table {
+        min-width: 800px;
+        font-size: 13px;
+    }
+    
+    .bulk-data-table th,
+    .bulk-data-table td {
+        padding: 6px;
+    }
+    
+    .bulk-input, .bulk-select, .bulk-textarea {
+        min-width: 70px;
+        padding: 4px 6px;
+        font-size: 13px;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .form-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .bulk-data-form .form-header,
+    .form-actions {
+        display: none;
+    }
+    
+    .bulk-table-container {
+        max-height: none;
+        overflow: visible;
+    }
+    
+    .bulk-data-table {
+        font-size: 10px;
+    }
+}
+
+/* Accessibility Improvements */
+.bulk-input:invalid,
+.bulk-select:invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.1);
+}
+
+.tank-row:focus-within {
+    background: #f0f9ff;
+    outline: 2px solid var(--color-deep-blue);
+    outline-offset: -2px;
+}
+
+/* Loading State */
+.bulk-data-form.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.bulk-data-form.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--color-deep-blue);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    transform: translate(-50%, -50%);
 }
 
 /* Tank detail cards - ensure proper stacking context */

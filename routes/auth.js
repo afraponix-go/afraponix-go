@@ -206,6 +206,7 @@ router.get('/verify', async (req, res) => {
             return res.status(401).json({ error: 'User not found' });
         }
 
+        console.log('🔍 Auth verify returning user data:', userRows[0]);
         res.json({ user: userRows[0] });
 
     } catch (error) {

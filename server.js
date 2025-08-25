@@ -21,6 +21,7 @@ const sensorRoutes = require('./routes/sensors');
 const credentialsRoutes = require('./routes/credentials');
 const seedVarietiesRoutes = require('./routes/seed-varieties');
 const cropKnowledgeRoutes = require('./routes/crop-knowledge');
+const customCropsRoutes = require('./routes/custom-crops');
 const { initializeDatabase, initializeConnectionPool, closeConnectionPool } = require('./database/init-mariadb');
 const sensorCollector = require('./services/sensor-collector');
 
@@ -100,6 +101,7 @@ app.use('/api/sensors', sensorRoutes);
 app.use('/api/credentials', credentialsRoutes);
 app.use('/api/seed-varieties', seedVarietiesRoutes);
 app.use('/api/crop-knowledge', cropKnowledgeRoutes);
+app.use('/api/custom-crops', customCropsRoutes);
 
 // Email verification route - serve main page with token parameter
 app.get('/verify-email', (req, res) => {

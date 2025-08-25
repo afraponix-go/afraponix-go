@@ -21,11 +21,18 @@ export default class SystemManager {
     async initialize() {
         console.log('🏗️ Initializing System Manager');
         
+        // Check if user is authenticated before loading systems
+        if (!this.app.currentUser) {
+            console.warn('⚠️ System Manager: Waiting for authentication before loading systems');
+            return false;
+        }
+        
         // Load systems and restore last active system
         await this.loadSystems();
         await this.restoreActiveSystem();
         
         console.log('✅ System Manager initialized');
+        return true;
     }
 
     /**
@@ -82,9 +89,39 @@ export default class SystemManager {
             return; // No change needed
         }
 
+        // Ensure systems are loaded before switching
+        if (!this.systems || Object.keys(this.systems).length === 0) {
+            console.log('🔄 Systems not loaded, loading now...');
+            try {
+                await this.loadSystems();
+            } catch (error) {
+                console.error('❌ Failed to load systems during switch:', error);
+                throw error;
+            }
+        }
+
         const system = this.systems[systemId];
         if (!system) {
-            throw new Error(`System ${systemId} not found`);
+            console.warn(`⚠️ System ${systemId} not found in available systems:`, Object.keys(this.systems));
+            console.warn('🔍 Available systems:', this.systems);
+            
+            // Try to reload systems once more
+            console.log('🔄 Attempting to reload systems...');
+            try {
+                await this.loadSystems();
+                const retrySystem = this.systems[systemId];
+                if (!retrySystem) {
+                    // Clear the invalid system ID from localStorage
+                    StorageUtils.removeItem('activeSystemId');
+                    throw new Error(`System ${systemId} not found after reload`);
+                }
+                // Continue with retry system
+                console.log('✅ System found after reload');
+            } catch (error) {
+                // Clear the invalid system ID from localStorage
+                StorageUtils.removeItem('activeSystemId');
+                throw new Error(`System ${systemId} not found`);
+            }
         }
 
         console.log('🔄 Switching to system:', systemId, system.system_name);
@@ -112,6 +149,17 @@ export default class SystemManager {
 
             // Load system data
             await this.loadSystemData(systemId);
+
+            // Also trigger monolithic app data refresh if methods exist
+            if (typeof this.app.loadDataRecords === 'function') {
+                console.log('📊 Refreshing monolithic app data records...');
+                await this.app.loadDataRecords();
+            }
+            
+            if (typeof this.app.updateDashboardFromData === 'function') {
+                console.log('📊 Refreshing monolithic app dashboard...');
+                await this.app.updateDashboardFromData();
+            }
 
             // Update UI components
             this.updateSystemDisplays();
@@ -197,7 +245,11 @@ export default class SystemManager {
     updateSystemDisplays() {
         // Update systems list component
         if (this.app.systemsList) {
+            console.log('📋 Updating systems dropdown via SystemsList component');
             this.app.systemsList.updateSystemsDropdown();
+        } else {
+            console.log('📋 SystemsList component not available, updating legacy dropdown directly');
+            this.updateLegacySystemsDropdown();
         }
 
         // Update any system name displays
@@ -208,6 +260,54 @@ export default class SystemManager {
 
         // Update system info in headers/titles
         this.updateSystemHeaders();
+    }
+
+    /**
+     * Update legacy systems dropdown when SystemsList component is not available
+     */
+    updateLegacySystemsDropdown() {
+        const selectElement = document.getElementById('active-system');
+        if (!selectElement) {
+            console.warn('⚠️ Legacy dropdown (#active-system) not found in DOM');
+            return;
+        }
+
+        console.log(`🔄 Updating legacy dropdown with ${Object.keys(this.systems).length} systems`);
+        
+        // Clear existing options
+        selectElement.innerHTML = '';
+
+        // Add systems to select
+        const systemIds = Object.keys(this.systems);
+        
+        if (systemIds.length === 0) {
+            selectElement.innerHTML = '<option value="">No systems available</option>';
+            selectElement.style.display = 'none';
+        } else {
+            // Show the select element
+            selectElement.style.display = 'block';
+            console.log('✅ Legacy dropdown made visible with', systemIds.length, 'systems');
+            
+            // Add default option
+            selectElement.innerHTML = '<option value="">Select a system...</option>';
+            
+            // Add system options
+            systemIds.forEach(systemId => {
+                const system = this.systems[systemId];
+                const option = document.createElement('option');
+                option.value = systemId;
+                option.textContent = system.system_name || `System ${systemId}`;
+                
+                // Mark as selected if this is the active system
+                if (systemId == this.app.activeSystemId) {
+                    option.selected = true;
+                }
+                
+                selectElement.appendChild(option);
+            });
+            
+            console.log(`✅ Added ${systemIds.length} system options to legacy dropdown`);
+        }
     }
 
     /**

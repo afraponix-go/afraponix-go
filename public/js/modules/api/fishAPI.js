@@ -2,10 +2,38 @@
 // Handles all fish inventory and health API calls
 
 /**
+ * Get authentication token from localStorage
+ */
+function getAuthToken() {
+    return localStorage.getItem('auth_token');
+}
+
+/**
+ * Create authenticated headers
+ */
+function getAuthHeaders(includeContentType = true) {
+    const headers = {};
+    const token = getAuthToken();
+    
+    if (includeContentType) {
+        headers['Content-Type'] = 'application/json';
+    }
+    
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return headers;
+}
+
+/**
  * Fetch fish inventory data for a system
  */
 export async function fetchFishInventory(systemId) {
-    const response = await fetch(`/api/fish-inventory/system/${systemId}`);
+    const response = await fetch(`/api/fish-inventory/system/${systemId}`, {
+        method: 'GET',
+        headers: getAuthHeaders()
+    });
     if (!response.ok) throw new Error('Failed to fetch fish inventory');
     return response.json();
 }
@@ -16,7 +44,7 @@ export async function fetchFishInventory(systemId) {
 export async function fetchFishTanks(systemId) {
     const response = await fetch(`/api/fish-tanks/system/${systemId}`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: getAuthHeaders()
     });
     if (!response.ok) throw new Error('Failed to fetch fish tanks');
     return response.json();
@@ -26,7 +54,10 @@ export async function fetchFishTanks(systemId) {
  * Fetch fish health data
  */
 export async function fetchFishHealthData(systemId) {
-    const response = await fetch(`/api/data/fish-health/${systemId}`);
+    const response = await fetch(`/api/data/fish-health/${systemId}`, {
+        method: 'GET',
+        headers: getAuthHeaders()
+    });
     if (!response.ok) throw new Error('Failed to fetch fish health data');
     return response.json();
 }
@@ -35,7 +66,10 @@ export async function fetchFishHealthData(systemId) {
  * Fetch fish health entries with query parameters
  */
 export async function fetchFishHealthEntries(systemId, limit = 50) {
-    const response = await fetch(`/api/data/entries/fish-health?system_id=${systemId}&limit=${limit}`);
+    const response = await fetch(`/api/data/entries/fish-health?system_id=${systemId}&limit=${limit}`, {
+        method: 'GET',
+        headers: getAuthHeaders(false)
+    });
     if (!response.ok) throw new Error('Failed to fetch fish health entries');
     return response.json();
 }
@@ -46,7 +80,7 @@ export async function fetchFishHealthEntries(systemId, limit = 50) {
 export async function addFishHealthEntry(healthData) {
     const response = await fetch('/api/data/entries/fish-health', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(healthData)
     });
     if (!response.ok) throw new Error('Failed to add fish health entry');
@@ -59,7 +93,7 @@ export async function addFishHealthEntry(healthData) {
 export async function updateFishHealthEntry(entryId, healthData) {
     const response = await fetch(`/api/data/fish-health/entry/${entryId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(healthData)
     });
     if (!response.ok) throw new Error('Failed to update fish health entry');
@@ -71,7 +105,8 @@ export async function updateFishHealthEntry(entryId, healthData) {
  */
 export async function deleteFishHealthEntry(entryId) {
     const response = await fetch(`/api/data/fish-health/entry/${entryId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getAuthHeaders(false)
     });
     if (!response.ok) throw new Error('Failed to delete fish health entry');
     return response.json();
@@ -83,7 +118,7 @@ export async function deleteFishHealthEntry(entryId) {
 export async function addFishToInventory(fishData) {
     const response = await fetch('/api/fish-inventory/add-fish', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(fishData)
     });
     if (!response.ok) throw new Error('Failed to add fish to inventory');
@@ -96,7 +131,7 @@ export async function addFishToInventory(fishData) {
 export async function recordFishMortality(mortalityData) {
     const response = await fetch('/api/fish-inventory/mortality', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(mortalityData)
     });
     if (!response.ok) throw new Error('Failed to record fish mortality');
@@ -109,7 +144,7 @@ export async function recordFishMortality(mortalityData) {
 export async function updateFishWeight(weightData) {
     const response = await fetch('/api/fish-inventory/update-weight', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(weightData)
     });
     if (!response.ok) throw new Error('Failed to update fish weight');

@@ -5,6 +5,8 @@ class SensorCollector {
     constructor() {
         this.isRunning = false;
         this.intervals = new Map();
+        this.errorSuppressionMap = new Map(); // Track errors to reduce spam
+        this.suppressionDuration = 5 * 60 * 1000; // 5 minutes
     }
 
     async start() {
@@ -18,7 +20,26 @@ class SensorCollector {
         this.isRunning = false;
         this.intervals.forEach(interval => clearInterval(interval));
         this.intervals.clear();
+    }
 
+    /**
+     * Log errors with suppression to prevent spam
+     * @param {string} errorKey - Unique key to identify error type
+     * @param {string} message - Error message to log
+     */
+    logSuppressedError(errorKey, message) {
+        const now = Date.now();
+        const lastLogged = this.errorSuppressionMap.get(errorKey);
+        
+        // Log if never logged before or suppression period has passed
+        if (!lastLogged || (now - lastLogged) > this.suppressionDuration) {
+            if (lastLogged) {
+                console.error(`${message} (suppressed similar errors for ${Math.round((now - lastLogged) / 60000)} minutes)`);
+            } else {
+                console.error(`${message} (will suppress similar errors for 5 minutes)`);
+            }
+            this.errorSuppressionMap.set(errorKey, now);
+        }
     }
 
     async scheduleAllSensors() {
@@ -94,7 +115,9 @@ class SensorCollector {
                 );
 
                 if (credentialRows.length === 0) {
-                    console.error(`❌ No ThingsBoard credentials found for sensor ${sensor.sensor_name}`);
+                    this.logSuppressedError(`CREDENTIALS_MISSING_${sensor.system_id}`, 
+                        `❌ No ThingsBoard credentials found for sensor ${sensor.sensor_name} (system: ${sensor.system_id})`
+                    );
                     return;
                 }
 
@@ -109,7 +132,9 @@ class SensorCollector {
                     password: CredentialEncryption.decrypt(credRecord.password_encrypted)
                 };
             } catch (credError) {
-                console.error(`❌ Failed to get credentials for sensor ${sensor.sensor_name}:`, credError.message);
+                this.logSuppressedError(`CREDENTIALS_ERROR_${sensor.system_id}`, 
+                    `❌ Failed to get credentials for sensor ${sensor.sensor_name}: ${credError.message}`
+                );
                 return;
             }
 
@@ -124,7 +149,9 @@ class SensorCollector {
                 });
                 authToken = authResponse.data.token;
             } catch (authError) {
-                console.error(`❌ Authentication failed for sensor ${sensor.sensor_name}:`, authError.message);
+                this.logSuppressedError(`AUTH_ERROR_${sensor.system_id}`, 
+                    `❌ Authentication failed for sensor ${sensor.sensor_name}: ${authError.message}`
+                );
                 return;
             }
 
@@ -262,7 +289,9 @@ class SensorCollector {
             }
 
         } catch (mappingError) {
-            console.error(`❌ Mapping error for sensor ${sensor.sensor_name}:`, mappingError.message);
+            this.logSuppressedError(`MAPPING_ERROR_${sensor.id}`, 
+                `❌ Mapping error for sensor ${sensor.sensor_name}: ${mappingError.message}`
+            );
         }
     }
 }

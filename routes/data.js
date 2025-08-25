@@ -781,4 +781,43 @@ router.put('/batch/:systemId/:batchId/grow-bed', async (req, res) => {
     }
 });
 
+// Get latest sensor data for a system
+router.get('/sensors/latest/:systemId', async (req, res) => {
+    const { systemId } = req.params;
+
+    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+        return res.status(403).json({ error: 'Access denied to this system' });
+    }
+
+    try {
+        const pool = getDatabase();
+        
+        // Get sensor configurations for this system
+        const [sensorRows] = await pool.execute(
+            'SELECT * FROM sensor_configs WHERE system_id = ?',
+            [systemId]
+        );
+        
+        if (sensorRows.length === 0) {
+            return res.json({ sensors: [] });
+        }
+
+        // For now, return empty data as we don't have actual sensor readings in this demo
+        // In a real implementation, this would fetch from ThingsBoard or sensor database
+        const sensorData = sensorRows.map(sensor => ({
+            id: sensor.id,
+            name: sensor.sensor_name,
+            type: sensor.sensor_type,
+            lastReading: null,
+            timestamp: null,
+            status: 'offline'
+        }));
+
+        res.json({ sensors: sensorData });
+    } catch (error) {
+        console.error('Error fetching latest sensor data:', error);
+        res.status(500).json({ error: 'Failed to fetch sensor data' });
+    }
+});
+
 module.exports = router;

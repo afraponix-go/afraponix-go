@@ -2,10 +2,37 @@
 // Handles all crop knowledge, nutrients database, and deficiency management API calls
 
 /**
+ * Get authentication token from window.app
+ */
+function getAuthToken() {
+    return window.app?.token || localStorage.getItem('authToken') || '';
+}
+
+/**
+ * Create authenticated headers
+ */
+function getAuthHeaders(includeContentType = true) {
+    const headers = {};
+    const token = getAuthToken();
+    
+    if (includeContentType) {
+        headers['Content-Type'] = 'application/json';
+    }
+    
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return headers;
+}
+
+/**
  * Fetch all crops
  */
 export async function fetchCrops() {
-    const response = await fetch('/api/crop-knowledge/crops');
+    const response = await fetch('/api/crop-knowledge/crops', {
+        headers: getAuthHeaders(false)
+    });
     if (!response.ok) throw new Error('Failed to fetch crops');
     return response.json();
 }
@@ -82,7 +109,7 @@ export async function saveAdminCrop(cropData, isEdit = false, cropCode = null) {
     
     const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(cropData)
     });
     if (!response.ok) throw new Error('Failed to save admin crop');
@@ -94,7 +121,8 @@ export async function saveAdminCrop(cropData, isEdit = false, cropCode = null) {
  */
 export async function deleteAdminCrop(cropCode) {
     const response = await fetch(`/api/crop-knowledge/admin/crops/${cropCode}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getAuthHeaders()
     });
     if (!response.ok) throw new Error('Failed to delete admin crop');
     return response.json();
@@ -106,7 +134,7 @@ export async function deleteAdminCrop(cropCode) {
 export async function fetchCropTargets(cropCode) {
     const response = await fetch(`/api/crop-knowledge/admin/crops/${cropCode}/targets`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: getAuthHeaders()
     });
     if (!response.ok) throw new Error('Failed to fetch crop targets');
     return response.json();
@@ -118,7 +146,7 @@ export async function fetchCropTargets(cropCode) {
 export async function createCropTargets(cropCode, targetsData) {
     const response = await fetch(`/api/crop-knowledge/admin/crops/${cropCode}/targets`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(targetsData)
     });
     if (!response.ok) throw new Error('Failed to create crop targets');
@@ -131,7 +159,7 @@ export async function createCropTargets(cropCode, targetsData) {
 export async function updateCropTarget(targetId, targetData) {
     const response = await fetch(`/api/crop-knowledge/admin/targets/${targetId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(targetData)
     });
     if (!response.ok) throw new Error('Failed to update crop target');
@@ -143,7 +171,8 @@ export async function updateCropTarget(targetId, targetData) {
  */
 export async function deleteCropTarget(targetId) {
     const response = await fetch(`/api/crop-knowledge/admin/targets/${targetId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getAuthHeaders()
     });
     if (!response.ok) throw new Error('Failed to delete crop target');
     return response.json();
@@ -155,7 +184,9 @@ export async function deleteCropTarget(targetId) {
  * Fetch ratio rules
  */
 export async function fetchRatioRules() {
-    const response = await fetch('/api/crop-knowledge/admin/ratio-rules');
+    const response = await fetch('/api/crop-knowledge/admin/ratio-rules', {
+        headers: getAuthHeaders(false)
+    });
     if (!response.ok) throw new Error('Failed to fetch ratio rules');
     return response.json();
 }
@@ -171,7 +202,7 @@ export async function saveRatioRule(ruleData, isEdit = false, ruleId = null) {
     
     const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(ruleData)
     });
     if (!response.ok) throw new Error('Failed to save ratio rule');
@@ -183,7 +214,8 @@ export async function saveRatioRule(ruleData, isEdit = false, ruleId = null) {
  */
 export async function deleteRatioRule(ruleId) {
     const response = await fetch(`/api/crop-knowledge/admin/ratio-rules/${ruleId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getAuthHeaders()
     });
     if (!response.ok) throw new Error('Failed to delete ratio rule');
     return response.json();
@@ -195,7 +227,9 @@ export async function deleteRatioRule(ruleId) {
  * Fetch environmental adjustments
  */
 export async function fetchEnvironmentalAdjustments() {
-    const response = await fetch('/api/crop-knowledge/admin/environmental-adjustments');
+    const response = await fetch('/api/crop-knowledge/admin/environmental-adjustments', {
+        headers: getAuthHeaders(false)
+    });
     if (!response.ok) throw new Error('Failed to fetch environmental adjustments');
     return response.json();
 }
@@ -206,7 +240,7 @@ export async function fetchEnvironmentalAdjustments() {
 export async function saveEnvironmentalAdjustments(adjustmentData) {
     const response = await fetch('/api/crop-knowledge/admin/environmental-adjustments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(adjustmentData)
     });
     if (!response.ok) throw new Error('Failed to save environmental adjustments');
@@ -232,8 +266,10 @@ export async function fetchDeficiencyImages(nutrientCode = null) {
  * Upload deficiency image
  */
 export async function uploadDeficiencyImage(nutrientCode, formData) {
+    const headers = getAuthHeaders(false); // Don't include Content-Type for FormData
     const response = await fetch(`/api/crop-knowledge/admin/nutrients/${nutrientCode}/deficiency-images/upload`, {
         method: 'POST',
+        headers,
         body: formData
     });
     if (!response.ok) throw new Error('Failed to upload deficiency image');
@@ -251,7 +287,7 @@ export async function saveDeficiencyImage(nutrientCode, imageData, imageId = nul
     
     const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(imageData)
     });
     if (!response.ok) throw new Error('Failed to save deficiency image');
@@ -263,7 +299,8 @@ export async function saveDeficiencyImage(nutrientCode, imageData, imageId = nul
  */
 export async function deleteDeficiencyImage(imageId) {
     const response = await fetch(`/api/crop-knowledge/admin/deficiency-images/${imageId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getAuthHeaders()
     });
     if (!response.ok) throw new Error('Failed to delete deficiency image');
     return response.json();
