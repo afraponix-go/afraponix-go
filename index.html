@@ -962,6 +962,7 @@
             <div class="data-entry-tabs">
                 <button id="water-quality-tab" class="data-tab active" data-target="water-quality-form">Water Quality</button>
                 <button id="operations-tab" class="data-tab" data-target="operations-form">Operations</button>
+                <button id="import-export-tab" class="data-tab" data-target="import-export-form">Import/Export</button>
             </div>
             
             <div id="water-quality-form" class="data-form active">
@@ -986,6 +987,259 @@
                     <h3 class="heading-3">Recent Operations Data</h3>
                     <div id="operations-history" class="data-history-list">
                         <!-- Operations history will be displayed here -->
+                    </div>
+                </div>
+            </div>
+
+            <div id="import-export-form" class="data-form">
+                <div class="import-export-container">
+                    <!-- Import Section -->
+                    <div class="import-section">
+                        <h3 class="heading-3">
+                            <img src="/icons/new-icons/Afraponix Go Icons_data.svg" alt="Import" class="section-icon">
+                            Import Data
+                        </h3>
+                        
+                        <div class="import-options">
+                            <div class="import-type-selector">
+                                <label for="import-type">Data Type:</label>
+                                <select id="import-type" class="form-select">
+                                    <option value="water-quality">Water Quality Data</option>
+                                    <option value="fish-health">Fish Health Data</option>
+                                    <option value="plant-growth">Plant Growth Data</option>
+                                    <option value="operations">Operations Data</option>
+                                    <option value="nutrients">Nutrient Data</option>
+                                </select>
+                            </div>
+                            
+                            <div class="file-upload-area">
+                                <div class="file-drop-zone" id="file-drop-zone">
+                                    <img src="/icons/new-icons/Afraponix Go Icons_data.svg" alt="Upload" class="upload-icon">
+                                    <p>Drag and drop your CSV or Excel file here</p>
+                                    <p class="upload-subtitle">or</p>
+                                    <button type="button" class="btn-primary" onclick="document.getElementById('file-input').click()">
+                                        Choose File
+                                    </button>
+                                    <input type="file" id="file-input" accept=".csv,.xlsx,.xls" style="display: none;">
+                                </div>
+                                
+                                <div class="file-info" id="file-info" style="display: none;">
+                                    <div class="selected-file">
+                                        <img src="/icons/new-icons/Afraponix Go Icons_data history.svg" alt="File" class="file-icon">
+                                        <span id="file-name"></span>
+                                        <span id="file-size"></span>
+                                        <button type="button" class="btn-link" onclick="clearSelectedFile()">
+                                            <img src="/icons/new-icons/Afraponix Go Icons_close.svg" alt="Remove">
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="import-options-config">
+                                <div class="option-group">
+                                    <label>
+                                        <input type="checkbox" id="has-headers" checked>
+                                        File has headers
+                                    </label>
+                                </div>
+                                <div class="option-group">
+                                    <label>
+                                        <input type="checkbox" id="skip-duplicates" checked>
+                                        Skip duplicate entries
+                                    </label>
+                                </div>
+                                <div class="option-group">
+                                    <label>
+                                        <input type="checkbox" id="validate-data" checked>
+                                        Validate data before import
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="import-actions">
+                                <button type="button" id="preview-data-btn" class="btn-secondary" disabled>
+                                    <img src="/icons/new-icons/Afraponix Go Icons_view.svg" alt="Preview" class="btn-icon">
+                                    Preview Data
+                                </button>
+                                <button type="button" id="import-data-btn" class="btn-primary" disabled>
+                                    <img src="/icons/new-icons/Afraponix Go Icons_data.svg" alt="Import" class="btn-icon">
+                                    Import Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Export Section -->
+                    <div class="export-section">
+                        <h3 class="heading-3">
+                            <img src="/icons/new-icons/Afraponix Go Icons_data history.svg" alt="Export" class="section-icon">
+                            Export Data
+                        </h3>
+                        
+                        <div class="export-options">
+                            <div class="export-type-selector">
+                                <label for="export-type">Data Type:</label>
+                                <select id="export-type" class="form-select">
+                                    <option value="water-quality">Water Quality Data</option>
+                                    <option value="fish-health">Fish Health Data</option>
+                                    <option value="plant-growth">Plant Growth Data</option>
+                                    <option value="operations">Operations Data</option>
+                                    <option value="nutrients">Nutrient Data</option>
+                                    <option value="all">All Data</option>
+                                </select>
+                            </div>
+                            
+                            <div class="date-range-selector">
+                                <div class="date-group">
+                                    <label for="export-start-date">From:</label>
+                                    <input type="date" id="export-start-date" class="form-input">
+                                </div>
+                                <div class="date-group">
+                                    <label for="export-end-date">To:</label>
+                                    <input type="date" id="export-end-date" class="form-input">
+                                </div>
+                            </div>
+                            
+                            <div class="export-format-selector">
+                                <label>Export Format:</label>
+                                <div class="format-options">
+                                    <label>
+                                        <input type="radio" name="export-format" value="csv" checked>
+                                        CSV
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="export-format" value="xlsx">
+                                        Excel (XLSX)
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="export-actions">
+                                <button type="button" id="export-data-btn" class="btn-primary">
+                                    <img src="/icons/new-icons/Afraponix Go Icons_data history.svg" alt="Export" class="btn-icon">
+                                    Export Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sample Templates Section -->
+                    <div class="templates-section">
+                        <h3 class="heading-3">
+                            <img src="/icons/new-icons/Afraponix Go Icons_copy.svg" alt="Templates" class="section-icon">
+                            Sample Templates
+                        </h3>
+                        
+                        <div class="templates-grid">
+                            <div class="template-card">
+                                <img src="/icons/new-icons/Afraponix Go Icons_chemistry.svg" alt="Water Quality" class="template-icon">
+                                <h4>Water Quality</h4>
+                                <p>Sample format for water quality measurements</p>
+                                <div class="template-actions">
+                                    <button type="button" class="btn-outline" onclick="downloadSampleTemplate('water-quality', 'csv')">
+                                        CSV
+                                    </button>
+                                    <button type="button" class="btn-outline" onclick="downloadSampleTemplate('water-quality', 'xlsx')">
+                                        Excel
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="template-card">
+                                <img src="/icons/new-icons/Afraponix Go Icons_fish.svg" alt="Fish Health" class="template-icon">
+                                <h4>Fish Health</h4>
+                                <p>Sample format for fish health monitoring</p>
+                                <div class="template-actions">
+                                    <button type="button" class="btn-outline" onclick="downloadSampleTemplate('fish-health', 'csv')">
+                                        CSV
+                                    </button>
+                                    <button type="button" class="btn-outline" onclick="downloadSampleTemplate('fish-health', 'xlsx')">
+                                        Excel
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="template-card">
+                                <img src="/icons/new-icons/Afraponix Go Icons_plant.svg" alt="Plant Growth" class="template-icon">
+                                <h4>Plant Growth</h4>
+                                <p>Sample format for plant growth tracking</p>
+                                <div class="template-actions">
+                                    <button type="button" class="btn-outline" onclick="downloadSampleTemplate('plant-growth', 'csv')">
+                                        CSV
+                                    </button>
+                                    <button type="button" class="btn-outline" onclick="downloadSampleTemplate('plant-growth', 'xlsx')">
+                                        Excel
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="template-card">
+                                <img src="/icons/new-icons/Afraponix Go Icons_ecosystem.svg" alt="Operations" class="template-icon">
+                                <h4>Operations</h4>
+                                <p>Sample format for system operations</p>
+                                <div class="template-actions">
+                                    <button type="button" class="btn-outline" onclick="downloadSampleTemplate('operations', 'csv')">
+                                        CSV
+                                    </button>
+                                    <button type="button" class="btn-outline" onclick="downloadSampleTemplate('operations', 'xlsx')">
+                                        Excel
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="template-card">
+                                <img src="/icons/new-icons/Afraponix Go Icons_parameters.svg" alt="Nutrients" class="template-icon">
+                                <h4>Nutrients</h4>
+                                <p>Sample format for nutrient measurements</p>
+                                <div class="template-actions">
+                                    <button type="button" class="btn-outline" onclick="downloadSampleTemplate('nutrients', 'csv')">
+                                        CSV
+                                    </button>
+                                    <button type="button" class="btn-outline" onclick="downloadSampleTemplate('nutrients', 'xlsx')">
+                                        Excel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Import Progress Modal -->
+                <div id="import-progress-modal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <h3>Importing Data</h3>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div id="import-progress" class="progress-fill" style="width: 0%"></div>
+                            </div>
+                            <div id="import-status">Preparing import...</div>
+                        </div>
+                        <div id="import-results" style="display: none;">
+                            <h4>Import Complete</h4>
+                            <div id="import-summary"></div>
+                            <div class="modal-actions">
+                                <button type="button" class="btn-primary" onclick="closeImportModal()">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Data Preview Modal -->
+                <div id="data-preview-modal" class="modal" style="display: none;">
+                    <div class="modal-content modal-large">
+                        <div class="modal-header">
+                            <h3>Data Preview</h3>
+                            <span class="close-modal" onclick="closePreviewModal()">&times;</span>
+                        </div>
+                        <div class="modal-body">
+                            <div id="preview-table-container">
+                                <!-- Preview table will be inserted here -->
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn-secondary" onclick="closePreviewModal()">Cancel</button>
+                            <button type="button" class="btn-primary" onclick="confirmImport()">Confirm Import</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1930,7 +2184,7 @@
                             <div class="form-row">
                                 <div class="form-field" style="flex: 2;">
                                     <label for="invite-email" class="form-label">Email Address:</label>
-                                    <input type="email" id="invite-email" class="form-input" placeholder="user@example.com" required>
+                                    <input type="email" id="invite-email" class="form-input" placeholder="user@example.com" autocomplete="email" required>
                                 </div>
                                 <div class="form-field" style="flex: 1;">
                                     <label for="invite-permission" class="form-label">Permission Level:</label>
@@ -2175,17 +2429,17 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="tb-username" class="form-label">Username:</label>
-                                    <input type="text" id="tb-username" name="username" class="form-input" placeholder="Your ThingsBoard username" required>
+                                    <input type="text" id="tb-username" name="username" class="form-input" placeholder="Your ThingsBoard username" autocomplete="username" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="tb-password" class="form-label">Password:</label>
-                                    <input type="password" id="tb-password" name="password" class="form-input" placeholder="Your ThingsBoard password" required>
+                                    <input type="password" id="tb-password" name="password" class="form-input" placeholder="Your ThingsBoard password" autocomplete="current-password" required>
                                 </div>
                             </div>
                             
                             <div class="form-actions">
-                                <button type="button" id="test-tb-credentials" class="btn btn-success">Test Credentials</button>
-                                <button type="submit" class="btn btn-success">Save Credentials</button>
+                                <button type="button" id="test-tb-credentials" class="btn btn-success" onclick="app.testThingsBoardCredentials()">Test Credentials</button>
+                                <button type="button" id="save-tb-credentials" class="btn btn-success" onclick="app.saveThingsBoardCredentials()">Save Credentials</button>
                             </div>
                         </form>
                     </div>
@@ -2304,6 +2558,8 @@
                         <h3 class="heading-3">SMTP Email Configuration</h3>
                         <p class="text-muted" style="margin-bottom: 1rem;">Configure email settings for password reset and notification emails.</p>
                         
+                        <form id="smtp-config-form">
+                        
                         <!-- SMTP Server Settings -->
                         <h4 class="section-header"><img src="icons/new-icons/Afraponix Go Icons_copy.svg" alt="Server" class="heading-icon"> Server Settings</h4>
                         <div class="settings-row">
@@ -2322,11 +2578,11 @@
                         <div class="settings-row">
                             <div class="form-field">
                                 <label for="smtp-user" class="form-label">SMTP Username:</label>
-                                <input type="email" id="smtp-user" class="form-input" placeholder="your-email@domain.com">
+                                <input type="email" id="smtp-user" class="form-input" placeholder="your-email@domain.com" autocomplete="email">
                             </div>
                             <div class="form-field">
                                 <label for="smtp-pass" class="form-label">SMTP Password:</label>
-                                <input type="password" id="smtp-pass" class="form-input" placeholder="Your SMTP password">
+                                <input type="password" id="smtp-pass" class="form-input" placeholder="Your SMTP password" autocomplete="current-password">
                             </div>
                         </div>
                         
@@ -2339,7 +2595,7 @@
                             </div>
                             <div class="form-field">
                                 <label for="smtp-from-email" class="form-label">From Email:</label>
-                                <input type="email" id="smtp-from-email" class="form-input" placeholder="noreply@yourdomain.com">
+                                <input type="email" id="smtp-from-email" class="form-input" placeholder="noreply@yourdomain.com" autocomplete="email">
                             </div>
                         </div>
                         <div class="settings-row">
@@ -2348,6 +2604,8 @@
                                 <input type="url" id="smtp-reset-url" class="form-input" placeholder="http://yourserver.com:8000/reset-password">
                             </div>
                         </div>
+                        
+                        </form>
                         
                         <div style="margin-top: 20px; display: flex; gap: 10px;">
                             <button class="form-btn" onclick="app.loadSmtpConfig()">Load Current Config</button>
@@ -2682,7 +2940,7 @@
                             <img src="icons/new-icons/Afraponix Go Icons_user.svg" alt="User" class="label-icon-svg">
                             Username or Email
                         </label>
-                        <input type="text" id="login-username" class="form-input" placeholder="Enter your username or email" required>
+                        <input type="text" id="login-username" class="form-input" placeholder="Enter your username or email" autocomplete="username" required>
                         <div class="field-error" id="login-username-error"></div>
                     </div>
                     
@@ -2692,7 +2950,7 @@
                             Password
                         </label>
                         <div class="password-input-container">
-                            <input type="password" id="login-password" class="form-input" placeholder="Enter your password" required>
+                            <input type="password" id="login-password" class="form-input" placeholder="Enter your password" autocomplete="current-password" required>
                             <button type="button" class="password-toggle" onclick="app.togglePasswordVisibility('login-password')" aria-label="Toggle password visibility">
                                 <img src="icons/new-icons/Afraponix Go Icons_view.svg" alt="Show" class="password-toggle-icon">
                             </button>
@@ -2742,15 +3000,15 @@
                     <form id="register-form-element" class="slideout-form">
                         <div class="name-fields-container">
                             <div class="form-field">
-                                <input type="text" id="register-first-name" class="form-input" placeholder="First Name" required>
+                                <input type="text" id="register-first-name" class="form-input" placeholder="First Name" autocomplete="given-name" required>
                             </div>
                             <div class="form-field">
-                                <input type="text" id="register-last-name" class="form-input" placeholder="Last Name" required>
+                                <input type="text" id="register-last-name" class="form-input" placeholder="Last Name" autocomplete="family-name" required>
                             </div>
                         </div>
                         <div class="form-field">
                             <div class="username-input-container">
-                                <input type="text" id="register-username" class="form-input" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]+" placeholder="Username (3-20 characters, letters, numbers, underscore)">
+                                <input type="text" id="register-username" class="form-input" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]+" placeholder="Username (3-20 characters, letters, numbers, underscore)" autocomplete="username">
                                 <div class="username-status" id="username-status" style="display: none;">
                                     <span class="status-icon"></span>
                                     <span class="status-text"></span>
@@ -2758,11 +3016,11 @@
                             </div>
                         </div>
                         <div class="form-field">
-                            <input type="email" id="register-email" class="form-input" placeholder="Email Address" required>
+                            <input type="email" id="register-email" class="form-input" placeholder="Email Address" autocomplete="email" required>
                         </div>
                         <div class="form-field">
                             <div class="password-input-container">
-                                <input type="password" id="register-password" class="form-input" required minlength="8" placeholder="Password (at least 8 characters)">
+                                <input type="password" id="register-password" class="form-input" required minlength="8" placeholder="Password (at least 8 characters)" autocomplete="new-password">
                                 <button type="button" class="password-toggle" onclick="app.togglePasswordVisibility('register-password')" aria-label="Toggle password visibility">
                                     <img src="icons/new-icons/Afraponix Go Icons_view.svg" alt="Show" class="password-toggle-icon">
                                 </button>
@@ -2793,7 +3051,7 @@
                         </div>
                         <div class="form-field">
                             <div class="password-input-container">
-                                <input type="password" id="register-confirm-password" class="form-input" required placeholder="Confirm Password">
+                                <input type="password" id="register-confirm-password" class="form-input" required placeholder="Confirm Password" autocomplete="new-password">
                                 <button type="button" class="password-toggle" onclick="app.togglePasswordVisibility('register-confirm-password')" aria-label="Toggle password visibility">
                                     <img src="icons/new-icons/Afraponix Go Icons_view.svg" alt="Show" class="password-toggle-icon">
                                 </button>
@@ -2873,7 +3131,7 @@
                             <img src="icons/new-icons/Afraponix Go Icons_email.svg" alt="Email" class="label-icon-svg">
                             Email Address
                         </label>
-                        <input type="email" id="forgot-email" class="form-input" placeholder="Enter your email address" required>
+                        <input type="email" id="forgot-email" class="form-input" placeholder="Enter your email address" autocomplete="email" required>
                     </div>
                     
                     <button type="submit" class="auth-submit-btn">
@@ -3318,6 +3576,23 @@
                         <div id="nutrient-modal-optimal" class="range-display">--</div>
                     </div>
                 </div>
+                <div class="chart-date-range-controls">
+                    <label for="chart-date-range">Data Range:</label>
+                    <select id="chart-date-range" class="form-input" title="Select time range for chart data">
+                        <option value="7">Last 7 days</option>
+                        <option value="14">Last 14 days</option>
+                        <option value="30" selected>Last 30 days</option>
+                        <option value="60">Last 60 days</option>
+                        <option value="90">Last 90 days</option>
+                        <option value="180">Last 6 months</option>
+                        <option value="365">Last year</option>
+                        <option value="all">All time</option>
+                    </select>
+                    <button id="refresh-chart-data" class="btn-secondary btn-sm" title="Refresh chart with selected date range">
+                        <img src="icons/new-icons/Afraponix Go Icons_reset.svg" alt="Refresh" style="width: 14px; height: 14px; vertical-align: middle;">
+                        Refresh
+                    </button>
+                </div>
                 <div class="chart-container-modal">
                     <canvas id="nutrient-modal-chart"></canvas>
                 </div>
@@ -3338,7 +3613,26 @@
                 </div>
             </div>
             <div class="modal-actions">
-                <button id="export-chart-data" class="form-btn secondary"><img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Export" class="btn-icon-svg"> Export Data</button>
+                <div class="export-dropdown">
+                    <button id="export-chart-data" class="form-btn secondary dropdown-toggle">
+                        <img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="Export" class="btn-icon-svg"> 
+                        Export <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div class="export-dropdown-menu">
+                        <button class="export-option" data-format="csv">
+                            <img src="icons/new-icons/Afraponix Go Icons_data.svg" alt="CSV" class="btn-icon-svg">
+                            Export as CSV
+                        </button>
+                        <button class="export-option" data-format="png">
+                            <img src="icons/new-icons/Afraponix Go Icons_save.svg" alt="PNG" class="btn-icon-svg">
+                            Export as PNG
+                        </button>
+                        <button class="export-option" data-format="jpeg">
+                            <img src="icons/new-icons/Afraponix Go Icons_save.svg" alt="JPEG" class="btn-icon-svg">
+                            Export as JPEG
+                        </button>
+                    </div>
+                </div>
                 <button id="close-nutrient-modal-btn" class="form-btn">Close</button>
             </div>
         </div>
@@ -4410,7 +4704,26 @@
         </div>
     </div>
 
+    <!-- Sensor Data Modal -->
+    <div id="sensor-data-modal" class="modal" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 class="modal-title">Sensor Data</h3>
+                <button class="close" onclick="app.closeSensorDataModal()" title="Close this modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="sensor-data-content">
+                    <!-- Sensor data will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="app.closeSensorDataModal()" title="Close this modal">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script src="utils/logger.js"></script>
+    <script src="public/js/import-export.js"></script>
     <script type="module" src="script.js"></script>
 <!-- Deficiency Image Management Modal -->
 <div id="deficiency-image-modal" class="modal-overlay" style="display: none;">
@@ -4570,11 +4883,11 @@
             <form id="login-form" style="display: block;">
                 <div class="form-group">
                     <label for="alt-login-username" class="form-label">Username</label>
-                    <input type="text" id="alt-login-username" name="username" class="form-input" required>
+                    <input type="text" id="alt-login-username" name="username" class="form-input" autocomplete="username" required>
                 </div>
                 <div class="form-group">
                     <label for="alt-login-password" class="form-label">Password</label>
-                    <input type="password" id="alt-login-password" name="password" class="form-input" required>
+                    <input type="password" id="alt-login-password" name="password" class="form-input" autocomplete="current-password" required>
                 </div>
                 <div id="login-error" class="error-message" style="display: none;"></div>
                 <div class="form-actions">
@@ -4587,23 +4900,23 @@
             <form id="register-form" style="display: none;">
                 <div class="form-group">
                     <label for="alt-register-username" class="form-label">Username</label>
-                    <input type="text" id="alt-register-username" name="username" class="form-input" required>
+                    <input type="text" id="alt-register-username" name="username" class="form-input" autocomplete="username" required>
                 </div>
                 <div class="form-group">
                     <label for="alt-register-email" class="form-label">Email</label>
-                    <input type="email" id="alt-register-email" name="email" class="form-input" required>
+                    <input type="email" id="alt-register-email" name="email" class="form-input" autocomplete="email" required>
                 </div>
                 <div class="form-group">
                     <label for="register-firstName" class="form-label">First Name</label>
-                    <input type="text" id="register-firstName" name="firstName" class="form-input" required>
+                    <input type="text" id="register-firstName" name="firstName" class="form-input" autocomplete="given-name" required>
                 </div>
                 <div class="form-group">
                     <label for="register-lastName" class="form-label">Last Name</label>
-                    <input type="text" id="register-lastName" name="lastName" class="form-input" required>
+                    <input type="text" id="register-lastName" name="lastName" class="form-input" autocomplete="family-name" required>
                 </div>
                 <div class="form-group">
                     <label for="alt-register-password" class="form-label">Password</label>
-                    <input type="password" id="alt-register-password" name="password" class="form-input" required>
+                    <input type="password" id="alt-register-password" name="password" class="form-input" autocomplete="new-password" required>
                 </div>
                 <div id="register-error" class="error-message" style="display: none;"></div>
                 <div class="form-actions">
@@ -4677,7 +4990,7 @@
             
             // Fetch water quality and nutrient data with authentication
             console.log('📡 Fetching water quality data...');
-            const waterQualityResponse = await fetch(`/api/data/entries/water-quality?system_id=${systemId}&limit=10`, {
+            const waterQualityResponse = await fetch(`/api/data/nutrients/${systemId}?limit=10`, {
                 headers: getAuthHeaders()
             });
             
