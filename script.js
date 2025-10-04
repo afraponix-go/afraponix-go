@@ -45,6 +45,7 @@ import { NavigationManagerComponent } from './public/js/modules/components/navig
 import { WaterQualitySensorManagerComponent } from './public/js/modules/components/waterQualitySensorManager.js';
 import { SystemConfigManagerComponent } from './public/js/modules/components/systemConfigManager.js';
 import { CropAllocationManagerComponent } from './public/js/modules/components/cropAllocationManager.js';
+import { SystemCreationWizard } from './public/js/modules/components/systemCreationWizard.js';
 
 // Make components available globally for AppCore dynamic initialization
 window.SystemManagementComponent = SystemManagementComponent;
@@ -77,6 +78,7 @@ window.NavigationManagerComponent = NavigationManagerComponent;
 window.WaterQualitySensorManagerComponent = WaterQualitySensorManagerComponent;
 window.SystemConfigManagerComponent = SystemConfigManagerComponent;
 window.CropAllocationManagerComponent = CropAllocationManagerComponent;
+window.SystemCreationWizard = SystemCreationWizard;
 
 // Make utilities available globally
 window.domUtils = domUtils;
@@ -16494,8 +16496,12 @@ class AquaponicsApp {
     }
     
     closeNewSystemModal() {
+        if (this.systemCreationWizard) {
+            return this.systemCreationWizard.closeWizard();
+        }
+        // Fallback
         const modal = document.getElementById('new-system-modal');
-        modal.classList.remove('show');
+        if (modal) modal.classList.remove('show');
     }
     
     // =====================================================
@@ -17173,8 +17179,12 @@ class AquaponicsApp {
     }
     
     async nextSystemStep() {
+        if (this.systemCreationWizard) {
+            return this.systemCreationWizard.nextStep();
+        }
+        // Fallback legacy implementation
         if (!(await this.validateCurrentStep())) return;
-        
+
         // Save current step data before moving to next step
         await this.saveCurrentStepData();
         
@@ -17196,6 +17206,10 @@ class AquaponicsApp {
     }
     
     async prevSystemStep() {
+        if (this.systemCreationWizard) {
+            return this.systemCreationWizard.prevStep();
+        }
+        // Fallback legacy implementation
         if (this.currentSystemStep > 1) {
             // Save current step data before moving to previous step
             await this.saveCurrentStepData();
@@ -17397,15 +17411,34 @@ class AquaponicsApp {
     updateBedTypeFields(bedIndex) {
         const typeSelect = document.getElementById(`bed-type-${bedIndex}`);
         const fieldsContainer = document.getElementById(`bed-type-fields-${bedIndex}`);
-        
-        if (!typeSelect || !fieldsContainer) return;
-        
+
+        if (!typeSelect || !fieldsContainer) {
+            return;
+        }
+
         const bedType = typeSelect.value;
-        const existingBed = this.systemWizardData.growBeds?.[bedIndex-1];
-        
+
+        // Try to get existing bed data from multiple sources
+        let existingBed = null;
+        if (this.allGrowBeds && this.allGrowBeds[bedIndex-1]) {
+            const bed = this.allGrowBeds[bedIndex-1];
+            existingBed = {
+                length: bed.length_meters,
+                width: bed.width_meters,
+                height: bed.height_meters,
+                verticals: bed.verticals,
+                plantsPerVertical: bed.plants_per_vertical,
+                channels: bed.channels,
+                troughLength: bed.trough_length,
+                plantSpacing: bed.plant_spacing
+            };
+        } else if (this.systemWizardData?.growBeds?.[bedIndex-1]) {
+            existingBed = this.systemWizardData.growBeds[bedIndex-1];
+        }
+
         // Get demo data if available
         let bedData = {};
-        if (this.systemWizardData.setupType === 'demo' && this.systemWizardData.demoData?.grow_beds[bedIndex-1]) {
+        if (this.systemWizardData?.setupType === 'demo' && this.systemWizardData.demoData?.grow_beds[bedIndex-1]) {
             const demoBed = this.systemWizardData.demoData.grow_beds[bedIndex-1];
             bedData = {
                 area: demoBed.area_m2,
@@ -17413,15 +17446,23 @@ class AquaponicsApp {
                 length: Math.sqrt(demoBed.area_m2), // Approximate square dimensions
                 width: Math.sqrt(demoBed.area_m2)
             };
+            console.log(`📊 Using demo data:`, bedData);
         } else {
             bedData = {
                 area: existingBed?.area || '',
                 depth: existingBed?.depth || '',
                 length: existingBed?.length || '',
-                width: existingBed?.width || ''
+                width: existingBed?.width || '',
+                height: existingBed?.height || '',
+                verticals: existingBed?.verticals || '',
+                plantsPerVertical: existingBed?.plantsPerVertical || '',
+                channels: existingBed?.channels || '',
+                troughLength: existingBed?.troughLength || '',
+                plantSpacing: existingBed?.plantSpacing || ''
             };
+            console.log(`📊 Using bedData from existingBed:`, bedData);
         }
-        
+
         if (!bedType) {
             fieldsContainer.innerHTML = '';
             return;
@@ -31605,6 +31646,72 @@ class GrowBedManager {
         });
 
         return configuration;
+    }
+
+    async loadExistingConfiguration(systemId) {
+        try {
+            // Fetch grow beds from API
+            const response = await window.app.makeApiCall(`/grow-beds/system/${systemId}`);
+            const beds = response || [];
+
+            // Populate each bed
+            beds.forEach(bed => {
+                this.populateBedForm(bed);
+            });
+
+        } catch (error) {
+            console.error('Failed to load existing bed configuration:', error);
+        }
+    }
+
+    populateBedForm(bed) {
+        const bedNumber = bed.bed_number;
+        const bedItem = document.querySelector(`[data-bed="${bedNumber}"]`);
+        if (!bedItem) return;
+
+        // Set bed type
+        const typeSelect = bedItem.querySelector('.bed-type');
+        if (typeSelect && bed.bed_type) {
+            typeSelect.value = bed.bed_type;
+            // Trigger updateBedFields to create dimension input fields
+            this.updateBedFields(bedNumber);
+        }
+
+        // Wait a moment for fields to be created, then populate them
+        setTimeout(() => {
+            this.populateFieldsBasedOnType(bedItem, bed);
+        }, 100);
+    }
+
+    populateFieldsBasedOnType(bedItem, bed) {
+        const type = bed.bed_type;
+
+        if (type === 'dwc' || type === 'media-flow' || type === 'flood-drain') {
+            this.setInputValue(bedItem, '.bed-length', bed.length_meters);
+            this.setInputValue(bedItem, '.bed-width', bed.width_meters);
+            this.setInputValue(bedItem, '.bed-height', bed.height_meters);
+        } else if (type === 'vertical') {
+            this.setInputValue(bedItem, '.base-length', bed.length_meters);
+            this.setInputValue(bedItem, '.base-width', bed.width_meters);
+            this.setInputValue(bedItem, '.base-height', bed.height_meters);
+            this.setInputValue(bedItem, '.vertical-count', bed.vertical_count);
+            this.setInputValue(bedItem, '.plants-per-vertical', bed.plants_per_vertical);
+        } else if (type === 'nft') {
+            this.setInputValue(bedItem, '.trough-length', bed.trough_length);
+            this.setInputValue(bedItem, '.trough-count', bed.trough_count);
+            this.setInputValue(bedItem, '.plant-spacing', bed.plant_spacing);
+            this.setInputValue(bedItem, '.reservoir-volume', bed.reservoir_volume_liters);
+        }
+
+        // Trigger calculation to update displayed volume and area
+        this.calculateBed(bed.bed_number);
+    }
+
+    setInputValue(container, selector, value) {
+        const input = container.querySelector(selector);
+        if (input && value !== null && value !== undefined) {
+            input.value = value;
+        }
     }
 }
 
