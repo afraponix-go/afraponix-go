@@ -10,6 +10,7 @@ const NAV = [
   { to: '/plants', label: 'Plants' },
   { to: '/grow-beds', label: 'Grow Beds' },
   { to: '/water', label: 'Water Quality' },
+  { to: '/charts', label: 'Charts' },
 ]
 
 export function AppShell() {
