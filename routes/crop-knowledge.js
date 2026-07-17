@@ -12,6 +12,13 @@ router.use((req, res, next) => {
     next();
 });
 
+// SECURITY: every /admin/* route requires an authenticated admin user.
+// requireAdmin verifies the JWT and checks the admin role itself, so this one
+// mount-path guard protects all admin write/read routes below (previously each
+// was individually bypassed with a "// Temporarily bypass" comment). Public
+// read routes (/crops, /nutrients, /stages, ...) are intentionally left open.
+router.use('/admin', requireAdmin);
+
 // Configure multer for deficiency image uploads
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -349,7 +356,6 @@ router.get('/categories', async (req, res) => {
 // =====================================================
 
 // Add new crop
-// Temporarily bypass requireAdmin for testing
 router.post('/admin/crops', async (req, res) => {
     try {
         const {
@@ -466,7 +472,6 @@ router.post('/admin/crops', async (req, res) => {
 });
 
 // Update crop
-// Temporarily bypass requireAdmin for testing
 router.put('/admin/crops/:cropCode', async (req, res) => {
     try {
         const { cropCode } = req.params;
@@ -535,7 +540,6 @@ router.put('/admin/crops/:cropCode', async (req, res) => {
 });
 
 // Delete crop (soft delete)
-// Temporarily bypass requireAdmin for testing
 router.delete('/admin/crops/:cropCode', async (req, res) => {
     try {
         const { cropCode } = req.params;
@@ -569,7 +573,6 @@ router.delete('/admin/crops/:cropCode', async (req, res) => {
 });
 
 // Get nutrient targets for specific crop (admin view with full data)
-// Temporarily bypass requireAdmin to test if endpoint works
 router.get('/admin/crops/:cropCode/targets', async (req, res) => {
     console.log('Admin targets endpoint hit for crop:', req.params.cropCode);
     try {
@@ -617,7 +620,6 @@ router.get('/admin/crops/:cropCode/targets', async (req, res) => {
 });
 
 // Update nutrient target
-// Temporarily bypass requireAdmin for testing
 router.put('/admin/targets/:targetId', async (req, res) => {
     try {
         const { targetId } = req.params;
@@ -653,7 +655,6 @@ router.put('/admin/targets/:targetId', async (req, res) => {
 });
 
 // Add new nutrient target for a crop
-// Temporarily bypass requireAdmin for testing
 router.post('/admin/crops/:cropCode/targets', async (req, res) => {
     try {
         const { cropCode } = req.params;
@@ -729,7 +730,6 @@ router.post('/admin/crops/:cropCode/targets', async (req, res) => {
 });
 
 // Delete nutrient target
-// Temporarily bypass requireAdmin for testing
 router.delete('/admin/targets/:targetId', async (req, res) => {
     try {
         const { targetId } = req.params;

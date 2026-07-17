@@ -50,9 +50,11 @@ typings/
 # Yarn Integrity file
 .yarn-integrity
 
-# Environment variables
+# Environment variables (only .env.example is tracked, as a template)
 .env
 .env.local
+.env.dev
+.env.staging
 .env.development.local
 .env.test.local
 .env.production.local
@@ -112,6 +114,11 @@ server.log
 # Backup files
 *.bak
 *.backup
+*.backup-*
+*.working-backup-*
+
+# Local scratch: debug scripts, backups, one-off analysis (not for version control)
+scratch/
 
 # SSL certificates
 *.pem
