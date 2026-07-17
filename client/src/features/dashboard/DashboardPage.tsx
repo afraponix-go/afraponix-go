@@ -1,19 +1,20 @@
 import { useQuery } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
-import { fetchLatestWaterQuality, fetchLatestNutrients, type WaterQuality, type LatestNutrients } from './api'
+import { fetchLatestNutrients, type LatestNutrients, type NutrientReading } from './api'
 import './dashboard.css'
 
 type Status = 'good' | 'warn' | 'none'
 type MetricDef = {
-  key: keyof WaterQuality
+  key: string
   label: string
   unit?: string
   digits?: number
   status?: (v: number) => Status
 }
 
-// Aquaponics-typical healthy ranges → a good/warn pill for the params that have one.
-const METRICS: MetricDef[] = [
+// Water-quality parameters (all now live in nutrient_readings). Aquaponics-typical
+// healthy ranges give a good/warn pill for the ones that have one.
+const WATER: MetricDef[] = [
   { key: 'temperature', label: 'Water Temp', unit: '°C', digits: 1, status: (v) => (v >= 18 && v <= 30 ? 'good' : 'warn') },
   { key: 'ph', label: 'pH', digits: 2, status: (v) => (v >= 6 && v <= 7.6 ? 'good' : 'warn') },
   { key: 'dissolved_oxygen', label: 'Dissolved O₂', unit: 'mg/L', digits: 1, status: (v) => (v >= 5 ? 'good' : 'warn') },
@@ -25,8 +26,6 @@ const METRICS: MetricDef[] = [
   { key: 'salinity', label: 'Salinity', unit: 'ppt', digits: 2 },
 ]
 
-// Plant nutrients shown as their own section, in display order. The endpoint
-// returns whatever has been recorded; we render those present.
 const NUTRIENTS: { key: string; label: string }[] = [
   { key: 'nitrogen', label: 'Nitrogen (N)' },
   { key: 'phosphorus', label: 'Phosphorus (P)' },
@@ -36,7 +35,6 @@ const NUTRIENTS: { key: string; label: string }[] = [
   { key: 'iron', label: 'Iron (Fe)' },
 ]
 
-// Source attribution matching the app's convention.
 function sourceBadge(source?: string | null) {
   const s = (source ?? '').toLowerCase()
   if (s.includes('sensor')) return { icon: '📡', label: 'Sensor' }
@@ -44,7 +42,27 @@ function sourceBadge(source?: string | null) {
   return { icon: '📝', label: 'Manual' }
 }
 
-function NutrientTile({ label, reading }: { label: string; reading: LatestNutrients[string] }) {
+function WaterCard({ def, reading }: { def: MetricDef; reading?: NutrientReading }) {
+  const v = reading?.value
+  const has = v != null && Number.isFinite(v)
+  const status: Status = has && def.status ? def.status(v as number) : 'none'
+  return (
+    <div className="metric">
+      <div className="label">{def.label}</div>
+      {has ? (
+        <div className="value">
+          {(v as number).toFixed(def.digits ?? 1)}
+          {def.unit && <span className="unit">{def.unit}</span>}
+        </div>
+      ) : (
+        <div className="value na">N/A</div>
+      )}
+      {def.status && <span className={`status ${status}`}>{status === 'good' ? 'In range' : status === 'warn' ? 'Check' : 'No data'}</span>}
+    </div>
+  )
+}
+
+function NutrientTile({ label, reading }: { label: string; reading: NutrientReading }) {
   const badge = sourceBadge(reading.source)
   return (
     <div className="metric">
@@ -60,46 +78,24 @@ function NutrientTile({ label, reading }: { label: string; reading: LatestNutrie
   )
 }
 
-function MetricCard({ def, wq }: { def: MetricDef; wq: WaterQuality | null }) {
-  const raw = wq ? (wq[def.key] as number | null) : null
-  const has = raw != null && Number.isFinite(raw)
-  const status: Status = has && def.status ? def.status(raw as number) : 'none'
-  return (
-    <div className="metric">
-      <div className="label">{def.label}</div>
-      {has ? (
-        <div className="value">
-          {(raw as number).toFixed(def.digits ?? 1)}
-          {def.unit && <span className="unit">{def.unit}</span>}
-        </div>
-      ) : (
-        <div className="value na">N/A</div>
-      )}
-      {def.status && (
-        <span className={`status ${status}`}>{status === 'good' ? 'In range' : status === 'warn' ? 'Check' : 'No data'}</span>
-      )}
-    </div>
-  )
+function latestDate(nutrients: LatestNutrients): string | null {
+  const dates = Object.values(nutrients)
+    .map((r) => r.reading_date)
+    .filter((d): d is string => !!d)
+    .sort()
+  return dates.length ? dates[dates.length - 1] : null
 }
 
 export function DashboardPage() {
   const { activeSystem, activeId, isLoading: systemsLoading } = useSystems()
 
-  const { data: wq, isLoading, isError } = useQuery({
-    queryKey: ['water-quality', 'latest', activeId],
-    queryFn: () => fetchLatestWaterQuality(activeId as string),
-    enabled: !!activeId,
-  })
-
-  const { data: nutrients = {} } = useQuery({
+  const { data: nutrients = {}, isLoading, isError } = useQuery({
     queryKey: ['nutrients', 'latest', activeId],
     queryFn: () => fetchLatestNutrients(activeId as string),
     enabled: !!activeId,
   })
-  const presentNutrients = NUTRIENTS.filter((n) => nutrients[n.key] && Number.isFinite(nutrients[n.key].value))
 
   if (systemsLoading) return <div className="empty">Loading systems…</div>
-
   if (!activeId) {
     return (
       <div>
@@ -111,7 +107,9 @@ export function DashboardPage() {
     )
   }
 
-  const updated = wq?.date ?? wq?.created_at
+  const updated = latestDate(nutrients)
+  const presentNutrients = NUTRIENTS.filter((n) => nutrients[n.key] && Number.isFinite(nutrients[n.key].value))
+
   return (
     <div>
       <div className="dash-head">
@@ -126,10 +124,11 @@ export function DashboardPage() {
                 : 'No readings yet'}
         </span>
       </div>
+
       <h2 className="section-title">Water quality</h2>
       <div className="metric-grid">
-        {METRICS.map((def) => (
-          <MetricCard key={def.key} def={def} wq={wq ?? null} />
+        {WATER.map((def) => (
+          <WaterCard key={def.key} def={def} reading={nutrients[def.key]} />
         ))}
       </div>
 

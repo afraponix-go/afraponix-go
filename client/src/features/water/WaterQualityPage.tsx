@@ -2,22 +2,9 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
 import { ApiError } from '../../lib/apiClient'
-import { createWaterQualityReading, fetchWaterQualityHistory, type WaterQualityInput } from './api'
+import { createWaterQualityReading, fetchWaterQualityHistory, WATER_FIELDS, type WaterFieldKey, type WaterQualityInput } from './api'
 import '../dashboard/dashboard.css'
 import './water.css'
-
-type FieldDef = { key: keyof WaterQualityInput; label: string; unit?: string; step?: string }
-const FIELDS: FieldDef[] = [
-  { key: 'temperature', label: 'Water Temp', unit: '°C', step: '0.1' },
-  { key: 'ph', label: 'pH', step: '0.01' },
-  { key: 'dissolved_oxygen', label: 'Dissolved O₂', unit: 'mg/L', step: '0.1' },
-  { key: 'ammonia', label: 'Ammonia', unit: 'ppm', step: '0.01' },
-  { key: 'nitrite', label: 'Nitrite', unit: 'ppm', step: '0.01' },
-  { key: 'nitrate', label: 'Nitrate', unit: 'ppm', step: '0.1' },
-  { key: 'ec', label: 'EC', unit: 'µS/cm', step: '1' },
-  { key: 'humidity', label: 'Humidity', unit: '%', step: '1' },
-  { key: 'salinity', label: 'Salinity', unit: 'ppt', step: '0.01' },
-]
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -30,7 +17,7 @@ export function WaterQualityPage() {
 
   const { data: history = [] } = useQuery({
     queryKey: ['water-quality', 'history', activeId],
-    queryFn: () => fetchWaterQualityHistory(activeId as string, 10),
+    queryFn: () => fetchWaterQualityHistory(activeId as string),
     enabled: !!activeId,
   })
 
@@ -39,7 +26,8 @@ export function WaterQualityPage() {
     onSuccess: () => {
       setSaved(true)
       setValues({ date: today() })
-      // Refresh everything that reflects the new reading.
+      // Everything reads from nutrient_readings now — refresh dashboard + history.
+      qc.invalidateQueries({ queryKey: ['nutrients'] })
       qc.invalidateQueries({ queryKey: ['water-quality'] })
       setTimeout(() => setSaved(false), 2500)
     },
@@ -49,9 +37,9 @@ export function WaterQualityPage() {
   function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
-    const input: WaterQualityInput = { date: values.date || today() }
+    const parsed: Partial<Record<WaterFieldKey, number>> = {}
     let hasValue = false
-    for (const f of FIELDS) {
+    for (const f of WATER_FIELDS) {
       const raw = values[f.key]
       if (raw != null && raw !== '') {
         const n = Number(raw)
@@ -59,16 +47,15 @@ export function WaterQualityPage() {
           setError(`${f.label} must be a number.`)
           return
         }
-        ;(input as Record<string, unknown>)[f.key] = n
+        parsed[f.key] = n
         hasValue = true
       }
     }
-    if (values.notes) input.notes = values.notes
     if (!hasValue) {
       setError('Enter at least one measurement.')
       return
     }
-    mutation.mutate(input)
+    mutation.mutate({ date: values.date || today(), notes: values.notes || undefined, values: parsed })
   }
 
   if (!activeId) return <div className="empty">Select a system to record water quality.</div>
@@ -89,7 +76,7 @@ export function WaterQualityPage() {
             <label htmlFor="date">Date</label>
             <input id="date" type="date" value={values.date ?? ''} onChange={(e) => setValues((v) => ({ ...v, date: e.target.value }))} />
           </div>
-          {FIELDS.map((f) => (
+          {WATER_FIELDS.map((f) => (
             <div className="field" key={f.key}>
               <label htmlFor={f.key}>
                 {f.label}
@@ -125,17 +112,17 @@ export function WaterQualityPage() {
             <thead>
               <tr>
                 <th>Date</th>
-                {FIELDS.map((f) => (
+                {WATER_FIELDS.map((f) => (
                   <th key={f.key}>{f.label}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {history.map((r, i) => (
-                <tr key={i}>
-                  <td>{r.date ? new Date(r.date).toLocaleDateString() : '—'}</td>
-                  {FIELDS.map((f) => {
-                    const v = r[f.key as keyof typeof r] as number | null
+              {history.map((r) => (
+                <tr key={r.date}>
+                  <td>{new Date(r.date).toLocaleDateString()}</td>
+                  {WATER_FIELDS.map((f) => {
+                    const v = r[f.key]
                     return <td key={f.key}>{v == null || !Number.isFinite(v) ? '—' : v}</td>
                   })}
                 </tr>
