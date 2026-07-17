@@ -6,6 +6,7 @@ import { AppShell } from './AppShell'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { FishPage } from '../features/fish/FishPage'
 import { PlantsPage } from '../features/plants/PlantsPage'
+import { GrowBedsPage } from '../features/growbeds/GrowBedsPage'
 import { StubPage } from './StubPage'
 
 export const router = createBrowserRouter([
@@ -20,7 +21,7 @@ export const router = createBrowserRouter([
           { index: true, element: <DashboardPage /> },
           { path: 'fish', element: <FishPage /> },
           { path: 'plants', element: <PlantsPage /> },
-          { path: 'grow-beds', element: <StubPage title="Grow Beds" /> },
+          { path: 'grow-beds', element: <GrowBedsPage /> },
           { path: 'water', element: <StubPage title="Water Quality" /> },
         ],
       },
