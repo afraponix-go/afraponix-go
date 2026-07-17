@@ -3,12 +3,14 @@
   display: flex;
   flex-direction: column;
 }
+
+/* Top bar: brand + system selector + account */
 .topbar {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
   padding: 0 22px;
-  height: 60px;
+  height: 58px;
   background: var(--surface);
   border-bottom: 1px solid var(--line);
   position: sticky;
@@ -21,32 +23,13 @@
   gap: 10px;
   font-weight: 700;
   font-size: 17px;
+  flex: 1;
 }
 .brand-mark {
   width: 22px;
   height: 22px;
   border-radius: 6px;
   background: linear-gradient(135deg, var(--brand-green), var(--brand-aqua));
-}
-.mainnav {
-  display: flex;
-  gap: 4px;
-  flex: 1;
-}
-.mainnav a {
-  padding: 8px 12px;
-  border-radius: 8px;
-  text-decoration: none;
-  color: var(--ink-soft);
-  font-weight: 500;
-  font-size: 14px;
-}
-.mainnav a:hover {
-  background: var(--surface-2);
-}
-.mainnav a.active {
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 .account {
   display: flex;
@@ -70,13 +53,85 @@
 .ghost:hover {
   background: var(--surface-2);
 }
+
+/* Content — leave room for the fixed bottom nav */
 .content {
   flex: 1;
-  padding: 28px 22px;
+  padding: 24px 22px calc(80px + env(safe-area-inset-bottom));
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
 }
+
+/* Bottom tab bar */
+.bottomnav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px);
+  border-top: 1px solid var(--line);
+}
+.bottomnav .tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 10px;
+  min-width: 62px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--ink-faint);
+  font-size: 11px;
+  font-weight: 600;
+  transition: color 0.15s, background 0.15s;
+}
+.bottomnav .tab:hover {
+  color: var(--ink-soft);
+  background: var(--surface-2);
+}
+.bottomnav .tab.active {
+  color: var(--accent);
+}
+.tab-icon {
+  display: block;
+}
+.tab-label {
+  line-height: 1;
+}
+
+/* Reusable sub-tab strip (Data Capture, Dashboard, Settings) */
+.subtabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 22px;
+  overflow-x: auto;
+}
+.subtabs a {
+  padding: 10px 14px;
+  text-decoration: none;
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-size: 14px;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.subtabs a:hover {
+  color: var(--ink);
+}
+.subtabs a.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* Generic placeholder card for not-yet-built areas */
 .placeholder {
   border: 1px dashed var(--line);
   border-radius: var(--radius-lg);
@@ -88,4 +143,13 @@
 .placeholder h2 {
   color: var(--ink);
   margin: 0 0 6px;
+}
+
+@media (min-width: 900px) {
+  .bottomnav .tab {
+    flex-direction: row;
+    gap: 8px;
+    font-size: 13px;
+    padding: 8px 14px;
+  }
 }

@@ -3,12 +3,27 @@ import { LoginPage } from '../features/auth/LoginPage'
 import { RegisterPage } from '../features/auth/RegisterPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AppShell } from './AppShell'
+import { SubTabLayout, Placeholder } from './SubTabLayout'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
+import { ChartsPage } from '../features/charts/ChartsPage'
+import { WaterQualityPage } from '../features/water/WaterQualityPage'
 import { FishPage } from '../features/fish/FishPage'
 import { PlantsPage } from '../features/plants/PlantsPage'
 import { GrowBedsPage } from '../features/growbeds/GrowBedsPage'
-import { WaterQualityPage } from '../features/water/WaterQualityPage'
-import { ChartsPage } from '../features/charts/ChartsPage'
+
+const DASHBOARD_TABS = [
+  { to: '/', label: 'Overview', end: true },
+  { to: '/charts', label: 'Charts' },
+]
+const DATA_TABS = [
+  { to: '/data', label: 'Water Quality', end: true },
+  { to: '/data/operations', label: 'Operations' },
+  { to: '/data/import-export', label: 'Import / Export' },
+]
+const SETTINGS_TABS = [
+  { to: '/settings', label: 'Grow Beds', end: true },
+  { to: '/settings/system', label: 'System' },
+]
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -19,12 +34,40 @@ export const router = createBrowserRouter([
       {
         element: <AppShell />,
         children: [
-          { index: true, element: <DashboardPage /> },
+          // Dashboard (Overview · Charts)
+          {
+            path: '/',
+            element: <SubTabLayout items={DASHBOARD_TABS} />,
+            children: [
+              { index: true, element: <DashboardPage /> },
+              { path: 'charts', element: <ChartsPage /> },
+            ],
+          },
+          // Calculator
+          { path: 'calculator', element: <Placeholder title="Calculator" note="Nutrient dosing and system calculators will live here." /> },
+          // Data Capture (Water Quality · Operations · Import/Export)
+          {
+            path: 'data',
+            element: <SubTabLayout items={DATA_TABS} />,
+            children: [
+              { index: true, element: <WaterQualityPage /> },
+              { path: 'operations', element: <Placeholder title="Operations" note="Log feeding, maintenance, and other operations here." /> },
+              { path: 'import-export', element: <Placeholder title="Import / Export" note="Bulk import and export of system data." /> },
+            ],
+          },
+          // Fish
           { path: 'fish', element: <FishPage /> },
+          // Plants
           { path: 'plants', element: <PlantsPage /> },
-          { path: 'grow-beds', element: <GrowBedsPage /> },
-          { path: 'water', element: <WaterQualityPage /> },
-          { path: 'charts', element: <ChartsPage /> },
+          // Settings (Grow Beds · System)
+          {
+            path: 'settings',
+            element: <SubTabLayout items={SETTINGS_TABS} />,
+            children: [
+              { index: true, element: <GrowBedsPage /> },
+              { path: 'system', element: <Placeholder title="System Settings" note="System configuration, sharing, and account settings." /> },
+            ],
+          },
         ],
       },
     ],

@@ -1,16 +1,17 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthContext'
 import { useSystems } from '../features/systems/SystemContext'
-import '../features/dashboard/dashboard.css'
+import { DashboardIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SettingsIcon } from './icons'
 import './shell.css'
 
-const NAV = [
-  { to: '/', label: 'Dashboard', end: true },
-  { to: '/fish', label: 'Fish' },
-  { to: '/plants', label: 'Plants' },
-  { to: '/grow-beds', label: 'Grow Beds' },
-  { to: '/water', label: 'Water Quality' },
-  { to: '/charts', label: 'Charts' },
+// Bottom tab bar matching the original app's information architecture.
+const TABS = [
+  { to: '/', label: 'Dashboard', Icon: DashboardIcon, end: true },
+  { to: '/calculator', label: 'Calculator', Icon: CalculatorIcon },
+  { to: '/data', label: 'Data Capture', Icon: DataCaptureIcon },
+  { to: '/fish', label: 'Fish', Icon: FishIcon },
+  { to: '/plants', label: 'Plants', Icon: PlantIcon },
+  { to: '/settings', label: 'Settings', Icon: SettingsIcon },
 ]
 
 export function AppShell() {
@@ -24,21 +25,9 @@ export function AppShell() {
           <span className="brand-mark" aria-hidden />
           Afraponix Go
         </div>
-        <nav className="mainnav">
-          {NAV.map((n) => (
-            <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => (isActive ? 'active' : '')}>
-              {n.label}
-            </NavLink>
-          ))}
-        </nav>
         <div className="account">
           {systems.length > 0 && (
-            <select
-              className="sys-select"
-              value={activeId ?? ''}
-              onChange={(e) => setActiveId(e.target.value)}
-              aria-label="Active system"
-            >
+            <select className="sys-select" value={activeId ?? ''} onChange={(e) => setActiveId(e.target.value)} aria-label="Active system">
               {systems.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.system_name}
@@ -52,9 +41,19 @@ export function AppShell() {
           </button>
         </div>
       </header>
+
       <main className="content">
         <Outlet />
       </main>
+
+      <nav className="bottomnav" aria-label="Primary">
+        {TABS.map(({ to, label, Icon, end }) => (
+          <NavLink key={to} to={to} end={end} className={({ isActive }) => (isActive ? 'tab active' : 'tab')}>
+            <Icon className="tab-icon" />
+            <span className="tab-label">{label}</span>
+          </NavLink>
+        ))}
+      </nav>
     </div>
   )
 }
