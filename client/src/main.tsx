@@ -6,6 +6,8 @@ import { queryClient } from './lib/queryClient'
 import { AuthProvider } from './features/auth/AuthContext'
 import { SystemProvider } from './features/systems/SystemContext'
 import { router } from './app/router'
+import '@fontsource-variable/geist'
+import '@fontsource-variable/geist-mono'
 import './styles/tokens.css'
 
 createRoot(document.getElementById('root')!).render(

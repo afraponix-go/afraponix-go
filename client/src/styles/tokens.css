@@ -1,60 +1,133 @@
-/* Afraponix Go design tokens — brand palette (Deep Blue, Bio Green, Aqua),
-   with a considered light/dark system. Components consume only these vars. */
-:root {
-  --brand-deep: #1663a6;
-  --brand-aqua: #35b0c9;
-  --brand-green: #5ba83f;
+/* Afraponix Go — design tokens.
+   An aquaponics monitoring instrument: calm, precise, trustworthy. Neutrals are
+   biased cool (water/tech); brand green signals life/growth. Every component
+   consumes only these variables, so the whole app restyles from here. */
 
-  --bg: #f5f7fa;
+:root {
+  /* Brand */
+  --brand-deep: #1462a8;
+  --brand-aqua: #2fabc6;
+  --brand-green: #4f9d3a;
+
+  /* Neutrals — cool-biased, chosen not defaulted */
+  --bg: #f4f7fb;
   --surface: #ffffff;
-  --surface-2: #eef1f6;
-  --ink: #16202e;
-  --ink-soft: #4c5a6c;
-  --ink-faint: #7c8798;
-  --line: #dfe4ec;
+  --surface-2: #eef2f8;
+  --surface-3: #e6ecf4;
+  --ink: #101825;
+  --ink-soft: #46566a;
+  --ink-faint: #8090a2;
+  --line: #e3e9f1;
+  --line-strong: #d2dae6;
+
+  /* Accent + semantics (semantics are distinct from the accent) */
   --accent: var(--brand-deep);
   --accent-ink: #ffffff;
-  --danger: #cf2e3f;
-  --ok: #2f9160;
+  --accent-wash: #e8f1fa;
+  --ok: #2c8f5c;
+  --ok-wash: #e2f2ea;
+  --warn: #b7791b;
+  --warn-wash: #f7efdc;
+  --danger: #ce3341;
+  --danger-wash: #fbe9eb;
 
-  --radius: 10px;
-  --radius-lg: 16px;
-  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --shadow: 0 1px 2px rgba(16, 32, 46, 0.06), 0 8px 24px rgba(16, 32, 46, 0.06);
+  /* Radius scale */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Type */
+  --sans: 'Geist Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Layered elevation — soft, not flat */
+  --shadow-sm: 0 1px 2px rgba(16, 27, 45, 0.05);
+  --shadow: 0 1px 2px rgba(16, 27, 45, 0.04), 0 4px 12px rgba(16, 27, 45, 0.05);
+  --shadow-lg: 0 2px 4px rgba(16, 27, 45, 0.05), 0 12px 32px rgba(16, 27, 45, 0.09);
+
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
+/* Dark theme — same care as light; not a naive invert */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1620;
-    --surface: #17212e;
-    --surface-2: #1e2a3a;
-    --ink: #e8edf4;
-    --ink-soft: #aab6c6;
-    --ink-faint: #7e8ca0;
-    --line: #27333f;
-    --accent: #4a9fe0;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    --bg: #0c131d;
+    --surface: #141d29;
+    --surface-2: #1b2634;
+    --surface-3: #223040;
+    --ink: #e9eef5;
+    --ink-soft: #a7b4c5;
+    --ink-faint: #74839a;
+    --line: #253243;
+    --line-strong: #32435a;
+    --accent: #57a8e8;
+    --accent-ink: #06131f;
+    --accent-wash: #14273b;
+    --ok: #4bb681;
+    --ok-wash: #12271d;
+    --warn: #d8a641;
+    --warn-wash: #2c2413;
+    --danger: #ef6673;
+    --danger-wash: #2f1a1e;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 18px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.4), 0 16px 40px rgba(0, 0, 0, 0.5);
   }
 }
 :root[data-theme='dark'] {
-  --bg: #0f1620;
-  --surface: #17212e;
-  --surface-2: #1e2a3a;
-  --ink: #e8edf4;
-  --ink-soft: #aab6c6;
-  --ink-faint: #7e8ca0;
-  --line: #27333f;
-  --accent: #4a9fe0;
+  --bg: #0c131d;
+  --surface: #141d29;
+  --surface-2: #1b2634;
+  --surface-3: #223040;
+  --ink: #e9eef5;
+  --ink-soft: #a7b4c5;
+  --ink-faint: #74839a;
+  --line: #253243;
+  --line-strong: #32435a;
+  --accent: #57a8e8;
+  --accent-ink: #06131f;
+  --accent-wash: #14273b;
+  --ok: #4bb681;
+  --ok-wash: #12271d;
+  --warn: #d8a641;
+  --warn-wash: #2c2413;
+  --danger: #ef6673;
+  --danger-wash: #2f1a1e;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 18px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.4), 0 16px 40px rgba(0, 0, 0, 0.5);
 }
 :root[data-theme='light'] {
-  --bg: #f5f7fa;
+  --bg: #f4f7fb;
   --surface: #ffffff;
-  --surface-2: #eef1f6;
-  --ink: #16202e;
-  --ink-soft: #4c5a6c;
-  --ink-faint: #7c8798;
-  --line: #dfe4ec;
-  --accent: #1663a6;
+  --surface-2: #eef2f8;
+  --surface-3: #e6ecf4;
+  --ink: #101825;
+  --ink-soft: #46566a;
+  --ink-faint: #8090a2;
+  --line: #e3e9f1;
+  --line-strong: #d2dae6;
+  --accent: #1462a8;
+  --accent-ink: #ffffff;
+  --accent-wash: #e8f1fa;
+  --ok: #2c8f5c;
+  --ok-wash: #e2f2ea;
+  --warn: #b7791b;
+  --warn-wash: #f7efdc;
+  --danger: #ce3341;
+  --danger-wash: #fbe9eb;
+  --shadow-sm: 0 1px 2px rgba(16, 27, 45, 0.05);
+  --shadow: 0 1px 2px rgba(16, 27, 45, 0.04), 0 4px 12px rgba(16, 27, 45, 0.05);
+  --shadow-lg: 0 2px 4px rgba(16, 27, 45, 0.05), 0 12px 32px rgba(16, 27, 45, 0.09);
 }
 
 * {
@@ -70,9 +143,26 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--sans);
+  font-size: 15px;
   line-height: 1.5;
+  letter-spacing: -0.006em;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+h1,
+h2,
+h3 {
+  letter-spacing: -0.02em;
+  text-wrap: balance;
 }
 a {
   color: var(--accent);
+}
+::selection {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: var(--radius-sm);
 }

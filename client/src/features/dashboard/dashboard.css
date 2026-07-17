@@ -14,12 +14,12 @@
   font-size: 14px;
 }
 .section-title {
-  font-size: 14px;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.09em;
   color: var(--ink-faint);
-  margin: 28px 0 12px;
-  font-weight: 700;
+  margin: 30px 0 14px;
+  font-weight: 600;
 }
 .section-title:first-of-type {
   margin-top: 8px;
@@ -43,33 +43,42 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  padding: 18px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+.metric:hover {
   box-shadow: var(--shadow);
+  border-color: var(--line-strong);
 }
 .metric .label {
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   color: var(--ink-faint);
   font-weight: 600;
 }
 .metric .value {
-  font-size: 30px;
-  font-weight: 700;
-  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 29px;
+  font-weight: 500;
+  margin-top: 8px;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
+  color: var(--ink);
 }
 .metric .value.na {
   color: var(--ink-faint);
-  font-weight: 500;
+  font-weight: 400;
   font-size: 22px;
 }
 .metric .unit {
-  font-size: 14px;
+  font-family: var(--sans);
+  font-size: 13px;
   color: var(--ink-faint);
   font-weight: 500;
-  margin-left: 3px;
+  margin-left: 4px;
+  letter-spacing: 0;
 }
 .metric .status {
   display: inline-block;
@@ -80,12 +89,12 @@
   border-radius: 999px;
 }
 .status.good {
-  background: color-mix(in srgb, var(--ok) 15%, transparent);
+  background: var(--ok-wash);
   color: var(--ok);
 }
 .status.warn {
-  background: color-mix(in srgb, #d9902a 18%, transparent);
-  color: #b5771f;
+  background: var(--warn-wash);
+  color: var(--warn);
 }
 .status.none {
   background: var(--surface-2);
