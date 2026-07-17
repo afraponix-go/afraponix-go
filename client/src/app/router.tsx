@@ -3,7 +3,8 @@ import { LoginPage } from '../features/auth/LoginPage'
 import { RegisterPage } from '../features/auth/RegisterPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AppShell } from './AppShell'
-import { DashboardPage, StubPage } from './DashboardPage'
+import { DashboardPage } from '../features/dashboard/DashboardPage'
+import { StubPage } from './StubPage'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
