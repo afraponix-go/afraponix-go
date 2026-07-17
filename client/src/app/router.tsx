@@ -7,7 +7,7 @@ import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { FishPage } from '../features/fish/FishPage'
 import { PlantsPage } from '../features/plants/PlantsPage'
 import { GrowBedsPage } from '../features/growbeds/GrowBedsPage'
-import { StubPage } from './StubPage'
+import { WaterQualityPage } from '../features/water/WaterQualityPage'
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -22,7 +22,7 @@ export const router = createBrowserRouter([
           { path: 'fish', element: <FishPage /> },
           { path: 'plants', element: <PlantsPage /> },
           { path: 'grow-beds', element: <GrowBedsPage /> },
-          { path: 'water', element: <StubPage title="Water Quality" /> },
+          { path: 'water', element: <WaterQualityPage /> },
         ],
       },
     ],

@@ -1,0 +1,104 @@
+.wq-form {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+  box-shadow: var(--shadow);
+  margin-bottom: 8px;
+}
+.wq-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+}
+.wq-form .field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+}
+.wq-form .field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.wq-form .unit-hint {
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+.wq-form input {
+  font: inherit;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+}
+.wq-form input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+.wq-notes {
+  grid-column: 1 / -1;
+}
+.wq-submit {
+  width: auto;
+  margin-top: 16px;
+  padding: 11px 22px;
+}
+.wq-error {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+.wq-ok {
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+  color: var(--ok);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+.wq-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.wq-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.wq-table th,
+.wq-table td {
+  padding: 10px 12px;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+.wq-table th:first-child,
+.wq-table td:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+}
+.wq-table th {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  background: var(--surface-2);
+}
+.wq-table th:first-child {
+  background: var(--surface-2);
+}
+.wq-table tbody tr:last-child td {
+  border-bottom: none;
+}
