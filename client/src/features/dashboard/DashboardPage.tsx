@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
-import { fetchLatestWaterQuality, type WaterQuality } from './api'
+import { fetchLatestWaterQuality, fetchLatestNutrients, type WaterQuality, type LatestNutrients } from './api'
 import './dashboard.css'
 
 type Status = 'good' | 'warn' | 'none'
@@ -24,6 +24,41 @@ const METRICS: MetricDef[] = [
   { key: 'humidity', label: 'Humidity', unit: '%', digits: 0 },
   { key: 'salinity', label: 'Salinity', unit: 'ppt', digits: 2 },
 ]
+
+// Plant nutrients shown as their own section, in display order. The endpoint
+// returns whatever has been recorded; we render those present.
+const NUTRIENTS: { key: string; label: string }[] = [
+  { key: 'nitrogen', label: 'Nitrogen (N)' },
+  { key: 'phosphorus', label: 'Phosphorus (P)' },
+  { key: 'potassium', label: 'Potassium (K)' },
+  { key: 'calcium', label: 'Calcium (Ca)' },
+  { key: 'magnesium', label: 'Magnesium (Mg)' },
+  { key: 'iron', label: 'Iron (Fe)' },
+]
+
+// Source attribution matching the app's convention.
+function sourceBadge(source?: string | null) {
+  const s = (source ?? '').toLowerCase()
+  if (s.includes('sensor')) return { icon: '📡', label: 'Sensor' }
+  if (s.includes('calc')) return { icon: '🧪', label: 'Calculated' }
+  return { icon: '📝', label: 'Manual' }
+}
+
+function NutrientTile({ label, reading }: { label: string; reading: LatestNutrients[string] }) {
+  const badge = sourceBadge(reading.source)
+  return (
+    <div className="metric">
+      <div className="label">{label}</div>
+      <div className="value">
+        {reading.value.toFixed(reading.value >= 100 ? 0 : 2)}
+        {reading.unit && <span className="unit">{reading.unit}</span>}
+      </div>
+      <span className="source" title={`${badge.label} reading`}>
+        {badge.icon} {badge.label}
+      </span>
+    </div>
+  )
+}
 
 function MetricCard({ def, wq }: { def: MetricDef; wq: WaterQuality | null }) {
   const raw = wq ? (wq[def.key] as number | null) : null
@@ -56,6 +91,13 @@ export function DashboardPage() {
     enabled: !!activeId,
   })
 
+  const { data: nutrients = {} } = useQuery({
+    queryKey: ['nutrients', 'latest', activeId],
+    queryFn: () => fetchLatestNutrients(activeId as string),
+    enabled: !!activeId,
+  })
+  const presentNutrients = NUTRIENTS.filter((n) => nutrients[n.key] && Number.isFinite(nutrients[n.key].value))
+
   if (systemsLoading) return <div className="empty">Loading systems…</div>
 
   if (!activeId) {
@@ -84,11 +126,23 @@ export function DashboardPage() {
                 : 'No readings yet'}
         </span>
       </div>
+      <h2 className="section-title">Water quality</h2>
       <div className="metric-grid">
         {METRICS.map((def) => (
           <MetricCard key={def.key} def={def} wq={wq ?? null} />
         ))}
       </div>
+
+      {presentNutrients.length > 0 && (
+        <>
+          <h2 className="section-title">Nutrient levels</h2>
+          <div className="metric-grid">
+            {presentNutrients.map((n) => (
+              <NutrientTile key={n.key} label={n.label} reading={nutrients[n.key]} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }

@@ -25,3 +25,20 @@ export async function fetchLatestWaterQuality(systemId: string): Promise<WaterQu
   if (rows.length === 0) return null
   return waterQualitySchema.parse(rows[0])
 }
+
+// Composite latest nutrient readings, keyed by nutrient, each with its own
+// source attribution (sensor / manual / calculated).
+const nutrientReading = z.object({
+  value: z.union([z.string(), z.number()]).transform((v) => Number(v)),
+  unit: z.string().nullable().optional(),
+  reading_date: z.string().nullable().optional(),
+  source: z.string().nullable().optional(),
+})
+export type NutrientReading = z.infer<typeof nutrientReading>
+export type LatestNutrients = Record<string, NutrientReading>
+
+export async function fetchLatestNutrients(systemId: string): Promise<LatestNutrients> {
+  const data = await api<unknown>(`/data/nutrients/latest/${systemId}`)
+  const parsed = z.record(z.string(), nutrientReading).safeParse(data)
+  return parsed.success ? parsed.data : {}
+}

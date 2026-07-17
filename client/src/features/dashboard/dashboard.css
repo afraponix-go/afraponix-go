@@ -13,10 +13,31 @@
   color: var(--ink-faint);
   font-size: 14px;
 }
+.section-title {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  margin: 28px 0 12px;
+  font-weight: 700;
+}
+.section-title:first-of-type {
+  margin-top: 8px;
+}
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 14px;
+}
+.metric .source {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-faint);
+  background: var(--surface-2);
+  padding: 3px 9px;
+  border-radius: 999px;
 }
 .metric {
   background: var(--surface);
