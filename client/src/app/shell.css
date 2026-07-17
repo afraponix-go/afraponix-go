@@ -1,0 +1,91 @@
+.shell {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 22px;
+  height: 60px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 17px;
+}
+.brand-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--brand-green), var(--brand-aqua));
+}
+.mainnav {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+.mainnav a {
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--ink-soft);
+  font-weight: 500;
+  font-size: 14px;
+}
+.mainnav a:hover {
+  background: var(--surface-2);
+}
+.mainnav a.active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.who {
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.ghost {
+  font: inherit;
+  font-size: 14px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.ghost:hover {
+  background: var(--surface-2);
+}
+.content {
+  flex: 1;
+  padding: 28px 22px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+.placeholder {
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-lg);
+  padding: 48px;
+  text-align: center;
+  color: var(--ink-faint);
+  background: var(--surface);
+}
+.placeholder h2 {
+  color: var(--ink);
+  margin: 0 0 6px;
+}

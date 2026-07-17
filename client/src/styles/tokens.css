@@ -1,0 +1,78 @@
+/* Afraponix Go design tokens — brand palette (Deep Blue, Bio Green, Aqua),
+   with a considered light/dark system. Components consume only these vars. */
+:root {
+  --brand-deep: #1663a6;
+  --brand-aqua: #35b0c9;
+  --brand-green: #5ba83f;
+
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --surface-2: #eef1f6;
+  --ink: #16202e;
+  --ink-soft: #4c5a6c;
+  --ink-faint: #7c8798;
+  --line: #dfe4ec;
+  --accent: var(--brand-deep);
+  --accent-ink: #ffffff;
+  --danger: #cf2e3f;
+  --ok: #2f9160;
+
+  --radius: 10px;
+  --radius-lg: 16px;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --shadow: 0 1px 2px rgba(16, 32, 46, 0.06), 0 8px 24px rgba(16, 32, 46, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1620;
+    --surface: #17212e;
+    --surface-2: #1e2a3a;
+    --ink: #e8edf4;
+    --ink-soft: #aab6c6;
+    --ink-faint: #7e8ca0;
+    --line: #27333f;
+    --accent: #4a9fe0;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0f1620;
+  --surface: #17212e;
+  --surface-2: #1e2a3a;
+  --ink: #e8edf4;
+  --ink-soft: #aab6c6;
+  --ink-faint: #7e8ca0;
+  --line: #27333f;
+  --accent: #4a9fe0;
+}
+:root[data-theme='light'] {
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --surface-2: #eef1f6;
+  --ink: #16202e;
+  --ink-soft: #4c5a6c;
+  --ink-faint: #7c8798;
+  --line: #dfe4ec;
+  --accent: #1663a6;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+a {
+  color: var(--accent);
+}
