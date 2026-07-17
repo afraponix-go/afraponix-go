@@ -5,6 +5,7 @@ import { ProtectedRoute } from './ProtectedRoute'
 import { AppShell } from './AppShell'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { FishPage } from '../features/fish/FishPage'
+import { PlantsPage } from '../features/plants/PlantsPage'
 import { StubPage } from './StubPage'
 
 export const router = createBrowserRouter([
@@ -18,7 +19,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <DashboardPage /> },
           { path: 'fish', element: <FishPage /> },
-          { path: 'plants', element: <StubPage title="Plants" /> },
+          { path: 'plants', element: <PlantsPage /> },
           { path: 'grow-beds', element: <StubPage title="Grow Beds" /> },
           { path: 'water', element: <StubPage title="Water Quality" /> },
         ],

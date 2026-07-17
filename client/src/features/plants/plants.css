@@ -1,0 +1,47 @@
+.crop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.crop-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.crop-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.crop-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.crop-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+.crop-date {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.crop-nums {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex: none;
+}
+.crop-nums b {
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+}
+.crop-nums span {
+  font-size: 12px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
