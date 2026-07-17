@@ -4,6 +4,7 @@ import { RegisterPage } from '../features/auth/RegisterPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AppShell } from './AppShell'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
+import { FishPage } from '../features/fish/FishPage'
 import { StubPage } from './StubPage'
 
 export const router = createBrowserRouter([
@@ -16,7 +17,7 @@ export const router = createBrowserRouter([
         element: <AppShell />,
         children: [
           { index: true, element: <DashboardPage /> },
-          { path: 'fish', element: <StubPage title="Fish" /> },
+          { path: 'fish', element: <FishPage /> },
           { path: 'plants', element: <StubPage title="Plants" /> },
           { path: 'grow-beds', element: <StubPage title="Grow Beds" /> },
           { path: 'water', element: <StubPage title="Water Quality" /> },
