@@ -106,6 +106,185 @@ router.get('/custom-crops', async (req, res) => {
     }
 });
 
+// Get single custom crop by ID
+router.get('/custom-crops/:id', async (req, res) => {
+    try {
+        const pool = getDatabase();
+        
+        const [crops] = await pool.execute(
+            'SELECT * FROM custom_crops WHERE id = ? AND user_id = ?',
+            [req.params.id, req.user.userId]
+        );
+
+        if (crops.length === 0) {
+            return res.status(404).json({ error: 'Custom crop not found' });
+        }
+
+        res.json(crops[0]);
+
+    } catch (error) {
+        console.error('Error fetching custom crop:', error);
+        res.status(500).json({ error: 'Failed to fetch custom crop' });
+    }
+});
+
+// Update custom crop
+router.put('/custom-crops/:id', async (req, res) => {
+    const { 
+        cropName, 
+        targetN, 
+        targetP, 
+        targetK, 
+        targetCa, 
+        targetMg, 
+        targetFe, 
+        targetEc,
+        category,
+        plantSpacing,
+        growthDays,
+        difficulty,
+        season,
+        description
+    } = req.body;
+
+    if (!cropName) {
+        return res.status(400).json({ error: 'Crop name is required' });
+    }
+
+    try {
+        const pool = getDatabase();
+        
+        // Check if crop exists and belongs to user
+        const [existing] = await pool.execute(
+            'SELECT id FROM custom_crops WHERE id = ? AND user_id = ?',
+            [req.params.id, req.user.userId]
+        );
+
+        if (existing.length === 0) {
+            return res.status(404).json({ error: 'Custom crop not found' });
+        }
+
+        await pool.execute(`
+            UPDATE custom_crops 
+            SET crop_name = ?, target_n = ?, target_p = ?, target_k = ?, 
+                target_ca = ?, target_mg = ?, target_fe = ?, target_ec = ?,
+                category = ?, plant_spacing = ?, growth_days = ?, difficulty = ?,
+                season = ?, description = ?
+            WHERE id = ? AND user_id = ?
+        `, [cropName, targetN, targetP, targetK, targetCa, targetMg, targetFe, targetEc,
+            category, plantSpacing, growthDays, difficulty, season, description,
+            req.params.id, req.user.userId]);
+
+        res.json({ success: true, message: 'Custom crop updated successfully' });
+
+    } catch (error) {
+        console.error('Error updating custom crop:', error);
+        res.status(500).json({ error: 'Failed to update custom crop' });
+    }
+});
+
+// Get seed varieties
+router.get('/seed-varieties', async (req, res) => {
+    try {
+        const pool = getDatabase();
+        
+        const [varieties] = await pool.execute(
+            'SELECT * FROM seed_varieties ORDER BY crop_type, variety_name'
+        );
+
+        res.json(varieties);
+
+    } catch (error) {
+        console.error('Error fetching seed varieties:', error);
+        res.status(500).json({ error: 'Failed to fetch seed varieties' });
+    }
+});
+
+// Submit custom crop to global database (for future implementation)
+router.post('/custom-crops/:id/submit-global', async (req, res) => {
+    try {
+        const pool = getDatabase();
+        
+        // Check if crop exists and belongs to user
+        const [crop] = await pool.execute(
+            'SELECT * FROM custom_crops WHERE id = ? AND user_id = ?',
+            [req.params.id, req.user.userId]
+        );
+
+        if (crop.length === 0) {
+            return res.status(404).json({ error: 'Custom crop not found' });
+        }
+
+        // For now, just log the submission request
+        console.log(`User ${req.user.userId} submitted custom crop "${crop[0].crop_name}" to global database`);
+        
+        // TODO: Implement actual submission to global/admin database
+        // This could involve copying to an admin review table
+
+        res.json({ 
+            success: true, 
+            message: 'Custom crop submitted for review. It will be available globally once approved.' 
+        });
+
+    } catch (error) {
+        console.error('Error submitting to global database:', error);
+        res.status(500).json({ error: 'Failed to submit to global database' });
+    }
+});
+
+// Bulk import custom crops
+router.post('/custom-crops/bulk-import', async (req, res) => {
+    const { crops } = req.body;
+
+    if (!Array.isArray(crops) || crops.length === 0) {
+        return res.status(400).json({ error: 'Crops array is required' });
+    }
+
+    try {
+        const pool = getDatabase();
+        let imported = 0;
+        let skipped = 0;
+        const errors = [];
+
+        for (const crop of crops) {
+            try {
+                if (!crop.cropName) {
+                    skipped++;
+                    errors.push(`Crop missing name: ${JSON.stringify(crop)}`);
+                    continue;
+                }
+
+                await pool.execute(`
+                    INSERT INTO custom_crops 
+                    (user_id, crop_name, target_n, target_p, target_k, target_ca, target_mg, target_fe, target_ec,
+                     category, plant_spacing, growth_days, difficulty, season, description)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `, [req.user.userId, crop.cropName, crop.targetN || 0, crop.targetP || 0, crop.targetK || 0,
+                    crop.targetCa || 0, crop.targetMg || 0, crop.targetFe || 0, crop.targetEc || 0,
+                    crop.category || 'leafy_greens', crop.plantSpacing || 15, crop.growthDays || 30,
+                    crop.difficulty || 'beginner', crop.season || 'year_round', crop.description || '']);
+                
+                imported++;
+            } catch (cropError) {
+                skipped++;
+                errors.push(`Error importing ${crop.cropName}: ${cropError.message}`);
+            }
+        }
+
+        res.json({ 
+            success: true, 
+            imported, 
+            skipped,
+            errors: errors.slice(0, 10), // Limit error messages
+            message: `Imported ${imported} crops, skipped ${skipped}` 
+        });
+
+    } catch (error) {
+        console.error('Error bulk importing crops:', error);
+        res.status(500).json({ error: 'Failed to bulk import crops' });
+    }
+});
+
 // Add custom crop
 router.post('/custom-crops', async (req, res) => {
     const { 
@@ -116,7 +295,13 @@ router.post('/custom-crops', async (req, res) => {
         targetCa, 
         targetMg, 
         targetFe, 
-        targetEc 
+        targetEc,
+        category,
+        plantSpacing,
+        growthDays,
+        difficulty,
+        season,
+        description
     } = req.body;
 
     if (!cropName) {
@@ -130,9 +315,13 @@ router.post('/custom-crops', async (req, res) => {
         
         const [result] = await pool.execute(`
             INSERT INTO custom_crops 
-            (user_id, crop_name, target_n, target_p, target_k, target_ca, target_mg, target_fe, target_ec)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [req.user.userId, cropName, targetN, targetP, targetK, targetCa, targetMg, targetFe, targetEc]);
+            (user_id, crop_name, target_n, target_p, target_k, target_ca, target_mg, target_fe, target_ec,
+             category, plant_spacing, growth_days, difficulty, season, description)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [req.user.userId, cropName, targetN || 0, targetP || 0, targetK || 0, targetCa || 0, 
+            targetMg || 0, targetFe || 0, targetEc || 0, category || 'leafy_greens', 
+            plantSpacing || 15, growthDays || 30, difficulty || 'beginner', 
+            season || 'year_round', description || '']);
 
         res.json({ success: true, id: result.insertId, message: 'Custom crop added successfully' });
 

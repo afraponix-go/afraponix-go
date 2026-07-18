@@ -65,7 +65,50 @@ router.post('/system/:systemId', async (req, res) => {
                 plant_spacing: bed.plant_spacing ?? null,
                 reservoir_volume_liters: bed.reservoir_volume_liters ?? null
             };
-            
+
+            // Calculate equivalent_m2 if not provided or is 0
+            if (!cleanBed.equivalent_m2 || cleanBed.equivalent_m2 === 0) {
+                const bedType = (cleanBed.bed_type || '').toLowerCase();
+                const length = parseFloat(cleanBed.length_meters) || 0;
+                const width = parseFloat(cleanBed.width_meters) || 0;
+                const verticalCount = parseFloat(cleanBed.vertical_count) || 0;
+                const plantsPerVertical = parseFloat(cleanBed.plants_per_vertical) || 0;
+                const troughLength = parseFloat(cleanBed.trough_length) || 0;
+                const troughCount = parseFloat(cleanBed.trough_count) || 0;
+                const plantSpacing = parseFloat(cleanBed.plant_spacing) || 0;
+
+                switch (bedType) {
+                    case 'dwc':
+                    case 'deep_water_culture':
+                    case 'ebb_flow':
+                    case 'flood_drain':
+                        if (length > 0 && width > 0) {
+                            cleanBed.equivalent_m2 = length * width;
+                        }
+                        break;
+
+                    case 'vertical':
+                        if (verticalCount > 0 && plantsPerVertical > 0) {
+                            const totalPlants = verticalCount * plantsPerVertical;
+                            cleanBed.equivalent_m2 = totalPlants / 25;
+                        }
+                        break;
+
+                    case 'nft':
+                        if (troughLength > 0 && plantSpacing > 0 && troughCount > 0) {
+                            const plantsPerTrough = Math.floor(troughLength / (plantSpacing / 100));
+                            const totalPlants = plantsPerTrough * troughCount;
+                            cleanBed.equivalent_m2 = totalPlants / 25;
+                        }
+                        break;
+
+                    default:
+                        if (length > 0 && width > 0) {
+                            cleanBed.equivalent_m2 = length * width;
+                        }
+                }
+            }
+
             const existingBed = existingBedMap.get(bed.bed_number);
             
             if (existingBed) {
@@ -136,6 +179,53 @@ router.put('/bed/:systemId/:bedNumber', async (req, res) => {
 
     try {
         const pool = getDatabase();
+
+        // Calculate equivalent_m2 if not provided or is 0
+        if (!bedConfig.equivalent_m2 || bedConfig.equivalent_m2 === 0) {
+            const bedType = (bedConfig.bed_type || '').toLowerCase();
+            const length = parseFloat(bedConfig.length_meters) || 0;
+            const width = parseFloat(bedConfig.width_meters) || 0;
+            const verticalCount = parseFloat(bedConfig.vertical_count) || 0;
+            const plantsPerVertical = parseFloat(bedConfig.plants_per_vertical) || 0;
+            const troughLength = parseFloat(bedConfig.trough_length) || 0;
+            const troughCount = parseFloat(bedConfig.trough_count) || 0;
+            const plantSpacing = parseFloat(bedConfig.plant_spacing) || 0;
+
+            switch (bedType) {
+                case 'dwc':
+                case 'deep_water_culture':
+                case 'ebb_flow':
+                case 'flood_drain':
+                    // Calculate from dimensions
+                    if (length > 0 && width > 0) {
+                        bedConfig.equivalent_m2 = length * width;
+                    }
+                    break;
+
+                case 'vertical':
+                    // Calculate based on number of plants (25 plants per m²)
+                    if (verticalCount > 0 && plantsPerVertical > 0) {
+                        const totalPlants = verticalCount * plantsPerVertical;
+                        bedConfig.equivalent_m2 = totalPlants / 25;
+                    }
+                    break;
+
+                case 'nft':
+                    // Calculate based on trough length and plant spacing
+                    if (troughLength > 0 && plantSpacing > 0 && troughCount > 0) {
+                        const plantsPerTrough = Math.floor(troughLength / (plantSpacing / 100)); // Convert cm to m
+                        const totalPlants = plantsPerTrough * troughCount;
+                        bedConfig.equivalent_m2 = totalPlants / 25;
+                    }
+                    break;
+
+                default:
+                    // Default to length × width if available
+                    if (length > 0 && width > 0) {
+                        bedConfig.equivalent_m2 = length * width;
+                    }
+            }
+        }
 
         // Check if bed exists
         const [existingBeds] = await pool.execute(

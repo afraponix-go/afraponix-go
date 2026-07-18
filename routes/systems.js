@@ -196,7 +196,7 @@ router.post('/create-demo', async (req, res) => {
         connection = await getDatabaseConnection();
         
         // Generate new system ID
-        const newSystemId = `system_${Date.now()}`;
+        let newSystemId = `system_${Date.now()}`;
         
         // Start transaction
         await connection.execute('START TRANSACTION');
@@ -212,11 +212,23 @@ router.post('/create-demo', async (req, res) => {
             } catch (sqliteError) {
                 console.log('⚠️ SQLite demo import failed, using simple demo creator:', sqliteError.message);
                 
+                // Rollback any partial changes from SQLite import
+                await connection.execute('ROLLBACK');
+                
+                // Start a new transaction for simple demo creator
+                await connection.execute('START TRANSACTION');
+                
+                // Generate a new system ID for the fallback
+                const fallbackSystemId = `system_${Date.now()}_fallback`;
+                
                 // Fallback to simple demo creator
                 const SimpleDemoCreator = require('../database/simple-demo-creator');
                 const simpleCreator = new SimpleDemoCreator(connection);
-                importResult = await simpleCreator.createDemoSystem(newSystemId, targetUserId, system_name);
-                console.log('✅ Demo system created using simple creator');
+                importResult = await simpleCreator.createDemoSystem(fallbackSystemId, targetUserId, system_name);
+                
+                // Update newSystemId to the fallback ID
+                newSystemId = fallbackSystemId;
+                console.log('✅ Demo system created using simple creator with fallback ID:', fallbackSystemId);
             }
             
             // Commit transaction

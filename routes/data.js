@@ -18,7 +18,7 @@ router.use(authenticateToken);
 // Get latest data for preloading forms
 router.get('/latest/:systemId', async (req, res) => {
     const { systemId } = req.params;
-    
+
     if (!await verifySystemOwnership(systemId, req.user.userId)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
@@ -27,26 +27,39 @@ router.get('/latest/:systemId', async (req, res) => {
     try {
         const pool = getDatabase();
         const latestData = {};
-        
-        // Get latest water quality data from nutrient_readings
-        const waterQualityParams = ['ph', 'ec', 'dissolved_oxygen', 'temperature', 'ammonia', 'humidity', 'salinity'];
-        const [latestWaterQuality] = await pool.execute(`SELECT * FROM nutrient_readings 
-                WHERE system_id = ? 
-                AND nutrient_type IN (${waterQualityParams.map(() => '?').join(',')})
-                ORDER BY reading_date DESC LIMIT 10`, 
-            [systemId, ...waterQualityParams]);
-        
+
+        // Get latest water quality data from water_quality table (primary source)
+        const [waterQualityRows] = await pool.execute(
+            'SELECT * FROM water_quality WHERE system_id = ? ORDER BY date DESC, created_at DESC LIMIT 1',
+            [systemId]
+        );
+
+        // Get latest nutrient readings from nutrient_readings table (for additional nutrients)
+        const [nutrientRows] = await pool.execute(`
+            SELECT nr1.nutrient_type, nr1.value, nr1.unit, nr1.reading_date, nr1.source
+            FROM nutrient_readings nr1
+            INNER JOIN (
+                SELECT nutrient_type, MAX(reading_date) as max_date
+                FROM nutrient_readings
+                WHERE system_id = ?
+                GROUP BY nutrient_type
+            ) nr2 ON nr1.nutrient_type = nr2.nutrient_type AND nr1.reading_date = nr2.max_date
+            WHERE nr1.system_id = ?
+            ORDER BY nr1.nutrient_type
+        `, [systemId, systemId]);
+
         // Get latest plant growth data
-        const [plantGrowthRows] = await pool.execute('SELECT * FROM plant_growth WHERE system_id = ? ORDER BY created_at DESC LIMIT 1', 
+        const [plantGrowthRows] = await pool.execute('SELECT * FROM plant_growth WHERE system_id = ? ORDER BY created_at DESC LIMIT 1',
             [systemId]);
         const latestPlantGrowth = plantGrowthRows[0] || null;
-        
+
         // Get latest fish health data
-        const [fishHealthRows] = await pool.execute('SELECT * FROM fish_health WHERE system_id = ? ORDER BY created_at DESC LIMIT 1', 
+        const [fishHealthRows] = await pool.execute('SELECT * FROM fish_health WHERE system_id = ? ORDER BY created_at DESC LIMIT 1',
             [systemId]);
         const latestFishHealth = fishHealthRows[0] || null;
 
-        latestData.waterQuality = latestWaterQuality;
+        latestData.waterQuality = waterQualityRows[0] || null;
+        latestData.nutrients = nutrientRows;
         latestData.plantGrowth = latestPlantGrowth;
         latestData.fishHealth = latestFishHealth;        res.json(latestData);
     } catch (error) {
@@ -67,55 +80,27 @@ async function verifySystemOwnership(systemId, userId) {
     }
 }
 
-// Water Quality Data - Now fetches from nutrient_readings table
+// Water Quality endpoints - stores complete water quality snapshots
 router.get('/water-quality/:systemId', async (req, res) => {
     const { systemId } = req.params;
+    const { limit } = req.query;
 
     if (!await verifySystemOwnership(systemId, req.user.userId)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    // Using connection pool - no manual connection management
     try {
         const pool = getDatabase();
-        // Get all unique dates from nutrient_readings for water quality parameters
-        const waterQualityParams = ['ph', 'ec', 'dissolved_oxygen', 'temperature', 'ammonia', 'humidity', 'salinity'];
-        
-        // Get all readings for water quality parameters
-        const [rows] = await pool.execute(`
-            SELECT reading_date, nutrient_type, value, source, created_at
-            FROM nutrient_readings 
-            WHERE system_id = ? 
-            AND nutrient_type IN (${waterQualityParams.map(() => '?').join(',')})
-            ORDER BY reading_date DESC
-        `, [systemId, ...waterQualityParams]);
-        
-        // Group by date to create water_quality-like records
-        const groupedData = {};
-        rows.forEach(row => {
-            const date = row.reading_date;
-            if (!groupedData[date]) {
-                groupedData[date] = {
-                    system_id: systemId,
-                    date: date,
-                    created_at: row.created_at,
-                    ph: null,
-                    ec: null,
-                    dissolved_oxygen: null,
-                    temperature: null,
-                    ammonia: null,
-                    humidity: null,
-                    salinity: null
-                };
-            }
-            // Map nutrient_type to the old column name
-            groupedData[date][row.nutrient_type] = row.value;
-        });
-        
-        // Convert to array and sort by date
-        const result = Object.values(groupedData).sort((a, b) => 
-            new Date(b.date) - new Date(a.date)
-        );        res.json(result);
+        let query = 'SELECT * FROM water_quality WHERE system_id = ? ORDER BY created_at DESC';
+        const params = [systemId];
+
+        if (limit) {
+            query += ' LIMIT ?';
+            params.push(parseInt(limit));
+        }
+
+        const [data] = await pool.execute(query, params);
+        res.json(data);
     } catch (error) {
         console.error('Error fetching water quality data:', error);
         res.status(500).json({ error: 'Failed to fetch data' });
@@ -124,61 +109,42 @@ router.get('/water-quality/:systemId', async (req, res) => {
 
 router.post('/water-quality/:systemId', async (req, res) => {
     const { systemId } = req.params;
-    const { date, ph, ec, dissolved_oxygen, temperature, humidity, salinity, ammonia, notes, nutrients, 
-            nitrite, nitrate, iron, potassium, calcium, phosphorus, magnesium } = req.body;
+    const data = req.body;
 
     if (!await verifySystemOwnership(systemId, req.user.userId)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
-    // Using connection pool - no manual connection management
     try {
         const pool = getDatabase();
-        // Save all water quality parameters to nutrient_readings table
-        const parameters = [
-            { type: 'ph', value: ph, unit: '' },
-            { type: 'ec', value: ec, unit: 'μS/cm' },
-            { type: 'dissolved_oxygen', value: dissolved_oxygen, unit: 'mg/L' },
-            { type: 'temperature', value: temperature, unit: '°C' },
-            { type: 'ammonia', value: ammonia, unit: 'ppm' },
-            { type: 'humidity', value: humidity, unit: '%' },
-            { type: 'salinity', value: salinity, unit: 'ppt' },
-            // Add nutrient parameters from form
-            { type: 'nitrite', value: nitrite, unit: 'mg/L' },
-            { type: 'nitrate', value: nitrate, unit: 'mg/L' },
-            { type: 'iron', value: iron, unit: 'mg/L' },
-            { type: 'potassium', value: potassium, unit: 'mg/L' },
-            { type: 'calcium', value: calcium, unit: 'mg/L' },
-            { type: 'phosphorus', value: phosphorus, unit: 'mg/L' },
-            { type: 'magnesium', value: magnesium, unit: 'mg/L' }
-        ];
+        const [result] = await pool.execute(`INSERT INTO water_quality
+            (system_id, date, ph, ec, dissolved_oxygen, temperature, ammonia, nitrite, nitrate,
+             iron, potassium, calcium, phosphorus, magnesium, humidity, salinity, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                systemId,
+                data.date || new Date().toISOString().slice(0, 19).replace('T', ' '),
+                toSqlValue(data.ph),
+                toSqlValue(data.ec),
+                toSqlValue(data.dissolved_oxygen),
+                toSqlValue(data.temperature),
+                toSqlValue(data.ammonia),
+                toSqlValue(data.nitrite),
+                toSqlValue(data.nitrate),
+                toSqlValue(data.iron),
+                toSqlValue(data.potassium),
+                toSqlValue(data.calcium),
+                toSqlValue(data.phosphorus),
+                toSqlValue(data.magnesium),
+                toSqlValue(data.humidity),
+                toSqlValue(data.salinity),
+                data.notes || ''
+            ]);
 
-        const insertedIds = [];
-        const readingDate = (date || new Date().toISOString()).replace('T', ' ').slice(0, 19);
-
-        // Insert each parameter that has a value
-        for (const param of parameters) {
-            if (param.value !== null && param.value !== undefined && param.value !== '' && !isNaN(param.value)) {
-                const [result] = await pool.execute(`INSERT INTO nutrient_readings 
-                    (system_id, nutrient_type, value, unit, reading_date, source, notes) 
-                    VALUES (?, ?, ?, ?, ?, 'manual', ?)`, 
-                    [systemId, param.type, param.value, param.unit, readingDate, notes || '']);
-                insertedIds.push(result.insertId);
-            }
-        }
-
-        // Save additional nutrient readings if provided
-        if (nutrients && Array.isArray(nutrients)) {
-            for (const nutrient of nutrients) {
-                if (nutrient.type && nutrient.value !== null && nutrient.value !== undefined && nutrient.value !== '' && !isNaN(nutrient.value)) {
-                    const [result] = await pool.execute(`INSERT INTO nutrient_readings 
-                        (system_id, nutrient_type, value, unit, reading_date, source, notes) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?)`, 
-                        [systemId, nutrient.type, nutrient.value, nutrient.unit || 'mg/L', readingDate, nutrient.source || 'manual', nutrient.notes || '']);
-                    insertedIds.push(result.insertId);
-                }
-            }
-        }        res.status(201).json({ ids: insertedIds, message: 'Water quality data saved to nutrient_readings' });
+        res.status(201).json({
+            id: result.insertId,
+            message: 'Water quality data saved successfully'
+        });
     } catch (error) {
         console.error('Error saving water quality data:', error);
         res.status(500).json({ error: 'Failed to save data' });
@@ -496,10 +462,13 @@ router.post('/operations/:systemId', async (req, res) => {
     // Using connection pool - no manual connection management
     try {
         const pool = getDatabase();
-        const [result] = await pool.execute(`INSERT INTO operations 
-            (system_id, date, operation_type, water_volume, chemical_added, amount_added, downtime_duration, notes) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, 
-            [systemId, date, operation_type, water_volume, chemical_added, amount_added, downtime_duration, notes]);        res.status(201).json({ id: result.insertId, message: 'Operations data saved' });
+        const [result] = await pool.execute(`INSERT INTO operations
+            (system_id, date, operation_type, water_volume, chemical_added, amount_added, downtime_duration, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [systemId, date, operation_type,
+             water_volume ?? null, chemical_added ?? null, amount_added ?? null,
+             downtime_duration ?? null, notes ?? null]);
+        res.status(201).json({ id: result.insertId, message: 'Operations data saved' });
     } catch (error) {
         console.error('Error saving operations data:', error);
         res.status(500).json({ error: 'Failed to save data' });
@@ -579,118 +548,7 @@ router.post('/entries/fish-health', async (req, res) => {
     }
 });
 
-// Water Quality - GET with query parameter (fetches from nutrient_readings)
-router.get('/entries/water-quality', async (req, res) => {
-    const { system_id, limit } = req.query;
-    
-    if (!system_id) {
-        return res.status(400).json({ error: 'system_id query parameter is required' });
-    }
-
-    if (!await verifySystemOwnership(system_id, req.user.userId)) {
-        return res.status(403).json({ error: 'Access denied to this system' });
-    }
-
-    // Using connection pool - no manual connection management
-    try {
-        const pool = getDatabase();
-        // Get water quality parameters from nutrient_readings
-        const waterQualityParams = ['ph', 'ec', 'dissolved_oxygen', 'temperature', 'ammonia', 'humidity', 'salinity'];
-        
-        let query = `
-            SELECT reading_date as date, nutrient_type, value, unit, source, notes, created_at
-            FROM nutrient_readings 
-            WHERE system_id = ? 
-            AND nutrient_type IN (${waterQualityParams.map(() => '?').join(',')})
-            ORDER BY reading_date DESC
-        `;
-        
-        const params = [system_id, ...waterQualityParams];
-        
-        if (limit) {
-            query += ' LIMIT ?';
-            params.push(parseInt(limit, 10));
-        }
-        
-        const [data] = await pool.execute(query, params);        res.json(data);
-    } catch (error) {
-        console.error('Error fetching water quality data:', error);
-        res.status(500).json({ error: 'Failed to fetch data' });
-    }
-});
-
-// Water Quality - POST with system_id in body
-router.post('/entries/water-quality', async (req, res) => {
-    const { system_id, date, ph, ec, dissolved_oxygen, temperature, ammonia, notes, nutrients } = req.body;
-    
-    if (!system_id) {
-        return res.status(400).json({ error: 'system_id is required in request body' });
-    }
-
-    if (!await verifySystemOwnership(system_id, req.user.userId)) {
-        return res.status(403).json({ error: 'Access denied to this system' });
-    }
-
-    // Using connection pool - no manual connection management
-    try {
-        const pool = getDatabase();
-        let insertedReadings = [];
-
-        // Save basic water quality parameters to nutrient_readings table
-        const waterQualityParams = [
-            { type: 'ph', value: ph, unit: '' },
-            { type: 'ec', value: ec, unit: 'μS/cm' },
-            { type: 'dissolved_oxygen', value: dissolved_oxygen, unit: 'mg/L' },
-            { type: 'temperature', value: temperature, unit: '°C' },
-            { type: 'ammonia', value: ammonia, unit: 'ppm' }
-        ];
-
-        for (const param of waterQualityParams) {
-            if (param.value !== null && param.value !== undefined && param.value !== '') {
-                const [result] = await pool.execute(`INSERT INTO nutrient_readings 
-                    (system_id, nutrient_type, value, unit, reading_date, source, notes) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?)`, 
-                    [system_id, param.type, param.value, param.unit, (date || new Date().toISOString()).replace('T', ' ').slice(0, 19), 'manual', notes || '']);
-                insertedReadings.push(result.insertId);
-            }
-        }
-
-        // Handle legacy nutrient data (for backward compatibility)
-        const { nitrite, nitrate, iron, potassium, calcium } = req.body;
-        if (nitrite || nitrate || iron || potassium || calcium) {
-            const legacyNutrients = [];
-            if (nitrite) legacyNutrients.push({ type: 'nitrite', value: nitrite });
-            if (nitrate) legacyNutrients.push({ type: 'nitrate', value: nitrate });
-            if (iron) legacyNutrients.push({ type: 'iron', value: iron });
-            if (potassium) legacyNutrients.push({ type: 'potassium', value: potassium });
-            if (calcium) legacyNutrients.push({ type: 'calcium', value: calcium });
-
-            for (const nutrient of legacyNutrients) {
-                const [result] = await pool.execute(`INSERT INTO nutrient_readings 
-                    (system_id, nutrient_type, value, unit, reading_date, source, notes) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?)`, 
-                    [system_id, nutrient.type, nutrient.value, 'mg/L', (date || new Date().toISOString()).replace('T', ' ').slice(0, 19), 'manual', notes || '']);
-                insertedReadings.push(result.insertId);
-            }
-        }
-
-        // Save individual nutrient readings if provided
-        if (nutrients && Array.isArray(nutrients)) {
-            for (const nutrient of nutrients) {
-                if (nutrient.type && nutrient.value !== null && nutrient.value !== undefined) {
-                    const [result] = await pool.execute(`INSERT INTO nutrient_readings 
-                        (system_id, nutrient_type, value, unit, reading_date, source, notes) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?)`, 
-                        [system_id, nutrient.type, nutrient.value, nutrient.unit || 'mg/L', (date || new Date().toISOString()).replace('T', ' ').slice(0, 19), nutrient.source || 'manual', nutrient.notes || notes || '']);
-                    insertedReadings.push(result.insertId);
-                }
-            }
-        }        res.status(201).json({ ids: insertedReadings, message: 'Water quality and nutrient data saved to nutrient_readings table' });
-    } catch (error) {
-        console.error('Error saving water quality data:', error);
-        res.status(500).json({ error: 'Failed to save data' });
-    }
-});
+// Legacy water quality endpoints removed - use /nutrients/ endpoints instead
 
 // Delete fish health entry
 router.delete('/fish-health/entry/:entryId', async (req, res) => {
@@ -817,6 +675,368 @@ router.get('/sensors/latest/:systemId', async (req, res) => {
     } catch (error) {
         console.error('Error fetching latest sensor data:', error);
         res.status(500).json({ error: 'Failed to fetch sensor data' });
+    }
+});
+
+// Bulk import endpoints
+router.post('/import/:systemId/fish-health', async (req, res) => {
+    const { systemId } = req.params;
+    const { records } = req.body;
+
+    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+        return res.status(403).json({ error: 'Access denied to this system' });
+    }
+
+    if (!records || !Array.isArray(records)) {
+        return res.status(400).json({ error: 'records array is required' });
+    }
+
+    try {
+        const pool = getDatabase();
+        const results = [];
+        const errors = [];
+
+        for (let i = 0; i < records.length; i++) {
+            const record = records[i];
+            try {
+                // Validate required fields
+                if (!record.date) {
+                    errors.push({ row: i + 1, error: 'Date is required' });
+                    continue;
+                }
+
+                // Map tank_number to actual tank ID
+                const [tankRows] = await pool.execute(
+                    'SELECT id FROM fish_tanks WHERE system_id = ? AND (id = ? OR tank_number = ?)',
+                    [systemId, record.fish_tank_id || 1, record.fish_tank_id || 1]
+                );
+                
+                const actualTankId = tankRows && tankRows.length > 0 ? tankRows[0].id : record.fish_tank_id || 1;
+
+                const [result] = await pool.execute(`INSERT INTO fish_health 
+                    (system_id, fish_tank_id, date, count, mortality, average_weight, feed_consumption, feed_type, behavior, notes) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+                    [
+                        systemId, 
+                        actualTankId, 
+                        record.date, 
+                        toSqlValue(record.count), 
+                        toSqlValue(record.mortality), 
+                        toSqlValue(record.average_weight), 
+                        toSqlValue(record.feed_consumption), 
+                        toSqlValue(record.feed_type), 
+                        toSqlValue(record.behavior), 
+                        toSqlValue(record.notes)
+                    ]
+                );
+
+                results.push({ row: i + 1, id: result.insertId });
+            } catch (error) {
+                errors.push({ row: i + 1, error: error.message });
+            }
+        }
+
+        res.json({ 
+            imported: results.length, 
+            errors: errors.length,
+            results,
+            errorDetails: errors
+        });
+    } catch (error) {
+        console.error('Error importing fish health data:', error);
+        res.status(500).json({ error: 'Failed to import data' });
+    }
+});
+
+router.post('/import/:systemId/plant-growth', async (req, res) => {
+    const { systemId } = req.params;
+    const { records } = req.body;
+
+    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+        return res.status(403).json({ error: 'Access denied to this system' });
+    }
+
+    if (!records || !Array.isArray(records)) {
+        return res.status(400).json({ error: 'records array is required' });
+    }
+
+    try {
+        const pool = getDatabase();
+        const results = [];
+        const errors = [];
+
+        for (let i = 0; i < records.length; i++) {
+            const record = records[i];
+            try {
+                // Validate required fields
+                if (!record.date || !record.crop_type) {
+                    errors.push({ row: i + 1, error: 'Date and crop_type are required' });
+                    continue;
+                }
+
+                const [result] = await pool.execute(`INSERT INTO plant_growth 
+                    (system_id, grow_bed_id, date, crop_type, count, harvest_weight, plants_harvested, new_seedlings, pest_control, health, growth_stage, notes, batch_id, seed_variety, batch_created_date, days_to_harvest) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+                    [
+                        systemId, 
+                        toSqlValue(record.grow_bed_id), 
+                        record.date, 
+                        record.crop_type, 
+                        toSqlValue(record.count), 
+                        toSqlValue(record.harvest_weight), 
+                        toSqlValue(record.plants_harvested), 
+                        toSqlValue(record.new_seedlings), 
+                        toSqlValue(record.pest_control), 
+                        toSqlValue(record.health), 
+                        toSqlValue(record.growth_stage), 
+                        toSqlValue(record.notes), 
+                        toSqlValue(record.batch_id), 
+                        toSqlValue(record.seed_variety), 
+                        toSqlValue(record.batch_created_date), 
+                        toSqlValue(record.days_to_harvest)
+                    ]
+                );
+
+                results.push({ row: i + 1, id: result.insertId });
+            } catch (error) {
+                errors.push({ row: i + 1, error: error.message });
+            }
+        }
+
+        res.json({ 
+            imported: results.length, 
+            errors: errors.length,
+            results,
+            errorDetails: errors
+        });
+    } catch (error) {
+        console.error('Error importing plant growth data:', error);
+        res.status(500).json({ error: 'Failed to import data' });
+    }
+});
+
+router.post('/import/:systemId/nutrients', async (req, res) => {
+    const { systemId } = req.params;
+    const { records } = req.body;
+
+    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+        return res.status(403).json({ error: 'Access denied to this system' });
+    }
+
+    if (!records || !Array.isArray(records)) {
+        return res.status(400).json({ error: 'records array is required' });
+    }
+
+    try {
+        const pool = getDatabase();
+        const results = [];
+        const errors = [];
+
+        for (let i = 0; i < records.length; i++) {
+            const record = records[i];
+            try {
+                // Validate required fields
+                if (!record.date) {
+                    errors.push({ row: i + 1, error: 'Date is required' });
+                    continue;
+                }
+
+                // Transpose the wide format data into individual nutrient readings
+                const nutrientMappings = {
+                    'nitrite': { type: 'nitrite', unit: 'mg/L' },
+                    'nitrate': { type: 'nitrate', unit: 'mg/L' },
+                    'phosphorus': { type: 'phosphorus', unit: 'mg/L' },
+                    'magnesium': { type: 'magnesium', unit: 'mg/L' },
+                    'iron': { type: 'iron', unit: 'mg/L' },
+                    'zinc': { type: 'zinc', unit: 'mg/L' },
+                    'boron': { type: 'boron', unit: 'mg/L' },
+                    'manganese': { type: 'manganese', unit: 'mg/L' },
+                    'sulfur': { type: 'sulfur', unit: 'mg/L' },
+                    'copper': { type: 'copper', unit: 'mg/L' },
+                    'molybdenum': { type: 'molybdenum', unit: 'mg/L' },
+                    'chlorine': { type: 'chlorine', unit: 'mg/L' }
+                };
+
+                // Insert each nutrient parameter as a separate reading
+                for (const [fieldName, mapping] of Object.entries(nutrientMappings)) {
+                    const value = record[fieldName];
+                    
+                    // Skip empty values
+                    if (value === null || value === undefined || value === '' || isNaN(value)) {
+                        continue;
+                    }
+
+                    const [result] = await pool.execute(`INSERT INTO nutrient_readings 
+                        (system_id, nutrient_type, value, unit, reading_date, source, notes) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?)`, 
+                        [
+                            systemId, 
+                            mapping.type, 
+                            parseFloat(value), 
+                            mapping.unit, 
+                            record.date, 
+                            'import', 
+                            'Imported from nutrients spreadsheet'
+                        ]
+                    );
+
+                    results.push({ row: i + 1, parameter: mapping.type, id: result.insertId });
+                }
+
+            } catch (error) {
+                errors.push({ row: i + 1, error: error.message });
+            }
+        }
+
+        res.json({ 
+            imported: results.length, 
+            errors: errors.length,
+            results,
+            errorDetails: errors
+        });
+    } catch (error) {
+        console.error('Error importing nutrient data:', error);
+        res.status(500).json({ error: 'Failed to import data' });
+    }
+});
+
+router.post('/import/:systemId/operations', async (req, res) => {
+    const { systemId } = req.params;
+    const { records } = req.body;
+
+    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+        return res.status(403).json({ error: 'Access denied to this system' });
+    }
+
+    if (!records || !Array.isArray(records)) {
+        return res.status(400).json({ error: 'records array is required' });
+    }
+
+    try {
+        const pool = getDatabase();
+        const results = [];
+        const errors = [];
+
+        for (let i = 0; i < records.length; i++) {
+            const record = records[i];
+            try {
+                // Validate required fields
+                if (!record.date || !record.operation_type) {
+                    errors.push({ row: i + 1, error: 'Date and operation_type are required' });
+                    continue;
+                }
+
+                const [result] = await pool.execute(`INSERT INTO operations 
+                    (system_id, date, operation_type, water_volume, chemical_added, amount_added, downtime_duration, notes) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, 
+                    [
+                        systemId, 
+                        record.date, 
+                        record.operation_type, 
+                        toSqlValue(record.water_volume), 
+                        toSqlValue(record.chemical_added), 
+                        toSqlValue(record.amount_added), 
+                        toSqlValue(record.downtime_duration), 
+                        toSqlValue(record.notes)
+                    ]
+                );
+
+                results.push({ row: i + 1, id: result.insertId });
+            } catch (error) {
+                errors.push({ row: i + 1, error: error.message });
+            }
+        }
+
+        res.json({ 
+            imported: results.length, 
+            errors: errors.length,
+            results,
+            errorDetails: errors
+        });
+    } catch (error) {
+        console.error('Error importing operations data:', error);
+        res.status(500).json({ error: 'Failed to import data' });
+    }
+});
+
+// Water Quality wide format import endpoint
+router.post('/import/:systemId/water-quality', async (req, res) => {
+    const { systemId } = req.params;
+    const { records } = req.body;
+
+    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+        return res.status(403).json({ error: 'Access denied to this system' });
+    }
+
+    if (!records || !Array.isArray(records)) {
+        return res.status(400).json({ error: 'records array is required' });
+    }
+
+    try {
+        const pool = getDatabase();
+        const results = [];
+        const errors = [];
+
+        for (let i = 0; i < records.length; i++) {
+            const record = records[i];
+            try {
+                // Validate required fields
+                if (!record.date) {
+                    errors.push({ row: i + 1, error: 'Date is required' });
+                    continue;
+                }
+
+                // Transpose the wide format data into individual nutrient readings
+                const nutrientMappings = {
+                    'ph': { type: 'ph', unit: 'pH' },
+                    'salinity': { type: 'salinity', unit: 'ppt' },
+                    'nitrogen': { type: 'nitrogen', unit: 'mg/L' },
+                    'potassium': { type: 'potassium', unit: 'mg/L' },
+                    'calcium': { type: 'calcium', unit: 'mg/L' },
+                    'dissolved_oxygen': { type: 'dissolved_oxygen', unit: 'mg/L' },
+                    'temperature': { type: 'temperature', unit: '°C' }
+                };
+
+                // Insert each nutrient parameter as a separate reading
+                for (const [fieldName, mapping] of Object.entries(nutrientMappings)) {
+                    const value = record[fieldName];
+                    
+                    // Skip empty values
+                    if (value === null || value === undefined || value === '' || isNaN(value)) {
+                        continue;
+                    }
+
+                    const [result] = await pool.execute(`INSERT INTO nutrient_readings 
+                        (system_id, nutrient_type, value, unit, reading_date, source, notes) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?)`, 
+                        [
+                            systemId, 
+                            mapping.type, 
+                            parseFloat(value), 
+                            mapping.unit, 
+                            record.date, 
+                            'import', 
+                            'Imported from water quality spreadsheet'
+                        ]
+                    );
+
+                    results.push({ row: i + 1, parameter: mapping.type, id: result.insertId });
+                }
+
+            } catch (error) {
+                errors.push({ row: i + 1, error: error.message });
+            }
+        }
+
+        res.json({ 
+            imported: results.length, 
+            errors: errors.length,
+            results,
+            errorDetails: errors
+        });
+    } catch (error) {
+        console.error('Error importing water quality data:', error);
+        res.status(500).json({ error: 'Failed to import data' });
     }
 });
 

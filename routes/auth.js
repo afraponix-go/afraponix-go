@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { getDatabase } = require('../database/init-mariadb');
 const { sendPasswordResetEmail, sendVerificationEmail } = require('../utils/emailService');
+const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -14,11 +15,14 @@ const formatDateForMySQL = (date) => {
 
 // Register new user
 router.post('/register', async (req, res) => {
-    const { username, email, password, firstName, lastName } = req.body;
-    
-    console.log('📝 Registration attempt:', { username, email, firstName, lastName });
+    const { email, password, firstName, lastName } = req.body;
+    // Accounts are identified by email; username is retained internally (unique, not null)
+    // and derived from the email so existing token/display logic keeps working.
+    const username = email;
 
-    if (!username || !email || !password || !firstName || !lastName) {
+    console.log('📝 Registration attempt:', { email, firstName, lastName });
+
+    if (!email || !password || !firstName || !lastName) {
         return res.status(400).json({ error: 'All fields are required' });
     }
 
@@ -33,17 +37,20 @@ router.post('/register', async (req, res) => {
         
         // Check if user already exists
         const [existingUserRows] = await pool.execute('SELECT username, email FROM users WHERE username = ? OR email = ?', [username, email]);
-        
-        if (existingUserRows.length > 0) {            const existingUser = existingUserRows[0];
-            
+
+        if (existingUserRows.length > 0) {
+            const existingUser = existingUserRows[0];
+
             if (existingUser.email === email) {
-                return res.status(400).json({ 
+                console.log('❌ Registration failed: Email already exists -', email);
+                return res.status(400).json({
                     error: 'Email already exists',
                     field: 'email',
                     message: 'An account with this email address already exists. Please sign in instead.'
                 });
             } else if (existingUser.username === username) {
-                return res.status(400).json({ 
+                console.log('❌ Registration failed: Username already exists -', username);
+                return res.status(400).json({
                     error: 'Username already exists',
                     field: 'username',
                     message: 'This username is already taken. Please choose a different one.'
@@ -67,28 +74,66 @@ router.post('/register', async (req, res) => {
             [username, email, firstName, lastName, passwordHash, 0, verificationToken, formatDateForMySQL(verificationTokenExpiry), verificationCode]);
         
         const userId = result.insertId;
-        // Send verification email with the code
-        const emailResult = await sendVerificationEmail(email, verificationToken, firstName, verificationCode);
-        
-        if (!emailResult.success) {
-            console.error('Failed to send verification email:', emailResult.error);
-            // Note: We still create the user but log the email failure
-        }
 
-        res.status(201).json({
-            message: 'Registration successful! Please check your email to verify your account.',
-            needsVerification: true,
-            user: { 
-                id: userId, 
-                username, 
-                email, 
-                firstName, 
-                lastName,
-                userRole: 'basic',
-                subscriptionStatus: 'basic',
-                emailVerified: false
+        // Check if SMTP is configured
+        const smtpConfigured = process.env.SMTP_USER && process.env.SMTP_PASS;
+
+        if (smtpConfigured) {
+            // Send verification email with the code (with timeout)
+            try {
+                const emailResult = await Promise.race([
+                    sendVerificationEmail(email, verificationToken, firstName, verificationCode),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Email timeout')), 5000))
+                ]);
+
+                if (!emailResult.success) {
+                    console.error('Failed to send verification email:', emailResult.error);
+                }
+            } catch (error) {
+                console.error('Email sending error:', error.message);
             }
-        });
+
+            res.status(201).json({
+                message: 'Registration successful! Please check your email to verify your account.',
+                needsVerification: true,
+                user: {
+                    id: userId,
+                    username,
+                    email,
+                    firstName,
+                    lastName,
+                    userRole: 'basic',
+                    subscriptionStatus: 'basic',
+                    emailVerified: false
+                }
+            });
+        } else {
+            // SMTP not configured - auto-verify user for testing
+            console.log('📧 SMTP not configured - auto-verifying user for testing');
+            await pool.execute('UPDATE users SET email_verified = 1 WHERE id = ?', [userId]);
+
+            // Create JWT token
+            const token = jwt.sign(
+                { userId, username, email },
+                process.env.JWT_SECRET || 'your-secret-key-change-this',
+                { expiresIn: '24h' }
+            );
+
+            res.status(201).json({
+                message: 'Registration successful!',
+                token,
+                user: {
+                    id: userId,
+                    username,
+                    email,
+                    firstName,
+                    lastName,
+                    userRole: 'basic',
+                    subscriptionStatus: 'basic',
+                    emailVerified: true
+                }
+            });
+        }
 
     } catch (error) {
         console.error('Registration error:', error);
@@ -585,6 +630,54 @@ router.post('/check-username', async (req, res) => {
         console.error('Username check error:', error);
         res.status(500).json({ error: 'Failed to check username availability' });
     }
+});
+
+// Get current user info
+router.get('/user', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const pool = getDatabase();
+        
+        const [result] = await pool.execute(
+            'SELECT id, username, email, user_role, subscription_status FROM users WHERE id = ?',
+            [userId]
+        );
+
+        if (result.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const user = result[0];
+        console.log('🔍 User info retrieved:', {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            user_role: user.user_role
+        });
+
+        res.json({
+            success: true,
+            user: user
+        });
+
+    } catch (error) {
+        console.error('Failed to get user info:', error);
+        res.status(500).json({ error: 'Failed to get user info' });
+    }
+});
+
+// Get CSRF token
+router.get('/csrf-token', (req, res) => {
+    // Generate a simple CSRF token
+    const token = require('crypto').randomBytes(32).toString('hex');
+    
+    // In a real application, you would store this token in session/database
+    // For now, we'll just return it
+    res.json({
+        success: true,
+        token: token,
+        message: 'CSRF token generated'
+    });
 });
 
 module.exports = router;
