@@ -11,7 +11,13 @@
     "dev:db:reset": "docker-compose -f docker-compose.dev.yml down -v && docker-compose -f docker-compose.dev.yml up -d",
     "dev:setup": "npm run dev:db:up && echo 'Waiting for database...' && sleep 10 && npm run dev",
     "staging": "NODE_ENV=staging node server.js",
-    "client": "python3 -m http.server 8000"
+    "client": "python3 -m http.server 8000",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:auth": "jest tests/integration/authentication.test.js --verbose",
+    "test:security": "node testing/auth-scanner.js && npm run test:auth",
+    "pretest": "node testing/auth-scanner.js || echo '⚠️ Authentication issues detected - tests will show details'"
   },
   "dependencies": {
     "axios": "^1.11.0",
@@ -25,12 +31,20 @@
     "mysql2": "^3.14.2",
     "node-fetch": "^2.7.0",
     "nodemailer": "^7.0.5",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@babel/core": "^7.28.3",
+    "@babel/preset-env": "^7.28.3",
+    "babel-jest": "^30.0.5",
     "dotenv": "^17.2.1",
     "dotenv-cli": "^7.4.4",
-    "nodemon": "^3.1.10"
+    "jest": "^30.0.5",
+    "jest-environment-jsdom": "^30.0.5",
+    "jsdom": "^26.1.0",
+    "nodemon": "^3.1.10",
+    "puppeteer": "^24.23.0"
   },
   "keywords": [
     "aquaponics",
