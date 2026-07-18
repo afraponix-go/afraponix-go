@@ -10,6 +10,7 @@ import { WaterQualityPage } from '../features/water/WaterQualityPage'
 import { FishPage } from '../features/fish/FishPage'
 import { PlantsPage } from '../features/plants/PlantsPage'
 import { GrowBedsPage } from '../features/growbeds/GrowBedsPage'
+import { FishStockingCalculator } from '../features/calculator/FishStockingCalculator'
 
 const DASHBOARD_TABS = [
   { to: '/', label: 'Overview', end: true },
@@ -23,6 +24,10 @@ const DATA_TABS = [
 const SETTINGS_TABS = [
   { to: '/settings', label: 'Grow Beds', end: true },
   { to: '/settings/system', label: 'System' },
+]
+const CALC_TABS = [
+  { to: '/calculator', label: 'Fish Stocking', end: true },
+  { to: '/calculator/nutrients', label: 'Nutrient Dosing' },
 ]
 
 export const router = createBrowserRouter([
@@ -43,8 +48,15 @@ export const router = createBrowserRouter([
               { path: 'charts', element: <ChartsPage /> },
             ],
           },
-          // Calculator
-          { path: 'calculator', element: <Placeholder title="Calculator" note="Nutrient dosing and system calculators will live here." /> },
+          // Calculator (Fish Stocking · Nutrient Dosing)
+          {
+            path: 'calculator',
+            element: <SubTabLayout items={CALC_TABS} />,
+            children: [
+              { index: true, element: <FishStockingCalculator /> },
+              { path: 'nutrients', element: <Placeholder title="Nutrient Dosing" note="Crop-target-based dosing calculator (reservoir volume, target EC, current levels). Coming next." /> },
+            ],
+          },
           // Data Capture (Water Quality · Operations · Import/Export)
           {
             path: 'data',
