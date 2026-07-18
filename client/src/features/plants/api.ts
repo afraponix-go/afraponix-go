@@ -31,3 +31,40 @@ export function prettyCrop(crop: string): string {
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ')
 }
+
+// Allocation CRUD (routes/plants.js). POST upserts by (system, bed, crop).
+export function saveAllocation(input: {
+  systemId: string
+  growBedId: number
+  cropType: string
+  percentageAllocated: number
+  plantsPlanted?: number
+  datePlanted?: string
+  plantSpacing?: number
+}) {
+  return api('/plants/allocations', { method: 'POST', body: input })
+}
+
+export function updateAllocation(id: number, input: { cropType: string; percentageAllocated: number; plantsPlanted?: number }) {
+  return api(`/plants/allocations/${id}`, { method: 'PUT', body: input })
+}
+
+export function deleteAllocation(id: number) {
+  return api(`/plants/allocations/${id}`, { method: 'DELETE' })
+}
+
+// Canonical estimate of how many plants a % allocation of a bed holds.
+// Vertical beds scale by vertical count; area beds use a square spacing grid.
+export function plantsForAllocation(
+  bed: { bed_type?: string | null; equivalent_m2?: number | null; vertical_count?: number | null; plants_per_vertical?: number | null },
+  percentage: number,
+  spacingCm: number,
+): number {
+  const pct = Math.max(0, percentage) / 100
+  if ((bed.bed_type ?? '').toLowerCase() === 'vertical' && bed.vertical_count && bed.plants_per_vertical) {
+    return Math.floor(pct * bed.vertical_count * bed.plants_per_vertical)
+  }
+  const areaM2 = pct * (bed.equivalent_m2 ?? 0)
+  const spacing = spacingCm > 0 ? spacingCm : 30
+  return Math.floor((areaM2 * 10000) / (spacing * spacing))
+}

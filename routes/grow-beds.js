@@ -7,16 +7,26 @@ const router = express.Router();
 // All routes require authentication
 router.use(authenticateToken);
 
+// Confirm the authenticated user owns the given system.
+async function verifyOwnership(pool, systemId, userId) {
+    const [rows] = await pool.execute('SELECT id FROM systems WHERE id = ? AND user_id = ?', [systemId, userId]);
+    return rows.length > 0;
+}
+
 // Get all grow beds for a system
 router.get('/system/:systemId', async (req, res) => {
-    // Using connection pool - no manual connection management
-
     try {
         const pool = getDatabase();
+
+        if (!(await verifyOwnership(pool, req.params.systemId, req.user.userId))) {
+            return res.status(404).json({ error: 'System not found or access denied' });
+        }
+
         const [growBeds] = await pool.execute(
-            'SELECT * FROM grow_beds WHERE system_id = ? ORDER BY bed_number', 
+            'SELECT * FROM grow_beds WHERE system_id = ? ORDER BY bed_number',
             [req.params.systemId]
-        );        res.json(growBeds);
+        );
+        res.json(growBeds);
 
     } catch (error) {
         console.error('Error fetching grow beds:', error);

@@ -194,3 +194,23 @@
 .link-btn:hover {
   text-decoration: underline;
 }
+
+/* Beds & allocation cards */
+.bed-empty {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+.alloc-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+}
+.alloc-pct {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}

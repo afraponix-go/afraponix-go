@@ -428,14 +428,20 @@ router.put('/allocations/:id', async (req, res) => {
         });
     }
 
-    // Using connection pool - no manual connection management
-
     try {
         const pool = getDatabase();
-        
-        // Update the allocation
+
+        // Ownership: the allocation must belong to a system owned by the user.
+        const [owned] = await pool.execute(
+            'SELECT pa.id FROM plant_allocations pa JOIN systems s ON pa.system_id = s.id WHERE pa.id = ? AND s.user_id = ?',
+            [allocationId, req.user.userId]
+        );
+        if (owned.length === 0) {
+            return res.status(404).json({ error: 'Allocation not found or access denied' });
+        }
+
         await pool.execute(`
-            UPDATE plant_allocations 
+            UPDATE plant_allocations
             SET crop_type = ?, percentage_allocated = ?, plants_planted = ?
             WHERE id = ?
         `, [cropType, percentageAllocated, plantsPlanted || 0, allocationId]);
@@ -451,15 +457,18 @@ router.put('/allocations/:id', async (req, res) => {
 
 // Delete plant allocation
 router.delete('/allocations/:id', async (req, res) => {
-    // Using connection pool - no manual connection management
-
     try {
         const pool = getDatabase();
-        
-        await pool.execute(
-            'DELETE FROM plant_allocations WHERE id = ?',
-            [req.params.id]
+
+        const [owned] = await pool.execute(
+            'SELECT pa.id FROM plant_allocations pa JOIN systems s ON pa.system_id = s.id WHERE pa.id = ? AND s.user_id = ?',
+            [req.params.id, req.user.userId]
         );
+        if (owned.length === 0) {
+            return res.status(404).json({ error: 'Allocation not found or access denied' });
+        }
+
+        await pool.execute('DELETE FROM plant_allocations WHERE id = ?', [req.params.id]);
 
         res.json({ success: true, message: 'Plant allocation removed successfully' });
 
