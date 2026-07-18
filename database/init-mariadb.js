@@ -76,7 +76,7 @@ async function createTables(connection) {
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         ) ENGINE=InnoDB`,
 
-        // Water quality table
+        // Water quality table - stores all water quality parameters in one record
         `CREATE TABLE IF NOT EXISTS water_quality (
             id INT PRIMARY KEY AUTO_INCREMENT,
             system_id VARCHAR(255) NOT NULL,
