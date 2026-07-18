@@ -18,24 +18,31 @@ export function AppShell() {
   const { user, signOut } = useAuth()
   const { systems, activeId, setActiveId } = useSystems()
   const name = user?.firstName || user?.email || 'Account'
+  const initial = (user?.firstName?.[0] || user?.email?.[0] || '?').toUpperCase()
   return (
     <div className="shell">
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden />
-          Afraponix Go
+          <span className="brand-name">Afraponix Go</span>
         </div>
         <div className="account">
           {systems.length > 0 && (
-            <select className="sys-select" value={activeId ?? ''} onChange={(e) => setActiveId(e.target.value)} aria-label="Active system">
-              {systems.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.system_name}
-                </option>
-              ))}
-            </select>
+            <label className="sys-switch">
+              <span className="sys-dot" aria-hidden />
+              <select className="sys-select" value={activeId ?? ''} onChange={(e) => setActiveId(e.target.value)} aria-label="Active system">
+                {systems.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.system_name}
+                  </option>
+                ))}
+              </select>
+            </label>
           )}
-          <span className="who">{name}</span>
+          <div className="user-chip" title={user?.email ?? undefined}>
+            <span className="avatar">{initial}</span>
+            <span className="who">{name}</span>
+          </div>
           <button className="ghost" onClick={signOut}>
             Log out
           </button>
