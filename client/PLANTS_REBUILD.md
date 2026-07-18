@@ -142,4 +142,6 @@ Each phase: verify in-browser against the demo system, then commit.
 - 2026-07-18: Audit complete; plan locked.
 - 2026-07-18: ✅ Phase 0 — `GET /plants/batches/:systemId` + ownership checks on /plants endpoints (commit 3d99681).
 - 2026-07-18: ✅ Phase 1 — Plants SubTabLayout + Overview (KPIs, ready-to-harvest, plants-by-crop) via client batches.ts (commit 8358b46).
-- Next: Phase 2 — Plantings (batch list, New Planting modal, Move batch).
+- 2026-07-18: ✅ Phase 2 — Plantings tab: batch list by crop, New Planting modal (crop-reference + custom crops, days-to-harvest prefill), Move batch (commit 1e2f9bb). New client modules: plantGrowth.ts, crops.ts.
+- 2026-07-18: ✅ Phase 3 — Harvest tab: ready-to-harvest list + harvest history table with edit/delete; HarvestModal (plants + fruit-only, weight kg→grams, quality) available from Harvest tab and Plantings cards; EditEntryModal. Verified record/delete/edit end-to-end.
+- Next: Phase 4 — Beds & Allocation (bed config moved here + allocation CRUD; canonical capacity formula + bed_type normalization).

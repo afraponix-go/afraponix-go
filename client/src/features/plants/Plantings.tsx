@@ -5,6 +5,7 @@ import { fetchBatches, type Batch, type BatchStatus } from './batches'
 import { prettyCrop } from './api'
 import { NewPlantingModal } from './NewPlantingModal'
 import { MoveBatchModal } from './MoveBatchModal'
+import { HarvestModal } from './HarvestModal'
 import '../dashboard/dashboard.css'
 import '../fish/fish.css'
 import './plants.css'
@@ -42,6 +43,7 @@ export function Plantings() {
   const [showAll, setShowAll] = useState(false)
   const [showNew, setShowNew] = useState(false)
   const [moving, setMoving] = useState<Batch | null>(null)
+  const [harvesting, setHarvesting] = useState<Batch | null>(null)
   const { data: batches = [], isLoading, isError } = useQuery({
     queryKey: ['plant-batches', activeId],
     queryFn: () => fetchBatches(activeId as string),
@@ -101,6 +103,7 @@ export function Plantings() {
                       <div className="density-bar"><div className={`density-fill ${s.cls}`} style={{ width: `${pct}%` }} /></div>
                     </div>
                     <div className="tank-actions">
+                      <button className="tank-action-btn" onClick={() => setHarvesting(b)} disabled={b.remaining <= 0}>Harvest</button>
                       <button className="tank-action-btn" onClick={() => setMoving(b)} disabled={b.remaining <= 0}>Move</button>
                     </div>
                   </div>
@@ -113,6 +116,7 @@ export function Plantings() {
 
       {showNew && <NewPlantingModal onClose={() => setShowNew(false)} />}
       {moving && <MoveBatchModal batch={moving} onClose={() => setMoving(null)} />}
+      {harvesting && <HarvestModal batch={harvesting} onClose={() => setHarvesting(null)} />}
     </div>
   )
 }

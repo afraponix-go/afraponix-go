@@ -14,6 +14,7 @@ import { FishHealth } from '../features/fish/FishHealth'
 import { FishDataCapture } from '../features/fish/FishDataCapture'
 import { PlantsOverview } from '../features/plants/PlantsOverview'
 import { Plantings } from '../features/plants/Plantings'
+import { Harvest } from '../features/plants/Harvest'
 import { GrowBedsPage } from '../features/growbeds/GrowBedsPage'
 import { FishStockingCalculator } from '../features/calculator/FishStockingCalculator'
 import { OperationsPage } from '../features/operations/OperationsPage'
@@ -106,7 +107,7 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <PlantsOverview /> },
               { path: 'plantings', element: <Plantings /> },
-              { path: 'harvest', element: <Placeholder title="Harvest" note="Record harvests from a batch and view growth/harvest history. Coming next." /> },
+              { path: 'harvest', element: <Harvest /> },
               { path: 'beds', element: <Placeholder title="Beds & Allocation" note="Grow-bed configuration and per-bed crop allocation. Coming next." /> },
               { path: 'crops', element: <Placeholder title="Crops" note="Crop reference, custom crops, and seed varieties. Coming next." /> },
             ],

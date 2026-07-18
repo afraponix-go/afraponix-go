@@ -1,4 +1,7 @@
+import { z } from 'zod'
 import { api } from '../../lib/apiClient'
+
+const numish = z.union([z.string(), z.number()]).nullable().optional().transform((v) => (v == null || v === '' ? null : Number(v)))
 
 // A batch id groups plant_growth rows. Matches the old app's format.
 export function generateBatchId(): string {
@@ -47,4 +50,91 @@ export function moveBatch(systemId: string, batchId: string, newGrowBedId: numbe
     method: 'PUT',
     body: { newGrowBedId },
   })
+}
+
+// Record a harvest against a batch: one plant_growth row with plants_harvested
+// (0 = fruit-only, leaves the plants in the bed) and weight stored in grams.
+export function recordHarvest(
+  systemId: string,
+  input: {
+    date: string
+    grow_bed_id: number
+    crop_type: string
+    batch_id: string
+    plants_harvested: number
+    harvest_weight_kg?: number
+    quality?: string
+    notes?: string
+  },
+) {
+  return api(`/data/plant-growth/${systemId}`, {
+    method: 'POST',
+    body: {
+      date: input.date,
+      grow_bed_id: input.grow_bed_id,
+      crop_type: input.crop_type,
+      plants_harvested: input.plants_harvested,
+      harvest_weight: input.harvest_weight_kg ? Math.round(input.harvest_weight_kg * 1000) : null,
+      health: input.quality ?? null,
+      growth_stage: 'harvest',
+      notes: input.notes ?? null,
+      batch_id: input.batch_id,
+    },
+  })
+}
+
+// A raw plant_growth row (the event log). Harvest rows have plants_harvested
+// and/or harvest_weight; planting rows have new_seedlings.
+export const plantRowSchema = z.object({
+  id: z.number(),
+  date: z.string().nullable().optional(),
+  grow_bed_id: numish,
+  crop_type: z.string().nullable().optional(),
+  count: numish,
+  harvest_weight: numish,
+  plants_harvested: numish,
+  new_seedlings: numish,
+  health: z.string().nullable().optional(),
+  growth_stage: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  batch_id: z.string().nullable().optional(),
+  seed_variety: z.string().nullable().optional(),
+  days_to_harvest: numish,
+  pest_control: z.string().nullable().optional(),
+})
+export type PlantRow = z.infer<typeof plantRowSchema>
+
+export async function fetchPlantGrowth(systemId: string): Promise<PlantRow[]> {
+  const data = await api<unknown>(`/data/plant-growth/${systemId}`)
+  const parsed = z.array(plantRowSchema).safeParse(data)
+  return parsed.success ? parsed.data : []
+}
+
+export function isHarvestRow(r: PlantRow): boolean {
+  return (r.plants_harvested ?? 0) > 0 || (r.harvest_weight ?? 0) > 0
+}
+
+// Update an existing row. The PUT endpoint overwrites the listed columns, so we
+// send the row's current values with the edits applied to avoid clobbering.
+export function updatePlantEntry(
+  entryId: number,
+  row: {
+    date: string | null
+    grow_bed_id: number | null
+    crop_type: string | null
+    count: number | null
+    harvest_weight: number | null
+    plants_harvested: number | null
+    new_seedlings: number | null
+    pest_control: string | null
+    health: string | null
+    growth_stage: string | null
+    notes: string | null
+  },
+) {
+  return api(`/data/plant-growth/${entryId}`, { method: 'PUT', body: row })
+}
+
+export function deletePlantEntry(systemId: string, recordId: number) {
+  return api(`/data/plant-growth/${systemId}/${recordId}`, { method: 'DELETE' })
 }
