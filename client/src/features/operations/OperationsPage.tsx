@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
 import { ApiError } from '../../lib/apiClient'
-import { createOperation, fetchOperations, OPERATION_TYPES, type OperationInput } from './api'
+import { createOperation, fetchOperations, OPERATION_TYPES, OP_FIELDS, OP_FIELD_META, type OperationInput, type OpField } from './api'
 import '../dashboard/dashboard.css'
 import '../water/water.css'
 import './operations.css'
@@ -24,6 +24,12 @@ export function OperationsPage() {
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
+  // Changing the operation type resets contextual fields so stale values from a
+  // previous type are never submitted, and only the relevant fields show.
+  const setOperation = (op: string) => setForm((f) => ({ date: f.date, operation_type: op, notes: f.notes ?? '' }))
+
+  const shownFields: OpField[] = OP_FIELDS[form.operation_type] ?? []
+
   const mutation = useMutation({
     mutationFn: (input: OperationInput) => createOperation(activeId as string, input),
     onSuccess: () => {
@@ -43,18 +49,18 @@ export function OperationsPage() {
       return
     }
     const input: OperationInput = { date: form.date || today(), operation_type: form.operation_type }
-    if (form.water_volume) {
-      const n = Number(form.water_volume)
-      if (!Number.isFinite(n)) return setError('Water volume must be a number.')
-      input.water_volume = n
+    for (const key of shownFields) {
+      const raw = form[key]
+      if (!raw) continue
+      const meta = OP_FIELD_META[key]
+      if (meta.kind === 'number') {
+        const n = Number(raw)
+        if (!Number.isFinite(n)) return setError(`${meta.label} must be a number.`)
+        ;(input as Record<string, unknown>)[key] = n
+      } else {
+        ;(input as Record<string, unknown>)[key] = raw
+      }
     }
-    if (form.downtime_duration) {
-      const n = Number(form.downtime_duration)
-      if (!Number.isFinite(n)) return setError('Downtime must be a number.')
-      input.downtime_duration = n
-    }
-    if (form.chemical_added) input.chemical_added = form.chemical_added
-    if (form.amount_added) input.amount_added = form.amount_added
     if (form.notes) input.notes = form.notes
     mutation.mutate(input)
   }
@@ -79,7 +85,7 @@ export function OperationsPage() {
           </div>
           <div className="field">
             <label htmlFor="operation_type">Operation</label>
-            <select id="operation_type" className="op-select" value={form.operation_type ?? ''} onChange={(e) => set('operation_type', e.target.value)}>
+            <select id="operation_type" className="op-select" value={form.operation_type ?? ''} onChange={(e) => setOperation(e.target.value)}>
               {OPERATION_TYPES.map((t) => (
                 <option key={t} value={t}>
                   {t}
@@ -87,22 +93,26 @@ export function OperationsPage() {
               ))}
             </select>
           </div>
-          <div className="field">
-            <label htmlFor="water_volume">Water changed <span className="unit-hint">(L)</span></label>
-            <input id="water_volume" type="number" step="1" inputMode="decimal" value={form.water_volume ?? ''} onChange={(e) => set('water_volume', e.target.value)} placeholder="—" />
-          </div>
-          <div className="field">
-            <label htmlFor="downtime_duration">Downtime <span className="unit-hint">(hrs)</span></label>
-            <input id="downtime_duration" type="number" step="0.5" inputMode="decimal" value={form.downtime_duration ?? ''} onChange={(e) => set('downtime_duration', e.target.value)} placeholder="—" />
-          </div>
-          <div className="field">
-            <label htmlFor="chemical_added">Chemical added</label>
-            <input id="chemical_added" type="text" value={form.chemical_added ?? ''} onChange={(e) => set('chemical_added', e.target.value)} placeholder="e.g. pH Down" />
-          </div>
-          <div className="field">
-            <label htmlFor="amount_added">Amount</label>
-            <input id="amount_added" type="text" value={form.amount_added ?? ''} onChange={(e) => set('amount_added', e.target.value)} placeholder="e.g. 50 mL" />
-          </div>
+          {shownFields.map((key) => {
+            const meta = OP_FIELD_META[key]
+            return (
+              <div className="field" key={key}>
+                <label htmlFor={key}>
+                  {meta.label}
+                  {meta.unit && <span className="unit-hint"> ({meta.unit})</span>}
+                </label>
+                <input
+                  id={key}
+                  type={meta.kind === 'number' ? 'number' : 'text'}
+                  step={meta.step}
+                  inputMode={meta.kind === 'number' ? 'decimal' : undefined}
+                  value={form[key] ?? ''}
+                  onChange={(e) => set(key, e.target.value)}
+                  placeholder={meta.placeholder}
+                />
+              </div>
+            )
+          })}
           <div className="field wq-notes">
             <label htmlFor="notes">Notes</label>
             <input id="notes" type="text" value={form.notes ?? ''} onChange={(e) => set('notes', e.target.value)} placeholder="Optional" />
