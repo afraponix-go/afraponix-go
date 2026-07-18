@@ -3,7 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
 import { fetchFishInventory, type FishTank } from './api'
 import { TankActionModal, type TankAction } from './TankActionModal'
+import { FeedingModal } from './FeedingModal'
+import { fetchFeedingLog } from './feeding'
 import '../dashboard/dashboard.css'
+import '../water/water.css'
 import './fish.css'
 
 function sum(tanks: FishTank[], key: keyof FishTank) {
@@ -29,9 +32,15 @@ function fmt(n: number | null, digits = 0) {
 export function FishPage() {
   const { activeId, activeSystem } = useSystems()
   const [modal, setModal] = useState<{ tank: FishTank; action: TankAction } | null>(null)
+  const [showFeeding, setShowFeeding] = useState(false)
   const { data: tanks = [], isLoading, isError } = useQuery({
     queryKey: ['fish-inventory', activeId],
     queryFn: () => fetchFishInventory(activeId as string),
+    enabled: !!activeId,
+  })
+  const { data: feedingLog = [] } = useQuery({
+    queryKey: ['feeding-log', activeId],
+    queryFn: () => fetchFeedingLog(activeId as string),
     enabled: !!activeId,
   })
 
@@ -87,8 +96,47 @@ export function FishPage() {
           ))}
       </div>
 
+      <div className="feed-head">
+        <h2 className="section-title" style={{ margin: 0 }}>Feeding</h2>
+        <button className="btn feed-btn" onClick={() => setShowFeeding(true)}>+ Log feeding</button>
+      </div>
+      {feedingLog.length === 0 ? (
+        <div className="empty">No feeding logged yet.</div>
+      ) : (
+        <div className="wq-table-wrap">
+          <table className="wq-table op-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Tank</th>
+                <th>Feed (g)</th>
+                <th>Type</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {feedingLog.map((r, i) => {
+                const tankNo = tanks.find((t) => t.fish_tank_id === r.fish_tank_id)?.tank_number
+                return (
+                  <tr key={r.id ?? i}>
+                    <td>{r.date ? new Date(r.date).toLocaleDateString() : '—'}</td>
+                    <td>{tankNo != null ? `Tank ${tankNo}` : `#${r.fish_tank_id ?? '—'}`}</td>
+                    <td>{r.feed_consumption ?? '—'}</td>
+                    <td className="op-text">{r.feed_type || '—'}</td>
+                    <td className="op-text">{r.notes || '—'}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {modal && activeId && (
         <TankActionModal systemId={activeId} tank={modal.tank} action={modal.action} onClose={() => setModal(null)} />
+      )}
+      {showFeeding && activeId && tanks.length > 0 && (
+        <FeedingModal systemId={activeId} tanks={tanks} onClose={() => setShowFeeding(false)} />
       )}
     </div>
   )
