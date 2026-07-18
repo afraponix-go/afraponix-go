@@ -17,7 +17,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: 18px 18px 14px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
 }
 .chart-legend {
   display: flex;
@@ -31,6 +31,6 @@
   width: 22px;
   height: 12px;
   border-radius: 3px;
-  background: color-mix(in srgb, #5ba83f 22%, transparent);
-  border: 1px solid color-mix(in srgb, #5ba83f 40%, transparent);
+  background: color-mix(in srgb, var(--brand-green) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--brand-green) 38%, transparent);
 }

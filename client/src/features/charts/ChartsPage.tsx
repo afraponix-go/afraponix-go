@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   ResponsiveContainer,
@@ -15,7 +15,27 @@ import { CHARTABLE, fetchSeries, type Chartable } from './api'
 import '../dashboard/dashboard.css'
 import './charts.css'
 
-const GREEN = '#5ba83f'
+// Read a CSS custom property and keep it current across theme changes, so the
+// chart's colors track light/dark like the rest of the app.
+function useCssVar(name: string, fallback: string) {
+  const [val, setVal] = useState(fallback)
+  useEffect(() => {
+    const read = () => {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+      if (v) setVal(v)
+    }
+    read()
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    mq.addEventListener('change', read)
+    const obs = new MutationObserver(read)
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => {
+      mq.removeEventListener('change', read)
+      obs.disconnect()
+    }
+  }, [name])
+  return val
+}
 
 function Stat({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
@@ -34,6 +54,9 @@ export function ChartsPage() {
   const [param, setParam] = useState<string>('temperature')
   const def = CHARTABLE.find((c) => c.key === param) as Chartable
 
+  const accent = useCssVar('--accent', '#1462a8')
+  const green = useCssVar('--brand-green', '#4f9d3a')
+
   const { data: series = [], isLoading, isError } = useQuery({
     queryKey: ['series', activeId, param],
     queryFn: () => fetchSeries(activeId as string, param),
@@ -48,6 +71,7 @@ export function ChartsPage() {
   const max = values.length ? Math.max(...values) : null
   const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null
   const fmt = (n: number | null) => (n == null ? '—' : n.toFixed(def.unit === '' ? 2 : 1))
+  const lastIndex = series.length - 1
 
   return (
     <div>
@@ -83,31 +107,43 @@ export function ChartsPage() {
           <div className="empty" style={{ border: 'none' }}>No readings for {def.label} yet.</div>
         ) : (
           <ResponsiveContainer width="100%" height={340}>
-            <AreaChart data={series} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+            <AreaChart data={series} margin={{ top: 10, right: 18, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={GREEN} stopOpacity={0.28} />
-                  <stop offset="100%" stopColor={GREEN} stopOpacity={0.02} />
+                  <stop offset="0%" stopColor={accent} stopOpacity={0.24} />
+                  <stop offset="100%" stopColor={accent} stopOpacity={0.02} />
                 </linearGradient>
               </defs>
               {(def.min != null || def.max != null) && (
-                <ReferenceArea
-                  y1={def.min ?? undefined}
-                  y2={def.max ?? undefined}
-                  fill={GREEN}
-                  fillOpacity={0.06}
-                  ifOverflow="extendDomain"
-                />
+                <ReferenceArea y1={def.min ?? undefined} y2={def.max ?? undefined} fill={green} fillOpacity={0.08} ifOverflow="extendDomain" />
               )}
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 12, fill: 'var(--ink-faint)' }} tickLine={false} axisLine={{ stroke: 'var(--line)' }} minTickGap={20} />
-              <YAxis tick={{ fontSize: 12, fill: 'var(--ink-faint)' }} tickLine={false} axisLine={false} width={44} />
+              <CartesianGrid strokeDasharray="2 4" stroke="var(--line)" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'var(--ink-faint)' }} tickLine={false} axisLine={{ stroke: 'var(--line)' }} minTickGap={24} />
+              <YAxis tick={{ fontSize: 11, fill: 'var(--ink-faint)' }} tickLine={false} axisLine={false} width={40} />
               <Tooltip
-                contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, fontSize: 13 }}
-                labelStyle={{ color: 'var(--ink-faint)' }}
+                cursor={{ stroke: accent, strokeWidth: 1, strokeDasharray: '3 3' }}
+                contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, fontSize: 13, boxShadow: 'var(--shadow)' }}
+                labelStyle={{ color: 'var(--ink-faint)', fontWeight: 600 }}
+                itemStyle={{ color: 'var(--ink)' }}
                 formatter={(v) => [`${v}${def.unit ? ' ' + def.unit : ''}`, def.label]}
               />
-              <Area type="monotone" dataKey="value" stroke={GREEN} strokeWidth={2} fill="url(#fill)" dot={false} activeDot={{ r: 4 }} isAnimationActive={false} />
+              <Area
+                type="monotone"
+                dataKey="value"
+                stroke={accent}
+                strokeWidth={2}
+                fill="url(#fill)"
+                isAnimationActive={false}
+                activeDot={{ r: 4, strokeWidth: 0 }}
+                dot={(props) => {
+                  const { cx, cy, index, key } = props as { cx: number; cy: number; index: number; key?: string }
+                  return index === lastIndex ? (
+                    <circle key={key} cx={cx} cy={cy} r={4} fill={accent} stroke="var(--surface)" strokeWidth={2} />
+                  ) : (
+                    <g key={key} />
+                  )
+                }}
+              />
             </AreaChart>
           </ResponsiveContainer>
         )}
