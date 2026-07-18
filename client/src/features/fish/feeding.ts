@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { api } from '../../lib/apiClient'
 
-export const FEED_TYPES = ['Floating pellets', 'Sinking pellets', 'Growth feed', 'Fingerling feed', 'Other']
+export const FEED_TYPES = ['Crumble', 'Pellet #2', 'Pellet #3', 'Pellet #4', 'Pellet #5', 'Pellet #6', 'Other']
 
 // --- Smart feed recommendation -------------------------------------------
 // Daily feed (g) = biomass × size rate × temperature response.
