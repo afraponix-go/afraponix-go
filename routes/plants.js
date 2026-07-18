@@ -7,13 +7,21 @@ const router = express.Router();
 // All routes require authentication
 router.use(authenticateToken);
 
+// Confirm the authenticated user owns the given system.
+async function verifyOwnership(pool, systemId, userId) {
+    const [rows] = await pool.execute('SELECT id FROM systems WHERE id = ? AND user_id = ?', [systemId, userId]);
+    return rows.length > 0;
+}
+
 // Get plant allocations for a system
 router.get('/allocations/:systemId', async (req, res) => {
-    // Using connection pool - no manual connection management
-
     try {
         const pool = getDatabase();
-        
+
+        if (!(await verifyOwnership(pool, req.params.systemId, req.user.userId))) {
+            return res.status(404).json({ error: 'System not found or access denied' });
+        }
+
         const [allocations] = await pool.execute(`
             SELECT pa.*, gb.bed_name, gb.bed_type, gb.equivalent_m2
             FROM plant_allocations pa
@@ -27,7 +35,82 @@ router.get('/allocations/:systemId', async (req, res) => {
     } catch (error) {
         console.error('Error fetching plant allocations:', error);
         res.status(500).json({ error: 'Failed to fetch plant allocations' });
-    } finally {
+    }
+});
+
+// Server-side batch aggregation. Plants are event-sourced in plant_growth; a
+// "batch" is all rows sharing a batch_id. We aggregate planted vs harvested
+// here so the client consumes clean batch objects instead of re-deriving them.
+router.get('/batches/:systemId', async (req, res) => {
+    try {
+        const pool = getDatabase();
+
+        if (!(await verifyOwnership(pool, req.params.systemId, req.user.userId))) {
+            return res.status(404).json({ error: 'System not found or access denied' });
+        }
+
+        const [rows] = await pool.execute(`
+            SELECT
+                pg.batch_id,
+                MAX(pg.crop_type)                                   AS crop_type,
+                gb.id                                               AS grow_bed_id,
+                gb.bed_name, gb.bed_type, gb.bed_number,
+                MAX(pg.seed_variety)                                AS seed_variety,
+                MAX(pg.days_to_harvest)                             AS days_to_harvest,
+                COALESCE(MAX(pg.batch_created_date), MIN(pg.date))  AS planted_date,
+                MAX(pg.date)                                        AS last_event_date,
+                COALESCE(SUM(pg.new_seedlings), 0)                  AS planted,
+                COALESCE(SUM(pg.plants_harvested), 0)               AS harvested,
+                COALESCE(SUM(pg.harvest_weight), 0)                 AS harvest_weight_g
+            FROM plant_growth pg
+            LEFT JOIN grow_beds gb ON pg.grow_bed_id = gb.id
+            WHERE pg.system_id = ? AND pg.batch_id IS NOT NULL AND pg.batch_id <> ''
+            GROUP BY pg.batch_id, gb.id, gb.bed_name, gb.bed_type, gb.bed_number
+            ORDER BY planted_date DESC
+        `, [req.params.systemId]);
+
+        const now = Date.now();
+        const DAY = 24 * 60 * 60 * 1000;
+        const batches = rows.map((r) => {
+            const planted = Number(r.planted) || 0;
+            const harvested = Number(r.harvested) || 0;
+            const remaining = Math.max(0, planted - harvested);
+            const dth = r.days_to_harvest != null ? Number(r.days_to_harvest) : null;
+            // planted_date is a 'YYYY-MM-DD' string; parse at noon to avoid tz drift.
+            const plantedMs = r.planted_date ? new Date(`${String(r.planted_date).slice(0, 10)}T12:00:00`).getTime() : null;
+            const ageDays = plantedMs ? Math.max(0, Math.floor((now - plantedMs) / DAY)) : null;
+
+            let status;
+            if (remaining <= 0) status = 'harvested';
+            else if (dth && ageDays != null && ageDays >= dth) status = 'ready';
+            else if (dth && ageDays != null && ageDays >= 0.8 * dth) status = 'approaching';
+            else status = 'growing';
+
+            return {
+                batch_id: r.batch_id,
+                crop_type: r.crop_type,
+                grow_bed_id: r.grow_bed_id,
+                bed_name: r.bed_name,
+                bed_type: r.bed_type,
+                bed_number: r.bed_number,
+                seed_variety: r.seed_variety,
+                days_to_harvest: dth,
+                planted_date: r.planted_date ? String(r.planted_date).slice(0, 10) : null,
+                last_event_date: r.last_event_date ? String(r.last_event_date).slice(0, 10) : null,
+                planted,
+                harvested,
+                remaining,
+                harvest_weight_g: Number(r.harvest_weight_g) || 0,
+                age_days: ageDays,
+                status,
+            };
+        });
+
+        res.json({ system_id: req.params.systemId, batches });
+
+    } catch (error) {
+        console.error('Error building plant batches:', error);
+        res.status(500).json({ error: 'Failed to build plant batches' });
     }
 });
 
@@ -49,11 +132,13 @@ router.post('/allocations', async (req, res) => {
         });
     }
 
-    // Using connection pool - no manual connection management
-
     try {
         const pool = getDatabase();
-        
+
+        if (!(await verifyOwnership(pool, systemId, req.user.userId))) {
+            return res.status(404).json({ error: 'System not found or access denied' });
+        }
+
         // Check if allocation already exists
         const [existingRows] = await pool.execute(
             'SELECT id FROM plant_allocations WHERE system_id = ? AND grow_bed_id = ? AND crop_type = ?',
@@ -408,11 +493,13 @@ router.delete('/custom-crops/:id', async (req, res) => {
 
 // Get grow bed utilization summary
 router.get('/utilization/:systemId', async (req, res) => {
-    // Using connection pool - no manual connection management
-
     try {
         const pool = getDatabase();
-        
+
+        if (!(await verifyOwnership(pool, req.params.systemId, req.user.userId))) {
+            return res.status(404).json({ error: 'System not found or access denied' });
+        }
+
         const [utilization] = await pool.execute(`
             SELECT 
                 gb.id,
