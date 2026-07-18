@@ -56,7 +56,7 @@ router.get('/system/:systemId', async (req, res) => {
                        AND fish_tank_id = ft.id 
                        AND weight IS NOT NULL 
                        AND event_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-                     ORDER BY event_date DESC 
+                     ORDER BY (event_type = 'weight_update') DESC, event_date DESC 
                      LIMIT 1
                      ), 50) as average_weight,
                 (ft.current_fish_count * COALESCE(
@@ -66,7 +66,7 @@ router.get('/system/:systemId', async (req, res) => {
                        AND fish_tank_id = ft.id 
                        AND weight IS NOT NULL 
                        AND event_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-                     ORDER BY event_date DESC 
+                     ORDER BY (event_type = 'weight_update') DESC, event_date DESC 
                      LIMIT 1
                      ), 50)) / 1000.0 as biomass_kg,
                 CASE 
@@ -78,7 +78,7 @@ router.get('/system/:systemId', async (req, res) => {
                                AND fish_tank_id = ft.id 
                                AND weight IS NOT NULL 
                                AND event_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-                             ORDER BY event_date DESC 
+                             ORDER BY (event_type = 'weight_update') DESC, event_date DESC 
                              LIMIT 1
                              ), 50)) / ft.volume_liters
                     ELSE 0 
