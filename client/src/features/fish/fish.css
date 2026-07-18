@@ -61,3 +61,78 @@
   letter-spacing: -0.01em;
   color: var(--ink);
 }
+
+/* Per-tank actions */
+.tank-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.tank-action-btn {
+  flex: 1;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.tank-action-btn:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+.tank-action-btn.danger:hover {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
+}
+
+/* Modal form */
+.mform .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.mform label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.mform .unit-hint {
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+.mform input,
+.mform select {
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+}
+.mform input:focus-visible,
+.mform select:focus-visible {
+  border-color: var(--accent);
+}
+.mform-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+.mform-actions .btn {
+  width: auto;
+  padding: 10px 18px;
+}
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}

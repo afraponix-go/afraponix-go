@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
 import { fetchFishInventory, type FishTank } from './api'
+import { TankActionModal, type TankAction } from './TankActionModal'
 import '../dashboard/dashboard.css'
 import './fish.css'
 
@@ -26,6 +28,7 @@ function fmt(n: number | null, digits = 0) {
 
 export function FishPage() {
   const { activeId, activeSystem } = useSystems()
+  const [modal, setModal] = useState<{ tank: FishTank; action: TankAction } | null>(null)
   const { data: tanks = [], isLoading, isError } = useQuery({
     queryKey: ['fish-inventory', activeId],
     queryFn: () => fetchFishInventory(activeId as string),
@@ -75,9 +78,18 @@ export function FishPage() {
                 <div><span>Density</span><b>{fmt(t.density_kg_m3, 2)} kg/m³</b></div>
                 <div><span>Volume</span><b>{fmt(t.volume_liters)} L</b></div>
               </div>
+              <div className="tank-actions">
+                <button className="tank-action-btn" onClick={() => setModal({ tank: t, action: 'add' })}>+ Add</button>
+                <button className="tank-action-btn danger" onClick={() => setModal({ tank: t, action: 'mortality' })}>− Loss</button>
+                <button className="tank-action-btn" onClick={() => setModal({ tank: t, action: 'weight' })}>Weight</button>
+              </div>
             </div>
           ))}
       </div>
+
+      {modal && activeId && (
+        <TankActionModal systemId={activeId} tank={modal.tank} action={modal.action} onClose={() => setModal(null)} />
+      )}
     </div>
   )
 }
