@@ -12,7 +12,7 @@ import { FishDensity } from '../features/fish/FishDensity'
 import { TankInformation } from '../features/fish/TankInformation'
 import { FishHealth } from '../features/fish/FishHealth'
 import { FishDataCapture } from '../features/fish/FishDataCapture'
-import { PlantsPage } from '../features/plants/PlantsPage'
+import { PlantsOverview } from '../features/plants/PlantsOverview'
 import { GrowBedsPage } from '../features/growbeds/GrowBedsPage'
 import { FishStockingCalculator } from '../features/calculator/FishStockingCalculator'
 import { OperationsPage } from '../features/operations/OperationsPage'
@@ -40,6 +40,13 @@ const FISH_TABS = [
   { to: '/fish/tanks', label: 'Tank Information' },
   { to: '/fish/health', label: 'Fish Health' },
   { to: '/fish/capture', label: 'Data Capture' },
+]
+const PLANTS_TABS = [
+  { to: '/plants', label: 'Overview', end: true },
+  { to: '/plants/plantings', label: 'Plantings' },
+  { to: '/plants/harvest', label: 'Harvest' },
+  { to: '/plants/beds', label: 'Beds & Allocation' },
+  { to: '/plants/crops', label: 'Crops' },
 ]
 
 export const router = createBrowserRouter([
@@ -91,8 +98,18 @@ export const router = createBrowserRouter([
               { path: 'capture', element: <FishDataCapture /> },
             ],
           },
-          // Plants
-          { path: 'plants', element: <PlantsPage /> },
+          // Plants (Overview · Plantings · Harvest · Beds & Allocation · Crops)
+          {
+            path: 'plants',
+            element: <SubTabLayout items={PLANTS_TABS} />,
+            children: [
+              { index: true, element: <PlantsOverview /> },
+              { path: 'plantings', element: <Placeholder title="Plantings" note="Batch list, new-planting flow, and moving batches between beds. Coming next." /> },
+              { path: 'harvest', element: <Placeholder title="Harvest" note="Record harvests from a batch and view growth/harvest history. Coming next." /> },
+              { path: 'beds', element: <Placeholder title="Beds & Allocation" note="Grow-bed configuration and per-bed crop allocation. Coming next." /> },
+              { path: 'crops', element: <Placeholder title="Crops" note="Crop reference, custom crops, and seed varieties. Coming next." /> },
+            ],
+          },
           // Settings (Grow Beds · System)
           {
             path: 'settings',

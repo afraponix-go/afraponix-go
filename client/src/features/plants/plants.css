@@ -49,3 +49,37 @@
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
 }
+
+/* Ready-to-harvest list + crop breakdown bars (Overview) */
+.ready-list {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+}
+.crop-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.crop-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.crop-bar-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.crop-bar-nums {
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+.crop-bar-nums b {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--ink);
+}
