@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
-import { logFeeding, FEED_TYPES, type FeedingRecord } from './feeding'
+import { logFeeding, suggestedFeed, FEED_TYPES, type FeedingRecord } from './feeding'
 import type { FishTank } from './api'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -108,12 +108,15 @@ export function FeedingModal({
           <div className="feed-row feed-row-head">
             <span>Tank</span>
             <span>Feed (g)</span>
+            <span>Rec.</span>
             <span>Type</span>
           </div>
           {tanks
             .slice()
             .sort((a, b) => a.tank_number - b.tank_number)
-            .map((t) => (
+            .map((t) => {
+              const rec = suggestedFeed(t.current_count, t.average_weight)
+              return (
               <div className="feed-row" key={t.fish_tank_id}>
                 <span className="feed-tank-name">Tank {t.tank_number}</span>
                 <input
@@ -123,9 +126,16 @@ export function FeedingModal({
                   inputMode="decimal"
                   value={rows[t.fish_tank_id]?.amount ?? ''}
                   onChange={(e) => setRow(t.fish_tank_id, { amount: e.target.value })}
-                  placeholder="—"
+                  placeholder={rec > 0 ? String(rec) : '—'}
                   aria-label={`Feed for tank ${t.tank_number}`}
                 />
+                {rec > 0 ? (
+                  <button type="button" className="feed-rec" onClick={() => setRow(t.fish_tank_id, { amount: String(rec) })} title="Use recommended amount">
+                    {rec} g
+                  </button>
+                ) : (
+                  <span className="feed-rec-none">—</span>
+                )}
                 <select value={rows[t.fish_tank_id]?.type ?? FEED_TYPES[0]} onChange={(e) => setRow(t.fish_tank_id, { type: e.target.value })} aria-label={`Feed type for tank ${t.tank_number}`}>
                   {(() => {
                     const cur = rows[t.fish_tank_id]?.type
@@ -136,7 +146,7 @@ export function FeedingModal({
                   })()}
                 </select>
               </div>
-            ))}
+            )})}
         </div>
 
         <div className="mform-actions">

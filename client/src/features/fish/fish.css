@@ -177,9 +177,32 @@
 }
 .feed-row {
   display: grid;
-  grid-template-columns: 1fr 96px 1.4fr;
+  grid-template-columns: 1fr 84px 64px 1.2fr;
   gap: 10px;
   align-items: center;
+}
+.feed-rec {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--brand-green);
+  background: var(--ok-wash);
+  border: 1px solid color-mix(in srgb, var(--brand-green) 22%, transparent);
+  border-radius: 8px;
+  padding: 7px 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+.feed-rec:hover {
+  background: color-mix(in srgb, var(--brand-green) 18%, transparent);
+  border-color: color-mix(in srgb, var(--brand-green) 40%, transparent);
+}
+.feed-rec-none {
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: 13px;
 }
 .feed-row-head {
   font-size: 11px;
