@@ -31,8 +31,9 @@ export function moveFish(systemId: string, fromTankId: number, input: { to_tank_
   })
 }
 
-// Harvest fish from a tank (removal for sale/consumption).
-export function harvestFish(systemId: string, tankId: number, input: { count: number; average_weight?: number; notes?: string }) {
+// Harvest fish from a tank (removal for sale/consumption). Total harvest
+// weight is captured in kg; the backend derives the per-fish average.
+export function harvestFish(systemId: string, tankId: number, input: { count: number; total_weight_kg?: number; notes?: string }) {
   return api('/fish-inventory/harvest', {
     method: 'POST',
     body: { system_id: systemId, fish_tank_id: tankId, ...input },

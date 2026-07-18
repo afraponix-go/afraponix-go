@@ -440,13 +440,15 @@ router.post('/move-fish', async (req, res) => {
 
 // Harvest fish from a tank (removal for sale/consumption)
 router.post('/harvest', async (req, res) => {
-    const { system_id, fish_tank_id, count, average_weight, notes } = req.body;
+    const { system_id, fish_tank_id, count, total_weight_kg, notes } = req.body;
 
     if (!system_id || !fish_tank_id || !count || count <= 0) {
         return res.status(400).json({ error: 'System ID, tank ID, and positive count are required' });
     }
 
-    const safeWeight = average_weight && average_weight > 0 ? average_weight : null;
+    // Capture the total harvest weight and derive the per-fish average (grams).
+    const totalKg = total_weight_kg && total_weight_kg > 0 ? Number(total_weight_kg) : null;
+    const avgWeight = totalKg ? (totalKg * 1000) / count : null;
     const safeNotes = notes || null;
 
     try {
@@ -482,8 +484,8 @@ router.post('/harvest', async (req, res) => {
             }
 
             const eventDate = new Date();
-            const totalKg = safeWeight ? ((count * safeWeight) / 1000).toFixed(2) : null;
-            const harvestNotes = `Harvested ${count} fish${totalKg ? ` (~${totalKg} kg)` : ''}. ${safeNotes || ''}`.trim();
+            const eventWeight = avgWeight ? avgWeight.toFixed(2) : null;
+            const harvestNotes = `Harvested ${count} fish${totalKg ? ` (${totalKg.toFixed(2)} kg, avg ${Math.round(avgWeight)} g)` : ''}. ${safeNotes || ''}`.trim();
 
             await executeQuery(pool, `
                 UPDATE fish_tanks SET current_fish_count = GREATEST(0, current_fish_count - ?)
@@ -493,7 +495,7 @@ router.post('/harvest', async (req, res) => {
             await executeQuery(pool, `
                 INSERT INTO fish_events (system_id, fish_tank_id, event_type, count_change, weight, notes, event_date, user_id)
                 VALUES (?, ?, 'harvest', ?, ?, ?, ?, ?)
-            `, [system_id, actualTankId, -count, safeWeight, harvestNotes, eventDate, req.user.userId]);
+            `, [system_id, actualTankId, -count, eventWeight, harvestNotes, eventDate, req.user.userId]);
 
             await executeQuery(pool, 'COMMIT');
             res.json({
@@ -501,7 +503,8 @@ router.post('/harvest', async (req, res) => {
                 harvested_count: count,
                 tank_id: actualTankId,
                 remaining_count: currentCount - count,
-                total_weight_kg: totalKg
+                total_weight_kg: totalKg,
+                average_weight_g: avgWeight ? Math.round(avgWeight) : null
             });
 
         } catch (transactionError) {

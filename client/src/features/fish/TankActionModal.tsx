@@ -30,9 +30,8 @@ export function TankActionModal({
 }) {
   const qc = useQueryClient()
   const [count, setCount] = useState('')
-  const [weight, setWeight] = useState(
-    (action === 'weight' || action === 'harvest') && tank.average_weight != null ? String(tank.average_weight) : '',
-  )
+  const [weight, setWeight] = useState(action === 'weight' && tank.average_weight != null ? String(tank.average_weight) : '')
+  const [totalWeight, setTotalWeight] = useState('')
   const [cause, setCause] = useState('')
   const [dest, setDest] = useState('')
   const [notes, setNotes] = useState('')
@@ -47,7 +46,7 @@ export function TankActionModal({
       if (action === 'add') return addFish(systemId, tank.fish_tank_id, { count: Number(count), average_weight: weight ? Number(weight) : undefined, notes: notes || undefined })
       if (action === 'mortality') return recordMortality(systemId, tank.fish_tank_id, { count: Number(count), cause: cause || undefined, notes: notes || undefined })
       if (action === 'move') return moveFish(systemId, tank.fish_tank_id, { to_tank_id: Number(dest), count: Number(count), notes: notes || undefined })
-      if (action === 'harvest') return harvestFish(systemId, tank.fish_tank_id, { count: Number(count), average_weight: weight ? Number(weight) : undefined, notes: notes || undefined })
+      if (action === 'harvest') return harvestFish(systemId, tank.fish_tank_id, { count: Number(count), total_weight_kg: totalWeight ? Number(totalWeight) : undefined, notes: notes || undefined })
       return updateWeight(systemId, tank.fish_tank_id, { average_weight: Number(weight), notes: notes || undefined })
     },
     onSuccess: () => {
@@ -67,9 +66,9 @@ export function TankActionModal({
     mutation.mutate()
   }
 
-  const estKg =
-    action === 'harvest' && Number(count) > 0 && Number(weight) > 0
-      ? ((Number(count) * Number(weight)) / 1000).toFixed(1)
+  const avgG =
+    action === 'harvest' && Number(count) > 0 && Number(totalWeight) > 0
+      ? Math.round((Number(totalWeight) * 1000) / Number(count))
       : null
 
   return (
@@ -101,13 +100,20 @@ export function TankActionModal({
           </div>
         )}
 
-        {(action === 'add' || action === 'weight' || action === 'harvest') && (
+        {(action === 'add' || action === 'weight') && (
           <div className="field">
             <label htmlFor="weight">
-              Average weight <span className="unit-hint">(g){action === 'add' ? ' · optional' : action === 'harvest' ? ' · optional' : ''}</span>
+              Average weight <span className="unit-hint">(g){action === 'add' ? ' · optional' : ''}</span>
             </label>
             <input id="weight" type="number" min="0" step="any" inputMode="decimal" autoFocus={action === 'weight'} value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="e.g. 50" />
-            {estKg && <div className="unit-hint" style={{ marginTop: 6 }}>Estimated harvest ≈ {estKg} kg</div>}
+          </div>
+        )}
+
+        {action === 'harvest' && (
+          <div className="field">
+            <label htmlFor="total">Total harvest weight <span className="unit-hint">(kg) · optional</span></label>
+            <input id="total" type="number" min="0" step="any" inputMode="decimal" value={totalWeight} onChange={(e) => setTotalWeight(e.target.value)} placeholder="e.g. 12.5" />
+            {avgG != null && <div className="unit-hint" style={{ marginTop: 6 }}>Average ≈ {avgG} g/fish</div>}
           </div>
         )}
 
