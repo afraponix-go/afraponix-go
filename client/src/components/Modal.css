@@ -15,14 +15,14 @@
   max-height: calc(100vh - 40px);
   display: flex;
   flex-direction: column;
-}
-.modal-card.wide {
-  max-width: 600px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   animation: modal-rise 0.16s ease;
+}
+.modal-card.wide {
+  max-width: 600px;
 }
 .modal-head {
   display: flex;
