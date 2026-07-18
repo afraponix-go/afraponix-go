@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
-import { fetchFishInventory, maxDensityForSpecies } from './api'
+import { fetchFishInventory, tankMaxDensity } from './api'
 import { fmt } from './fishShared'
 import '../dashboard/dashboard.css'
 import '../water/water.css'
@@ -51,7 +51,7 @@ export function TankInformation() {
                   <td>{fmt(t.average_weight)}</td>
                   <td>{fmt(t.biomass_kg, 1)}</td>
                   <td>{fmt(t.density_kg_m3, 2)}</td>
-                  <td>{maxDensityForSpecies(t.tank_fish_type)}</td>
+                  <td>{tankMaxDensity(t)}</td>
                 </tr>
               ))}
           </tbody>

@@ -9,6 +9,7 @@ export const fishTankSchema = z.object({
   volume_liters: numish,
   size_m3: numish,
   tank_fish_type: z.string().nullable().optional(),
+  max_stocking_density: numish,
   current_count: numish,
   average_weight: numish,
   biomass_kg: numish,
@@ -32,4 +33,12 @@ export async function fetchFishInventory(systemId: string): Promise<FishTank[]> 
 const MAX_DENSITY: Record<string, number> = { tilapia: 30, trout: 25, catfish: 35, bass: 25, goldfish: 25, koi: 25 }
 export function maxDensityForSpecies(fishType?: string | null): number {
   return MAX_DENSITY[(fishType ?? '').toLowerCase()] ?? 25
+}
+
+// The effective max density for a tank: the operator-entered value if set,
+// otherwise the species recommendation.
+export function tankMaxDensity(tank: Pick<FishTank, 'max_stocking_density' | 'tank_fish_type'>): number {
+  return tank.max_stocking_density && tank.max_stocking_density > 0
+    ? tank.max_stocking_density
+    : maxDensityForSpecies(tank.tank_fish_type)
 }

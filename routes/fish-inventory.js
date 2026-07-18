@@ -46,6 +46,7 @@ router.get('/system/:systemId', async (req, res) => {
                 ft.volume_liters,
                 ft.size_m3,
                 ft.fish_type as tank_fish_type,
+                ft.max_stocking_density,
                 ft.current_fish_count as current_count,
                 -- Use most recent weight from fish events instead of historical average
                 COALESCE(
