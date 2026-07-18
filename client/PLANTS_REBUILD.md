@@ -139,4 +139,7 @@ Each phase: verify in-browser against the demo system, then commit.
 - Phase 5: custom_crops schema fix (that's where custom crops are edited).
 
 ## 8. Progress log
-- 2026-07-18: Audit complete; plan locked. Starting Phase 0.
+- 2026-07-18: Audit complete; plan locked.
+- 2026-07-18: ✅ Phase 0 — `GET /plants/batches/:systemId` + ownership checks on /plants endpoints (commit 3d99681).
+- 2026-07-18: ✅ Phase 1 — Plants SubTabLayout + Overview (KPIs, ready-to-harvest, plants-by-crop) via client batches.ts (commit 8358b46).
+- Next: Phase 2 — Plantings (batch list, New Planting modal, Move batch).

@@ -83,3 +83,70 @@
   font-weight: 600;
   color: var(--ink);
 }
+
+/* Plantings — crop sections + batch cards */
+.crop-section {
+  margin-bottom: 22px;
+}
+.crop-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 2px 12px;
+}
+.crop-section-head .crop-name {
+  font-size: 16px;
+  font-weight: 650;
+}
+.crop-section-sub {
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+.batch-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+.batch-badge.growing {
+  background: color-mix(in srgb, var(--brand-green) 16%, transparent);
+  color: var(--brand-green);
+}
+.batch-badge.approaching {
+  background: color-mix(in srgb, #d99a2b 18%, transparent);
+  color: #b9791a;
+}
+.batch-badge.ready {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+.batch-badge.harvested {
+  background: var(--surface-2);
+  color: var(--ink-faint);
+}
+/* Maturity bar fills, matching batch status */
+.density-fill.growing {
+  background: var(--brand-green);
+}
+.density-fill.approaching {
+  background: #d99a2b;
+}
+.density-fill.ready {
+  background: var(--accent);
+}
+.density-fill.harvested {
+  background: var(--ink-faint);
+}
+
+/* Two fields side by side inside a modal form */
+.field-row {
+  display: flex;
+  gap: 12px;
+}
+.field-row .field {
+  flex: 1;
+  min-width: 0;
+}
