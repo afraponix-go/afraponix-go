@@ -75,6 +75,10 @@
   font-size: 14px;
   font-variant-numeric: tabular-nums;
 }
+.wq-table td {
+  font-family: var(--mono);
+  letter-spacing: -0.01em;
+}
 .wq-table th,
 .wq-table td {
   padding: 10px 12px;
