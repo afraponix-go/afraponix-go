@@ -7,7 +7,10 @@ import { SubTabLayout, Placeholder } from './SubTabLayout'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { ChartsPage } from '../features/charts/ChartsPage'
 import { WaterQualityPage } from '../features/water/WaterQualityPage'
-import { FishPage } from '../features/fish/FishPage'
+import { FishOverview } from '../features/fish/FishOverview'
+import { TankInformation } from '../features/fish/TankInformation'
+import { FishHealth } from '../features/fish/FishHealth'
+import { FishDataCapture } from '../features/fish/FishDataCapture'
 import { PlantsPage } from '../features/plants/PlantsPage'
 import { GrowBedsPage } from '../features/growbeds/GrowBedsPage'
 import { FishStockingCalculator } from '../features/calculator/FishStockingCalculator'
@@ -29,6 +32,12 @@ const SETTINGS_TABS = [
 const CALC_TABS = [
   { to: '/calculator', label: 'Fish Stocking', end: true },
   { to: '/calculator/nutrients', label: 'Nutrient Dosing' },
+]
+const FISH_TABS = [
+  { to: '/fish', label: 'Overview', end: true },
+  { to: '/fish/tanks', label: 'Tank Information' },
+  { to: '/fish/health', label: 'Fish Health' },
+  { to: '/fish/capture', label: 'Data Capture' },
 ]
 
 export const router = createBrowserRouter([
@@ -68,8 +77,17 @@ export const router = createBrowserRouter([
               { path: 'import-export', element: <Placeholder title="Import / Export" note="Bulk import and export of system data." /> },
             ],
           },
-          // Fish
-          { path: 'fish', element: <FishPage /> },
+          // Fish (Overview · Tank Information · Fish Health · Data Capture)
+          {
+            path: 'fish',
+            element: <SubTabLayout items={FISH_TABS} />,
+            children: [
+              { index: true, element: <FishOverview /> },
+              { path: 'tanks', element: <TankInformation /> },
+              { path: 'health', element: <FishHealth /> },
+              { path: 'capture', element: <FishDataCapture /> },
+            ],
+          },
           // Plants
           { path: 'plants', element: <PlantsPage /> },
           // Settings (Grow Beds · System)
