@@ -29,6 +29,19 @@ export async function fetchFishInventory(systemId: string): Promise<FishTank[]> 
   return parsed.success ? parsed.data.tanks : []
 }
 
+const densityPointSchema = z.object({
+  date: z.string(),
+  density: z.coerce.number(),
+  biomass_kg: z.coerce.number().optional(),
+})
+export type DensityPoint = z.infer<typeof densityPointSchema>
+
+export async function fetchDensityHistory(systemId: string, days = 90): Promise<DensityPoint[]> {
+  const data = await api<unknown>(`/fish-inventory/density-history/${systemId}?days=${days}`)
+  const parsed = z.object({ series: z.array(densityPointSchema) }).safeParse(data)
+  return parsed.success ? parsed.data.series : []
+}
+
 // Recommended max stocking density (kg/m³) per species.
 const MAX_DENSITY: Record<string, number> = { tilapia: 30, trout: 25, catfish: 35, bass: 25, goldfish: 25, koi: 25 }
 export function maxDensityForSpecies(fishType?: string | null): number {

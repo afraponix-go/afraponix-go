@@ -519,6 +519,96 @@ router.post('/harvest', async (req, res) => {
     }
 });
 
+// Reconstructed system average stocking density over time.
+// Density isn't stored, so we rebuild each tank's fish count and weight back
+// through the fish_events log (starting from the current state and unwinding
+// the logged deltas), then aggregate biomass / volume across all tanks per day.
+router.get('/density-history/:systemId', async (req, res) => {
+    const { systemId } = req.params;
+    const days = Math.min(365, Math.max(7, parseInt(req.query.days, 10) || 90));
+
+    try {
+        const pool = getDatabase();
+
+        const systemRows = await executeQuery(pool,
+            'SELECT id FROM systems WHERE id = ? AND user_id = ?',
+            [systemId, req.user.userId]
+        );
+        if (!systemRows || systemRows.length === 0) {
+            return res.status(404).json({ error: 'System not found or access denied' });
+        }
+
+        const tanks = await executeQuery(pool,
+            'SELECT id, size_m3, volume_liters, current_fish_count FROM fish_tanks WHERE system_id = ?',
+            [systemId]
+        );
+        if (!tanks || tanks.length === 0) {
+            return res.json({ system_id: systemId, days, series: [] });
+        }
+
+        const events = await executeQuery(pool,
+            `SELECT fish_tank_id, count_change, weight, event_date
+             FROM fish_events WHERE system_id = ? ORDER BY event_date ASC`,
+            [systemId]
+        );
+
+        const DEFAULT_WEIGHT = 50; // matches the inventory query's fallback
+        const toKey = (d) => {
+            const dt = new Date(d);
+            const y = dt.getFullYear();
+            const m = String(dt.getMonth() + 1).padStart(2, '0');
+            const day = String(dt.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        };
+
+        // Reconstruct a baseline (pre-history) count and weight per tank.
+        const perTank = tanks.map((t) => {
+            const vol = Number(t.size_m3) > 0 ? Number(t.size_m3) : (Number(t.volume_liters) || 0) / 1000;
+            const evs = events
+                .filter((e) => e.fish_tank_id === t.id)
+                .map((e) => ({ key: toKey(e.event_date), delta: Number(e.count_change) || 0, weight: e.weight != null ? Number(e.weight) : null }));
+            const totalDelta = evs.reduce((s, e) => s + e.delta, 0);
+            const baselineCount = (Number(t.current_fish_count) || 0) - totalDelta;
+            const firstWeight = evs.find((e) => e.weight != null);
+            return { vol, evs, baselineCount, baselineWeight: firstWeight ? firstWeight.weight : DEFAULT_WEIGHT };
+        });
+
+        // Walk the day window and compute the aggregate density at each day's end.
+        const end = new Date();
+        const series = [];
+        for (let i = days - 1; i >= 0; i--) {
+            const d = new Date(end);
+            d.setDate(end.getDate() - i);
+            const key = toKey(d);
+            let biomass = 0;
+            let volume = 0;
+            for (const t of perTank) {
+                volume += t.vol;
+                let count = t.baselineCount;
+                let weight = t.baselineWeight;
+                for (const e of t.evs) {
+                    if (e.key <= key) {
+                        count += e.delta;
+                        if (e.weight != null) weight = e.weight;
+                    }
+                }
+                biomass += (Math.max(0, count) * weight) / 1000;
+            }
+            series.push({
+                date: key,
+                density: volume > 0 ? Number((biomass / volume).toFixed(3)) : 0,
+                biomass_kg: Number(biomass.toFixed(2)),
+            });
+        }
+
+        res.json({ system_id: systemId, days, series });
+
+    } catch (error) {
+        console.error('Error building density history:', error);
+        res.status(500).json({ error: 'Failed to build density history' });
+    }
+});
+
 // Get fish events history for a tank
 router.get('/events/:systemId/:tankId', async (req, res) => {
     const { systemId, tankId } = req.params;
