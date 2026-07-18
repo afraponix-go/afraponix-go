@@ -264,14 +264,22 @@ router.post('/mortality', async (req, res) => {
 
 // Update fish weight
 router.post('/update-weight', async (req, res) => {
-    const { system_id, fish_tank_id, average_weight, notes } = req.body;
-    
+    const { system_id, fish_tank_id, average_weight, notes, date } = req.body;
+
     if (!system_id || !fish_tank_id || !average_weight || average_weight <= 0) {
         return res.status(400).json({ error: 'System ID, tank ID, and positive weight are required' });
     }
 
     // Convert undefined to null for SQL compatibility
     const safeNotes = notes || null;
+
+    // Date the weighing was taken. Stored at noon to avoid the reading
+    // shifting a day under timezone conversion. Falls back to now.
+    let eventDate = new Date();
+    if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        const parsed = new Date(`${date}T12:00:00`);
+        if (!isNaN(parsed.getTime())) eventDate = parsed;
+    }
 
     // Using pool pool - no manual pool management
 
@@ -303,7 +311,6 @@ router.post('/update-weight', async (req, res) => {
             }
 
             const actualTankId = tankRows[0].id;
-            const eventDate = new Date();
 
             // 1. Log weight update event (no direct weight storage in fish_tanks)
             // Weight is calculated from recent fish_events records

@@ -16,7 +16,7 @@ export function recordMortality(systemId: string, tankId: number, input: { count
   })
 }
 
-export function updateWeight(systemId: string, tankId: number, input: { average_weight: number; notes?: string }) {
+export function updateWeight(systemId: string, tankId: number, input: { average_weight: number; date?: string; notes?: string }) {
   return api('/fish-inventory/update-weight', {
     method: 'POST',
     body: { system_id: systemId, fish_tank_id: tankId, ...input },

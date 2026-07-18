@@ -7,6 +7,8 @@ import type { FishTank } from './api'
 
 export type TankAction = 'add' | 'mortality' | 'weight' | 'move' | 'harvest'
 
+const today = () => new Date().toISOString().slice(0, 10)
+
 const TITLES: Record<TankAction, string> = {
   add: 'Add fish',
   mortality: 'Record loss',
@@ -34,6 +36,7 @@ export function TankActionModal({
   const [totalWeight, setTotalWeight] = useState('')
   const [cause, setCause] = useState('')
   const [dest, setDest] = useState('')
+  const [date, setDate] = useState(today())
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -47,7 +50,7 @@ export function TankActionModal({
       if (action === 'mortality') return recordMortality(systemId, tank.fish_tank_id, { count: Number(count), cause: cause || undefined, notes: notes || undefined })
       if (action === 'move') return moveFish(systemId, tank.fish_tank_id, { to_tank_id: Number(dest), count: Number(count), notes: notes || undefined })
       if (action === 'harvest') return harvestFish(systemId, tank.fish_tank_id, { count: Number(count), total_weight_kg: totalWeight ? Number(totalWeight) : undefined, notes: notes || undefined })
-      return updateWeight(systemId, tank.fish_tank_id, { average_weight: Number(weight), notes: notes || undefined })
+      return updateWeight(systemId, tank.fish_tank_id, { average_weight: Number(weight), date: date || undefined, notes: notes || undefined })
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fish-inventory'] })
@@ -106,6 +109,13 @@ export function TankActionModal({
               Average weight <span className="unit-hint">(g){action === 'add' ? ' · optional' : ''}</span>
             </label>
             <input id="weight" type="number" min="0" step="any" inputMode="decimal" autoFocus={action === 'weight'} value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="e.g. 50" />
+          </div>
+        )}
+
+        {action === 'weight' && (
+          <div className="field">
+            <label htmlFor="weigh-date">Date weighed</label>
+            <input id="weigh-date" type="date" max={today()} value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
         )}
 
