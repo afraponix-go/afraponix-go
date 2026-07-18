@@ -1,7 +1,8 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
+import { fetchLatestNutrients } from '../dashboard/api'
 import { logFeeding, suggestedFeed, FEED_TYPES, type FeedingRecord } from './feeding'
 import type { FishTank } from './api'
 
@@ -35,6 +36,9 @@ export function FeedingModal({
 }) {
   const qc = useQueryClient()
   const [date, setDate] = useState(today())
+  // Latest water temperature drives the appetite side of the recommendation.
+  const { data: nutrients } = useQuery({ queryKey: ['nutrients', 'latest', systemId], queryFn: () => fetchLatestNutrients(systemId) })
+  const waterTemp = nutrients?.temperature?.value ?? null
   const prev = useMemo(() => previousByTank(previousLog), [previousLog])
   const [rows, setRows] = useState<Record<number, Row>>(() => {
     const init: Record<number, Row> = {}
@@ -103,6 +107,11 @@ export function FeedingModal({
             </button>
           )}
         </div>
+        <p className="feed-temp-note">
+          {waterTemp != null
+            ? `Recommendations adjusted for water temp ${waterTemp.toFixed(1)}°C and each tank's species & size.`
+            : 'No recent water-temp reading — recommendations assume optimal temperature.'}
+        </p>
 
         <div className="feed-rows">
           <div className="feed-row feed-row-head">
@@ -115,7 +124,8 @@ export function FeedingModal({
             .slice()
             .sort((a, b) => a.tank_number - b.tank_number)
             .map((t) => {
-              const rec = suggestedFeed(t.current_count, t.average_weight)
+              const rec = suggestedFeed(t.current_count, t.average_weight, t.tank_fish_type, waterTemp)
+              const recTitle = rec.grams > 0 ? `Recommended ${rec.grams} g/day${rec.note ? ` (${rec.note})` : ''}. Click to use.` : 'No fish/weight data'
               return (
               <div className="feed-row" key={t.fish_tank_id}>
                 <span className="feed-tank-name">Tank {t.tank_number}</span>
@@ -126,12 +136,12 @@ export function FeedingModal({
                   inputMode="decimal"
                   value={rows[t.fish_tank_id]?.amount ?? ''}
                   onChange={(e) => setRow(t.fish_tank_id, { amount: e.target.value })}
-                  placeholder={rec > 0 ? String(rec) : '—'}
+                  placeholder={rec.grams > 0 ? String(rec.grams) : '—'}
                   aria-label={`Feed for tank ${t.tank_number}`}
                 />
-                {rec > 0 ? (
-                  <button type="button" className="feed-rec" onClick={() => setRow(t.fish_tank_id, { amount: String(rec) })} title="Use recommended amount">
-                    {rec} g
+                {rec.grams > 0 ? (
+                  <button type="button" className={`feed-rec${rec.factor < 0.95 ? ' reduced' : ''}`} onClick={() => setRow(t.fish_tank_id, { amount: String(rec.grams) })} title={recTitle}>
+                    {rec.grams} g
                   </button>
                 ) : (
                   <span className="feed-rec-none">—</span>

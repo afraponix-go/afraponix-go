@@ -199,6 +199,16 @@
   background: color-mix(in srgb, var(--brand-green) 18%, transparent);
   border-color: color-mix(in srgb, var(--brand-green) 40%, transparent);
 }
+.feed-rec.reduced {
+  color: var(--warn);
+  background: var(--warn-wash);
+  border-color: color-mix(in srgb, var(--warn) 26%, transparent);
+}
+.feed-temp-note {
+  margin: -6px 0 16px;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
 .feed-rec-none {
   text-align: center;
   color: var(--ink-faint);
