@@ -1,0 +1,25 @@
+.wq-form .op-select {
+  font: inherit;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+}
+.wq-form .op-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+/* Text columns read as prose, not data */
+.op-table td.op-text {
+  text-align: left;
+  font-family: var(--sans);
+  letter-spacing: 0;
+  white-space: normal;
+  color: var(--ink-soft);
+  max-width: 200px;
+}
+.op-table td.op-text:first-letter {
+  text-transform: none;
+}

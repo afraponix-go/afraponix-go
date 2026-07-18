@@ -11,6 +11,7 @@ import { FishPage } from '../features/fish/FishPage'
 import { PlantsPage } from '../features/plants/PlantsPage'
 import { GrowBedsPage } from '../features/growbeds/GrowBedsPage'
 import { FishStockingCalculator } from '../features/calculator/FishStockingCalculator'
+import { OperationsPage } from '../features/operations/OperationsPage'
 
 const DASHBOARD_TABS = [
   { to: '/', label: 'Overview', end: true },
@@ -63,7 +64,7 @@ export const router = createBrowserRouter([
             element: <SubTabLayout items={DATA_TABS} />,
             children: [
               { index: true, element: <WaterQualityPage /> },
-              { path: 'operations', element: <Placeholder title="Operations" note="Log feeding, maintenance, and other operations here." /> },
+              { path: 'operations', element: <OperationsPage /> },
               { path: 'import-export', element: <Placeholder title="Import / Export" note="Bulk import and export of system data." /> },
             ],
           },
