@@ -136,7 +136,7 @@ export function FishPage() {
         <TankActionModal systemId={activeId} tank={modal.tank} action={modal.action} onClose={() => setModal(null)} />
       )}
       {showFeeding && activeId && tanks.length > 0 && (
-        <FeedingModal systemId={activeId} tanks={tanks} onClose={() => setShowFeeding(false)} />
+        <FeedingModal systemId={activeId} tanks={tanks} previousLog={feedingLog} onClose={() => setShowFeeding(false)} />
       )}
     </div>
   )
