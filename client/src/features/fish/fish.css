@@ -62,6 +62,81 @@
   color: var(--ink);
 }
 
+/* KPI sub-text + density bars */
+.stat-sub {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+.density-bar {
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+.density-fill {
+  height: 100%;
+  background: var(--brand-green);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+.density-fill.watch {
+  background: var(--warn);
+}
+.density-fill.warn {
+  background: var(--danger);
+}
+
+/* Per-tank density block */
+.tank-density {
+  margin: 14px 0 2px;
+}
+.tank-density-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 14px;
+}
+.tank-density-top span {
+  color: var(--ink-faint);
+}
+.tank-density-top b {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.tank-density-rec {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+/* Tank health badge */
+.tank-health {
+  margin-left: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+.tank-health.ok {
+  background: var(--ok-wash);
+  color: var(--ok);
+}
+.tank-health.watch {
+  background: var(--warn-wash);
+  color: var(--warn);
+}
+.tank-health.warn {
+  background: var(--danger-wash);
+  color: var(--danger);
+}
+
 /* Per-tank actions */
 .tank-actions {
   display: flex;

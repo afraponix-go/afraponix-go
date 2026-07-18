@@ -27,3 +27,9 @@ export async function fetchFishInventory(systemId: string): Promise<FishTank[]> 
   const parsed = inventorySchema.safeParse(data)
   return parsed.success ? parsed.data.tanks : []
 }
+
+// Recommended max stocking density (kg/m³) per species.
+const MAX_DENSITY: Record<string, number> = { tilapia: 30, trout: 25, catfish: 35, bass: 25, goldfish: 25, koi: 25 }
+export function maxDensityForSpecies(fishType?: string | null): number {
+  return MAX_DENSITY[(fishType ?? '').toLowerCase()] ?? 25
+}

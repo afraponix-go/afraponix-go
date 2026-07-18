@@ -140,10 +140,11 @@ const healthRow = z.object({
   feed_type: z.string().nullable().optional(),
   behavior: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+  created_at: z.string().nullable().optional(),
 })
 export type FeedingRecord = z.infer<typeof healthRow>
 
-export async function fetchFeedingLog(systemId: string, limit = 20): Promise<FeedingRecord[]> {
+export async function fetchFeedingLog(systemId: string, limit = 400): Promise<FeedingRecord[]> {
   const data = await api<unknown[]>(`/data/fish-health/${systemId}?limit=${limit}`)
   const parsed = z.array(healthRow).safeParse(data)
   if (!parsed.success) return []
