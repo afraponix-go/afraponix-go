@@ -140,13 +140,14 @@
 /* Per-tank actions */
 .tank-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
 }
 .tank-action-btn {
-  flex: 1;
+  flex: 1 1 68px;
   font: inherit;
   font-size: 13px;
   font-weight: 500;
@@ -166,6 +167,10 @@
 .tank-action-btn.danger:hover {
   color: var(--danger);
   border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
+}
+.tank-action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* Modal form */

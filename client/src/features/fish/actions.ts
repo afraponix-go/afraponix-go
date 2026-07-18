@@ -23,4 +23,20 @@ export function updateWeight(systemId: string, tankId: number, input: { average_
   })
 }
 
+// Move fish from one tank to another within the same system.
+export function moveFish(systemId: string, fromTankId: number, input: { to_tank_id: number; count: number; notes?: string }) {
+  return api('/fish-inventory/move-fish', {
+    method: 'POST',
+    body: { system_id: systemId, from_tank_id: fromTankId, ...input },
+  })
+}
+
+// Harvest fish from a tank (removal for sale/consumption).
+export function harvestFish(systemId: string, tankId: number, input: { count: number; average_weight?: number; notes?: string }) {
+  return api('/fish-inventory/harvest', {
+    method: 'POST',
+    body: { system_id: systemId, fish_tank_id: tankId, ...input },
+  })
+}
+
 export const MORTALITY_CAUSES = ['Disease', 'Poor water quality', 'Oxygen depletion', 'Handling stress', 'Predation', 'Unknown']

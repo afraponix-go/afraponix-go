@@ -81,6 +81,8 @@ export function FishOverview() {
                   <button className="tank-action-btn" onClick={() => setModal({ tank: t, action: 'add' })}>+ Add</button>
                   <button className="tank-action-btn danger" onClick={() => setModal({ tank: t, action: 'mortality' })}>− Loss</button>
                   <button className="tank-action-btn" onClick={() => setModal({ tank: t, action: 'weight' })}>Weight</button>
+                  <button className="tank-action-btn" onClick={() => setModal({ tank: t, action: 'move' })} disabled={tanks.length < 2}>Move</button>
+                  <button className="tank-action-btn" onClick={() => setModal({ tank: t, action: 'harvest' })}>Harvest</button>
                 </div>
               </div>
             )
@@ -88,7 +90,7 @@ export function FishOverview() {
       </div>
 
       {modal && activeId && (
-        <TankActionModal systemId={activeId} tank={modal.tank} action={modal.action} onClose={() => setModal(null)} />
+        <TankActionModal systemId={activeId} tank={modal.tank} tanks={tanks} action={modal.action} onClose={() => setModal(null)} />
       )}
     </div>
   )

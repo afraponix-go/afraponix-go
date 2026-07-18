@@ -2,39 +2,52 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
-import { addFish, recordMortality, updateWeight, MORTALITY_CAUSES } from './actions'
+import { addFish, recordMortality, updateWeight, moveFish, harvestFish, MORTALITY_CAUSES } from './actions'
 import type { FishTank } from './api'
 
-export type TankAction = 'add' | 'mortality' | 'weight'
+export type TankAction = 'add' | 'mortality' | 'weight' | 'move' | 'harvest'
 
 const TITLES: Record<TankAction, string> = {
   add: 'Add fish',
   mortality: 'Record loss',
   weight: 'Update weight',
+  move: 'Move fish',
+  harvest: 'Harvest',
 }
 
 export function TankActionModal({
   systemId,
   tank,
+  tanks,
   action,
   onClose,
 }: {
   systemId: string
   tank: FishTank
+  tanks: FishTank[]
   action: TankAction
   onClose: () => void
 }) {
   const qc = useQueryClient()
   const [count, setCount] = useState('')
-  const [weight, setWeight] = useState(action === 'weight' && tank.average_weight != null ? String(tank.average_weight) : '')
+  const [weight, setWeight] = useState(
+    (action === 'weight' || action === 'harvest') && tank.average_weight != null ? String(tank.average_weight) : '',
+  )
   const [cause, setCause] = useState('')
+  const [dest, setDest] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
+
+  const others = tanks.filter((t) => t.fish_tank_id !== tank.fish_tank_id).sort((a, b) => a.tank_number - b.tank_number)
+  const removes = action === 'mortality' || action === 'move' || action === 'harvest'
+  const available = tank.current_count ?? 0
 
   const mutation = useMutation({
     mutationFn: () => {
       if (action === 'add') return addFish(systemId, tank.fish_tank_id, { count: Number(count), average_weight: weight ? Number(weight) : undefined, notes: notes || undefined })
       if (action === 'mortality') return recordMortality(systemId, tank.fish_tank_id, { count: Number(count), cause: cause || undefined, notes: notes || undefined })
+      if (action === 'move') return moveFish(systemId, tank.fish_tank_id, { to_tank_id: Number(dest), count: Number(count), notes: notes || undefined })
+      if (action === 'harvest') return harvestFish(systemId, tank.fish_tank_id, { count: Number(count), average_weight: weight ? Number(weight) : undefined, notes: notes || undefined })
       return updateWeight(systemId, tank.fish_tank_id, { average_weight: Number(weight), notes: notes || undefined })
     },
     onSuccess: () => {
@@ -47,28 +60,54 @@ export function TankActionModal({
   function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
-    if ((action === 'add' || action === 'mortality') && !(Number(count) > 0)) return setError('Enter a positive number of fish.')
+    if ((action === 'add' || removes) && !(Number(count) > 0)) return setError('Enter a positive number of fish.')
     if (action === 'weight' && !(Number(weight) > 0)) return setError('Enter a positive weight.')
-    if (action === 'mortality' && Number(count) > (tank.current_count ?? 0)) return setError(`Only ${tank.current_count ?? 0} fish in this tank.`)
+    if (removes && Number(count) > available) return setError(`Only ${available} fish in this tank.`)
+    if (action === 'move' && !dest) return setError('Choose a destination tank.')
     mutation.mutate()
   }
+
+  const estKg =
+    action === 'harvest' && Number(count) > 0 && Number(weight) > 0
+      ? ((Number(count) * Number(weight)) / 1000).toFixed(1)
+      : null
 
   return (
     <Modal title={`${TITLES[action]} — Tank ${tank.tank_number}`} onClose={onClose}>
       <form className="mform" onSubmit={onSubmit}>
         {error && <div className="wq-error">{error}</div>}
 
-        {(action === 'add' || action === 'mortality') && (
+        {(action === 'add' || removes) && (
           <div className="field">
-            <label htmlFor="count">Number of fish{action === 'mortality' ? ' lost' : ''}</label>
-            <input id="count" type="number" min="1" step="1" inputMode="numeric" autoFocus value={count} onChange={(e) => setCount(e.target.value)} placeholder={action === 'mortality' ? `up to ${tank.current_count ?? 0}` : 'e.g. 100'} />
+            <label htmlFor="count">
+              Number of fish{action === 'mortality' ? ' lost' : action === 'move' ? ' to move' : action === 'harvest' ? ' harvested' : ''}
+            </label>
+            <input id="count" type="number" min="1" step="1" inputMode="numeric" autoFocus value={count} onChange={(e) => setCount(e.target.value)} placeholder={removes ? `up to ${available}` : 'e.g. 100'} />
           </div>
         )}
 
-        {(action === 'add' || action === 'weight') && (
+        {action === 'move' && (
           <div className="field">
-            <label htmlFor="weight">Average weight <span className="unit-hint">(g){action === 'add' ? ' · optional' : ''}</span></label>
-            <input id="weight" type="number" min="0" step="1" inputMode="decimal" autoFocus={action === 'weight'} value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="e.g. 50" />
+            <label htmlFor="dest">Destination tank</label>
+            <select id="dest" value={dest} onChange={(e) => setDest(e.target.value)}>
+              <option value="">Select a tank…</option>
+              {others.map((t) => (
+                <option key={t.fish_tank_id} value={t.fish_tank_id}>
+                  Tank {t.tank_number}
+                  {t.tank_fish_type ? ` · ${t.tank_fish_type}` : ''} ({t.current_count ?? 0} fish)
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {(action === 'add' || action === 'weight' || action === 'harvest') && (
+          <div className="field">
+            <label htmlFor="weight">
+              Average weight <span className="unit-hint">(g){action === 'add' ? ' · optional' : action === 'harvest' ? ' · optional' : ''}</span>
+            </label>
+            <input id="weight" type="number" min="0" step="any" inputMode="decimal" autoFocus={action === 'weight'} value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="e.g. 50" />
+            {estKg && <div className="unit-hint" style={{ marginTop: 6 }}>Estimated harvest ≈ {estKg} kg</div>}
           </div>
         )}
 

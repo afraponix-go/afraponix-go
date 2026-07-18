@@ -331,6 +331,190 @@ router.post('/update-weight', async (req, res) => {
     }
 });
 
+// Move fish between two tanks in the same system
+router.post('/move-fish', async (req, res) => {
+    const { system_id, from_tank_id, to_tank_id, count, notes } = req.body;
+
+    if (!system_id || !from_tank_id || !to_tank_id || !count || count <= 0) {
+        return res.status(400).json({ error: 'System ID, source tank, destination tank, and positive count are required' });
+    }
+    if (String(from_tank_id) === String(to_tank_id)) {
+        return res.status(400).json({ error: 'Source and destination tanks must be different' });
+    }
+
+    const safeNotes = notes || null;
+
+    try {
+        const pool = getDatabase();
+        await executeQuery(pool, 'START TRANSACTION');
+
+        try {
+            // Verify system ownership
+            const systemRows = await executeQuery(pool,
+                'SELECT * FROM systems WHERE id = ? AND user_id = ?',
+                [system_id, req.user.userId]
+            );
+            if (!systemRows || systemRows.length === 0) {
+                await executeQuery(pool, 'ROLLBACK');
+                return res.status(404).json({ error: 'System not found or access denied' });
+            }
+
+            // Map both tanks (accept tank id or tank_number)
+            const fromRows = await executeQuery(pool,
+                'SELECT id, current_fish_count FROM fish_tanks WHERE system_id = ? AND (id = ? OR tank_number = ?)',
+                [system_id, from_tank_id, from_tank_id]
+            );
+            const toRows = await executeQuery(pool,
+                'SELECT id FROM fish_tanks WHERE system_id = ? AND (id = ? OR tank_number = ?)',
+                [system_id, to_tank_id, to_tank_id]
+            );
+            if (!fromRows || fromRows.length === 0 || !toRows || toRows.length === 0) {
+                await executeQuery(pool, 'ROLLBACK');
+                return res.status(404).json({ error: 'Tank not found' });
+            }
+
+            const fromId = fromRows[0].id;
+            const toId = toRows[0].id;
+            const fromCount = fromRows[0].current_fish_count;
+
+            if (fromId === toId) {
+                await executeQuery(pool, 'ROLLBACK');
+                return res.status(400).json({ error: 'Source and destination tanks must be different' });
+            }
+            if (fromCount < count) {
+                await executeQuery(pool, 'ROLLBACK');
+                return res.status(400).json({ error: `Insufficient fish in source tank. Current count: ${fromCount}` });
+            }
+
+            // Carry the source tank's most recent weight so the destination's
+            // biomass/density stays realistic after the move.
+            const weightRows = await executeQuery(pool, `
+                SELECT weight FROM fish_events
+                WHERE system_id = ? AND fish_tank_id = ? AND weight IS NOT NULL
+                  AND event_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                ORDER BY event_date DESC LIMIT 1
+            `, [system_id, fromId]);
+            const carryWeight = weightRows.length > 0 ? weightRows[0].weight : null;
+
+            const eventDate = new Date();
+            const moveNotes = `Moved ${count} fish. ${safeNotes || ''}`.trim();
+
+            // Decrement source, increment destination
+            await executeQuery(pool, `
+                UPDATE fish_tanks SET current_fish_count = GREATEST(0, current_fish_count - ?)
+                WHERE id = ? AND system_id = ?
+            `, [count, fromId, system_id]);
+            await executeQuery(pool, `
+                UPDATE fish_tanks SET current_fish_count = current_fish_count + ?
+                WHERE id = ? AND system_id = ?
+            `, [count, toId, system_id]);
+
+            // Log both sides of the move
+            await executeQuery(pool, `
+                INSERT INTO fish_events (system_id, fish_tank_id, event_type, count_change, weight, notes, event_date, user_id)
+                VALUES (?, ?, 'move_out', ?, ?, ?, ?, ?)
+            `, [system_id, fromId, -count, carryWeight, moveNotes, eventDate, req.user.userId]);
+            await executeQuery(pool, `
+                INSERT INTO fish_events (system_id, fish_tank_id, event_type, count_change, weight, notes, event_date, user_id)
+                VALUES (?, ?, 'move_in', ?, ?, ?, ?, ?)
+            `, [system_id, toId, count, carryWeight, moveNotes, eventDate, req.user.userId]);
+
+            await executeQuery(pool, 'COMMIT');
+            res.json({
+                message: 'Fish moved successfully',
+                moved_count: count,
+                from_tank_id: fromId,
+                to_tank_id: toId
+            });
+
+        } catch (transactionError) {
+            await executeQuery(pool, 'ROLLBACK').catch(() => {});
+            throw transactionError;
+        }
+
+    } catch (error) {
+        console.error('Error moving fish:', error);
+        res.status(500).json({ error: 'Failed to move fish' });
+    }
+});
+
+// Harvest fish from a tank (removal for sale/consumption)
+router.post('/harvest', async (req, res) => {
+    const { system_id, fish_tank_id, count, average_weight, notes } = req.body;
+
+    if (!system_id || !fish_tank_id || !count || count <= 0) {
+        return res.status(400).json({ error: 'System ID, tank ID, and positive count are required' });
+    }
+
+    const safeWeight = average_weight && average_weight > 0 ? average_weight : null;
+    const safeNotes = notes || null;
+
+    try {
+        const pool = getDatabase();
+        await executeQuery(pool, 'START TRANSACTION');
+
+        try {
+            // Verify system ownership
+            const systemRows = await executeQuery(pool,
+                'SELECT * FROM systems WHERE id = ? AND user_id = ?',
+                [system_id, req.user.userId]
+            );
+            if (!systemRows || systemRows.length === 0) {
+                await executeQuery(pool, 'ROLLBACK');
+                return res.status(404).json({ error: 'System not found or access denied' });
+            }
+
+            const tankRows = await executeQuery(pool,
+                'SELECT id, current_fish_count FROM fish_tanks WHERE system_id = ? AND (id = ? OR tank_number = ?)',
+                [system_id, fish_tank_id, fish_tank_id]
+            );
+            if (!tankRows || tankRows.length === 0) {
+                await executeQuery(pool, 'ROLLBACK');
+                return res.status(404).json({ error: 'Tank not found' });
+            }
+
+            const actualTankId = tankRows[0].id;
+            const currentCount = tankRows[0].current_fish_count;
+
+            if (currentCount < count) {
+                await executeQuery(pool, 'ROLLBACK');
+                return res.status(400).json({ error: `Insufficient fish in tank. Current count: ${currentCount}` });
+            }
+
+            const eventDate = new Date();
+            const totalKg = safeWeight ? ((count * safeWeight) / 1000).toFixed(2) : null;
+            const harvestNotes = `Harvested ${count} fish${totalKg ? ` (~${totalKg} kg)` : ''}. ${safeNotes || ''}`.trim();
+
+            await executeQuery(pool, `
+                UPDATE fish_tanks SET current_fish_count = GREATEST(0, current_fish_count - ?)
+                WHERE id = ? AND system_id = ?
+            `, [count, actualTankId, system_id]);
+
+            await executeQuery(pool, `
+                INSERT INTO fish_events (system_id, fish_tank_id, event_type, count_change, weight, notes, event_date, user_id)
+                VALUES (?, ?, 'harvest', ?, ?, ?, ?, ?)
+            `, [system_id, actualTankId, -count, safeWeight, harvestNotes, eventDate, req.user.userId]);
+
+            await executeQuery(pool, 'COMMIT');
+            res.json({
+                message: 'Harvest recorded successfully',
+                harvested_count: count,
+                tank_id: actualTankId,
+                remaining_count: currentCount - count,
+                total_weight_kg: totalKg
+            });
+
+        } catch (transactionError) {
+            await executeQuery(pool, 'ROLLBACK').catch(() => {});
+            throw transactionError;
+        }
+
+    } catch (error) {
+        console.error('Error harvesting fish:', error);
+        res.status(500).json({ error: 'Failed to harvest fish' });
+    }
+});
+
 // Get fish events history for a tank
 router.get('/events/:systemId/:tankId', async (req, res) => {
     const { systemId, tankId } = req.params;
