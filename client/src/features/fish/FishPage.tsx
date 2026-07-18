@@ -33,6 +33,8 @@ export function FishPage() {
   const { activeId, activeSystem } = useSystems()
   const [modal, setModal] = useState<{ tank: FishTank; action: TankAction } | null>(null)
   const [showFeeding, setShowFeeding] = useState(false)
+  const [feedExpanded, setFeedExpanded] = useState(false)
+  const FEED_PREVIEW = 6
   const { data: tanks = [], isLoading, isError } = useQuery({
     queryKey: ['fish-inventory', activeId],
     queryFn: () => fetchFishInventory(activeId as string),
@@ -115,7 +117,7 @@ export function FishPage() {
               </tr>
             </thead>
             <tbody>
-              {feedingLog.map((r, i) => {
+              {(feedExpanded ? feedingLog : feedingLog.slice(0, FEED_PREVIEW)).map((r, i) => {
                 const tankNo = tanks.find((t) => t.fish_tank_id === r.fish_tank_id)?.tank_number
                 return (
                   <tr key={r.id ?? i}>
@@ -129,6 +131,11 @@ export function FishPage() {
               })}
             </tbody>
           </table>
+          {feedingLog.length > FEED_PREVIEW && (
+            <button className="feed-expand" onClick={() => setFeedExpanded((v) => !v)}>
+              {feedExpanded ? 'Show less' : `Show all ${feedingLog.length} entries`}
+            </button>
+          )}
         </div>
       )}
 

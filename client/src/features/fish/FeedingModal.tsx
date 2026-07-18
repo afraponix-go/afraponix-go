@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
 import { fetchLatestNutrients } from '../dashboard/api'
-import { logFeeding, suggestedFeed, FEED_TYPES, type FeedingRecord } from './feeding'
+import { logFeeding, suggestedFeed, recommendedPellet, FEED_TYPES, type FeedingRecord } from './feeding'
 import type { FishTank } from './api'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -44,7 +44,8 @@ export function FeedingModal({
     const init: Record<number, Row> = {}
     for (const t of tanks) {
       const p = prev.get(t.fish_tank_id)
-      init[t.fish_tank_id] = { amount: p?.amount ?? '', type: p?.type ?? FEED_TYPES[0] }
+      // Default to the last feed used, else the pellet grade matched to fish size.
+      init[t.fish_tank_id] = { amount: p?.amount ?? '', type: p?.type ?? recommendedPellet(t.average_weight ?? 0) ?? FEED_TYPES[0] }
     }
     return init
   })
@@ -109,8 +110,8 @@ export function FeedingModal({
         </div>
         <p className="feed-temp-note">
           {waterTemp != null
-            ? `Recommendations adjusted for water temp ${waterTemp.toFixed(1)}°C and each tank's species & size.`
-            : 'No recent water-temp reading — recommendations assume optimal temperature.'}
+            ? `Ration = biomass × size-based rate × temperature response (water ${waterTemp.toFixed(1)}°C, per species). Hover a chip for pellet size & feeds/day.`
+            : 'No recent water-temp reading — recommendations assume optimal temperature. Hover a chip for pellet size & feeds/day.'}
         </p>
 
         <div className="feed-rows">
@@ -125,7 +126,10 @@ export function FeedingModal({
             .sort((a, b) => a.tank_number - b.tank_number)
             .map((t) => {
               const rec = suggestedFeed(t.current_count, t.average_weight, t.tank_fish_type, waterTemp)
-              const recTitle = rec.grams > 0 ? `Recommended ${rec.grams} g/day${rec.note ? ` (${rec.note})` : ''}. Click to use.` : 'No fish/weight data'
+              const recTitle =
+                rec.grams > 0
+                  ? `Recommended ${rec.grams} g/day (${rec.ratePct.toFixed(1)}% body weight) · ${rec.pellet} · ${rec.frequency}×/day${rec.note ? ` — ${rec.note}` : ''}. Click to use.`
+                  : 'No fish/weight data'
               return (
               <div className="feed-row" key={t.fish_tank_id}>
                 <span className="feed-tank-name">Tank {t.tank_number}</span>

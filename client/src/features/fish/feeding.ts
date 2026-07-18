@@ -3,46 +3,99 @@ import { api } from '../../lib/apiClient'
 
 export const FEED_TYPES = ['Crumble', 'Pellet #2', 'Pellet #3', 'Pellet #4', 'Pellet #5', 'Pellet #6', 'Other']
 
-// --- Smart feed recommendation -------------------------------------------
-// Daily feed (g) = biomass × size rate × temperature response.
-// Fish are ectotherms: appetite peaks near a species' optimal temperature and
-// falls to zero toward its cold/hot no-feed limits. Species therefore drives
-// the temperature curve (a tilapia and a trout want very different things at
-// the same water temp), while size drives the % of body weight.
+// --- Feed recommendation model -------------------------------------------
+//
+// Daily ration (g) = biomass × feeding-rate(weight) × temperature-response ×
+// species scale. This follows standard aquaculture practice rather than a flat
+// percentage:
+//
+//  1. Feeding rate falls steeply with body weight. Fry eat 10-30% of body
+//     weight/day; market-size fish ~1.5%. We interpolate a published-style
+//     warm-water (tilapia) rate curve rather than use coarse buckets.
+//  2. Fish are ectotherms — intake tracks metabolism, which rises toward a
+//     species' optimal temperature and collapses toward its cold/hot limits.
+//     We use a smooth (smoothstep) asymmetric response with a plateau, per
+//     species, so a tilapia and a trout behave very differently at 25 °C.
+//  3. Pellet size is matched to mouth gape (≈ body weight), and feeding
+//     frequency (meals/day) is higher for small fish.
+//
+// These are planning guidelines; observed appetite (uneaten feed, behaviour)
+// should always override.
 
-type SpeciesProfile = { optimal: number; noFeedBelow: number; noFeedAbove: number }
-
-// Optimal temp and no-feed bounds (°C) per species.
-const SPECIES_PROFILES: Record<string, SpeciesProfile> = {
-  tilapia: { optimal: 28, noFeedBelow: 15, noFeedAbove: 36 },
-  catfish: { optimal: 27, noFeedBelow: 13, noFeedAbove: 35 },
-  trout: { optimal: 14, noFeedBelow: 4, noFeedAbove: 22 }, // cold-water
-  bass: { optimal: 25, noFeedBelow: 10, noFeedAbove: 33 },
-  goldfish: { optimal: 21, noFeedBelow: 5, noFeedAbove: 30 },
-  koi: { optimal: 22, noFeedBelow: 6, noFeedAbove: 31 },
-}
-const DEFAULT_PROFILE: SpeciesProfile = { optimal: 26, noFeedBelow: 12, noFeedAbove: 34 }
-
-// % of body weight/day by size — smaller fish eat proportionally more.
-function sizeRate(w: number): number {
-  return w < 100 ? 0.04 : w < 200 ? 0.03 : w < 500 ? 0.025 : 0.02
-}
-
-// 0..1 appetite multiplier: full within a plateau around optimal, ramping to
-// 0 at the no-feed bounds.
-function temperatureResponse(t: number, p: SpeciesProfile): number {
-  if (t <= p.noFeedBelow || t >= p.noFeedAbove) return 0
-  const plateau = 2.5
-  if (Math.abs(t - p.optimal) <= plateau) return 1
-  if (t < p.optimal) {
-    const lo = p.optimal - plateau
-    return Math.max(0, Math.min(1, (t - p.noFeedBelow) / (lo - p.noFeedBelow)))
+function interp(x: number, pts: [number, number][]): number {
+  if (x <= pts[0][0]) return pts[0][1]
+  const last = pts[pts.length - 1]
+  if (x >= last[0]) return last[1]
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1]
+    const [x1, y1] = pts[i]
+    if (x <= x1) return y0 + ((y1 - y0) * (x - x0)) / (x1 - x0)
   }
-  const hi = p.optimal + plateau
-  return Math.max(0, Math.min(1, (p.noFeedAbove - t) / (p.noFeedAbove - hi)))
+  return last[1]
 }
 
-export type FeedSuggestion = { grams: number; factor: number; hasTemp: boolean; note: string }
+function smoothstep(edge0: number, edge1: number, x: number): number {
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)))
+  return t * t * (3 - 2 * t)
+}
+
+// Body weight (g) → feeding rate (fraction of body weight/day) at optimal temp.
+const RATE_POINTS: [number, number][] = [
+  [1, 0.3], [3, 0.18], [5, 0.12], [10, 0.085], [20, 0.06], [35, 0.05],
+  [50, 0.043], [75, 0.038], [100, 0.033], [150, 0.028], [250, 0.022],
+  [400, 0.019], [600, 0.016], [1000, 0.014],
+]
+
+// Species thermal profile: optimal temp + cold/hot temps where feeding stops,
+// and a metabolic rate scale relative to tilapia.
+type Thermal = { optimal: number; coldStop: number; warmStop: number; scale: number }
+const THERMAL: Record<string, Thermal> = {
+  tilapia: { optimal: 29, coldStop: 15, warmStop: 37, scale: 1.0 },
+  catfish: { optimal: 28, coldStop: 13, warmStop: 36, scale: 1.0 },
+  bass: { optimal: 26, coldStop: 10, warmStop: 34, scale: 0.9 },
+  trout: { optimal: 15, coldStop: 4, warmStop: 23, scale: 0.9 }, // cold-water
+  goldfish: { optimal: 22, coldStop: 4, warmStop: 32, scale: 0.8 },
+  koi: { optimal: 23, coldStop: 5, warmStop: 33, scale: 0.8 },
+}
+const DEFAULT_THERMAL: Thermal = { optimal: 27, coldStop: 12, warmStop: 35, scale: 1.0 }
+
+function temperatureFactor(t: number, th: Thermal): number {
+  const plateauLo = th.optimal - 2
+  const plateauHi = th.optimal + 1
+  if (t >= plateauLo && t <= plateauHi) return 1
+  if (t < plateauLo) return smoothstep(th.coldStop, plateauLo, t) // 0 at coldStop → 1 at plateau
+  return 1 - smoothstep(plateauHi, th.warmStop, t) // 1 at plateau → 0 at warmStop
+}
+
+// Pellet grade by body weight (mouth gape) — maps to FEED_TYPES.
+export function recommendedPellet(w: number): string {
+  if (w <= 0) return ''
+  if (w < 15) return 'Crumble'
+  if (w < 40) return 'Pellet #2'
+  if (w < 100) return 'Pellet #3'
+  if (w < 250) return 'Pellet #4'
+  if (w < 500) return 'Pellet #5'
+  return 'Pellet #6'
+}
+
+// Meals per day — small fish need frequent small feeds.
+function feedingFrequency(w: number): number {
+  if (w <= 0) return 0
+  if (w < 10) return 6
+  if (w < 50) return 4
+  if (w < 200) return 3
+  return 2
+}
+
+export type FeedSuggestion = {
+  grams: number
+  factor: number
+  hasTemp: boolean
+  note: string
+  pellet: string
+  frequency: number
+  ratePct: number
+}
 
 export function suggestedFeed(
   count?: number | null,
@@ -53,17 +106,21 @@ export function suggestedFeed(
   const c = count ?? 0
   const w = avgWeightG ?? 0
   const hasTemp = waterTempC != null && Number.isFinite(waterTempC)
-  if (c <= 0 || w <= 0) return { grams: 0, factor: 1, hasTemp, note: '' }
+  const th = THERMAL[(fishType ?? '').toLowerCase()] ?? DEFAULT_THERMAL
+  const pellet = recommendedPellet(w)
+  const frequency = feedingFrequency(w)
+  if (c <= 0 || w <= 0) return { grams: 0, factor: 1, hasTemp, note: '', pellet, frequency, ratePct: 0 }
 
-  const base = c * w * sizeRate(w)
-  const profile = SPECIES_PROFILES[(fishType ?? '').toLowerCase()] ?? DEFAULT_PROFILE
-  const factor = hasTemp ? temperatureResponse(waterTempC as number, profile) : 1
+  const rate = interp(w, RATE_POINTS) * th.scale
+  const factor = hasTemp ? temperatureFactor(waterTempC as number, th) : 1
+  const grams = Math.round(c * w * rate * factor)
+  const ratePct = rate * factor * 100
 
   let note = ''
-  if (hasTemp && factor < 0.95) note = (waterTempC as number) < profile.optimal ? 'reduced — cool water' : 'reduced — warm water'
-  else if (!hasTemp) note = 'no temp reading — assumes optimal'
+  if (hasTemp && factor < 0.9) note = (waterTempC as number) < th.optimal ? 'reduced — cool water' : 'reduced — warm water'
+  else if (!hasTemp) note = 'assumes optimal temp'
 
-  return { grams: Math.round(base * factor), factor, hasTemp, note }
+  return { grams, factor, hasTemp, note, pellet, frequency, ratePct }
 }
 
 export function logFeeding(

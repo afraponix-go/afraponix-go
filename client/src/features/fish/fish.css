@@ -209,6 +209,21 @@
   font-size: 13px;
   color: var(--ink-faint);
 }
+.feed-expand {
+  width: 100%;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--surface-2);
+  border: none;
+  border-top: 1px solid var(--line);
+  padding: 11px;
+  cursor: pointer;
+}
+.feed-expand:hover {
+  background: var(--surface-3);
+}
 .feed-rec-none {
   text-align: center;
   color: var(--ink-faint);
