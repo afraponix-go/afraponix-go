@@ -60,7 +60,7 @@ router.post('/system/:systemId', async (req, res) => {
             const cleanBed = {
                 bed_type: bed.bed_type ?? null,
                 bed_name: bed.bed_name ?? null,
-                volume_liters: bed.volume_liters ?? null,
+                volume_liters: bed.volume_liters ?? 0,
                 area_m2: bed.area_m2 ?? null,
                 length_meters: bed.length_meters ?? null,
                 width_meters: bed.width_meters ?? null,
@@ -118,6 +118,9 @@ router.post('/system/:systemId', async (req, res) => {
                         }
                 }
             }
+
+            // equivalent_m2 is NOT NULL in the schema; never let it fall through as null.
+            cleanBed.equivalent_m2 = cleanBed.equivalent_m2 ?? 0;
 
             const existingBed = existingBedMap.get(bed.bed_number);
             

@@ -82,7 +82,7 @@ export function AddSystemModal({ onClose }: { onClose: () => void }) {
         const nft = bedShape(b.type) === 'nft'
         return {
           bed_number: i + 1, bed_type: b.type, bed_name: b.name.trim() || `Bed ${i + 1}`,
-          volume_liters: Math.round(c.volume_liters) || null, area_m2: c.area_m2 || null, equivalent_m2: c.equivalent_m2 || null,
+          volume_liters: Math.round(c.volume_liters) || 0, area_m2: c.area_m2 || null, equivalent_m2: c.equivalent_m2 || null,
           length_meters: numOrNull(b.length), width_meters: numOrNull(b.width), height_meters: numOrNull(b.height),
           plant_capacity: c.plant_capacity, vertical_count: numOrNull(b.verticals), plants_per_vertical: numOrNull(b.perVertical),
           reservoir_volume: nft ? numOrNull(b.reservoir) : Math.round(c.volume_liters) || null,
