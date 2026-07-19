@@ -4,15 +4,20 @@ import { api } from '../../lib/apiClient'
 // Water-quality parameters, all stored in nutrient_readings (the single source
 // of truth). Field defs are shared by the form and the history table.
 export const WATER_FIELDS = [
-  { key: 'temperature', label: 'Water Temp', unit: '°C', step: '0.1' },
-  { key: 'ph', label: 'pH', unit: '', step: '0.01' },
-  { key: 'dissolved_oxygen', label: 'Dissolved O₂', unit: 'mg/L', step: '0.1' },
-  { key: 'ammonia', label: 'Ammonia', unit: 'ppm', step: '0.01' },
-  { key: 'nitrite', label: 'Nitrite', unit: 'ppm', step: '0.01' },
-  { key: 'nitrate', label: 'Nitrate', unit: 'ppm', step: '0.1' },
-  { key: 'ec', label: 'EC', unit: 'µS/cm', step: '1' },
-  { key: 'humidity', label: 'Humidity', unit: '%', step: '1' },
-  { key: 'salinity', label: 'Salinity', unit: 'ppt', step: '0.01' },
+  { key: 'ph', label: 'pH', unit: '', step: '0.1', range: '6.0 - 8.5' },
+  { key: 'ec', label: 'EC / TDS', unit: 'ppm', step: '10', range: '400 - 1200' },
+  { key: 'dissolved_oxygen', label: 'Dissolved O₂', unit: 'mg/L', step: '0.1', range: '5.0 - 8.0' },
+  { key: 'temperature', label: 'Water Temp', unit: '°C', step: '0.1', range: '18 - 30' },
+  { key: 'humidity', label: 'Humidity', unit: '%', step: '1', range: '40 - 80' },
+  { key: 'salinity', label: 'Salinity', unit: 'ppt', step: '0.1', range: '0 - 1.0' },
+  { key: 'ammonia', label: 'Ammonia (NH₃)', unit: 'ppm', step: '0.01', range: '< 0.5' },
+  { key: 'nitrite', label: 'Nitrite (NO₂)', unit: 'ppm', step: '0.01', range: '< 0.5' },
+  { key: 'nitrate', label: 'Nitrate (NO₃)', unit: 'ppm', step: '1', range: '10 - 150' },
+  { key: 'iron', label: 'Iron (Fe)', unit: 'ppm', step: '0.1', range: '1 - 3' },
+  { key: 'potassium', label: 'Potassium (K)', unit: 'ppm', step: '1', range: '40 - 70' },
+  { key: 'calcium', label: 'Calcium (Ca)', unit: 'ppm', step: '1', range: '50 - 100' },
+  { key: 'phosphorus', label: 'Phosphorus (P)', unit: 'ppm', step: '0.1', range: '5 - 20' },
+  { key: 'magnesium', label: 'Magnesium (Mg)', unit: 'ppm', step: '0.1', range: '12 - 18' },
 ] as const
 
 export type WaterFieldKey = (typeof WATER_FIELDS)[number]['key']

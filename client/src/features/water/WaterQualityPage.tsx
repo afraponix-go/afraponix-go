@@ -89,7 +89,7 @@ export function WaterQualityPage() {
                 inputMode="decimal"
                 value={values[f.key] ?? ''}
                 onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
-                placeholder="—"
+                placeholder={f.range ?? '—'}
               />
             </div>
           ))}
