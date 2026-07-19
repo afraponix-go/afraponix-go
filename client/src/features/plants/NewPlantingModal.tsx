@@ -9,14 +9,14 @@ import { recordPlanting } from './plantGrowth'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-export function NewPlantingModal({ onClose }: { onClose: () => void }) {
+export function NewPlantingModal({ initialBedId, onClose }: { initialBedId?: number; onClose: () => void }) {
   const { activeId } = useSystems()
   const qc = useQueryClient()
   const { data: beds = [] } = useQuery({ queryKey: ['grow-beds', activeId], queryFn: () => fetchGrowBeds(activeId as string), enabled: !!activeId })
   const { data: crops = [] } = useQuery({ queryKey: ['crop-options', activeId], queryFn: () => fetchCropOptions(activeId as string), enabled: !!activeId })
 
   const [date, setDate] = useState(today())
-  const [bed, setBed] = useState('')
+  const [bed, setBed] = useState(initialBedId != null ? String(initialBedId) : '')
   const [crop, setCrop] = useState('')
   const [count, setCount] = useState('')
   const [stage, setStage] = useState('seedling')

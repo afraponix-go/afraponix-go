@@ -98,3 +98,36 @@ export function computeBed(type: string, i: BedInputs): BedComputed {
     plant_capacity: null,
   }
 }
+
+// How full a bed is with actual plants — reproduces the old app's Beds Overview
+// numbers exactly. Capacity = plant_capacity or floor(area × 25 plants/m²).
+// Area beds report m² used (plants × 0.04); vertical/NFT report verticals used.
+export type BedFill = { plants: number; capacity: number; spaceLeft: number; pct: number; usage: string; bedArea: number }
+
+const PLANTS_PER_M2 = 25
+const AVG_PLANT_M2 = 0.04 // ~20 cm spacing
+
+export function bedFill(
+  bed: { bed_type?: string | null; area_m2?: number | null; equivalent_m2?: number | null; plant_capacity?: number | null; vertical_count?: number | null; plants_per_vertical?: number | null },
+  plants: number,
+): BedFill {
+  const bedArea = n(bed.area_m2) || n(bed.equivalent_m2) || 0
+  const capacity = bed.plant_capacity && bed.plant_capacity > 0 ? bed.plant_capacity : Math.floor(bedArea * PLANTS_PER_M2)
+  const pct = capacity > 0 ? Math.round((plants / capacity) * 100) : 0
+  const spaceLeft = capacity - plants
+
+  const t = (bed.bed_type ?? '').toLowerCase()
+  const isVerticalDisplay = t.includes('vertical') || t.includes('tower') || t.includes('nft')
+
+  let usage: string
+  if (isVerticalDisplay) {
+    const perUnit = n(bed.plants_per_vertical) || 6
+    let totalUnits = n(bed.vertical_count) || 0
+    if (!totalUnits && capacity > 0) totalUnits = Math.ceil(capacity / perUnit)
+    const unitsUsed = perUnit > 0 ? Math.ceil(plants / perUnit) : 0
+    usage = `${unitsUsed}/${totalUnits} verticals`
+  } else {
+    usage = `${(plants * AVG_PLANT_M2).toFixed(1)}/${bedArea.toFixed(1)} m² used`
+  }
+  return { plants, capacity, spaceLeft, pct, usage, bedArea }
+}

@@ -195,11 +195,50 @@
   text-decoration: underline;
 }
 
-/* Beds & allocation cards */
+/* Beds — plant-fill cards */
 .bed-empty {
   margin-top: 10px;
   font-size: 13px;
   color: var(--ink-faint);
+}
+.bed-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 10px 0 4px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.bed-stat b {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  font-weight: 600;
+}
+.bed-fullness {
+  margin-left: auto;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.bed-fullness.low {
+  background: color-mix(in srgb, var(--brand-green) 14%, transparent);
+  color: var(--brand-green);
+}
+.bed-fullness.medium {
+  background: color-mix(in srgb, #d99a2b 18%, transparent);
+  color: #b9791a;
+}
+.bed-fullness.high {
+  background: color-mix(in srgb, var(--danger) 15%, transparent);
+  color: var(--danger);
+}
+.bed-batch-list {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }
 .alloc-actions {
   display: flex;

@@ -44,7 +44,7 @@ const PLANTS_TABS = [
   { to: '/plants', label: 'Overview', end: true },
   { to: '/plants/plantings', label: 'Plantings' },
   { to: '/plants/harvest', label: 'Harvest' },
-  { to: '/plants/beds', label: 'Beds & Allocation' },
+  { to: '/plants/beds', label: 'Beds' },
   { to: '/plants/crops', label: 'Crops' },
 ]
 

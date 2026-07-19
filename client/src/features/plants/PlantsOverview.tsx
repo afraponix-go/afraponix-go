@@ -43,7 +43,7 @@ export function PlantsOverview() {
   const totalHarvestKg = batches.reduce((n, b) => n + b.harvest_weight_g, 0) / 1000
   const plantsHarvested = batches.reduce((n, b) => n + b.harvested, 0)
   const crops = new Set(active.map((b) => b.crop_type))
-  const avgUtil = beds.length ? beds.reduce((n, b) => n + (b.total_allocated ?? 0), 0) / beds.length : 0
+  const totalArea = beds.reduce((n, b) => n + (b.equivalent_m2 ?? 0), 0)
   const groups = cropBreakdown(active)
   const maxPlants = groups.length ? groups[0].plants : 0
 
@@ -55,7 +55,7 @@ export function PlantsOverview() {
         <Stat label="Active Batches" value={String(active.length)} sub={`${batches.length} total`} />
         <Stat label="Ready to Harvest" value={String(ready.length)} sub={ready.length ? 'batches at maturity' : 'none yet'} />
         <Stat label="Total Harvested" value={totalHarvestKg >= 1 ? totalHarvestKg.toFixed(1) : totalHarvestKg.toFixed(2)} unit="kg" sub={`${plantsHarvested.toLocaleString()} plants`} />
-        <Stat label="Grow Beds" value={String(beds.length)} sub={`${avgUtil.toFixed(0)}% allocated`} />
+        <Stat label="Grow Beds" value={String(beds.length)} sub={`${totalArea.toFixed(0)} m² grow area`} />
         <Stat label="Crop Varieties" value={String(crops.size)} />
       </div>
 

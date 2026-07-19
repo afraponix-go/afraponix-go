@@ -57,9 +57,13 @@ router.get('/batches/:systemId', async (req, res) => {
                 gb.bed_name, gb.bed_type, gb.bed_number,
                 MAX(pg.seed_variety)                                AS seed_variety,
                 MAX(pg.days_to_harvest)                             AS days_to_harvest,
-                COALESCE(MAX(pg.batch_created_date), MIN(pg.date))  AS planted_date,
+                COALESCE(MIN(pg.batch_created_date), MIN(pg.date))  AS planted_date,
                 MAX(pg.date)                                        AS last_event_date,
-                COALESCE(SUM(pg.new_seedlings), 0)                  AS planted,
+                -- Planting quantity: for non-harvest rows use new_seedlings, or
+                -- fall back to count (legacy rows store the planting in count).
+                -- Matches the old app's Beds Overview (new_seedlings || count).
+                COALESCE(SUM(CASE WHEN COALESCE(pg.plants_harvested, 0) > 0 THEN 0
+                                  ELSE COALESCE(NULLIF(pg.new_seedlings, 0), pg.count, 0) END), 0) AS planted,
                 COALESCE(SUM(pg.plants_harvested), 0)               AS harvested,
                 COALESCE(SUM(pg.harvest_weight), 0)                 AS harvest_weight_g
             FROM plant_growth pg
