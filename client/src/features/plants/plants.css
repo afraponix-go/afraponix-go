@@ -305,47 +305,67 @@
   box-sizing: border-box;
 }
 
-/* Seed varieties */
-.seed-add {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
-}
-.seed-add select,
-.seed-add input {
-  padding: 8px 10px;
+/* Crop library */
+.crop-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  margin-bottom: 16px;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 10px;
   background: var(--surface);
   color: var(--ink);
   font: inherit;
   font-size: 14px;
 }
-.seed-add input {
-  flex: 1;
-  min-width: 140px;
+.crop-library {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
 }
-.variety-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.crop-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
 }
-.variety-group {
+.crop-card-head {
   display: flex;
-  gap: 12px;
-  align-items: baseline;
+  align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
 }
-.variety-crop {
+.crop-card-head .crop-name {
+  font-size: 15px;
+  font-weight: 650;
+}
+.tag-custom {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
   font-weight: 600;
-  font-size: 14px;
-  min-width: 110px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
 }
-.variety-chips {
+.crop-cat {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.crop-card-actions {
+  margin-left: auto;
   display: flex;
-  gap: 6px;
+  gap: 12px;
+}
+.crop-meta {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+.crop-varieties {
+  display: flex;
   flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
 }
 .variety-chip {
   display: inline-flex;
@@ -368,4 +388,30 @@
 }
 .variety-chip button:hover {
   color: var(--danger);
+}
+.variety-chip.add {
+  padding: 4px 10px;
+  border-style: dashed;
+  color: var(--ink-soft);
+  font-weight: 600;
+  cursor: pointer;
+}
+.variety-chip.add:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.variety-add-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.variety-add-inline input {
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  width: 150px;
 }
