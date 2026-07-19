@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthContext'
 import { useSystems } from '../features/systems/SystemContext'
+import { AddSystemModal } from '../features/systems/AddSystemModal'
 import { DashboardIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SettingsIcon } from './icons'
 import './shell.css'
 
@@ -17,6 +19,7 @@ const TABS = [
 export function AppShell() {
   const { user, signOut } = useAuth()
   const { systems, activeId, setActiveId } = useSystems()
+  const [showAdd, setShowAdd] = useState(false)
   const name = user?.firstName || user?.email || 'Account'
   const initial = (user?.firstName?.[0] || user?.email?.[0] || '?').toUpperCase()
   return (
@@ -39,6 +42,9 @@ export function AppShell() {
               </select>
             </label>
           )}
+          <button className="sys-add" onClick={() => setShowAdd(true)} title="Add system" aria-label="Add system">
+            {systems.length > 0 ? '+' : '+ Add system'}
+          </button>
           <div className="user-chip" title={user?.email ?? undefined}>
             <span className="avatar">{initial}</span>
             <span className="who">{name}</span>
@@ -61,6 +67,8 @@ export function AppShell() {
           </NavLink>
         ))}
       </nav>
+
+      {showAdd && <AddSystemModal onClose={() => setShowAdd(false)} />}
     </div>
   )
 }

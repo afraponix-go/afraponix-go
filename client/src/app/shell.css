@@ -80,6 +80,26 @@
   box-shadow: none;
 }
 
+/* Add-system button next to the switcher */
+.sys-add {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  flex: none;
+  transition: border-color 0.15s, color 0.15s;
+}
+.sys-add:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* User chip */
 .user-chip {
   display: flex;
