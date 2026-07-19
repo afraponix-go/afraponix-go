@@ -219,30 +219,20 @@ router.get('/custom-crops/:id', async (req, res) => {
 
 // Update custom crop
 router.put('/custom-crops/:id', async (req, res) => {
-    const { 
-        cropName, 
-        targetN, 
-        targetP, 
-        targetK, 
-        targetCa, 
-        targetMg, 
-        targetFe, 
-        targetEc,
-        category,
-        plantSpacing,
-        growthDays,
-        difficulty,
-        season,
-        description
+    const {
+        cropName, cropCode, scientificName,
+        targetN, targetP, targetK, targetCa, targetMg, targetFe, targetEc,
+        ecMin, ecMax, category, plantSpacing, growthDays, difficulty, season, description
     } = req.body;
 
     if (!cropName) {
         return res.status(400).json({ error: 'Crop name is required' });
     }
+    const nn = (v) => (v === undefined || v === '' ? null : v);
 
     try {
         const pool = getDatabase();
-        
+
         // Check if crop exists and belongs to user
         const [existing] = await pool.execute(
             'SELECT id FROM custom_crops WHERE id = ? AND user_id = ?',
@@ -254,15 +244,16 @@ router.put('/custom-crops/:id', async (req, res) => {
         }
 
         await pool.execute(`
-            UPDATE custom_crops 
-            SET crop_name = ?, target_n = ?, target_p = ?, target_k = ?, 
-                target_ca = ?, target_mg = ?, target_fe = ?, target_ec = ?,
-                category = ?, plant_spacing = ?, growth_days = ?, difficulty = ?,
+            UPDATE custom_crops
+            SET crop_name = ?, crop_code = ?, scientific_name = ?,
+                target_n = ?, target_p = ?, target_k = ?, target_ca = ?, target_mg = ?, target_fe = ?, target_ec = ?,
+                ec_min = ?, ec_max = ?, category = ?, plant_spacing = ?, growth_days = ?, difficulty = ?,
                 season = ?, description = ?
             WHERE id = ? AND user_id = ?
-        `, [cropName, targetN, targetP, targetK, targetCa, targetMg, targetFe, targetEc,
-            category, plantSpacing, growthDays, difficulty, season, description,
-            req.params.id, req.user.userId]);
+        `, [cropName, nn(cropCode), nn(scientificName),
+            nn(targetN), nn(targetP), nn(targetK), nn(targetCa), nn(targetMg), nn(targetFe), nn(targetEc),
+            nn(ecMin), nn(ecMax), nn(category), nn(plantSpacing), nn(growthDays), nn(difficulty),
+            nn(season), nn(description), req.params.id, req.user.userId]);
 
         res.json({ success: true, message: 'Custom crop updated successfully' });
 
@@ -376,40 +367,29 @@ router.post('/custom-crops/bulk-import', async (req, res) => {
 
 // Add custom crop
 router.post('/custom-crops', async (req, res) => {
-    const { 
-        cropName, 
-        targetN, 
-        targetP, 
-        targetK, 
-        targetCa, 
-        targetMg, 
-        targetFe, 
-        targetEc,
-        category,
-        plantSpacing,
-        growthDays,
-        difficulty,
-        season,
-        description
+    const {
+        cropName, cropCode, scientificName,
+        targetN, targetP, targetK, targetCa, targetMg, targetFe, targetEc,
+        ecMin, ecMax, category, plantSpacing, growthDays, difficulty, season, description
     } = req.body;
 
     if (!cropName) {
         return res.status(400).json({ error: 'Crop name is required' });
     }
-
-    // Using connection pool - no manual connection management
+    const nn = (v) => (v === undefined || v === '' ? null : v);
+    const code = cropCode || cropName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 
     try {
         const pool = getDatabase();
-        
+
         const [result] = await pool.execute(`
-            INSERT INTO custom_crops 
-            (user_id, crop_name, target_n, target_p, target_k, target_ca, target_mg, target_fe, target_ec,
-             category, plant_spacing, growth_days, difficulty, season, description)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [req.user.userId, cropName, targetN || 0, targetP || 0, targetK || 0, targetCa || 0, 
-            targetMg || 0, targetFe || 0, targetEc || 0, category || 'leafy_greens', 
-            plantSpacing || 15, growthDays || 30, difficulty || 'beginner', 
+            INSERT INTO custom_crops
+            (user_id, crop_name, crop_code, scientific_name, target_n, target_p, target_k, target_ca, target_mg, target_fe, target_ec,
+             ec_min, ec_max, category, plant_spacing, growth_days, difficulty, season, description)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [req.user.userId, cropName, code, nn(scientificName), targetN || 0, targetP || 0, targetK || 0, targetCa || 0,
+            targetMg || 0, targetFe || 0, targetEc || 0, nn(ecMin), nn(ecMax), category || 'leafy_greens',
+            plantSpacing || 15, growthDays || 30, difficulty || 'beginner',
             season || 'year_round', description || '']);
 
         res.json({ success: true, id: result.insertId, message: 'Custom crop added successfully' });

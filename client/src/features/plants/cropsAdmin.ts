@@ -26,7 +26,9 @@ export async function fetchReferenceCrops(): Promise<RefCrop[]> {
 // ---- Custom crops (user-defined) ----
 export const customCropSchema = z.object({
   id: z.number(),
+  crop_code: z.string().nullable().optional(),
   crop_name: z.string(),
+  scientific_name: z.string().nullable().optional(),
   target_n: numish,
   target_p: numish,
   target_k: numish,
@@ -34,6 +36,8 @@ export const customCropSchema = z.object({
   target_mg: numish,
   target_fe: numish,
   target_ec: numish,
+  ec_min: numish,
+  ec_max: numish,
   category: z.string().nullable().optional(),
   plant_spacing: numish,
   growth_days: numish,
@@ -51,9 +55,13 @@ export async function fetchCustomCrops(systemId: string): Promise<CustomCrop[]> 
 
 export type CustomCropInput = {
   cropName: string
+  cropCode?: string
+  scientificName?: string
   category?: string
   plantSpacing?: number
   growthDays?: number
+  ecMin?: number
+  ecMax?: number
   targetN?: number
   targetP?: number
   targetK?: number

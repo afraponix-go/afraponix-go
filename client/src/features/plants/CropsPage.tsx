@@ -4,13 +4,11 @@ import { Modal } from '../../components/Modal'
 import { useSystems } from '../systems/SystemContext'
 import { prettyCrop } from './api'
 import {
-  fetchReferenceCrops,
   fetchCustomCrops,
   fetchSeedVarieties,
   deleteCustomCrop,
   addSeedVariety,
   deleteSeedVariety,
-  type RefCrop,
   type CustomCrop,
   type SeedVariety,
 } from './cropsAdmin'
@@ -20,52 +18,41 @@ import '../fish/fish.css'
 import './plants.css'
 
 const cap = (s?: string | null) => (s ? s.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : '')
+const slug = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
 
-// One row per crop, merging reference data, custom crops, and seed varieties.
+// One row per crop from the user's own crop list, plus its seed varieties.
 type CropEntry = {
   key: string
   varietyKey: string
   name: string
   category: string
   meta: string[]
-  custom: boolean
   customCrop?: CustomCrop
   varieties: SeedVariety[]
 }
 
-function buildEntries(refCrops: RefCrop[], customCrops: CustomCrop[], seeds: SeedVariety[]): CropEntry[] {
+function buildEntries(customCrops: CustomCrop[], seeds: SeedVariety[]): CropEntry[] {
   const byKey = new Map<string, CropEntry>()
 
-  const ecRange = (min: number | null, max: number | null) => (min != null && max != null ? `EC ${min}–${max}` : min != null ? `EC ${min}` : null)
+  const ecRange = (min: number | null, max: number | null, single: number | null) =>
+    min != null && max != null ? `EC ${min}–${max}` : single != null ? `EC ${single}` : null
   const meta = (days: number | null, spacing: number | null, ec: string | null) =>
     [days != null ? `${days} d to harvest` : null, spacing != null ? `${spacing} cm spacing` : null, ec].filter(Boolean) as string[]
 
-  for (const c of refCrops) {
-    byKey.set(c.code, {
-      key: c.code,
-      varietyKey: c.code,
-      name: c.name,
-      category: c.category_name ?? '',
-      meta: meta(c.days_to_harvest, c.plant_spacing_cm, ecRange(c.default_ec_min, c.default_ec_max)),
-      custom: false,
-      varieties: [],
-    })
-  }
   for (const c of customCrops) {
-    byKey.set(`custom:${c.id}`, {
+    const code = c.crop_code || slug(c.crop_name)
+    byKey.set(code, {
       key: `custom:${c.id}`,
-      varietyKey: c.crop_name,
+      varietyKey: code,
       name: c.crop_name,
       category: cap(c.category),
-      meta: meta(c.growth_days, c.plant_spacing, c.target_ec != null ? `EC ${c.target_ec}` : null),
-      custom: true,
+      meta: meta(c.growth_days, c.plant_spacing, ecRange(c.ec_min, c.ec_max, c.target_ec)),
       customCrop: c,
       varieties: [],
     })
   }
 
-  // Attach seed varieties to their crop, creating an entry for any crop_type
-  // that has no reference/custom match (legacy cultivar groups).
+  // Attach seed varieties to their crop (keyed by crop_code).
   const groups = new Map<string, SeedVariety[]>()
   for (const s of seeds) {
     const arr = groups.get(s.crop_type) ?? []
@@ -73,15 +60,15 @@ function buildEntries(refCrops: RefCrop[], customCrops: CustomCrop[], seeds: See
     groups.set(s.crop_type, arr)
   }
   for (const [ct, vs] of groups) {
-    let entry = [...byKey.values()].find((e) => e.varietyKey.toLowerCase() === ct.toLowerCase())
+    let entry = byKey.get(ct) ?? [...byKey.values()].find((e) => e.varietyKey.toLowerCase() === ct.toLowerCase())
     if (!entry) {
-      entry = { key: `seed:${ct}`, varietyKey: ct, name: prettyCrop(ct), category: '', meta: [], custom: false, varieties: [] }
+      entry = { key: `seed:${ct}`, varietyKey: ct, name: prettyCrop(ct), category: '', meta: [], varieties: [] }
       byKey.set(entry.key, entry)
     }
     entry.varieties = vs.slice().sort((a, b) => a.variety_name.localeCompare(b.variety_name))
   }
 
-  return [...byKey.values()].sort((a, b) => Number(b.custom) - Number(a.custom) || a.name.localeCompare(b.name))
+  return [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name))
 }
 
 export function Crops() {
@@ -93,7 +80,6 @@ export function Crops() {
   const [addingFor, setAddingFor] = useState<string | null>(null)
   const [newVar, setNewVar] = useState('')
 
-  const { data: refCrops = [] } = useQuery({ queryKey: ['reference-crops'], queryFn: fetchReferenceCrops })
   const { data: customCrops = [] } = useQuery({ queryKey: ['custom-crops', activeId], queryFn: () => fetchCustomCrops(activeId as string), enabled: !!activeId })
   const { data: seeds = [] } = useQuery({ queryKey: ['seed-varieties'], queryFn: fetchSeedVarieties })
 
@@ -110,7 +96,7 @@ export function Crops() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['seed-varieties'] }),
   })
 
-  const entries = useMemo(() => buildEntries(refCrops, customCrops, seeds), [refCrops, customCrops, seeds])
+  const entries = useMemo(() => buildEntries(customCrops, seeds), [customCrops, seeds])
   const filtered = entries.filter((e) => e.name.toLowerCase().includes(search.trim().toLowerCase()))
 
   function submitVariety(e: FormEvent, cropType: string) {
@@ -122,10 +108,10 @@ export function Crops() {
     <div>
       <div className="feed-head">
         <h2 className="section-title" style={{ margin: 0 }}>Crops</h2>
-        <button className="btn feed-btn" onClick={() => setCropModal({})}>+ Add custom crop</button>
+        <button className="btn feed-btn" onClick={() => setCropModal({})}>+ Add crop</button>
       </div>
       <p style={{ margin: '0 0 14px', color: 'var(--ink-faint)', fontSize: 13 }}>
-        Reference crops and your custom crops, each with its seed varieties. Used when recording a planting.
+        Your crop list — edit or delete any of these freely; changes are yours alone. Used when recording a planting.
       </p>
 
       <input className="crop-search" type="search" placeholder="Search crops…" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -135,9 +121,8 @@ export function Crops() {
           <div className="crop-card" key={e.key}>
             <div className="crop-card-head">
               <span className="crop-name">{e.name}</span>
-              {e.custom && <span className="tag-custom">Custom</span>}
               {e.category && <span className="crop-cat">{e.category}</span>}
-              {e.custom && e.customCrop && (
+              {e.customCrop && (
                 <span className="crop-card-actions">
                   <button className="link-btn" onClick={() => setCropModal({ crop: e.customCrop })}>Edit</button>
                   <button className="link-btn danger" onClick={() => setConfirmDel(e.customCrop!)}>Delete</button>

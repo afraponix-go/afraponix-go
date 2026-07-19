@@ -7,6 +7,7 @@ import { saveCustomCrop, updateCustomCrop, type CustomCrop, type CustomCropInput
 const CATEGORIES = ['leafy_greens', 'fruiting_vegetables', 'herbs', 'root_vegetables', 'legumes', 'other']
 const label = (s: string) => s.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 const numOrU = (s: string): number | undefined => (s.trim() === '' || isNaN(Number(s)) ? undefined : Number(s))
+const slug = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
 
 const NUTRIENTS = [
   { key: 'targetN', label: 'N' },
@@ -22,10 +23,12 @@ export function CustomCropModal({ crop, onClose }: { crop?: CustomCrop; onClose:
   const editing = !!crop
 
   const [name, setName] = useState(crop?.crop_name ?? '')
+  const [sciName, setSciName] = useState(crop?.scientific_name ?? '')
   const [category, setCategory] = useState(crop?.category ?? 'leafy_greens')
   const [spacing, setSpacing] = useState(crop?.plant_spacing != null ? String(crop.plant_spacing) : '')
   const [days, setDays] = useState(crop?.growth_days != null ? String(crop.growth_days) : '')
-  const [ec, setEc] = useState(crop?.target_ec != null ? String(crop.target_ec) : '')
+  const [ecMin, setEcMin] = useState(crop?.ec_min != null ? String(crop.ec_min) : '')
+  const [ecMax, setEcMax] = useState(crop?.ec_max != null ? String(crop.ec_max) : '')
   const [nutrients, setNutrients] = useState<Record<string, string>>({
     targetN: crop?.target_n != null ? String(crop.target_n) : '',
     targetP: crop?.target_p != null ? String(crop.target_p) : '',
@@ -38,12 +41,18 @@ export function CustomCropModal({ crop, onClose }: { crop?: CustomCrop; onClose:
 
   const mutation = useMutation({
     mutationFn: () => {
+      const min = numOrU(ecMin)
+      const max = numOrU(ecMax)
       const input: CustomCropInput = {
         cropName: name.trim(),
+        cropCode: crop?.crop_code || slug(name),
+        scientificName: sciName.trim() || undefined,
         category,
         plantSpacing: numOrU(spacing),
         growthDays: numOrU(days),
-        targetEc: numOrU(ec),
+        ecMin: min,
+        ecMax: max,
+        targetEc: min != null && max != null ? Math.round(((min + max) / 2) * 100) / 100 : min ?? max,
         targetN: numOrU(nutrients.targetN),
         targetP: numOrU(nutrients.targetP),
         targetK: numOrU(nutrients.targetK),
@@ -69,25 +78,31 @@ export function CustomCropModal({ crop, onClose }: { crop?: CustomCrop; onClose:
   }
 
   return (
-    <Modal title={editing ? 'Edit custom crop' : 'Add custom crop'} onClose={onClose}>
+    <Modal title={editing ? `Edit ${crop?.crop_name ?? 'crop'}` : 'Add crop'} onClose={onClose}>
       <form className="mform" onSubmit={onSubmit}>
         {error && <div className="wq-error">{error}</div>}
 
-        <div className="field">
-          <label htmlFor="cc-name">Crop name</label>
-          <input id="cc-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Purple Basil" autoFocus />
+        <div className="field-row">
+          <div className="field">
+            <label htmlFor="cc-name">Crop name</label>
+            <input id="cc-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Purple Basil" autoFocus />
+          </div>
+          <div className="field">
+            <label htmlFor="cc-cat">Category</label>
+            <select id="cc-cat" value={category} onChange={(e) => setCategory(e.target.value)}>
+              {CATEGORIES.map((c) => <option key={c} value={c}>{label(c)}</option>)}
+            </select>
+          </div>
         </div>
 
         <div className="field">
-          <label htmlFor="cc-cat">Category</label>
-          <select id="cc-cat" value={category} onChange={(e) => setCategory(e.target.value)}>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{label(c)}</option>)}
-          </select>
+          <label htmlFor="cc-sci">Scientific name <span className="unit-hint">· optional</span></label>
+          <input id="cc-sci" type="text" value={sciName} onChange={(e) => setSciName(e.target.value)} placeholder="e.g. Ocimum basilicum" />
         </div>
 
         <div className="field-row">
           <div className="field">
-            <label htmlFor="cc-spacing">Plant spacing <span className="unit-hint">(cm)</span></label>
+            <label htmlFor="cc-spacing">Spacing <span className="unit-hint">(cm)</span></label>
             <input id="cc-spacing" type="number" min="0" step="any" inputMode="decimal" value={spacing} onChange={(e) => setSpacing(e.target.value)} placeholder="15" />
           </div>
           <div className="field">
@@ -95,8 +110,12 @@ export function CustomCropModal({ crop, onClose }: { crop?: CustomCrop; onClose:
             <input id="cc-days" type="number" min="0" step="1" inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value)} placeholder="30" />
           </div>
           <div className="field">
-            <label htmlFor="cc-ec">Target EC</label>
-            <input id="cc-ec" type="number" min="0" step="any" inputMode="decimal" value={ec} onChange={(e) => setEc(e.target.value)} placeholder="1.6" />
+            <label htmlFor="cc-ecmin">EC min</label>
+            <input id="cc-ecmin" type="number" min="0" step="any" inputMode="decimal" value={ecMin} onChange={(e) => setEcMin(e.target.value)} placeholder="1.0" />
+          </div>
+          <div className="field">
+            <label htmlFor="cc-ecmax">EC max</label>
+            <input id="cc-ecmax" type="number" min="0" step="any" inputMode="decimal" value={ecMax} onChange={(e) => setEcMax(e.target.value)} placeholder="1.6" />
           </div>
         </div>
 

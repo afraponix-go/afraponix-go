@@ -75,6 +75,20 @@ router.post('/register', async (req, res) => {
         
         const userId = result.insertId;
 
+        // Seed the new user with their own editable copy of the default crops.
+        try {
+            await pool.execute(`
+                INSERT INTO custom_crops
+                  (user_id, crop_code, crop_name, scientific_name, category, plant_spacing, growth_days, target_ec, ec_min, ec_max)
+                SELECT ?, c.code, c.name, c.scientific_name, cat.code, c.plant_spacing_cm, c.days_to_harvest,
+                       ROUND((c.default_ec_min + c.default_ec_max) / 2, 2), c.default_ec_min, c.default_ec_max
+                FROM crops c LEFT JOIN crop_categories cat ON c.category_id = cat.id
+                WHERE c.is_active = 1
+            `, [userId]);
+        } catch (seedErr) {
+            console.error('Failed to seed default crops for new user:', seedErr.message);
+        }
+
         // Check if SMTP is configured
         const smtpConfigured = process.env.SMTP_USER && process.env.SMTP_PASS;
 
