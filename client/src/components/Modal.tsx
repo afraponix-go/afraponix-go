@@ -3,21 +3,19 @@ import { createPortal } from 'react-dom'
 import './Modal.css'
 
 export function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+  // The modal only closes via the × button (or an explicit Cancel/action).
+  // Clicking the backdrop or pressing Escape does NOT dismiss it, so progress
+  // in a form isn't lost by accident.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
     return () => {
-      document.removeEventListener('keydown', onKey)
       document.body.style.overflow = ''
     }
-  }, [onClose])
+  }, [])
 
   return createPortal(
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className={`modal-card${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
+    <div className="modal-backdrop">
+      <div className={`modal-card${wide ? ' wide' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="modal-head">
           <h2 className="modal-title">{title}</h2>
           <button className="modal-close" onClick={onClose} aria-label="Close">
