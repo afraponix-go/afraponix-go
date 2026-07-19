@@ -5,15 +5,23 @@ import { ApiError } from '../../lib/apiClient'
 import { useSystems } from '../systems/SystemContext'
 import { fetchGrowBeds } from '../growbeds/api'
 import { fetchCropOptions } from './crops'
+import { fetchSeedVarieties, addSeedVariety } from './cropsAdmin'
 import { recordPlanting } from './plantGrowth'
 
 const today = () => new Date().toISOString().slice(0, 10)
+const STAGES = [
+  { value: 'seedling', label: 'Seedling' },
+  { value: 'transplant', label: 'Transplant' },
+  { value: 'vegetative', label: 'Vegetative growth' },
+]
+const ADD_NEW = '__add__'
 
 export function NewPlantingModal({ initialBedId, onClose }: { initialBedId?: number; onClose: () => void }) {
   const { activeId } = useSystems()
   const qc = useQueryClient()
   const { data: beds = [] } = useQuery({ queryKey: ['grow-beds', activeId], queryFn: () => fetchGrowBeds(activeId as string), enabled: !!activeId })
   const { data: crops = [] } = useQuery({ queryKey: ['crop-options', activeId], queryFn: () => fetchCropOptions(activeId as string), enabled: !!activeId })
+  const { data: allVarieties = [] } = useQuery({ queryKey: ['seed-varieties'], queryFn: fetchSeedVarieties })
 
   const [date, setDate] = useState(today())
   const [bed, setBed] = useState(initialBedId != null ? String(initialBedId) : '')
@@ -21,34 +29,49 @@ export function NewPlantingModal({ initialBedId, onClose }: { initialBedId?: num
   const [count, setCount] = useState('')
   const [stage, setStage] = useState('seedling')
   const [variety, setVariety] = useState('')
+  const [newVariety, setNewVariety] = useState('')
   const [days, setDays] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const cropDef = useMemo(() => crops.find((c) => c.value === crop), [crops, crop])
+  const cropVarieties = useMemo(() => allVarieties.filter((v) => v.crop_type === crop), [allVarieties, crop])
 
   function pickCrop(value: string) {
     setCrop(value)
+    setVariety('') // varieties are crop-specific
+    setNewVariety('')
     const def = crops.find((c) => c.value === value)
     // Prefill days-to-harvest from the crop reference when the field is empty.
     if (def?.days_to_harvest != null && !days) setDays(String(def.days_to_harvest))
   }
 
   const mutation = useMutation({
-    mutationFn: () =>
-      recordPlanting(activeId as string, {
+    mutationFn: async () => {
+      let sv = variety === ADD_NEW ? newVariety.trim() : variety
+      // Persist a brand-new variety so it's available next time, then use it.
+      if (variety === ADD_NEW && sv) {
+        try {
+          await addSeedVariety(crop, sv)
+        } catch {
+          /* ignore duplicates */
+        }
+      }
+      return recordPlanting(activeId as string, {
         date,
         grow_bed_id: Number(bed),
         crop_type: crop,
         count: Number(count),
         growth_stage: stage,
-        seed_variety: variety.trim() || undefined,
+        seed_variety: sv || undefined,
         days_to_harvest: days ? Number(days) : undefined,
         notes: notes.trim() || undefined,
-      }),
+      })
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['plant-batches'] })
       qc.invalidateQueries({ queryKey: ['plant-growth'] })
+      qc.invalidateQueries({ queryKey: ['seed-varieties'] })
       onClose()
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Something went wrong.'),
@@ -97,10 +120,11 @@ export function NewPlantingModal({ initialBedId, onClose }: { initialBedId?: num
             <input id="np-count" type="number" min="1" step="1" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} placeholder="e.g. 24" />
           </div>
           <div className="field">
-            <label htmlFor="np-stage">Stage</label>
+            <label htmlFor="np-stage">Growth stage</label>
             <select id="np-stage" value={stage} onChange={(e) => setStage(e.target.value)}>
-              <option value="seedling">Seedling</option>
-              <option value="transplant">Transplant</option>
+              {STAGES.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -118,7 +142,16 @@ export function NewPlantingModal({ initialBedId, onClose }: { initialBedId?: num
 
         <div className="field">
           <label htmlFor="np-variety">Seed variety <span className="unit-hint">· optional</span></label>
-          <input id="np-variety" type="text" value={variety} onChange={(e) => setVariety(e.target.value)} placeholder="Optional" />
+          <select id="np-variety" value={variety} onChange={(e) => setVariety(e.target.value)} disabled={!crop}>
+            <option value="">{crop ? 'Select variety…' : 'Choose a crop first'}</option>
+            {cropVarieties.map((v) => (
+              <option key={v.id} value={v.variety_name}>{v.variety_name}</option>
+            ))}
+            {crop && <option value={ADD_NEW}>+ Add new variety…</option>}
+          </select>
+          {variety === ADD_NEW && (
+            <input type="text" style={{ marginTop: 8 }} value={newVariety} onChange={(e) => setNewVariety(e.target.value)} placeholder="New variety name" autoFocus />
+          )}
         </div>
 
         <div className="field">
