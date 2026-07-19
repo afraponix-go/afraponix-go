@@ -89,6 +89,16 @@ router.post('/register', async (req, res) => {
             console.error('Failed to seed default crops for new user:', seedErr.message);
         }
 
+        // Seed the new user with a copy of the default seed varieties.
+        try {
+            await pool.execute(`
+                INSERT INTO seed_varieties (user_id, crop_type, variety_name)
+                SELECT ?, sv.crop_type, sv.variety_name FROM seed_varieties sv WHERE sv.user_id IS NULL
+            `, [userId]);
+        } catch (seedErr) {
+            console.error('Failed to seed default seed varieties for new user:', seedErr.message);
+        }
+
         // Check if SMTP is configured
         const smtpConfigured = process.env.SMTP_USER && process.env.SMTP_PASS;
 
