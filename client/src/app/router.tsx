@@ -16,6 +16,7 @@ import { PlantsOverview } from '../features/plants/PlantsOverview'
 import { Plantings } from '../features/plants/Plantings'
 import { Harvest } from '../features/plants/Harvest'
 import { BedsAllocation } from '../features/plants/BedsAllocation'
+import { Crops } from '../features/plants/CropsPage'
 import { FishStockingCalculator } from '../features/calculator/FishStockingCalculator'
 import { OperationsPage } from '../features/operations/OperationsPage'
 
@@ -105,7 +106,7 @@ export const router = createBrowserRouter([
               { path: 'plantings', element: <Plantings /> },
               { path: 'harvest', element: <Harvest /> },
               { path: 'beds', element: <BedsAllocation /> },
-              { path: 'crops', element: <Placeholder title="Crops" note="Crop reference, custom crops, and seed varieties. Coming next." /> },
+              { path: 'crops', element: <Crops /> },
             ],
           },
           // Settings (grow-bed config now lives under Plants → Beds & Allocation)

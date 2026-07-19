@@ -244,7 +244,17 @@ async function createTables(connection) {
             target_mg DECIMAL(8,2),
             target_fe DECIMAL(8,2),
             target_ec DECIMAL(8,2),
+            category VARCHAR(50) DEFAULT 'leafy_greens',
+            plant_spacing INT DEFAULT 15,
+            growth_days INT DEFAULT 30,
+            difficulty VARCHAR(20) DEFAULT 'beginner',
+            season VARCHAR(20) DEFAULT 'year_round',
+            description TEXT,
+            image_url VARCHAR(500),
+            is_verified BOOLEAN DEFAULT 0,
+            submission_status VARCHAR(20) DEFAULT 'private',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         ) ENGINE=InnoDB`,
 
