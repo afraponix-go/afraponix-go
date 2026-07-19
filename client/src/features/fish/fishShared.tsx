@@ -46,9 +46,15 @@ export function feedLabel(g: number): { value: string; unit: string } {
   return g >= 1000 ? { value: (g / 1000).toFixed(1), unit: 'kg' } : { value: String(Math.round(g)), unit: 'g' }
 }
 
-export function Stat({ label, value, unit, sub, children }: { label: string; value: string; unit?: string; sub?: string; children?: ReactNode }) {
+export function Stat({ label, value, unit, sub, children, onClick }: { label: string; value: string; unit?: string; sub?: string; children?: ReactNode; onClick?: () => void }) {
   return (
-    <div className="metric">
+    <div
+      className={`metric${onClick ? ' clickable' : ''}`}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } } : undefined}
+    >
       <div className="label">{label}</div>
       <div className="value">
         {value}

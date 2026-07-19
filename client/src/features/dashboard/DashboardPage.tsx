@@ -1,10 +1,15 @@
-import { useQuery } from '@tanstack/react-query'
+import { useState, type KeyboardEvent } from 'react'
+import { useQuery, type QueryKey } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
 import { fetchLatestNutrients, type LatestNutrients, type NutrientReading } from './api'
-import { fetchFishInventory, tankMaxDensity } from '../fish/api'
+import { fetchFishInventory, fetchDensityHistory, tankMaxDensity } from '../fish/api'
 import { sum, fmt, Stat } from '../fish/fishShared'
+import { CHARTABLE, fetchSeries, type SeriesPoint } from '../charts/api'
+import { MetricChartModal } from '../charts/MetricChartModal'
 import './dashboard.css'
 import '../fish/fish.css'
+
+type ChartCfg = { title: string; unit: string; min?: number; max?: number; queryKey: QueryKey; queryFn: () => Promise<SeriesPoint[]> }
 
 type Status = 'good' | 'warn' | 'none'
 type MetricDef = {
@@ -45,12 +50,29 @@ function sourceBadge(source?: string | null) {
   return { icon: '📝', label: 'Manual' }
 }
 
-function WaterCard({ def, reading }: { def: MetricDef; reading?: NutrientReading }) {
+function clickProps(onOpen?: () => void) {
+  return onOpen
+    ? {
+        className: 'metric clickable',
+        onClick: onOpen,
+        role: 'button' as const,
+        tabIndex: 0,
+        onKeyDown: (e: KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onOpen()
+          }
+        },
+      }
+    : { className: 'metric' }
+}
+
+function WaterCard({ def, reading, onOpen }: { def: MetricDef; reading?: NutrientReading; onOpen?: () => void }) {
   const v = reading?.value
   const has = v != null && Number.isFinite(v)
   const status: Status = has && def.status ? def.status(v as number) : 'none'
   return (
-    <div className="metric">
+    <div {...clickProps(onOpen)}>
       <div className="label">{def.label}</div>
       {has ? (
         <div className="value">
@@ -65,10 +87,10 @@ function WaterCard({ def, reading }: { def: MetricDef; reading?: NutrientReading
   )
 }
 
-function NutrientTile({ label, reading }: { label: string; reading: NutrientReading }) {
+function NutrientTile({ label, reading, onOpen }: { label: string; reading: NutrientReading; onOpen?: () => void }) {
   const badge = sourceBadge(reading.source)
   return (
-    <div className="metric">
+    <div {...clickProps(onOpen)}>
       <div className="label">{label}</div>
       <div className="value">
         {reading.value.toFixed(reading.value >= 100 ? 0 : 2)}
@@ -91,6 +113,7 @@ function latestDate(nutrients: LatestNutrients): string | null {
 
 export function DashboardPage() {
   const { activeSystem, activeId, isLoading: systemsLoading } = useSystems()
+  const [chart, setChart] = useState<ChartCfg | null>(null)
 
   const { data: nutrients = {}, isLoading, isError } = useQuery({
     queryKey: ['nutrients', 'latest', activeId],
@@ -125,6 +148,37 @@ export function DashboardPage() {
   const systemDensity = totalVolumeM3 > 0 ? totalBiomass / totalVolumeM3 : 0
   const systemMax = tanks.length ? Math.max(25, ...tanks.map((t) => tankMaxDensity(t))) : 25
 
+  // Open a chart modal for a nutrient/water parameter (its history lives in
+  // nutrient_readings). Healthy-range band comes from the shared CHARTABLE def.
+  const openParam = (key: string, fallbackLabel: string, fallbackUnit = '') => {
+    const c = CHARTABLE.find((x) => x.key === key)
+    setChart({
+      title: c?.label ?? fallbackLabel,
+      unit: c?.unit ?? fallbackUnit,
+      min: c?.min,
+      max: c?.max,
+      queryKey: ['series', activeId, key],
+      queryFn: () => fetchSeries(activeId as string, key),
+    })
+  }
+
+  // Open a chart modal for a fish metric derived from the density history.
+  const openFish = (metric: 'density' | 'biomass') => {
+    setChart({
+      title: metric === 'density' ? 'Fish Density' : 'Total Biomass',
+      unit: metric === 'density' ? 'kg/m³' : 'kg',
+      max: metric === 'density' ? systemMax : undefined,
+      queryKey: ['fish-series', activeId, metric],
+      queryFn: async () => {
+        const pts = await fetchDensityHistory(activeId as string)
+        return pts.map((p) => {
+          const d = new Date(p.date)
+          return { date: p.date, label: `${d.getMonth() + 1}/${d.getDate()}`, value: metric === 'density' ? p.density : p.biomass_kg ?? 0 }
+        })
+      },
+    })
+  }
+
   return (
     <div>
       <div className="dash-head">
@@ -145,8 +199,8 @@ export function DashboardPage() {
           <h2 className="section-title">Fish</h2>
           <div className="metric-grid">
             <Stat label="Total Fish" value={fmt(totalFish)} sub={`Across ${tanks.length} tank${tanks.length === 1 ? '' : 's'}`} />
-            <Stat label="Total Biomass" value={fmt(totalBiomass, 1)} unit="kg" sub={`≈ ${fmt(totalVolumeM3, 1)} m³ water`} />
-            <Stat label="Current Density" value={fmt(systemDensity, 1)} unit="kg/m³" sub={`Max ${systemMax} kg/m³`}>
+            <Stat label="Total Biomass" value={fmt(totalBiomass, 1)} unit="kg" sub={`≈ ${fmt(totalVolumeM3, 1)} m³ water`} onClick={() => openFish('biomass')} />
+            <Stat label="Current Density" value={fmt(systemDensity, 1)} unit="kg/m³" sub={`Max ${systemMax} kg/m³`} onClick={() => openFish('density')}>
               <div className="density-bar"><div className="density-fill" style={{ width: `${Math.min(100, (systemDensity / systemMax) * 100)}%` }} /></div>
             </Stat>
           </div>
@@ -156,7 +210,7 @@ export function DashboardPage() {
       <h2 className="section-title">Water quality</h2>
       <div className="metric-grid">
         {WATER.map((def) => (
-          <WaterCard key={def.key} def={def} reading={nutrients[def.key]} />
+          <WaterCard key={def.key} def={def} reading={nutrients[def.key]} onOpen={() => openParam(def.key, def.label, def.unit)} />
         ))}
       </div>
 
@@ -165,10 +219,22 @@ export function DashboardPage() {
           <h2 className="section-title">Nutrient levels</h2>
           <div className="metric-grid">
             {presentNutrients.map((n) => (
-              <NutrientTile key={n.key} label={n.label} reading={nutrients[n.key]} />
+              <NutrientTile key={n.key} label={n.label} reading={nutrients[n.key]} onOpen={() => openParam(n.key, n.label)} />
             ))}
           </div>
         </>
+      )}
+
+      {chart && (
+        <MetricChartModal
+          title={chart.title}
+          unit={chart.unit}
+          min={chart.min}
+          max={chart.max}
+          queryKey={chart.queryKey}
+          queryFn={chart.queryFn}
+          onClose={() => setChart(null)}
+        />
       )}
     </div>
   )
