@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
 import { fetchLatestNutrients, type LatestNutrients, type NutrientReading } from './api'
+import { fetchFishInventory, tankMaxDensity } from '../fish/api'
+import { sum, fmt, Stat } from '../fish/fishShared'
 import './dashboard.css'
+import '../fish/fish.css'
 
 type Status = 'good' | 'warn' | 'none'
 type MetricDef = {
@@ -95,6 +98,12 @@ export function DashboardPage() {
     enabled: !!activeId,
   })
 
+  const { data: tanks = [] } = useQuery({
+    queryKey: ['fish-inventory', activeId],
+    queryFn: () => fetchFishInventory(activeId as string),
+    enabled: !!activeId,
+  })
+
   if (systemsLoading) return <div className="empty">Loading systems…</div>
   if (!activeId) {
     return (
@@ -110,6 +119,12 @@ export function DashboardPage() {
   const updated = latestDate(nutrients)
   const presentNutrients = NUTRIENTS.filter((n) => nutrients[n.key] && Number.isFinite(nutrients[n.key].value))
 
+  const totalFish = sum(tanks, 'current_count')
+  const totalBiomass = sum(tanks, 'biomass_kg')
+  const totalVolumeM3 = sum(tanks, 'size_m3')
+  const systemDensity = totalVolumeM3 > 0 ? totalBiomass / totalVolumeM3 : 0
+  const systemMax = tanks.length ? Math.max(25, ...tanks.map((t) => tankMaxDensity(t))) : 25
+
   return (
     <div>
       <div className="dash-head">
@@ -124,6 +139,19 @@ export function DashboardPage() {
                 : 'No readings yet'}
         </span>
       </div>
+
+      {tanks.length > 0 && (
+        <>
+          <h2 className="section-title">Fish</h2>
+          <div className="metric-grid">
+            <Stat label="Total Fish" value={fmt(totalFish)} sub={`Across ${tanks.length} tank${tanks.length === 1 ? '' : 's'}`} />
+            <Stat label="Total Biomass" value={fmt(totalBiomass, 1)} unit="kg" sub={`≈ ${fmt(totalVolumeM3, 1)} m³ water`} />
+            <Stat label="Current Density" value={fmt(systemDensity, 1)} unit="kg/m³" sub={`Max ${systemMax} kg/m³`}>
+              <div className="density-bar"><div className="density-fill" style={{ width: `${Math.min(100, (systemDensity / systemMax) * 100)}%` }} /></div>
+            </Stat>
+          </div>
+        </>
+      )}
 
       <h2 className="section-title">Water quality</h2>
       <div className="metric-grid">
