@@ -7,6 +7,7 @@ import { fetchBatches, type Batch, type BatchStatus } from './batches'
 import { prettyCrop } from './api'
 import { BedConfigModal } from './BedConfigModal'
 import { NewPlantingModal } from './NewPlantingModal'
+import { HarvestModal } from './HarvestModal'
 import { normalizeBedType, bedFill } from './bedMath'
 import '../dashboard/dashboard.css'
 import '../fish/fish.css'
@@ -25,6 +26,7 @@ export function BedsAllocation() {
   const [bedModal, setBedModal] = useState<{ bed?: GrowBedConfig } | null>(null)
   const [confirmBedDel, setConfirmBedDel] = useState<GrowBedConfig | null>(null)
   const [plantBed, setPlantBed] = useState<GrowBedConfig | null>(null)
+  const [harvesting, setHarvesting] = useState<Batch | null>(null)
 
   const { data: beds = [], isLoading, isError } = useQuery({ queryKey: ['grow-bed-configs', activeId], queryFn: () => fetchGrowBedConfigs(activeId as string), enabled: !!activeId })
   const { data: batches = [] } = useQuery({ queryKey: ['plant-batches', activeId], queryFn: () => fetchBatches(activeId as string), enabled: !!activeId })
@@ -92,7 +94,10 @@ export function BedsAllocation() {
                               {b.age_days ?? '—'}d old · {harvestIn != null ? `harvest in ${harvestIn}d` : 'harvest time unknown'}
                             </span>
                           </div>
-                          <div className="crop-nums"><b>{b.remaining}</b><span>plants</span></div>
+                          <div className="bed-batch-right">
+                            <div className="crop-nums"><b>{b.remaining}</b><span>plants</span></div>
+                            <button className="row-btn" onClick={() => setHarvesting(b)}>Harvest</button>
+                          </div>
                         </div>
                       )
                     })}
@@ -113,6 +118,7 @@ export function BedsAllocation() {
 
       {bedModal && <BedConfigModal bed={bedModal.bed} existingBedNumbers={bedNumbers} onClose={() => setBedModal(null)} />}
       {plantBed && <NewPlantingModal initialBedId={plantBed.id} onClose={() => setPlantBed(null)} />}
+      {harvesting && <HarvestModal batch={harvesting} onClose={() => setHarvesting(null)} />}
 
       {confirmBedDel && (
         <Modal title="Delete grow bed" onClose={() => setConfirmBedDel(null)}>
