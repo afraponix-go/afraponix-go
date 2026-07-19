@@ -20,11 +20,43 @@ export async function fetchSystems(): Promise<System[]> {
 
 // Create a system. The backend expects a client-generated string id and fills
 // sensible defaults for anything omitted. Returns the new system's id.
-export async function createSystem(input: { system_name: string; system_type?: string; fish_type?: string }): Promise<string> {
-  const id = `system_${Date.now()}`
+export async function createSystem(input: {
+  id: string
+  system_name: string
+  system_type?: string
+  fish_type?: string
+  fish_tank_count?: number
+  grow_bed_count?: number
+  total_grow_area?: number
+}): Promise<string> {
   await api('/systems', {
     method: 'POST',
-    body: { id, system_name: input.system_name.trim(), system_type: input.system_type, fish_type: input.fish_type },
+    body: { ...input, system_name: input.system_name.trim() },
   })
-  return id
+  return input.id
+}
+
+// Add a fish tank to a system (used by the creation wizard).
+export function createFishTank(systemId: string, tank: { tank_number: number; volume_liters: number; fish_type: string }) {
+  return api('/fish-tanks', {
+    method: 'POST',
+    body: {
+      system_id: systemId,
+      tank_number: tank.tank_number,
+      size_m3: tank.volume_liters / 1000,
+      volume_liters: tank.volume_liters,
+      fish_type: tank.fish_type,
+    },
+  })
+}
+
+// Bulk-save the grow beds for a system (the endpoint upserts and computes
+// equivalent_m2). Used by the creation wizard.
+export function saveGrowBedsBulk(systemId: string, growBeds: unknown[]) {
+  return api(`/grow-beds/system/${systemId}`, { method: 'POST', body: { growBeds } })
+}
+
+// Import a full demo system for the current user.
+export async function createDemoSystem(name: string): Promise<void> {
+  await api('/systems/create-demo', { method: 'POST', body: { system_name: name.trim() } })
 }

@@ -1,0 +1,97 @@
+/* System creation wizard */
+.wizard-steps {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.wizard-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-faint);
+}
+.wizard-step:not(:last-child)::after {
+  content: '›';
+  margin-left: 6px;
+  color: var(--line-strong);
+}
+.wizard-step b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+.wizard-step.active {
+  color: var(--accent);
+}
+.wizard-step.active b {
+  background: var(--accent);
+  color: #fff;
+}
+.wizard-step.done b {
+  background: color-mix(in srgb, var(--brand-green) 20%, transparent);
+  color: var(--brand-green);
+}
+.wizard-step.skip {
+  opacity: 0.4;
+}
+
+/* Setup method choices */
+.setup-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.setup-choice {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.setup-choice.sel {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.setup-choice input {
+  grid-row: span 2;
+  align-self: center;
+}
+.setup-title {
+  font-weight: 650;
+  font-size: 15px;
+}
+.setup-sub {
+  grid-column: 2;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+/* Per-tank / per-bed config cards */
+.wizard-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.wizard-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  background: var(--surface);
+}
+.wizard-card-head {
+  font-weight: 650;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
