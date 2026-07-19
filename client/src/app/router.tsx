@@ -16,7 +16,6 @@ import { PlantsOverview } from '../features/plants/PlantsOverview'
 import { Plantings } from '../features/plants/Plantings'
 import { Harvest } from '../features/plants/Harvest'
 import { BedsAllocation } from '../features/plants/BedsAllocation'
-import { GrowBedsPage } from '../features/growbeds/GrowBedsPage'
 import { FishStockingCalculator } from '../features/calculator/FishStockingCalculator'
 import { OperationsPage } from '../features/operations/OperationsPage'
 
@@ -28,10 +27,6 @@ const DATA_TABS = [
   { to: '/data', label: 'Water Quality', end: true },
   { to: '/data/operations', label: 'Operations' },
   { to: '/data/import-export', label: 'Import / Export' },
-]
-const SETTINGS_TABS = [
-  { to: '/settings', label: 'Grow Beds', end: true },
-  { to: '/settings/system', label: 'System' },
 ]
 const CALC_TABS = [
   { to: '/calculator', label: 'Fish Stocking', end: true },
@@ -113,15 +108,8 @@ export const router = createBrowserRouter([
               { path: 'crops', element: <Placeholder title="Crops" note="Crop reference, custom crops, and seed varieties. Coming next." /> },
             ],
           },
-          // Settings (Grow Beds · System)
-          {
-            path: 'settings',
-            element: <SubTabLayout items={SETTINGS_TABS} />,
-            children: [
-              { index: true, element: <GrowBedsPage /> },
-              { path: 'system', element: <Placeholder title="System Settings" note="System configuration, sharing, and account settings." /> },
-            ],
-          },
+          // Settings (grow-bed config now lives under Plants → Beds & Allocation)
+          { path: 'settings', element: <Placeholder title="System Settings" note="System configuration, sharing, and account settings. Coming next." /> },
         ],
       },
     ],

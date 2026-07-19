@@ -214,3 +214,21 @@
   font-weight: 600;
   color: var(--ink);
 }
+
+/* Computed metrics readout in the bed config modal */
+.bed-calc {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+.bed-calc b {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  font-weight: 600;
+}

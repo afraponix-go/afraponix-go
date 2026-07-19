@@ -185,10 +185,13 @@ router.post('/system/:systemId', async (req, res) => {
 router.put('/bed/:systemId/:bedNumber', async (req, res) => {
     const { systemId, bedNumber } = req.params;
     const bedConfig = req.body;
-    // Using connection pool - no manual connection management
 
     try {
         const pool = getDatabase();
+
+        if (!(await verifyOwnership(pool, systemId, req.user.userId))) {
+            return res.status(404).json({ error: 'System not found or access denied' });
+        }
 
         // Calculate equivalent_m2 if not provided or is 0
         if (!bedConfig.equivalent_m2 || bedConfig.equivalent_m2 === 0) {
@@ -292,11 +295,18 @@ router.put('/bed/:systemId/:bedNumber', async (req, res) => {
 
 // Delete a specific grow bed
 router.delete('/:bedId', async (req, res) => {
-    // Using connection pool - no manual connection management
-
     try {
         const pool = getDatabase();
-        
+
+        // Ownership: the bed must belong to a system owned by the user.
+        const [owned] = await pool.execute(
+            'SELECT gb.id FROM grow_beds gb JOIN systems s ON gb.system_id = s.id WHERE gb.id = ? AND s.user_id = ?',
+            [req.params.bedId, req.user.userId]
+        );
+        if (owned.length === 0) {
+            return res.status(404).json({ error: 'Grow bed not found or access denied' });
+        }
+
         const [result] = await pool.execute(
             'DELETE FROM grow_beds WHERE id = ?',
             [req.params.bedId]

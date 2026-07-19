@@ -45,3 +45,33 @@ export async function fetchGrowBedConfigs(systemId: string): Promise<GrowBedConf
   const parsed = z.array(growBedConfigSchema).safeParse(data)
   return parsed.success ? parsed.data : []
 }
+
+// Full bed config payload. The single-bed PUT binds every column, so all keys
+// must be present (null when unused) to avoid undefined-bind errors.
+export type BedConfigPayload = {
+  bed_number: number
+  bed_type: string
+  bed_name: string
+  volume_liters: number | null
+  area_m2: number | null
+  equivalent_m2: number | null
+  length_meters: number | null
+  width_meters: number | null
+  height_meters: number | null
+  plant_capacity: number | null
+  vertical_count: number | null
+  plants_per_vertical: number | null
+  reservoir_volume: number | null
+  trough_length: number | null
+  trough_count: number | null
+  plant_spacing: number | null
+  reservoir_volume_liters: number | null
+}
+
+export function saveBedConfig(systemId: string, bedNumber: number, cfg: BedConfigPayload) {
+  return api(`/grow-beds/bed/${systemId}/${bedNumber}`, { method: 'PUT', body: cfg })
+}
+
+export function deleteBed(bedId: number) {
+  return api(`/grow-beds/${bedId}`, { method: 'DELETE' })
+}
