@@ -54,7 +54,6 @@ export type CustomCropInput = {
   category?: string
   plantSpacing?: number
   growthDays?: number
-  difficulty?: string
   targetN?: number
   targetP?: number
   targetK?: number

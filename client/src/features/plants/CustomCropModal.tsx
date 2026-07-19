@@ -5,7 +5,6 @@ import { ApiError } from '../../lib/apiClient'
 import { saveCustomCrop, updateCustomCrop, type CustomCrop, type CustomCropInput } from './cropsAdmin'
 
 const CATEGORIES = ['leafy_greens', 'fruiting_vegetables', 'herbs', 'root_vegetables', 'legumes', 'other']
-const DIFFICULTIES = ['beginner', 'intermediate', 'advanced']
 const label = (s: string) => s.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 const numOrU = (s: string): number | undefined => (s.trim() === '' || isNaN(Number(s)) ? undefined : Number(s))
 
@@ -26,7 +25,6 @@ export function CustomCropModal({ crop, onClose }: { crop?: CustomCrop; onClose:
   const [category, setCategory] = useState(crop?.category ?? 'leafy_greens')
   const [spacing, setSpacing] = useState(crop?.plant_spacing != null ? String(crop.plant_spacing) : '')
   const [days, setDays] = useState(crop?.growth_days != null ? String(crop.growth_days) : '')
-  const [difficulty, setDifficulty] = useState(crop?.difficulty ?? 'beginner')
   const [ec, setEc] = useState(crop?.target_ec != null ? String(crop.target_ec) : '')
   const [nutrients, setNutrients] = useState<Record<string, string>>({
     targetN: crop?.target_n != null ? String(crop.target_n) : '',
@@ -45,7 +43,6 @@ export function CustomCropModal({ crop, onClose }: { crop?: CustomCrop; onClose:
         category,
         plantSpacing: numOrU(spacing),
         growthDays: numOrU(days),
-        difficulty,
         targetEc: numOrU(ec),
         targetN: numOrU(nutrients.targetN),
         targetP: numOrU(nutrients.targetP),
@@ -81,19 +78,11 @@ export function CustomCropModal({ crop, onClose }: { crop?: CustomCrop; onClose:
           <input id="cc-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Purple Basil" autoFocus />
         </div>
 
-        <div className="field-row">
-          <div className="field">
-            <label htmlFor="cc-cat">Category</label>
-            <select id="cc-cat" value={category} onChange={(e) => setCategory(e.target.value)}>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{label(c)}</option>)}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor="cc-diff">Difficulty</label>
-            <select id="cc-diff" value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
-              {DIFFICULTIES.map((d) => <option key={d} value={d}>{label(d)}</option>)}
-            </select>
-          </div>
+        <div className="field">
+          <label htmlFor="cc-cat">Category</label>
+          <select id="cc-cat" value={category} onChange={(e) => setCategory(e.target.value)}>
+            {CATEGORIES.map((c) => <option key={c} value={c}>{label(c)}</option>)}
+          </select>
         </div>
 
         <div className="field-row">

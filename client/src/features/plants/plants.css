@@ -243,17 +243,21 @@
 }
 .nutrient-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.nutrient-grid .field {
+  min-width: 0;
 }
 .nutrient-grid .field label {
-  text-align: center;
   font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
 }
 .nutrient-grid .field input {
-  text-align: center;
-  padding-left: 4px;
-  padding-right: 4px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* Seed varieties */

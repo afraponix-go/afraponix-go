@@ -87,7 +87,6 @@ export function Crops() {
                 <div><span>Spacing</span><b>{c.plant_spacing ?? '—'} cm</b></div>
                 <div><span>To harvest</span><b>{c.growth_days ?? '—'} d</b></div>
                 <div><span>Target EC</span><b>{c.target_ec ?? '—'}</b></div>
-                <div><span>Difficulty</span><b style={{ textTransform: 'capitalize' }}>{c.difficulty ?? '—'}</b></div>
               </div>
               <div className="tank-actions">
                 <button className="tank-action-btn" onClick={() => setCropModal({ crop: c })}>Edit</button>
