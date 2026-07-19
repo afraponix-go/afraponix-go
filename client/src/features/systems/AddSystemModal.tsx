@@ -22,7 +22,7 @@ type Bed = {
   troughLength: string; troughCount: string; spacing: string; reservoir: string
 }
 const newTank = (i: number): Tank => ({ name: `Tank ${i}`, volume: '7000', fish_type: 'tilapia', stocking: '20', harvest: '500' })
-const newBed = (i: number): Bed => ({ name: `Bed ${i}`, type: 'dwc', length: '', width: '', height: '', verticals: '', perVertical: '', troughLength: '', troughCount: '', spacing: '', reservoir: '' })
+const newBed = (i: number): Bed => ({ name: `Bed ${i}`, type: 'dwc', length: '', width: '', height: '0.3', verticals: '', perVertical: '', troughLength: '', troughCount: '', spacing: '', reservoir: '' })
 
 function bedToInputs(b: Bed): BedInputs {
   return {
@@ -116,7 +116,14 @@ export function AddSystemModal({ onClose }: { onClose: () => void }) {
     setError(null)
     if (!name.trim()) return setError('Enter a system name.')
     if (method === 'custom') {
-      for (const b of beds) if (computeBed(b.type, bedToInputs(b)).equivalent_m2 <= 0) return setError(`Enter dimensions for ${b.name}.`)
+      for (const b of beds) {
+        if (computeBed(b.type, bedToInputs(b)).equivalent_m2 <= 0) return setError(`Enter dimensions for ${b.name}.`)
+        // Depth drives water volume for area/vertical beds; 0 is not valid.
+        const shape = bedShape(b.type)
+        if ((shape === 'area' || shape === 'vertical') && num(b.height) <= 0) {
+          return setError(`${shape === 'vertical' ? 'Base height' : 'Depth'} must be greater than 0 for ${b.name}.`)
+        }
+      }
     }
     mutation.mutate()
   }
