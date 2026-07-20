@@ -22,21 +22,34 @@ export const CHARTABLE: Chartable[] = [
 ]
 
 const reading = z.object({
+  id: z.coerce.number().optional(),
   value: z.union([z.string(), z.number()]).transform((v) => Number(v)),
   reading_date: z.string(),
 })
 
 export type SeriesPoint = { date: string; label: string; value: number }
 
-export async function fetchSeries(systemId: string, type: string, limit = 60): Promise<SeriesPoint[]> {
+export async function fetchSeries(systemId: string, type: string, limit = 120): Promise<SeriesPoint[]> {
   const data = await api<unknown[]>(`/data/nutrients/${systemId}?nutrient_type=${type}&limit=${limit}`)
   const rows = z.array(reading).safeParse(data)
   if (!rows.success) return []
-  return rows.data
-    .map((r) => {
+
+  // One point per calendar day, using that day's most recent reading. When two
+  // readings share a timestamp, the higher id wins (inserted last) so the chart
+  // matches the "latest" value shown on the dashboard.
+  const byDay = new Map<string, SeriesPoint & { _id: number }>()
+  for (const r of rows.data) {
+    if (!Number.isFinite(r.value)) continue
+    const day = r.reading_date.slice(0, 10)
+    const id = r.id ?? 0
+    const existing = byDay.get(day)
+    const newer = !existing || r.reading_date > existing.date || (r.reading_date === existing.date && id > existing._id)
+    if (newer) {
       const d = new Date(r.reading_date)
-      return { date: r.reading_date, label: `${d.getMonth() + 1}/${d.getDate()}`, value: r.value }
-    })
-    .filter((p) => Number.isFinite(p.value))
+      byDay.set(day, { date: r.reading_date, label: `${d.getMonth() + 1}/${d.getDate()}`, value: r.value, _id: id })
+    }
+  }
+  return [...byDay.values()]
+    .map(({ _id, ...p }) => p)
     .sort((a, b) => a.date.localeCompare(b.date)) // oldest -> newest for the x-axis
 }
