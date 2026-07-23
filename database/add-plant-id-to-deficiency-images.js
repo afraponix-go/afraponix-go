@@ -23,9 +23,9 @@ async function addPlantIdToDeficiencyImages() {
       ADD COLUMN IF NOT EXISTS plant_id INT DEFAULT NULL,
       ADD COLUMN IF NOT EXISTS system_id VARCHAR(255) DEFAULT NULL,
       ADD COLUMN IF NOT EXISTS grow_bed_id INT DEFAULT NULL,
-      ADD INDEX idx_plant_id (plant_id),
-      ADD INDEX idx_system_id (system_id),
-      ADD INDEX idx_grow_bed_id (grow_bed_id)
+      ADD INDEX IF NOT EXISTS idx_plant_id (plant_id),
+      ADD INDEX IF NOT EXISTS idx_system_id (system_id),
+      ADD INDEX IF NOT EXISTS idx_grow_bed_id (grow_bed_id)
     `);
     
     console.log('✅ Successfully added plant_id and related columns to nutrient_deficiency_images table');
