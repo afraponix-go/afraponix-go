@@ -67,9 +67,10 @@ export function AddSystemModal({ onClose }: { onClose: () => void }) {
         const list = await fetchSystems()
         return list.slice().sort((a, b) => b.id.localeCompare(a.id))[0]?.id ?? null
       }
-      const id = `system_${Date.now()}`
-      await createSystem({
-        id, system_name: name, system_type: 'aquaponics',
+      // The backend generates the id; the tanks and beds below are attached to
+      // whatever it returns.
+      const id = await createSystem({
+        system_name: name, system_type: 'aquaponics',
         fish_type: tanks[0]?.fish_type || 'tilapia',
         fish_tank_count: tankCount, grow_bed_count: bedCount,
         total_grow_area: Math.round(totalArea * 100) / 100,

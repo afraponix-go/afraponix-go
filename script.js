@@ -418,13 +418,21 @@ class AquaponicsApp {
         if (bottomNav) bottomNav.style.display = 'flex';
         
         // Ensure charts are initialized and dashboard is updated when app UI is shown
+        // Use longer delay to ensure DOM is fully rendered
         setTimeout(async () => {
             try {
+                console.log('🔧 showAppUI delayed initialization starting...');
+
                 // Initialize charts first
                 await this.initializeCharts();
-                // Then update dashboard data
-                await this.updateDashboardFromData();
-                
+                console.log('✅ Charts initialized in showAppUI');
+
+                // Force an immediate chart update with current data
+                if (this.charts && this.charts.initialized) {
+                    console.log('🔧 Triggering immediate chart update after initialization...');
+                    await this.charts.updateCharts();
+                }
+
                 // Force chart visibility check after everything loads
                 setTimeout(() => {
                     if (this.charts && this.charts.forceChartVisibilityCheck) {
@@ -435,7 +443,7 @@ class AquaponicsApp {
             } catch (error) {
                 console.error('Error during app UI initialization:', error);
             }
-        }, 100);
+        }, 500);
     }
 
     async login(username, password) {
@@ -487,11 +495,11 @@ class AquaponicsApp {
         }
     }
 
-    async register(username, email, password, firstName, lastName) {
+    async register(email, password, firstName, lastName) {
         try {
             const response = await this.makeApiCall('/auth/register', {
                 method: 'POST',
-                body: JSON.stringify({ username, email, password, firstName, lastName })
+                body: JSON.stringify({ email, password, firstName, lastName })
             });
 
             if (response.needsVerification) {
@@ -514,6 +522,10 @@ class AquaponicsApp {
             
             return { success: true };
         } catch (error) {
+            // Return the full error response from the server if available
+            if (error.response) {
+                return { success: false, ...error.response };
+            }
             return { success: false, error: error.message };
         }
     }
@@ -1587,13 +1599,13 @@ class AquaponicsApp {
         
         // Close button controls with null checks
         if (loginCloseBtn) {
-            loginCloseBtn.addEventListener('click', () => this.closeLoginSlideout());
+            loginCloseBtn.addEventListener('click', () => this.modalManager.closeLoginSlideout());
         }
         if (registerCloseBtn) {
-            registerCloseBtn.addEventListener('click', () => this.closeRegisterSlideout());
+            registerCloseBtn.addEventListener('click', () => this.modalManager.closeRegisterSlideout());
         }
         if (forgotPasswordCloseBtn) {
-            forgotPasswordCloseBtn.addEventListener('click', () => this.closeForgotPasswordSlideout());
+            forgotPasswordCloseBtn.addEventListener('click', () => this.modalManager.closeForgotPasswordSlideout());
         }
         
         // Backdrop click to close (only on backdrop, not panel)
@@ -1607,28 +1619,28 @@ class AquaponicsApp {
         if (showRegisterLink) {
             showRegisterLink.addEventListener('click', (e) => {
                 e.preventDefault();
-                this.closeLoginSlideout();
+                this.modalManager.closeLoginSlideout();
                 setTimeout(() => this.modalManager.showRegisterSlideout(), 300);
             });
         }
         if (showLoginLink) {
             showLoginLink.addEventListener('click', (e) => {
                 e.preventDefault();
-                this.closeRegisterSlideout();
+                this.modalManager.closeRegisterSlideout();
                 setTimeout(() => this.modalManager.showLoginSlideout(), 300);
             });
         }
         if (showForgotPasswordLink) {
             showForgotPasswordLink.addEventListener('click', (e) => {
                 e.preventDefault();
-                this.closeLoginSlideout();
+                this.modalManager.closeLoginSlideout();
                 setTimeout(() => this.modalManager.showForgotPasswordSlideout(), 300);
             });
         }
         if (backToLoginLink) {
             backToLoginLink.addEventListener('click', (e) => {
                 e.preventDefault();
-                this.closeForgotPasswordSlideout();
+                this.modalManager.closeForgotPasswordSlideout();
                 setTimeout(() => this.modalManager.showLoginSlideout(), 300);
             });
         }
@@ -1880,7 +1892,7 @@ class AquaponicsApp {
                 
                 // Close registration panel and show login
                 setTimeout(() => {
-                    this.closeRegisterSlideout();
+                    this.modalManager.closeRegisterSlideout();
                     this.showNotification('🎉 Account created! Please log in with your credentials.', 'success');
                     this.modalManager.showLoginSlideout();
                 }, 1500);
@@ -2166,12 +2178,11 @@ class AquaponicsApp {
         // Get all register form elements with defensive checks
         const firstNameElement = document.getElementById('register-first-name');
         const lastNameElement = document.getElementById('register-last-name');
-        const usernameElement = document.getElementById('register-username');
         const emailElement = document.getElementById('register-email');
         const passwordElement = document.getElementById('register-password');
         const confirmPasswordElement = document.getElementById('register-confirm-password');
-        
-        if (!firstNameElement || !lastNameElement || !usernameElement || !emailElement || !passwordElement || !confirmPasswordElement) {
+
+        if (!firstNameElement || !lastNameElement || !emailElement || !passwordElement || !confirmPasswordElement) {
             if (window.errorManager) {
                 window.errorManager.warnOnce('register_form_elements_missing', 'Register form elements not found', 'auth');
             } else {
@@ -2183,7 +2194,6 @@ class AquaponicsApp {
         
         const firstName = firstNameElement.value;
         const lastName = lastNameElement.value;
-        const username = usernameElement.value;
         const email = emailElement.value;
         const password = passwordElement.value;
         const confirmPassword = confirmPasswordElement.value;
@@ -2192,13 +2202,6 @@ class AquaponicsApp {
 
         if (password !== confirmPassword) {
             this.showMessage('Passwords do not match', 'error');
-            this.scrollAuthModalToTop();
-            return;
-        }
-
-        // Validate username format
-        if (!this.formValidation.isValidUsername(username)) {
-            this.showMessage('Please enter a valid username (3-20 characters, letters, numbers, underscore only)', 'error');
             this.scrollAuthModalToTop();
             return;
         }
@@ -2212,15 +2215,16 @@ class AquaponicsApp {
 
         form.classList.add('loading');
 
-        const result = await this.register(username, email, password, firstName, lastName);
-        
+        const result = await this.register(email, password, firstName, lastName);
+
+        console.log('🔍 Registration result:', result);
+
         form.classList.remove('loading');
-        
+
         if (result.success) {
             if (result.needsVerification) {
                 // Store registration data for verification step
                 this.pendingRegistration = {
-                    username,
                     email,
                     firstName,
                     lastName
@@ -2295,7 +2299,7 @@ class AquaponicsApp {
                 
                 // Auto-close the forgot password modal after 3 seconds
                 setTimeout(() => {
-                    this.closeForgotPasswordSlideout();
+                    this.modalManager.closeForgotPasswordSlideout();
                 }, 3000);
             } else {
                 // Handle specific error cases
@@ -2414,15 +2418,45 @@ class AquaponicsApp {
 
         if (!message) return;
 
+        console.log('🔔 showMessage called:', message, type);
+
         // Create new message
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${type}`;
         messageDiv.textContent = message;
 
-        // Insert at the top of the active form
-        const activeForm = document.querySelector('.auth-form:not([style*="display: none"])');
+        // Insert at the top of the active form - try multiple selectors
+        let activeForm = null;
+
+        // Try slideout forms first (register/login/forgot)
+        const slideouts = document.querySelectorAll('.auth-slideout');
+        for (const slideout of slideouts) {
+            const backdrop = slideout.parentElement;
+            if (backdrop && backdrop.classList.contains('active')) {
+                activeForm = slideout.querySelector('form, .slideout-form');
+                break;
+            }
+        }
+
+        // Fallback: try to find forms by ID
+        if (!activeForm) {
+            activeForm = document.getElementById('register-form-element') ||
+                        document.getElementById('login-form-element') ||
+                        document.getElementById('register-form');
+        }
+
+        // Fallback: any visible auth form
+        if (!activeForm) {
+            activeForm = document.querySelector('.auth-form:not([style*="display: none"])');
+        }
+
+        console.log('🎯 Active form found:', activeForm);
+
         if (activeForm) {
             activeForm.insertBefore(messageDiv, activeForm.firstChild);
+            console.log('✅ Message inserted into form');
+        } else {
+            console.error('❌ No active form found to show message');
         }
     }
 
@@ -2431,33 +2465,64 @@ class AquaponicsApp {
         const existingMessages = document.querySelectorAll('.message');
         existingMessages.forEach(msg => msg.remove());
 
+        console.log('📧 showEmailExistsMessage called:', message);
+
         // Create enhanced message with login link
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message error email-exists-message';
-        
+
         const messageText = document.createElement('p');
         messageText.textContent = message;
         messageDiv.appendChild(messageText);
 
         const loginLinkContainer = document.createElement('p');
         loginLinkContainer.className = 'login-suggestion';
-        
+
         const loginLink = document.createElement('a');
         loginLink.href = '#';
         loginLink.className = 'auth-link';
         loginLink.textContent = 'Sign in to your existing account';
         loginLink.onclick = (e) => {
             e.preventDefault();
-            this.showLoginForm();
+            this.modalManager.closeRegisterSlideout();
+            setTimeout(() => this.modalManager.showLoginSlideout(), 300);
         };
-        
+
         loginLinkContainer.appendChild(loginLink);
         messageDiv.appendChild(loginLinkContainer);
 
-        // Insert at the top of the active form
-        const activeForm = document.querySelector('.auth-form:not([style*="display: none"])');
+        // Insert at the top of the active form - try multiple selectors
+        let activeForm = null;
+
+        // Try slideout forms first (register/login/forgot)
+        const slideouts = document.querySelectorAll('.auth-slideout');
+        for (const slideout of slideouts) {
+            const backdrop = slideout.parentElement;
+            if (backdrop && backdrop.classList.contains('active')) {
+                activeForm = slideout.querySelector('form, .slideout-form');
+                break;
+            }
+        }
+
+        // Fallback: try to find forms by ID
+        if (!activeForm) {
+            activeForm = document.getElementById('register-form-element') ||
+                        document.getElementById('login-form-element') ||
+                        document.getElementById('register-form');
+        }
+
+        // Fallback: any visible auth form
+        if (!activeForm) {
+            activeForm = document.querySelector('.auth-form:not([style*="display: none"])');
+        }
+
+        console.log('🎯 Active form found:', activeForm);
+
         if (activeForm) {
             activeForm.insertBefore(messageDiv, activeForm.firstChild);
+            console.log('✅ Email exists message inserted into form');
+        } else {
+            console.error('❌ No active form found to show email exists message');
         }
     }
 
@@ -2650,6 +2715,15 @@ class AquaponicsApp {
                 } else if (targetContent === 'dashboard-farm-layout-content') {
                     console.log('📡 Loading loadSVG...');
                     await this.loadSVG();
+                } else if (targetContent === 'dashboard-charts-content') {
+                    console.log('📊 Charts tab activated - initializing temperature chart...');
+                    setTimeout(() => {
+                        if (typeof window.initializeNewTempChart === 'function') {
+                            window.initializeNewTempChart();
+                        } else {
+                            console.error('❌ initializeNewTempChart function not found');
+                        }
+                    }, 100);
                 } else if (targetContent === 'dashboard-actions-content') {
                     console.log('📡 Loading loadActionsRequired...');
                     await this.loadActionsRequired();
@@ -18645,13 +18719,10 @@ class AquaponicsApp {
     }
 
     async createNewSystem(systemData) {
-        const systemId = 'system_' + Date.now();
-        
         // Extract additional configuration data for later processing
         const { fish_tanks, grow_beds, allocations, ...basicSystemData } = systemData;
-        
+
         const newSystem = {
-            id: systemId,
             ...basicSystemData,
             fish_type: fish_tanks[0]?.fish_type || 'tilapia', // Use first tank's fish type as default
             total_grow_volume: systemData.total_grow_area * 200 // Estimate grow bed volume from area
@@ -18662,6 +18733,9 @@ class AquaponicsApp {
                 method: 'POST',
                 body: JSON.stringify(newSystem)
             });
+
+            // The backend generates the id, so take it from the response.
+            const systemId = createdSystem.id;
 
             this.systems[systemId] = createdSystem;
             this.updateSystemSelector();
@@ -18850,6 +18924,8 @@ class AquaponicsApp {
     }
 
     async saveSystemConfig() {
+        console.log('💾 saveSystemConfig() CALLED');
+
         if (!this.activeSystemId) {
             this.showNotification('🏗️ Please select or create a system first.', 'warning');
             return;
@@ -18868,7 +18944,7 @@ class AquaponicsApp {
 
         // Calculate total grow bed volume
         const totalGrowVolumeL = await this.calculateTotalGrowBedVolume();
-        
+
         const config = {
             system_name: document.getElementById('system-name').value || 'My Aquaponics System',
             system_type: document.getElementById('system-type-config').value,
@@ -18878,6 +18954,8 @@ class AquaponicsApp {
             total_grow_volume: totalGrowVolumeL || 800,
             total_grow_area: parseFloat(document.getElementById('total-grow-area').value) || 2.0
         };
+
+        console.log('💾 Config to save:', config);
 
         try {
             const updatedSystem = await this.makeApiCall(`/systems/${this.activeSystemId}`, {
@@ -18902,7 +18980,10 @@ class AquaponicsApp {
                 }
             });
             
-            // Update the system data with the recalculated total
+            // Update the system data immediately so loadGrowBedConfiguration can read the new count
+            this.systems[this.activeSystemId] = updatedSystem;
+
+            // Recalculate and update the system's total fish volume after individual tanks are saved
             if (actualTotalFishVolumeL !== updatedSystem.total_fish_volume) {
                 updatedSystem.total_fish_volume = actualTotalFishVolumeL;
                 // Save the updated total back to the API
@@ -18914,12 +18995,13 @@ class AquaponicsApp {
                     })
                 });
                 this.systems[this.activeSystemId] = finalSystemUpdate;
-            } else {
-                this.systems[this.activeSystemId] = updatedSystem;
             }
             this.updateSystemSelector(); // Update dropdown with new name
             this.updateCurrentSystemDisplay(); // Update system name on all tabs
-            
+
+            // Reload the system config form to show saved values (including grow bed count)
+            this.loadSystemConfigToForm();
+
             // Reload the grow bed configuration to show saved values
             await this.loadGrowBedConfiguration();
             
@@ -20574,12 +20656,8 @@ Generated by Afraponix Go - Aquaponics Management System`;
             growBedCountDisplay.textContent = growBedCount;
         }
 
-        // Update total grow area display
-        const totalGrowArea = document.getElementById('total-grow-area')?.value || '0';
-        const totalGrowAreaDisplay = document.getElementById('total-grow-area-display');
-        if (totalGrowAreaDisplay) {
-            totalGrowAreaDisplay.textContent = `${parseFloat(totalGrowArea).toFixed(1)} m²`;
-        }
+        // Update total grow area display (calculate from grow beds)
+        this.updateTotalGrowBedArea();
 
         // Update total fish volume (this method already updates the display)
         this.updateTotalFishVolume();
@@ -20946,22 +21024,31 @@ Generated by Afraponix Go - Aquaponics Management System`;
 
 
     async loadGrowBedConfiguration() {
+        console.log('🏁 loadGrowBedConfiguration() STARTED');
+
         if (!this.activeSystemId || this.activeSystemId === 'undefined') {
-            console.error('No active system ID for loading grow bed configuration');
+            console.error('❌ No active system ID for loading grow bed configuration');
             return;
         }
 
+        console.log(`✅ Active system ID: ${this.activeSystemId}`);
+
         try {
-            
-            // Check if container exists first
-            const container = document.getElementById('grow-beds-container');
+
+            // Check if container exists first (in settings tab)
+            const container = document.getElementById('grow-beds-config-container');
+            console.log('🔍 Container check:', container ? 'EXISTS' : 'NOT FOUND');
+
             if (container) {
                 const containerStyles = window.getComputedStyle(container);
+                console.log('🔍 Container display:', containerStyles.display);
             }
             if (!container) {
-                console.error('grow-beds-container not found in DOM');
+                console.error('❌ grow-beds-config-container not found in DOM');
                 return;
             }
+
+            console.log('✅ Container validated, proceeding...');
             
             const growBeds = await this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`);
 
@@ -20983,17 +21070,27 @@ Generated by Afraponix Go - Aquaponics Management System`;
             const bedCountElement = document.getElementById('grow-bed-count');
             const systemConfig = this.loadSystemConfig();
             let bedCount = 4; // Default
-            
+
+            console.log('🔍 Debug bed count sources:', {
+                inputFieldValue: bedCountElement?.value,
+                systemConfigValue: systemConfig?.grow_bed_count,
+                activeSystemId: this.activeSystemId
+            });
+
             if (bedCountElement && bedCountElement.value) {
                 bedCount = parseInt(bedCountElement.value);
+                console.log(`✅ Using bed count from input field: ${bedCount}`);
             } else if (systemConfig && systemConfig.grow_bed_count) {
                 bedCount = parseInt(systemConfig.grow_bed_count);
+                console.log(`✅ Using bed count from system config: ${bedCount}`);
             }
 
-            
+            console.log(`🔧 Generating ${bedCount} grow bed forms...`);
+
             if (window.growBedManager && typeof window.growBedManager.generateGrowBedConfiguration === 'function') {
                 try {
                     window.growBedManager.generateGrowBedConfiguration(bedCount);
+                    console.log(`✅ Successfully generated ${bedCount} grow bed forms`);
                 } catch (error) {
                     console.error('Error in generateGrowBedConfiguration:', error);
                     console.error('Error stack:', error.stack);
@@ -21122,21 +21219,54 @@ Generated by Afraponix Go - Aquaponics Management System`;
     }
 
     async calculateTotalGrowBedVolume() {
-        if (!this.activeSystemId) return 0;
+        if (!this.activeSystemId) {
+            console.warn('📊 calculateTotalGrowBedVolume: No active system ID');
+            return 0;
+        }
+
+        try {
+            console.log('📊 Fetching grow beds for system:', this.activeSystemId);
+            const growBeds = await this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`);
+            console.log('📊 Grow beds received:', growBeds);
+
+            let totalVolume = 0;
+
+            if (growBeds && growBeds.length > 0) {
+                totalVolume = growBeds.reduce((sum, bed) => {
+                    const bedVolume = parseFloat(bed.volume_liters) || 0;
+                    console.log(`📊 Bed "${bed.bed_name}": ${bedVolume} L`);
+                    return sum + bedVolume;
+                }, 0);
+            }
+
+            console.log('📊 Total grow bed volume calculated:', totalVolume, 'L');
+            return totalVolume;
+        } catch (error) {
+            console.error('❌ Error calculating total grow bed volume:', error);
+            return 0;
+        }
+    }
+
+    async calculateTotalGrowBedArea() {
+        if (!this.activeSystemId) {
+            console.warn('📊 calculateTotalGrowBedArea: No active system ID');
+            return 0;
+        }
 
         try {
             const growBeds = await this.makeApiCall(`/grow-beds/system/${this.activeSystemId}`);
-            let totalVolume = 0;
-            
+            let totalArea = 0;
+
             if (growBeds && growBeds.length > 0) {
-                totalVolume = growBeds.reduce((sum, bed) => {
-                    return sum + (bed.volume_liters || 0);
+                totalArea = growBeds.reduce((sum, bed) => {
+                    const bedArea = parseFloat(bed.equivalent_m2) || 0;
+                    return sum + bedArea;
                 }, 0);
             }
-            
-            return totalVolume;
+
+            return totalArea;
         } catch (error) {
-            console.error('Error calculating total grow bed volume:', error);
+            console.error('❌ Error calculating total grow bed area:', error);
             return 0;
         }
     }
@@ -21144,18 +21274,40 @@ Generated by Afraponix Go - Aquaponics Management System`;
     async updateTotalGrowBedVolume() {
         const totalVolume = await this.calculateTotalGrowBedVolume();
         const displayElement = document.getElementById('total-grow-volume-display');
-        
+
+        // Validate totalVolume is a valid number
+        const validVolume = (typeof totalVolume === 'number' && !isNaN(totalVolume) && isFinite(totalVolume)) ? totalVolume : 0;
+
         if (displayElement) {
-            displayElement.textContent = `Auto-calculated: ${Math.round(totalVolume)} L`;
-            displayElement.style.color = totalVolume > 0 ? '#28a745' : '#6c757d';
+            displayElement.textContent = `Auto-calculated: ${Math.round(validVolume)} L`;
+            displayElement.style.color = validVolume > 0 ? '#28a745' : '#6c757d';
         }
-        
+
         // Update the system object with calculated volume
         if (this.systems[this.activeSystemId]) {
-            this.systems[this.activeSystemId].total_grow_volume = totalVolume;
+            this.systems[this.activeSystemId].total_grow_volume = validVolume;
         }
-        
-        return totalVolume;
+
+        return validVolume;
+    }
+
+    async updateTotalGrowBedArea() {
+        const totalArea = await this.calculateTotalGrowBedArea();
+        const displayElement = document.getElementById('total-grow-area-display');
+
+        // Validate totalArea is a valid number
+        const validArea = (typeof totalArea === 'number' && !isNaN(totalArea) && isFinite(totalArea)) ? totalArea : 0;
+
+        if (displayElement) {
+            displayElement.textContent = `${validArea.toFixed(2)} m²`;
+        }
+
+        // Update the system object with calculated area
+        if (this.systems[this.activeSystemId]) {
+            this.systems[this.activeSystemId].total_grow_area = validArea;
+        }
+
+        return validArea;
     }
 
     async displayGrowBedStatus() {
@@ -23171,40 +23323,8 @@ Generated by Afraponix Go - Aquaponics Management System`;
         return 'Current System';
     }
 
-    async deleteSystem() {
-        if (!this.activeSystemId) {
-            this.showNotification('❌ No active system to delete', 'error');
-            return;
-        }
-
-        try {
-            this.showNotification('Deleting system...', 'info');
-            
-            await this.makeApiCall(`/systems/${this.activeSystemId}`, {
-                method: 'DELETE'
-            });
-
-            this.showNotification('✅ System deleted successfully', 'success');
-            
-            // Clear local system data
-            this.activeSystemId = null;
-            this.systems = [];
-            
-            // Reload user data to get updated system list
-            await this.loadUserData();
-            
-            // If no systems left, show system creation
-            if (Object.keys(this.systems).length === 0) {
-                // Clear the flag so the modal shows again
-                localStorage.removeItem('hasSeenSystemModal');
-                this.showAddSystemDialog();
-            }
-            
-        } catch (error) {
-            console.error('Error deleting system:', error);
-            this.showNotification('❌ Failed to delete system: ' + (error.message || 'Unknown error'), 'error');
-        }
-    }
+    // Note: deleteSystem is implemented earlier in the main class (see line ~18877)
+    // This duplicate definition has been removed to prevent overwriting the real implementation
 
     async loadCustomCrops() {
         return this.customCropManager.loadCustomCrops();
@@ -23840,25 +23960,12 @@ Generated by Afraponix Go - Aquaponics Management System`;
     }
 
     // Plant Batch Manager delegation methods
-    async updatePlantCropDropdown() {
-        return this.plantBatchManager.updatePlantCropDropdown();
-    }
-
-    async updateHarvestCropDropdown() {
-        return this.plantBatchManager.updateHarvestCropDropdown();
-    }
-
-    async updateRemainingPlantsDisplay() {
-        return this.plantBatchManager.updateRemainingPlantsDisplay();
-    }
-
-    async recordPlanting() {
-        return this.plantBatchManager.recordPlanting();
-    }
-
-    async recordHarvest() {
-        return this.plantBatchManager.recordHarvest();
-    }
+    // Note: Plant batch methods are implemented directly in the main class (not delegated)
+    // updatePlantCropDropdown - see line ~2950
+    // updateHarvestCropDropdown - see line ~3019
+    // updateRemainingPlantsDisplay - see line ~3082
+    // recordPlanting - see line ~3320
+    // recordHarvest - see line ~3426
 
     generateBatchId(date = new Date()) {
         return this.plantBatchManager.generateBatchId(date);
@@ -23937,50 +24044,39 @@ Generated by Afraponix Go - Aquaponics Management System`;
         }
     }
 
-    async loadFishHealthEntry() {
-        return this.fishTankManager.loadFishHealthEntry();
-    }
+    // Note: loadFishHealthEntry is implemented directly in the main class (not delegated)
+    // See the main implementation around line 26858
 
-    initializeFishCalculator() {
-        return this.fishTankManager.initializeFishCalculator();
-    }
+    // Note: initializeFishCalculator is implemented directly in the main class (not delegated)
+    // See the main implementation around line 15489
 
     // Navigation Manager delegation methods
-    setupNavigation() {
-        return this.navigationManager.setupNavigation();
-    }
+    // Note: setupNavigation is implemented directly in the main class (not delegated)
+    // See the main implementation around line 2536
 
-    setupDashboardTabs() {
-        return this.navigationManager.setupDashboardTabs();
-    }
+    // Note: setupDashboardTabs is implemented directly in the main class (not delegated)
+    // See the main implementation around line 2683
 
-    setupCalculatorTabs() {
-        return this.navigationManager.setupCalculatorTabs();
-    }
+    // Note: setupCalculatorTabs is implemented directly in the main class (not delegated)
+    // See the main implementation around line 2603
 
-    setupDataEntryTabs() {
-        return this.navigationManager.setupDataEntryTabs();
-    }
+    // Note: setupDataEntryTabs is implemented directly in the main class (not delegated)
+    // See the main implementation around line 2603
 
-    setupPlantTabs() {
-        return this.navigationManager.setupPlantTabs();
-    }
+    // Note: setupPlantTabs is implemented directly in the main class (not delegated)
+    // See the main implementation around line 2672
 
-    setupPlantManagementTabs() {
-        return this.navigationManager.setupPlantManagementTabs();
-    }
+    // Note: setupPlantManagementTabs is implemented directly in the main class (not delegated)
+    // See the main implementation around line 2757
 
-    setupPlantActionTabs() {
-        return this.navigationManager.setupPlantActionTabs();
-    }
+    // Note: setupPlantActionTabs is implemented directly in the main class (not delegated)
+    // See the main implementation around line 2810
 
-    setupFishManagementTabs() {
-        return this.navigationManager.setupFishManagementTabs();
-    }
+    // Note: setupFishManagementTabs is implemented directly in the main class (not delegated)
+    // See the main implementation around line 4204
 
-    setupSettingsTabs() {
-        return this.navigationManager.setupSettingsTabs();
-    }
+    // Note: setupSettingsTabs is implemented directly in the main class (not delegated)
+    // See the main implementation around line 4274
 
     switchToView(viewId) {
         return this.navigationManager.switchToView(viewId);
@@ -23991,13 +24087,11 @@ Generated by Afraponix Go - Aquaponics Management System`;
     }
 
     // Water Quality & Sensor Manager delegation methods
-    async saveWaterQualityData() {
-        return this.waterQualitySensorManager.saveWaterQualityData();
-    }
+    // Note: saveWaterQualityData is implemented directly in the main class (not delegated)
+    // See the main implementation around line 16314
 
-    async fetchSensorData() {
-        return this.waterQualitySensorManager.fetchSensorData();
-    }
+    // Note: fetchSensorData is implemented directly in the main class (not delegated)
+    // See the main implementation around line 29201
 
     initializeSensorManagement() {
         return this.waterQualitySensorManager.initializeSensorManagement();
@@ -24008,34 +24102,28 @@ Generated by Afraponix Go - Aquaponics Management System`;
         return this.systemConfigManager.loadSystemConfiguration();
     }
 
-    async saveSystemConfig() {
-        return this.systemConfigManager.saveSystemConfig();
-    }
+    // Note: saveSystemConfig is implemented directly in the main class (not delegated)
+    // See the main implementation around line 18919
 
     generateGrowBedConfiguration(bedCount) {
         return this.systemConfigManager.generateGrowBedConfiguration(bedCount);
     }
 
-    async loadGrowBedConfiguration() {
-        return this.systemConfigManager.loadGrowBedConfiguration();
-    }
+    // Note: loadGrowBedConfiguration is implemented directly in the main class (not delegated)
+    // See the main implementation around line 21015
 
     // Crop Allocation Manager delegation methods
-    async loadPlantAllocations() {
-        return this.cropAllocationManager.loadPlantAllocations();
-    }
+    // Note: loadPlantAllocations is implemented directly in the main class (not delegated)
+    // See the main implementation around line 22567
 
-    async loadCustomCrops() {
-        return this.cropAllocationManager.loadCustomCrops();
-    }
+    // Note: loadCustomCrops is implemented directly in the main class (not delegated)
+    // See the main implementation around line 23354
 
-    async addCustomCrop() {
-        return this.cropAllocationManager.addCustomCrop();
-    }
+    // Note: addCustomCrop is implemented directly in the main class (not delegated)
+    // See the main implementation around line 23366
 
-    async deleteCustomCrop(cropId) {
-        return this.cropAllocationManager.deleteCustomCrop(cropId);
-    }
+    // Note: deleteCustomCrop is implemented directly in the main class (not delegated)
+    // See the main implementation around line 23627
 
     updateCropDropdowns(customCrops) {
         return this.cropAllocationManager.updateCropDropdowns(customCrops);
@@ -26605,68 +26693,7 @@ Generated by Afraponix Go - Aquaponics Management System`;
     }
 
     // Fish Management Tab Methods
-    async loadFishOverview() {
-        console.log('📡 Loading Fish Overview...');
-        const container = document.getElementById('tank-summary-container');
-        if (!container) {
-            console.warn('❌ Tank summary container not found');
-            return;
-        }
-
-        try {
-            // Show loading state
-            container.innerHTML = '<div class="loading-message">Loading fish overview...</div>';
-
-            // Ensure system is selected
-            if (!this.activeSystemId) {
-                console.warn('❌ No active system selected');
-                container.innerHTML = '<div class="no-data">Please select a system first</div>';
-                return;
-            }
-
-            // Force fresh data loading with proper sequencing
-            console.log('🔄 Step 1: Loading fresh data records...');
-            await this.loadDataRecords();
-            
-            // Additional delay to ensure all data APIs have completed
-            console.log('⏳ Step 2: Waiting for data processing...');
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // Verify data is actually loaded before proceeding
-            console.log('🔍 Step 3: Verifying data availability...');
-            let attempts = 0;
-            const maxAttempts = 10;
-            
-            while (attempts < maxAttempts) {
-                const hasData = this.dataRecords && (
-                    this.dataRecords.fishHealth?.length > 0 || 
-                    this.dataRecords.fishInventory?.tanks?.length > 0
-                );
-                
-                if (hasData) {
-                    console.log('✅ Data verified and ready');
-                    break;
-                }
-                
-                console.log(`⏳ Attempt ${attempts + 1}: Waiting for data...`);
-                await new Promise(resolve => setTimeout(resolve, 200));
-                attempts++;
-            }
-
-            if (attempts >= maxAttempts) {
-                console.warn('⚠️ Proceeding without full data verification');
-            }
-
-            // Load tank summary data
-            console.log('📊 Step 4: Displaying fish tank summary...');
-            await this.displayFishTankSummary();
-            
-            console.log('✅ Fish overview loaded successfully');
-        } catch (error) {
-            console.error('❌ Error loading fish overview:', error);
-            container.innerHTML = '<div class="error-message">Failed to load fish overview. Please try again.</div>';
-        }
-    }
+    // Note: loadFishOverview duplicate removed - see implementation at line ~23976
 
     async displayFishTankSummary() {
 
@@ -34192,3 +34219,224 @@ setInterval(() => {
         }
     }
 }, 2000); // Check every 2 seconds
+
+// ========================================
+// SIMPLE NEW CHART SYSTEM
+// ========================================
+const newCharts = {};
+
+// Chart configurations
+const chartConfigs = [
+    { id: 'new-temp-chart', param: 'temperature', label: 'Temperature (°C)', color: '#0051b1', unit: '°C' },
+    { id: 'new-ph-chart', param: 'ph', label: 'pH Level', color: '#7BAAEE', unit: '' },
+    { id: 'new-oxygen-chart', param: 'dissolved_oxygen', label: 'Dissolved Oxygen (mg/L)', color: '#8DFBCC', unit: 'mg/L' },
+    { id: 'new-ammonia-chart', param: 'ammonia', label: 'Ammonia (mg/L)', color: '#f59e0b', unit: 'mg/L' },
+    { id: 'new-humidity-chart', param: 'humidity', label: 'Humidity (%)', color: '#5a8fd9', unit: '%' },
+    { id: 'new-salinity-chart', param: 'salinity', label: 'Salinity (ppt)', color: '#95bcf2', unit: 'ppt' },
+    { id: 'new-ec-chart', param: 'ec', label: 'EC/Conductivity (µS/cm)', color: '#002a61', unit: 'µS/cm' }
+];
+
+async function initializeNewTempChart() {
+    // Initialize all charts
+    for (const config of chartConfigs) {
+        await initializeSingleChart(config);
+    }
+}
+
+async function initializeSingleChart(config) {
+    console.log(`📊 ========== INITIALIZE ${config.label} ==========`);
+
+    const canvas = document.getElementById(config.id);
+    if (!canvas) {
+        console.error(`❌ Canvas ${config.id} not found`);
+        return;
+    }
+
+    console.log(`✅ Canvas found: ${config.id}`);
+    console.log('📐 Canvas CSS dimensions:', canvas.getBoundingClientRect());
+    console.log('📐 Canvas internal dimensions:', canvas.width, 'x', canvas.height);
+
+    // Check if Chart.js is loaded
+    if (typeof Chart === 'undefined') {
+        console.error('❌ Chart.js is not loaded!');
+        return;
+    }
+
+    console.log('✅ Chart.js version:', Chart.version || 'unknown');
+
+    // Destroy existing chart if it exists
+    if (newCharts[config.id]) {
+        console.log(`🗑️ Destroying existing chart ${config.id}`);
+        newCharts[config.id].destroy();
+        newCharts[config.id] = null;
+    }
+
+    // Get the container div size
+    const container = canvas.parentElement;
+    const containerRect = container.getBoundingClientRect();
+    console.log('📦 Container size:', containerRect.width, 'x', containerRect.height);
+
+    // Set explicit canvas dimensions
+    canvas.width = containerRect.width;
+    canvas.height = containerRect.height;
+    console.log('✅ Set canvas dimensions to:', canvas.width, 'x', canvas.height);
+
+    try {
+        // Fetch water quality data
+        const systemId = window.app?.activeSystemId || 2;
+        console.log('🔍 Fetching water quality data for system', systemId);
+
+        // Get auth token from localStorage
+        const token = localStorage.getItem('auth_token');
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`/api/data/water-quality/${systemId}`, {
+            method: 'GET',
+            headers: headers
+        });
+        const data = await response.json();
+
+        console.log('📊 API Response:', data);
+        console.log('📊 API Response type:', Array.isArray(data) ? 'array' : 'object');
+        console.log('📊 API Response length:', data?.length);
+
+        // Handle both array and object responses
+        let waterQualityData = [];
+        if (Array.isArray(data)) {
+            waterQualityData = data;
+        } else if (data.success && data.data) {
+            waterQualityData = data.data;
+        } else if (data.data) {
+            waterQualityData = data.data;
+        }
+
+        if (!waterQualityData || waterQualityData.length === 0) {
+            console.warn('⚠️ No water quality data available');
+            document.getElementById('new-temp-chart-info').textContent = 'No data available';
+            return;
+        }
+
+        console.log(`📊 Retrieved ${waterQualityData.length} water quality records`);
+
+        // Filter and sort for valid data (newest first)
+        const sortedData = waterQualityData
+            .filter(item => {
+                const value = item[config.param];
+                return value !== null && value !== undefined && !isNaN(value) && isFinite(value);
+            })
+            .sort((a, b) => {
+                const dateA = new Date(a.date || a.created_at);
+                const dateB = new Date(b.date || b.created_at);
+                return dateB - dateA; // Newest first
+            });
+
+        console.log(`📊 Total valid ${config.param} records: ${sortedData.length}`);
+
+        // Take the most recent 12 entries and reverse to show oldest->newest (left to right)
+        const validData = sortedData.slice(0, 12).reverse();
+
+        console.log(`📊 Displaying ${validData.length} most recent records`);
+
+        if (validData.length === 0) {
+            console.warn(`⚠️ No valid ${config.param} data`);
+            const infoElement = document.getElementById(`${config.id}-info`);
+            if (infoElement) {
+                infoElement.textContent = `No valid ${config.param} data`;
+            }
+            return;
+        }
+
+        // Extract labels and values
+        const labels = validData.map(item => {
+            const date = new Date(item.date || item.created_at);
+            return `${date.getMonth() + 1}/${date.getDate()}`;
+        });
+
+        const values = validData.map(item => parseFloat(item[config.param]));
+
+        // Log date range
+        const firstDate = new Date(validData[0].date || validData[0].created_at);
+        const lastDate = new Date(validData[validData.length - 1].date || validData[validData.length - 1].created_at);
+        console.log(`📅 Date range: ${firstDate.toLocaleDateString()} to ${lastDate.toLocaleDateString()}`);
+
+        console.log('📊 Labels:', labels);
+        console.log('📊 Values:', values);
+
+        // Create the chart
+        console.log('🎨 Creating Chart.js instance...');
+
+        newCharts[config.id] = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: config.label,
+                    data: values,
+                    borderColor: config.color,
+                    backgroundColor: config.color + '20',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 6,
+                    pointBackgroundColor: config.color,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        enabled: true,
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.parsed.y.toFixed(1)}${config.unit}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: function(value) {
+                                return value + config.unit;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        console.log(`✅ Chart ${config.id} created successfully!`);
+        console.log('📊 Chart instance:', newCharts[config.id]);
+
+        // Update info text
+        const lastValue = values[values.length - 1];
+        const lastLabel = labels[labels.length - 1];
+        const infoElement = document.getElementById(`${config.id}-info`);
+        if (infoElement) {
+            infoElement.textContent = `Latest: ${lastValue.toFixed(1)}${config.unit} on ${lastLabel} | Showing ${values.length} readings`;
+        }
+
+    } catch (error) {
+        console.error(`❌ Error creating chart ${config.id}:`, error);
+        const infoElement = document.getElementById(`${config.id}-info`);
+        if (infoElement) {
+            infoElement.textContent = 'Error loading chart: ' + error.message;
+        }
+    }
+}
+
+// Expose to global scope
+window.initializeNewTempChart = initializeNewTempChart;

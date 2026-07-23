@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const { getDatabase, getDatabaseConnection } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
 
@@ -6,6 +7,14 @@ const router = express.Router();
 
 // All routes require authentication
 router.use(authenticateToken);
+
+// System ids are generated server-side and must be unguessable: they are the
+// only thing identifying a tenant's system in most API paths. The legacy
+// `system_<Date.now()>` format was enumerable. Existing ids keep working —
+// this only governs newly created systems.
+function generateSystemId() {
+    return `system_${crypto.randomUUID()}`;
+}
 
 // Get all systems for authenticated user
 router.get('/', async (req, res) => {
@@ -50,7 +59,6 @@ router.get('/:id', async (req, res) => {
 // Create new system
 router.post('/', async (req, res) => {
     const {
-        id,
         system_name,
         system_type,
         fish_type,
@@ -61,13 +69,18 @@ router.post('/', async (req, res) => {
         total_grow_area
     } = req.body;
 
-    if (!id || !system_name) {
-        return res.status(400).json({ error: 'System ID and name are required' });
+    if (!system_name) {
+        return res.status(400).json({ error: 'System name is required' });
     }
+
+    // The id is generated here and any client-supplied one is ignored. It used
+    // to be a caller-chosen `system_<millisecond timestamp>`, which is guessable
+    // and made system ids enumerable across tenants; a random UUID is not.
+    const id = generateSystemId();
 
     try {
         const pool = getDatabase();
-        
+
         const [result] = await pool.execute(`INSERT INTO systems 
             (id, user_id, system_name, system_type, fish_type, fish_tank_count, total_fish_volume, grow_bed_count, total_grow_volume, total_grow_area) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
@@ -84,11 +97,7 @@ router.post('/', async (req, res) => {
 
     } catch (error) {
         console.error('Error creating system:', error);
-        if (error.code === 'ER_DUP_ENTRY') {
-            res.status(400).json({ error: 'System ID already exists' });
-        } else {
-            res.status(500).json({ error: 'Failed to create system' });
-        }
+        res.status(500).json({ error: 'Failed to create system' });
     }
 });
 
@@ -196,7 +205,7 @@ router.post('/create-demo', async (req, res) => {
         connection = await getDatabaseConnection();
         
         // Generate new system ID
-        let newSystemId = `system_${Date.now()}`;
+        let newSystemId = generateSystemId();
         
         // Start transaction
         await connection.execute('START TRANSACTION');
@@ -219,7 +228,7 @@ router.post('/create-demo', async (req, res) => {
                 await connection.execute('START TRANSACTION');
                 
                 // Generate a new system ID for the fallback
-                const fallbackSystemId = `system_${Date.now()}_fallback`;
+                const fallbackSystemId = generateSystemId();
                 
                 // Fallback to simple demo creator
                 const SimpleDemoCreator = require('../database/simple-demo-creator');
