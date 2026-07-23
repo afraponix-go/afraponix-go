@@ -39,8 +39,18 @@ router.post('/system/:systemId', async (req, res) => {
     const { growBeds } = req.body;
     // Using connection pool - no manual connection management
 
+    // Beds missing from the payload are deleted further down, so a non-array
+    // body must be rejected before anything is read or written.
+    if (!Array.isArray(growBeds)) {
+        return res.status(400).json({ error: 'growBeds must be an array' });
+    }
+
     try {
         const pool = getDatabase();
+
+        if (!(await verifyOwnership(pool, req.params.systemId, req.user.userId))) {
+            return res.status(404).json({ error: 'System not found or access denied' });
+        }
 
         // Get existing grow beds for this system
         const [existingBeds] = await pool.execute(
@@ -176,11 +186,9 @@ router.post('/system/:systemId', async (req, res) => {
         console.error('Error details:', error.message);
         console.error('Request data:', JSON.stringify(req.body, null, 2));
         console.error('System ID:', req.params.systemId);
-        res.status(500).json({ 
-            error: 'Failed to save grow beds',
-            details: error.message,
-            code: error.code 
-        });
+        // Details stay in the server log — echoing the driver's error message
+        // and code back to the caller discloses schema internals.
+        res.status(500).json({ error: 'Failed to save grow beds' });
     }
 });
 
