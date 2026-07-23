@@ -70,6 +70,11 @@ cd ${APP_DIR}
 echo "📦 Installing application dependencies..."
 npm install --production
 
+# Build the database schema: core tables, crop/nutrient reference data, seed
+# varieties, then every migration. Idempotent, so it is safe to re-run.
+echo "🗄️  Building database schema..."
+DB_HOST=localhost DB_USER="${DB_USER}" DB_PASSWORD="${DB_PASS}" DB_NAME="${DB_NAME}" npm run db:bootstrap
+
 # Replace the complex database init with simple version
 echo "🔧 Configuring database initialization..."
 cp database/init-simple.js database/init.js

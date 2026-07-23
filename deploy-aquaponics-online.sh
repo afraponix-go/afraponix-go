@@ -92,6 +92,11 @@ cd ${APP_DIR}
 echo "📦 Installing application dependencies..."
 npm install --production
 
+# Build the database schema: core tables, crop/nutrient reference data, seed
+# varieties, then every migration. Idempotent, so it is safe to re-run.
+echo "🗄️  Building database schema..."
+DB_HOST=localhost DB_USER="${DB_USER}" DB_PASSWORD="${DB_PASS}" DB_NAME="${DB_NAME}" npm run db:bootstrap
+
 # Create environment file
 echo "⚙️ Creating production environment configuration..."
 cat > .env <<EOF
@@ -197,7 +202,7 @@ echo "📊 Service Management Commands:"
 echo "   • Check status: systemctl status ${APP_NAME}"
 echo "   • View logs: journalctl -u ${APP_NAME} -f"
 echo "   • Restart app: systemctl restart ${APP_NAME}"
-echo "   • Update app: cd ${APP_DIR} && git pull && npm install --production && systemctl restart ${APP_NAME}"
+echo "   • Update app: cd ${APP_DIR} && git pull && npm install --production && npm run db:bootstrap && systemctl restart ${APP_NAME}"
 echo ""
 echo "⚠️  IMPORTANT: Save these credentials securely!"
 echo "   Database Password: ${DB_PASS}"

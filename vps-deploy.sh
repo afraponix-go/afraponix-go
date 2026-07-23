@@ -72,6 +72,11 @@ cd ${APP_DIR}
 echo "📦 Installing application dependencies..."
 npm install --production
 
+# Build the database schema: core tables, crop/nutrient reference data, seed
+# varieties, then every migration. Idempotent, so it is safe to re-run.
+echo "🗄️  Building database schema..."
+DB_HOST=localhost DB_USER="${DB_USER}" DB_PASSWORD="${DB_PASS}" DB_NAME="${DB_NAME}" npm run db:bootstrap
+
 # Check for existing SQLite database to migrate
 SQLITE_DB_PATH="${APP_DIR}/aquaponics.db"
 if [ -f "$SQLITE_DB_PATH" ]; then
