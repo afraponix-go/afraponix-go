@@ -150,10 +150,12 @@ ENCRYPTION_KEY=your-generated-encryption-key
 ## 🚀 Production Deployment
 
 ### 1. Database Setup
+Create an **empty** database and user. The schema itself is built in step 2.
+
 ```bash
 # Create production database
 mysql -u root -p
-CREATE DATABASE afraponix_production;
+CREATE DATABASE afraponix_production CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER 'afraponix_user'@'localhost' IDENTIFIED BY 'secure_password';
 GRANT ALL PRIVILEGES ON afraponix_production.* TO 'afraponix_user'@'localhost';
 FLUSH PRIVILEGES;
@@ -164,12 +166,17 @@ FLUSH PRIVILEGES;
 # Install dependencies
 npm ci --production
 
-# Run database migrations (if any)
-npm run migrate
+# Build the schema: core tables, crop/nutrient reference data, seed
+# varieties, and every migration. Idempotent, so run it on each deploy
+# to pick up new migrations.
+npm run db:bootstrap
 
 # Start application
 npm start
 ```
+
+`db:bootstrap` reads `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` and
+`DB_NAME` from the environment — the same variables configured above.
 
 ### 3. Process Management (PM2)
 ```bash

@@ -22,6 +22,16 @@ npm run dev:db:up
 npm run dev
 ```
 
+### 2b. Build the Database Schema (first run, and after a reset)
+Starting the server creates the core tables, but not the crop/nutrient
+reference data, seed varieties, or migrations. Run once against a new database:
+
+```bash
+npm run dev:db:bootstrap
+```
+
+Idempotent, so re-run it any time to pick up new migrations.
+
 ### 3. Access Applications
 - **Main App**: http://localhost:8000
 - **Database Admin** (Adminer): http://localhost:8080
@@ -42,6 +52,9 @@ npm run dev:db:down
 
 # Reset database (removes all data)
 npm run dev:db:reset
+
+# Rebuild the schema + reference data (run after a reset)
+npm run dev:db:bootstrap
 
 # View database logs
 docker-compose -f docker-compose.dev.yml logs -f mariadb

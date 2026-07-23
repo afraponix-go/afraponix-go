@@ -9,13 +9,13 @@
 
 ## Deployment Steps
 
-### 1. Setup Database
-```bash
-# Login to MariaDB as root
-mysql -u root -p
+### 1. Create the Database and User
+This creates an **empty** database and its user. The tables and reference data
+are created later, in step 4.
 
-# Run the database setup script
-source /path/to/database-setup.sql
+```bash
+# Edit the password in the script first, then run it as root
+sudo mysql -u root -p < database-setup.sql
 ```
 
 ### 2. Clone and Setup Application
@@ -47,7 +47,28 @@ DB_NAME=aquaponics
 JWT_SECRET=your-super-secure-jwt-secret
 ```
 
-### 4. Configure Systemd Service
+### 4. Create the Database Schema
+Run once, before starting the app for the first time. It builds the complete
+schema — core tables, crop and nutrient reference data, seed varieties — and
+applies every migration.
+
+```bash
+cd /var/www/aquaponics-app
+npm run db:bootstrap
+```
+
+It reads `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD` and `DB_NAME` from the
+environment, so make sure `.env` from step 3 is loaded (or pass them inline):
+
+```bash
+DB_HOST=localhost DB_USER=aquaponics DB_PASSWORD=your_secure_password \
+  DB_NAME=aquaponics npm run db:bootstrap
+```
+
+Every step is idempotent, so re-running it is safe — that is also how you apply
+new migrations after an update (see *Update Application* below).
+
+### 5. Configure Systemd Service
 ```bash
 # Copy service file
 sudo cp afraponix-go.service /etc/systemd/system/
@@ -61,7 +82,7 @@ sudo systemctl start afraponix-go
 sudo systemctl status afraponix-go
 ```
 
-### 5. Configure Nginx
+### 6. Configure Nginx
 ```bash
 # Copy nginx configuration
 sudo cp nginx-site.conf /etc/nginx/sites-available/afraponix-go
@@ -76,7 +97,7 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-### 6. Configure SSL (Let's Encrypt)
+### 7. Configure SSL (Let's Encrypt)
 ```bash
 # Install certbot
 sudo apt install certbot python3-certbot-nginx
@@ -88,7 +109,7 @@ sudo certbot --nginx -d your-domain.com
 sudo certbot renew --dry-run
 ```
 
-### 7. Configure Firewall
+### 8. Configure Firewall
 ```bash
 # Allow necessary ports
 sudo ufw allow 22    # SSH
@@ -115,5 +136,9 @@ mysqldump -u aquaponics -p aquaponics > backup-$(date +%Y%m%d).sql
 cd /var/www/aquaponics-app
 sudo git pull
 npm install --production
+
+# Apply any new migrations (idempotent — safe to run every deploy)
+npm run db:bootstrap
+
 sudo systemctl restart afraponix-go
 ```
