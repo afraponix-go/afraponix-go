@@ -316,14 +316,17 @@ router.post('/create-demo', async (req, res) => {
 });
 
 // Delete system
-// Tables that carry a system_id but have NO foreign key to systems, so they are
-// not cleaned up by ON DELETE CASCADE. These must be deleted explicitly or they
-// leak orphaned rows. Everything else that references systems (fish_tanks,
-// grow_beds, water_quality, plant_growth, plant_allocations, fish_health,
-// fish_feeding, operations, sensor_configs, spray_programmes, system_credentials,
-// system_shares, water_quality_archived) has an ON DELETE CASCADE constraint and
-// is removed automatically when the system row goes — as are the grandchildren
-// sensor_readings and spray_applications.
+// Tables carrying a system_id that older databases may not have an ON DELETE
+// CASCADE foreign key for — long-lived databases created these tables before the
+// constraints were declared, and CREATE TABLE IF NOT EXISTS never adds them
+// retroactively, so every deletion leaked orphaned rows. The
+// 2026-07-system-id-cascade-fks migration backfills the constraints; these
+// explicit deletes stay as a safety net for any database that hasn't run it yet.
+// Everything else (fish_tanks, grow_beds, water_quality, plant_growth,
+// plant_allocations, fish_health, fish_feeding, operations, sensor_configs,
+// spray_programmes, system_credentials, system_shares, water_quality_archived)
+// has always cascaded — as do the grandchildren sensor_readings and
+// spray_applications.
 const UNCASCADED_SYSTEM_TABLES = [
     'fish_events',
     'fish_harvest',
