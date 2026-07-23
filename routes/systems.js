@@ -316,45 +316,67 @@ router.post('/create-demo', async (req, res) => {
 });
 
 // Delete system
+// Tables that carry a system_id but have NO foreign key to systems, so they are
+// not cleaned up by ON DELETE CASCADE. These must be deleted explicitly or they
+// leak orphaned rows. Everything else that references systems (fish_tanks,
+// grow_beds, water_quality, plant_growth, plant_allocations, fish_health,
+// fish_feeding, operations, sensor_configs, spray_programmes, system_credentials,
+// system_shares, water_quality_archived) has an ON DELETE CASCADE constraint and
+// is removed automatically when the system row goes — as are the grandchildren
+// sensor_readings and spray_applications.
+const UNCASCADED_SYSTEM_TABLES = [
+    'fish_events',
+    'fish_harvest',
+    'fish_inventory',
+    'nutrient_readings',
+    'nutrient_deficiency_images',
+    'import_history'
+];
+
 router.delete('/:id', async (req, res) => {
+    const systemId = req.params.id;
+    let connection;
+
     try {
         const pool = getDatabase();
-        
-        // First verify the system exists and belongs to the user
-        const [systemRows] = await pool.execute('SELECT * FROM systems WHERE id = ? AND user_id = ?', 
-            [req.params.id, req.user.userId]);
-        const system = systemRows[0];
 
-        if (!system) {
+        // First verify the system exists and belongs to the user
+        const [systemRows] = await pool.execute('SELECT id FROM systems WHERE id = ? AND user_id = ?',
+            [systemId, req.user.userId]);
+
+        if (!systemRows[0]) {
             return res.status(404).json({ error: 'System not found' });
         }
 
-        // Delete all related data in the correct order (to handle foreign key constraints)
-        
-        // Delete plant allocations
-        await pool.execute('DELETE FROM plant_allocations WHERE system_id = ?', [req.params.id]);
+        // Delete in a transaction so a failure part-way cannot leave the system
+        // half-deleted (data gone but the system row still present, or vice versa).
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
 
-        // Delete nutrient readings (consolidated table)
-        await pool.execute('DELETE FROM nutrient_readings WHERE system_id = ?', [req.params.id]);
+        for (const table of UNCASCADED_SYSTEM_TABLES) {
+            await connection.execute(`DELETE FROM ${table} WHERE system_id = ?`, [systemId]);
+        }
 
-        // Delete plant growth records
-        await pool.execute('DELETE FROM plant_growth WHERE system_id = ?', [req.params.id]);
+        // Dropping the system cascades to every table that has an FK to it.
+        await connection.execute('DELETE FROM systems WHERE id = ? AND user_id = ?',
+            [systemId, req.user.userId]);
 
-        // Delete fish health records
-        await pool.execute('DELETE FROM fish_health WHERE system_id = ?', [req.params.id]);
-
-        // Delete grow beds
-        await pool.execute('DELETE FROM grow_beds WHERE system_id = ?', [req.params.id]);
-
-        // Finally delete the system itself
-        await pool.execute('DELETE FROM systems WHERE id = ? AND user_id = ?', 
-            [req.params.id, req.user.userId]);
+        await connection.commit();
 
         res.json({ message: 'System and all related data deleted successfully' });
 
     } catch (error) {
+        if (connection) {
+            try {
+                await connection.rollback();
+            } catch (rollbackError) {
+                console.error('Rollback failed while deleting system:', rollbackError);
+            }
+        }
         console.error('Error deleting system:', error);
         res.status(500).json({ error: 'Failed to delete system' });
+    } finally {
+        if (connection) connection.release();
     }
 });
 
