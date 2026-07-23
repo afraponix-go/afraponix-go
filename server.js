@@ -26,8 +26,50 @@ const dataImportRoutes = require('./routes/data-import');
 const { initializeDatabase, initializeConnectionPool, closeConnectionPool } = require('./database/init-mariadb');
 const sensorCollector = require('./services/sensor-collector');
 
+// JWT_SECRET signs every session token. Refuse to start without a strong one:
+// a missing or guessable secret lets anyone forge a token for any account, and
+// failing at startup is far safer than discovering it in production.
+const KNOWN_PLACEHOLDER_SECRETS = [
+    'your-secret-key-change-this',
+    'your-super-secure-jwt-secret',
+    'your-generated-jwt-secret',
+    'change-me',
+    'secret'
+];
+
+function assertJwtSecret() {
+    const secret = process.env.JWT_SECRET;
+
+    if (!secret || !secret.trim()) {
+        throw new Error('JWT_SECRET is not set. Generate one with: openssl rand -base64 48');
+    }
+    if (KNOWN_PLACEHOLDER_SECRETS.includes(secret.trim().toLowerCase())) {
+        throw new Error('JWT_SECRET is still set to a placeholder value. Generate a real one with: openssl rand -base64 48');
+    }
+    if (secret.length < 32) {
+        throw new Error(`JWT_SECRET is too short (${secret.length} chars, need at least 32). Generate one with: openssl rand -base64 48`);
+    }
+}
+
+try {
+    assertJwtSecret();
+} catch (error) {
+    console.error(`\n❌ Refusing to start: ${error.message}\n`);
+    process.exit(1);
+}
+
 const app = express();
 const PORT = process.env.PORT || 8000;
+
+// Behind nginx the real client IP arrives in X-Forwarded-For. Without this
+// every request looks like it came from the proxy, so the rate limits below
+// would be shared by all users at once. Opt-in via TRUST_PROXY (e.g. 1 for a
+// single nginx in front) — left off, Express uses the direct socket address,
+// which cannot be spoofed.
+if (process.env.TRUST_PROXY) {
+    const trustProxy = process.env.TRUST_PROXY;
+    app.set('trust proxy', /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy);
+}
 
 // Security middleware
 app.use(helmet({
@@ -70,6 +112,48 @@ const limiter = rateLimit({
     message: 'Too many requests from this IP, please try again later.'
 });
 app.use('/api/', limiter);
+
+// The general limit above is far too permissive for authentication — it would
+// allow thousands of password guesses per window. These endpoints get their own
+// strict per-IP limits. Mounted before the auth router so they run first.
+
+// Password guessing. Successful logins are not counted, so normal use never
+// trips it; only failures burn the allowance.
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    skipSuccessfulRequests: true,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many failed login attempts. Please try again in 15 minutes.' }
+});
+
+// Guessing a verification code or password-reset token — every attempt counts.
+const codeLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many attempts. Please try again in 15 minutes.' }
+});
+
+// Endpoints that create accounts or send email — limits signup floods and
+// using the app to spam someone else's inbox.
+const accountLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests. Please try again later.' }
+});
+
+app.use('/api/auth/login', loginLimiter);
+app.use('/api/auth/verify-code', codeLimiter);
+app.use('/api/auth/verify-email', codeLimiter);
+app.use('/api/auth/reset-password', codeLimiter);
+app.use('/api/auth/register', accountLimiter);
+app.use('/api/auth/forgot-password', accountLimiter);
+app.use('/api/auth/resend-verification', accountLimiter);
 
 // Request logging middleware (for debugging)
 app.use((req, res, next) => {

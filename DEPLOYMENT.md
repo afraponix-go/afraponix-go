@@ -44,7 +44,16 @@ DB_HOST=localhost
 DB_USER=aquaponics
 DB_PASSWORD=your_secure_password
 DB_NAME=aquaponics
-JWT_SECRET=your-super-secure-jwt-secret
+
+# Required. The server refuses to start if this is missing, a placeholder,
+# or shorter than 32 characters. Generate one with:
+#   openssl rand -base64 48
+JWT_SECRET=
+
+# Number of reverse proxies in front of the app. With nginx (step 6) this
+# must be set, otherwise every request appears to come from nginx itself and
+# the login rate limits would be shared by all users at once.
+TRUST_PROXY=1
 ```
 
 ### 4. Create the Database Schema
