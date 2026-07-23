@@ -317,6 +317,40 @@ async function createTables(connection) {
             FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
         ) ENGINE=InnoDB`,
 
+        // Fish harvest table
+        `CREATE TABLE IF NOT EXISTS fish_harvest (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            system_id VARCHAR(255) NOT NULL,
+            tank_number INT NOT NULL,
+            harvest_date DATE NOT NULL,
+            fish_count INT NOT NULL,
+            total_weight_kg DECIMAL(10,2) NOT NULL,
+            average_weight_kg DECIMAL(6,3),
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE,
+            INDEX idx_system_harvest_date (system_id, harvest_date),
+            INDEX idx_tank_harvest (system_id, tank_number)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+        // Import history table (data import audit trail)
+        `CREATE TABLE IF NOT EXISTS import_history (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            system_id VARCHAR(255) NOT NULL,
+            import_type VARCHAR(50) NOT NULL,
+            file_name VARCHAR(255) NOT NULL,
+            records_imported INT DEFAULT 0,
+            records_errors INT DEFAULT 0,
+            records_duplicates INT DEFAULT 0,
+            user_id VARCHAR(255) DEFAULT NULL,
+            import_session_id VARCHAR(255) DEFAULT NULL,
+            import_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE,
+            INDEX idx_import_system (system_id),
+            INDEX idx_import_date (import_date)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
         // Spray programmes table
         `CREATE TABLE IF NOT EXISTS spray_programmes (
             id INT PRIMARY KEY AUTO_INCREMENT,

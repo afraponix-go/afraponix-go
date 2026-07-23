@@ -21,7 +21,7 @@ async function addPlantIdToDeficiencyImages() {
     await connection.execute(`
       ALTER TABLE nutrient_deficiency_images 
       ADD COLUMN IF NOT EXISTS plant_id INT DEFAULT NULL,
-      ADD COLUMN IF NOT EXISTS system_id VARCHAR(50) DEFAULT NULL,
+      ADD COLUMN IF NOT EXISTS system_id VARCHAR(255) DEFAULT NULL,
       ADD COLUMN IF NOT EXISTS grow_bed_id INT DEFAULT NULL,
       ADD INDEX idx_plant_id (plant_id),
       ADD INDEX idx_system_id (system_id),
@@ -29,7 +29,21 @@ async function addPlantIdToDeficiencyImages() {
     `);
     
     console.log('✅ Successfully added plant_id and related columns to nutrient_deficiency_images table');
-    
+
+    // Tie the images to their system so they are cleaned up when the system is
+    // deleted. NULL system_id is allowed and means "global reference image".
+    try {
+      await connection.execute(`
+        ALTER TABLE nutrient_deficiency_images
+        ADD CONSTRAINT fk_deficiency_images_system
+        FOREIGN KEY IF NOT EXISTS (system_id) REFERENCES systems(id)
+        ON DELETE CASCADE
+      `);
+      console.log('✅ Added cascading foreign key to systems table');
+    } catch (error) {
+      console.log('⚠️ Could not add systems foreign key:', error.message);
+    }
+
     // Check if crops table exists and has the expected structure
     const [tables] = await connection.execute(`
       SELECT COUNT(*) as count 
