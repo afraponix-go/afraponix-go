@@ -38,6 +38,19 @@ export async function register(input: {
   return loginResponse.parse(data)
 }
 
+// Confirm the 6-digit code emailed after registration. On success the backend
+// verifies the account and returns a token, so the user is signed straight in.
+export async function verifyCode(email: string, code: string) {
+  const data = await api('/auth/verify-code', { method: 'POST', body: { email, code } })
+  return loginResponse.parse(data)
+}
+
+// Email another verification code.
+export async function resendVerification(email: string) {
+  const data = await api('/auth/resend-verification', { method: 'POST', body: { email } })
+  return loginResponse.parse(data)
+}
+
 export async function fetchCurrentUser(): Promise<User> {
   const data = await api<{ user?: unknown } | unknown>('/auth/user')
   // Backend returns either { user } or the user object directly depending on route.

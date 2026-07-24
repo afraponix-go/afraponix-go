@@ -1,0 +1,315 @@
+/* Public landing page. Uses the same tokens as the app so it tracks light/dark. */
+.lp {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-2, var(--surface));
+  color: var(--ink);
+}
+
+/* Nav */
+.lp-nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.lp-nav-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.lp-nav-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Buttons */
+.lp-btn {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
+}
+.lp-btn.lg {
+  font-size: 15px;
+  padding: 12px 22px;
+}
+.lp-btn.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.lp-btn.primary:hover {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--accent) 88%, black);
+}
+.lp-btn.ghost {
+  background: var(--surface);
+  color: var(--ink-soft);
+  border-color: var(--line-strong);
+}
+.lp-btn.ghost:hover {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+
+/* Hero */
+.lp-hero {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 72px 24px 56px;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 48px;
+  align-items: center;
+}
+.lp-hero h1 {
+  margin: 0;
+  font-size: clamp(34px, 5vw, 52px);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+.lp-hero h1 .accent {
+  background: linear-gradient(90deg, var(--brand-deep), var(--brand-aqua));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.lp-lede {
+  margin: 18px 0 0;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  max-width: 46ch;
+}
+.lp-hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+.lp-hero-cta.center {
+  justify-content: center;
+}
+.lp-stats {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  margin: 36px 0 0;
+  padding: 0;
+}
+.lp-stats li {
+  display: flex;
+  flex-direction: column;
+}
+.lp-stats b {
+  font-size: 22px;
+  font-family: var(--mono, inherit);
+  letter-spacing: -0.01em;
+}
+.lp-stats span {
+  font-size: 13px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+
+/* Dashboard preview */
+.lp-preview {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg, 14px);
+  box-shadow: var(--shadow, 0 12px 32px rgba(16, 24, 37, 0.1));
+  padding: 18px;
+  overflow: hidden;
+}
+.lp-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 14px;
+}
+.lp-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ok);
+}
+.lp-dot::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+.lp-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.lp-preview-grid > div {
+  background: var(--surface-2, color-mix(in srgb, var(--ink) 4%, transparent));
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lp-preview-grid span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+}
+.lp-preview-grid b {
+  font-size: 19px;
+  font-family: var(--mono, inherit);
+}
+.lp-spark {
+  width: 100%;
+  height: 70px;
+  margin-top: 14px;
+  display: block;
+}
+
+/* Sections */
+.lp-section {
+  padding: 64px 24px;
+}
+.lp-section.alt {
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.lp-section-head {
+  max-width: 720px;
+  margin: 0 auto 40px;
+  text-align: center;
+}
+.lp-section-head h2 {
+  margin: 0;
+  font-size: clamp(24px, 3.2vw, 32px);
+  letter-spacing: -0.015em;
+}
+.lp-section-head p {
+  margin: 12px 0 0;
+  color: var(--ink-soft);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* Feature cards */
+.lp-features {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+}
+.lp-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg, 14px);
+  padding: 22px;
+  transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
+}
+.lp-card:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(16, 24, 37, 0.06));
+  transform: translateY(-2px);
+}
+.lp-card h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.lp-card p {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+/* Benefits */
+.lp-benefits {
+  max-width: 900px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+  text-align: center;
+}
+.lp-benefit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lp-benefit b {
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  background: linear-gradient(90deg, var(--brand-green), var(--brand-aqua));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.lp-benefit-label {
+  font-weight: 650;
+  font-size: 15px;
+}
+.lp-benefit-body {
+  font-size: 14px;
+  color: var(--ink-faint);
+}
+
+/* Final CTA */
+.lp-final {
+  padding: 72px 24px 80px;
+  text-align: center;
+}
+.lp-final h2 {
+  margin: 0;
+  font-size: clamp(24px, 3.4vw, 34px);
+  letter-spacing: -0.015em;
+}
+.lp-final p {
+  margin: 12px 0 0;
+  color: var(--ink-soft);
+  font-size: 16px;
+}
+
+.lp-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--line);
+  padding: 22px 24px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+@media (max-width: 860px) {
+  .lp-hero {
+    grid-template-columns: 1fr;
+    padding-top: 48px;
+    gap: 32px;
+  }
+  .lp-stats {
+    gap: 24px;
+  }
+}

@@ -35,6 +35,9 @@
 }
 .field input {
   font: inherit;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 11px 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -50,6 +53,10 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+/* Grid items default to min-width:auto, which lets inputs push past the card. */
+.row-2 > .field {
+  min-width: 0;
 }
 .btn {
   width: 100%;
@@ -79,4 +86,121 @@
   text-align: center;
   font-size: 14px;
   color: var(--ink-faint);
+}
+
+/* ---- Registration: password strength, match, verification code ---- */
+.auth-notice {
+  background: var(--ok-wash);
+  color: var(--ok);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  margin-bottom: 14px;
+}
+
+.pw-wrap {
+  position: relative;
+  display: flex;
+}
+.pw-wrap input {
+  flex: 1;
+  padding-right: 62px;
+}
+.pw-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-faint);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.pw-toggle:hover {
+  color: var(--ink);
+}
+
+.pw-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+  margin-top: 10px;
+}
+.pw-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.2s ease, background 0.2s ease;
+  background: var(--danger);
+}
+.pw-fill.s3 { background: var(--warn); }
+.pw-fill.s4 { background: var(--brand-aqua); }
+.pw-fill.s5 { background: var(--ok); }
+
+.pw-strength {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  margin-top: 6px;
+}
+.pw-rules {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+.pw-rules li {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+.pw-rules li.ok {
+  color: var(--ok);
+}
+.pw-match {
+  font-size: 12.5px;
+  margin-top: 6px;
+}
+.pw-match.ok { color: var(--ok); }
+.pw-match.bad { color: var(--danger); }
+
+.code-row {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0 18px;
+}
+.code-box {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 600;
+  padding: 12px 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.code-box:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-wash);
+}
+
+.link-btn {
+  font: inherit;
+  font-size: inherit;
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.link-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

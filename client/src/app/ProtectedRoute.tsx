@@ -6,6 +6,8 @@ export function ProtectedRoute() {
   if (status === 'loading') {
     return <div style={{ display: 'grid', placeItems: 'center', height: '100%', color: 'var(--ink-faint)' }}>Loading…</div>
   }
-  if (status === 'anonymous') return <Navigate to="/login" replace />
+  // Anonymous visitors get the public landing page, which is the front door to
+  // sign-in and registration.
+  if (status === 'anonymous') return <Navigate to="/welcome" replace />
   return <Outlet />
 }
