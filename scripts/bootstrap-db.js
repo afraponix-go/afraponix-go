@@ -55,6 +55,7 @@ const STEPS = [
   { type: 'sql', file: 'database/migrations/2026-07-per-user-default-crops.sql', label: 'Per-user default crops' },
   { type: 'sql', file: 'database/migrations/2026-07-per-user-seed-varieties.sql', label: 'Per-user seed varieties' },
   { type: 'sql', file: 'database/migrations/2026-07-system-id-cascade-fks.sql', label: 'Cascading system foreign keys' },
+  { type: 'sql', file: 'database/migrations/2026-07-widen-plant-growth-batch-id.sql', label: 'Widen plant_growth batch_id' },
   { type: 'node', file: 'database/migrations/2026-07-backfill-nutrient-readings.js', label: 'Backfill nutrient readings' },
 ];
 

@@ -23,19 +23,20 @@ class SimpleDemoCreator {
 
             // Create two fish tanks
             await this.mysql.execute(
-                `INSERT INTO fish_tanks (system_id, tank_number, name, volume, unit, fish_type) 
-                 VALUES 
-                 (?, 1, 'Tank 1', 3500, 'liters', 'tilapia'),
-                 (?, 2, 'Tank 2', 3500, 'liters', 'tilapia')`,
+                `INSERT INTO fish_tanks (system_id, tank_number, size_m3, volume_liters, fish_type, current_fish_count)
+                 VALUES
+                 (?, 1, 3.5, 3500, 'tilapia', 100),
+                 (?, 2, 3.5, 3500, 'tilapia', 100)`,
                 [systemId, systemId]
             );
 
-            // Create two grow beds
+            // Create two grow beds (equivalent_m2 is NOT NULL; for a media bed it
+            // equals the grow area)
             await this.mysql.execute(
-                `INSERT INTO grow_beds (system_id, bed_number, bed_name, type, area_m2, depth, volume) 
-                 VALUES 
-                 (?, 1, 'Grow Bed 1', 'media', 2.0, 0.3, 600),
-                 (?, 2, 'Grow Bed 2', 'media', 2.0, 0.4, 800)`,
+                `INSERT INTO grow_beds (system_id, bed_number, bed_name, bed_type, area_m2, equivalent_m2, height_meters, volume_liters)
+                 VALUES
+                 (?, 1, 'Grow Bed 1', 'media', 2.0, 2.0, 0.3, 600),
+                 (?, 2, 'Grow Bed 2', 'media', 2.0, 2.0, 0.4, 800)`,
                 [systemId, systemId]
             );
 
@@ -67,29 +68,30 @@ class SimpleDemoCreator {
                 );
             }
 
-            // Add sample fish inventory
+            // Add sample fish inventory (one row per tank)
             await this.mysql.execute(
-                `INSERT INTO fish_inventory (system_id, tank_id, fish_count, average_weight, total_biomass, date) 
-                 SELECT ?, id, 100, 250, 25000, NOW() FROM fish_tanks WHERE system_id = ?`,
+                `INSERT INTO fish_inventory (system_id, fish_tank_id, current_count, average_weight, fish_type)
+                 SELECT ?, id, 100, 250, fish_type FROM fish_tanks WHERE system_id = ?`,
                 [systemId, systemId]
             );
 
-            // Add sample plant allocation
+            // Add sample plant allocation (percentage_allocated is a percent of the bed)
             await this.mysql.execute(
-                `INSERT INTO plant_allocations (system_id, grow_bed_id, crop_type, allocated_area, plant_count) 
-                 SELECT ?, gb.id, 'lettuce', 1.0, 20 FROM grow_beds gb WHERE gb.system_id = ? AND gb.bed_number = 1
+                `INSERT INTO plant_allocations (system_id, grow_bed_id, crop_type, percentage_allocated, plants_planted)
+                 SELECT ?, gb.id, 'lettuce', 100.0, 20 FROM grow_beds gb WHERE gb.system_id = ? AND gb.bed_number = 1
                  UNION ALL
-                 SELECT ?, gb.id, 'basil', 1.0, 15 FROM grow_beds gb WHERE gb.system_id = ? AND gb.bed_number = 2`,
+                 SELECT ?, gb.id, 'basil', 100.0, 15 FROM grow_beds gb WHERE gb.system_id = ? AND gb.bed_number = 2`,
                 [systemId, systemId, systemId, systemId]
             );
 
-            // Add some sample plant growth data
+            // Add some sample plant growth data. plant_growth is the event log
+            // (there is no plant_data table); a planting sets new_seedlings/count.
             await this.mysql.execute(
-                `INSERT INTO plant_data (system_id, grow_bed_id, batch_id, crop_type, plant_date, plant_count, growth_stage) 
-                 SELECT ?, gb.id, CONCAT('batch_', UNIX_TIMESTAMP()), 'lettuce', DATE_SUB(NOW(), INTERVAL 14 DAY), 20, 'vegetative' 
+                `INSERT INTO plant_growth (system_id, grow_bed_id, date, crop_type, count, new_seedlings, growth_stage, batch_id, batch_created_date)
+                 SELECT ?, gb.id, DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 14 DAY), '%Y-%m-%d'), 'lettuce', 20, 20, 'vegetative', CONCAT('batch_', UNIX_TIMESTAMP()), DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 14 DAY), '%Y-%m-%d')
                  FROM grow_beds gb WHERE gb.system_id = ? AND gb.bed_number = 1
                  UNION ALL
-                 SELECT ?, gb.id, CONCAT('batch_', UNIX_TIMESTAMP()+1), 'basil', DATE_SUB(NOW(), INTERVAL 7 DAY), 15, 'seedling' 
+                 SELECT ?, gb.id, DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 7 DAY), '%Y-%m-%d'), 'basil', 15, 15, 'seedling', CONCAT('batch_', UNIX_TIMESTAMP() + 1), DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 7 DAY), '%Y-%m-%d')
                  FROM grow_beds gb WHERE gb.system_id = ? AND gb.bed_number = 2`,
                 [systemId, systemId, systemId, systemId]
             );
@@ -103,7 +105,7 @@ class SimpleDemoCreator {
                     grow_beds: 2,
                     water_quality: 7,
                     plant_allocations: 2,
-                    plant_data: 2
+                    plant_growth: 2
                 }
             };
 

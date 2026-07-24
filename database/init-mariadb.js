@@ -205,7 +205,7 @@ async function createTables(connection) {
             pest_control TEXT,
             health VARCHAR(100),
             growth_stage VARCHAR(100),
-            batch_id VARCHAR(50),
+            batch_id VARCHAR(100),
             seed_variety VARCHAR(100),
             batch_created_date VARCHAR(20),
             days_to_harvest INT,
