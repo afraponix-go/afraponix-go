@@ -18376,8 +18376,9 @@ class AquaponicsApp {
             const response = await this.makeApiCall('/systems/create-demo', {
                 method: 'POST',
                 body: JSON.stringify({
-                    system_name: systemName || 'Oribi 1 Demo System',
-                    user_id: this.userId
+                    system_name: systemName || 'Oribi 1 Demo System'
+                    // The server owns the demo to the authenticated user; it no
+                    // longer accepts a client-supplied user_id.
                 })
             });
             

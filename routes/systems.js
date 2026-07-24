@@ -179,25 +179,19 @@ router.put('/:id', async (req, res) => {
 
 // Create demo system using SQLite demo database
 router.post('/create-demo', async (req, res) => {
-    const { system_name, user_id } = req.body;
+    const { system_name } = req.body;
     const SQLiteDemoImporter = require('../database/sqlite-demo-importer');
-    
+
     if (!system_name) {
         return res.status(400).json({ error: 'System name is required' });
     }
 
-    // Validate user authentication and get user ID
-    let targetUserId;
-    if (user_id) {
-        targetUserId = user_id;
-    } else if (req.user && req.user.userId) {
-        targetUserId = req.user.userId;
-    } else {
-        console.error('No valid user ID found in request');
-        return res.status(401).json({ error: 'User authentication required' });
-    }
+    // Always the authenticated user. A user_id in the request body was
+    // previously honoured, which let a caller create a demo system owned by
+    // someone else's account. authenticateToken guarantees req.user is set.
+    const targetUserId = req.user.userId;
 
-    
+
     let connection;
 
     try {
