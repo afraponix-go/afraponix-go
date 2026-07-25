@@ -663,7 +663,7 @@ router.get('/user', authenticateToken, async (req, res) => {
         const pool = getDatabase();
         
         const [result] = await pool.execute(
-            'SELECT id, username, email, user_role, subscription_status FROM users WHERE id = ?',
+            'SELECT id, username, email, first_name, last_name, user_role, subscription_status FROM users WHERE id = ?',
             [userId]
         );
 
@@ -687,6 +687,66 @@ router.get('/user', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Failed to get user info:', error);
         res.status(500).json({ error: 'Failed to get user info' });
+    }
+});
+
+// Update the signed-in user's own profile (name only; email is the login
+// identifier and is not changed here).
+router.put('/profile', authenticateToken, async (req, res) => {
+    const { firstName, lastName } = req.body;
+
+    if (!firstName || !firstName.trim() || !lastName || !lastName.trim()) {
+        return res.status(400).json({ error: 'First and last name are required' });
+    }
+
+    try {
+        const pool = getDatabase();
+        await pool.execute(
+            'UPDATE users SET first_name = ?, last_name = ? WHERE id = ?',
+            [firstName.trim(), lastName.trim(), req.user.userId]
+        );
+
+        const [rows] = await pool.execute(
+            'SELECT id, username, email, first_name, last_name, user_role, subscription_status FROM users WHERE id = ?',
+            [req.user.userId]
+        );
+        res.json({ success: true, user: rows[0] });
+    } catch (error) {
+        console.error('Failed to update profile:', error);
+        res.status(500).json({ error: 'Failed to update profile' });
+    }
+});
+
+// Change the signed-in user's own password. Requires the current password so a
+// stolen session token alone cannot change it.
+router.put('/password', authenticateToken, async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: 'Current and new password are required' });
+    }
+    if (newPassword.length < 8) {
+        return res.status(400).json({ error: 'New password must be at least 8 characters' });
+    }
+
+    try {
+        const pool = getDatabase();
+        const [rows] = await pool.execute('SELECT password_hash FROM users WHERE id = ?', [req.user.userId]);
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const ok = await bcrypt.compare(currentPassword, rows[0].password_hash);
+        if (!ok) {
+            return res.status(400).json({ error: 'Current password is incorrect' });
+        }
+
+        const newHash = await bcrypt.hash(newPassword, 10);
+        await pool.execute('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, req.user.userId]);
+        res.json({ success: true, message: 'Password updated' });
+    } catch (error) {
+        console.error('Failed to change password:', error);
+        res.status(500).json({ error: 'Failed to change password' });
     }
 });
 

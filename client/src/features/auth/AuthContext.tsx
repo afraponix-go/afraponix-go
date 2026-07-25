@@ -20,6 +20,7 @@ type AuthState = {
   status: 'loading' | 'authenticated' | 'anonymous'
   signIn: (token: string, user?: User) => Promise<void>
   signOut: () => void
+  setUser: (user: User) => void
 }
 
 const AuthCtx = createContext<AuthState | null>(null)
@@ -68,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('anonymous')
   }
 
-  return <AuthCtx.Provider value={{ user, status, signIn, signOut }}>{children}</AuthCtx.Provider>
+  return <AuthCtx.Provider value={{ user, status, signIn, signOut, setUser }}>{children}</AuthCtx.Provider>
 }
 
 export function useAuth() {

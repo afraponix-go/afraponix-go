@@ -21,6 +21,7 @@ import { Crops } from '../features/plants/CropsPage'
 import { FishStockingCalculator } from '../features/calculator/FishStockingCalculator'
 import { OperationsPage } from '../features/operations/OperationsPage'
 import { GeneralSettings } from '../features/settings/GeneralSettings'
+import { AccountSettings } from '../features/settings/AccountSettings'
 import { DangerZone } from '../features/settings/DangerZone'
 
 const DASHBOARD_TABS = [
@@ -45,6 +46,7 @@ const FISH_TABS = [
 ]
 const SETTINGS_TABS = [
   { to: '/settings', label: 'General', end: true },
+  { to: '/settings/account', label: 'Account' },
   { to: '/settings/danger', label: 'Danger Zone' },
 ]
 const PLANTS_TABS = [
@@ -123,6 +125,7 @@ export const router = createBrowserRouter([
             element: <SubTabLayout items={SETTINGS_TABS} />,
             children: [
               { index: true, element: <GeneralSettings /> },
+              { path: 'account', element: <AccountSettings /> },
               { path: 'danger', element: <DangerZone /> },
             ],
           },

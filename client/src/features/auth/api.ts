@@ -1,18 +1,36 @@
 import { z } from 'zod'
 import { api } from '../../lib/apiClient'
 
-// Shape returned by the existing backend (routes/auth.js). username is derived
-// from email server-side now, but we keep it optional for compatibility.
-export const userSchema = z.object({
-  id: z.number(),
-  email: z.string(),
-  username: z.string().optional(),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  userRole: z.string().optional(),
-  subscriptionStatus: z.string().optional(),
-  emailVerified: z.boolean().optional(),
-})
+// The backend is inconsistent: register/login return camelCase user fields,
+// while GET /auth/user returns snake_case (first_name, user_role, …). Normalize
+// to camelCase before validating so callers see one shape everywhere.
+function normalizeUser(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object') return raw
+  const r = raw as Record<string, unknown>
+  return {
+    ...r,
+    firstName: r.firstName ?? r.first_name,
+    lastName: r.lastName ?? r.last_name,
+    userRole: r.userRole ?? r.user_role,
+    subscriptionStatus: r.subscriptionStatus ?? r.subscription_status,
+    emailVerified: r.emailVerified ?? r.email_verified,
+  }
+}
+
+// username is derived from email server-side now, but we keep it optional.
+export const userSchema = z.preprocess(
+  normalizeUser,
+  z.object({
+    id: z.number(),
+    email: z.string(),
+    username: z.string().optional(),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    userRole: z.string().optional(),
+    subscriptionStatus: z.string().optional(),
+    emailVerified: z.boolean().optional(),
+  }),
+)
 export type User = z.infer<typeof userSchema>
 
 const loginResponse = z.object({
@@ -56,4 +74,18 @@ export async function fetchCurrentUser(): Promise<User> {
   // Backend returns either { user } or the user object directly depending on route.
   const raw = data && typeof data === 'object' && 'user' in data ? (data as { user: unknown }).user : data
   return userSchema.parse(raw)
+}
+
+// Update the signed-in user's own name.
+export async function updateProfile(firstName: string, lastName: string): Promise<User> {
+  const data = await api<{ user?: unknown }>('/auth/profile', {
+    method: 'PUT',
+    body: { firstName: firstName.trim(), lastName: lastName.trim() },
+  })
+  return userSchema.parse(data && typeof data === 'object' && 'user' in data ? data.user : data)
+}
+
+// Change the signed-in user's own password (requires the current one).
+export async function changePassword(currentPassword: string, newPassword: string) {
+  return api('/auth/password', { method: 'PUT', body: { currentPassword, newPassword } })
 }

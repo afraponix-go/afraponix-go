@@ -52,6 +52,21 @@
   border-color: var(--ink-faint);
 }
 
+/* Two-column field row (grid items need min-width:0 so inputs don't overflow) */
+.set-card .row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.set-card .row-2 > .field {
+  min-width: 0;
+}
+@media (max-width: 560px) {
+  .set-card .row-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Danger-zone action row */
 .danger-row {
   display: flex;
