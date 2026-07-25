@@ -20,6 +20,8 @@ import { BedsAllocation } from '../features/plants/BedsAllocation'
 import { Crops } from '../features/plants/CropsPage'
 import { FishStockingCalculator } from '../features/calculator/FishStockingCalculator'
 import { OperationsPage } from '../features/operations/OperationsPage'
+import { GeneralSettings } from '../features/settings/GeneralSettings'
+import { DangerZone } from '../features/settings/DangerZone'
 
 const DASHBOARD_TABS = [
   { to: '/', label: 'Overview', end: true },
@@ -40,6 +42,10 @@ const FISH_TABS = [
   { to: '/fish/tanks', label: 'Tank Information' },
   { to: '/fish/health', label: 'Fish Health' },
   { to: '/fish/capture', label: 'Data Capture' },
+]
+const SETTINGS_TABS = [
+  { to: '/settings', label: 'General', end: true },
+  { to: '/settings/danger', label: 'Danger Zone' },
 ]
 const PLANTS_TABS = [
   { to: '/plants', label: 'Overview', end: true },
@@ -111,8 +117,15 @@ export const router = createBrowserRouter([
               { path: 'crops', element: <Crops /> },
             ],
           },
-          // Settings (grow-bed config now lives under Plants → Beds & Allocation)
-          { path: 'settings', element: <Placeholder title="System Settings" note="System configuration, sharing, and account settings. Coming next." /> },
+          // Settings (grow-bed config lives under Plants → Beds & Allocation)
+          {
+            path: 'settings',
+            element: <SubTabLayout items={SETTINGS_TABS} />,
+            children: [
+              { index: true, element: <GeneralSettings /> },
+              { path: 'danger', element: <DangerZone /> },
+            ],
+          },
         ],
       },
     ],

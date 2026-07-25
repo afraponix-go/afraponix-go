@@ -36,6 +36,18 @@ export async function createSystem(input: {
   return systemSchema.pick({ id: true }).parse(created).id
 }
 
+// Update a system's editable fields. The backend only touches the fields
+// present in the body and scopes the update by owner.
+export async function updateSystem(id: string, input: { system_name?: string; system_type?: string }) {
+  const body = { ...input, ...(input.system_name != null ? { system_name: input.system_name.trim() } : {}) }
+  return api(`/systems/${id}`, { method: 'PUT', body })
+}
+
+// Permanently delete a system and all its data (cascades server-side).
+export async function deleteSystem(id: string) {
+  return api(`/systems/${id}`, { method: 'DELETE' })
+}
+
 // Add a fish tank to a system (used by the creation wizard).
 export function createFishTank(systemId: string, tank: { tank_number: number; volume_liters: number; fish_type: string }) {
   return api('/fish-tanks', {
