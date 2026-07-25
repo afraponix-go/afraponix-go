@@ -24,15 +24,17 @@ export function SystemProvider({ children }: { children: ReactNode }) {
   })
   const [activeId, setActiveIdState] = useState<string | null>(() => localStorage.getItem(ACTIVE_KEY))
 
-  // Once systems load, make sure the active selection is valid; default to first.
+  // Once systems load, make sure the active selection belongs to this user.
+  // Must also handle the empty case: a persisted id from a previous account
+  // would otherwise dangle and drive queries for a system the user cannot see.
   useEffect(() => {
-    if (isLoading || systems.length === 0) return
-    const stillValid = activeId && systems.some((s) => s.id === activeId)
-    if (!stillValid) {
-      const first = systems[0].id
-      setActiveIdState(first)
-      localStorage.setItem(ACTIVE_KEY, first)
-    }
+    if (isLoading) return
+    const stillValid = activeId != null && systems.some((s) => s.id === activeId)
+    if (stillValid) return
+    const next = systems[0]?.id ?? null
+    setActiveIdState(next)
+    if (next) localStorage.setItem(ACTIVE_KEY, next)
+    else localStorage.removeItem(ACTIVE_KEY)
   }, [systems, isLoading, activeId])
 
   function setActiveId(id: string) {
