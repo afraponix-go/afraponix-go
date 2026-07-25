@@ -4,6 +4,7 @@ import { useAuth } from '../features/auth/AuthContext'
 import { useSystems } from '../features/systems/SystemContext'
 import { AddSystemModal } from '../features/systems/AddSystemModal'
 import { DashboardIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SettingsIcon } from './icons'
+import { Brand } from '../components/Brand'
 import './shell.css'
 
 // Bottom tab bar matching the original app's information architecture.
@@ -25,10 +26,7 @@ export function AppShell() {
   return (
     <div className="shell">
       <header className="topbar">
-        <div className="brand">
-          <span className="brand-mark" aria-hidden />
-          <span className="brand-name">Afraponix Go</span>
-        </div>
+        <Brand />
         <div className="account">
           {systems.length > 0 && (
             <label className="sys-switch">

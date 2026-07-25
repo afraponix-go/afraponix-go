@@ -1,0 +1,20 @@
+/* Afraponix Go lockup. Owned by the Brand component so any surface that renders
+   the brand gets these styles regardless of stylesheet order. */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-mark {
+  display: block;
+  flex: none;
+  /* The mark is a transparent SVG, so it sits on light and dark alike. */
+  object-fit: contain;
+}
+.brand-name {
+  font-weight: 650;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  white-space: nowrap;
+}

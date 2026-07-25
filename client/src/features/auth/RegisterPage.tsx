@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { register, verifyCode, resendVerification } from './api'
 import { useAuth } from './AuthContext'
 import { ApiError } from '../../lib/apiClient'
+import { Brand } from '../../components/Brand'
 import './auth.css'
 
 // Same rules the old app enforced on the registration form.
@@ -139,6 +140,9 @@ export function RegisterPage() {
     return (
       <div className="auth-wrap">
         <div className="auth-card">
+          <Link to="/welcome" className="auth-brand" aria-label="Afraponix Go home">
+            <Brand size={34} />
+          </Link>
           <h1>Verify your email</h1>
           <p className="sub">
             Enter the 6-digit code we sent to <b>{form.email}</b>, or click the link in that email.
@@ -189,6 +193,9 @@ export function RegisterPage() {
   return (
     <div className="auth-wrap">
       <form className="auth-card" onSubmit={onRegister} noValidate>
+        <Link to="/welcome" className="auth-brand" aria-label="Afraponix Go home">
+          <Brand size={34} />
+        </Link>
         <h1>Create your account</h1>
         <p className="sub">Join Afraponix Go — you'll sign in with your email.</p>
         {error && <div className="auth-error">{error}</div>}

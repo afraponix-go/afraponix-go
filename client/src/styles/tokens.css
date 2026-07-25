@@ -4,10 +4,18 @@
    consumes only these variables, so the whole app restyles from here. */
 
 :root {
-  /* Brand */
-  --brand-deep: #1462a8;
-  --brand-aqua: #2fabc6;
-  --brand-green: #4f9d3a;
+  /* Brand — the official Afraponix palette (see app-styles.css in the legacy
+     app). The vivid members are for fills, gradients and the logo; the darker
+     members are the ones safe to use as text/UI colour on a light surface. */
+  --color-deep-blue: #0051b1;
+  --color-bio-green: #80fb7b;
+  --color-blue-fish: #7baaee;
+  --color-aqua-green: #8dfbcc;
+
+  /* Functional brand tokens — readable members of the palette above. */
+  --brand-deep: var(--color-deep-blue);
+  --brand-aqua: #5a8fd9; /* blue-fish-dark */
+  --brand-green: #40b93b; /* bio-green-darker */
 
   /* Neutrals — cool-biased, chosen not defaulted */
   --bg: #f4f7fb;

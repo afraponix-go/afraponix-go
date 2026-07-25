@@ -18,23 +18,10 @@
   top: 0;
   z-index: 10;
 }
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+/* The lockup itself is styled by the Brand component; the shell only decides
+   how it sits in the top bar. */
+.topbar > .brand {
   flex: 1;
-}
-.brand-name {
-  font-weight: 650;
-  font-size: 16px;
-  letter-spacing: -0.01em;
-}
-.brand-mark {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: linear-gradient(140deg, var(--brand-green), var(--brand-aqua) 70%, var(--brand-deep));
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--brand-aqua) 40%, transparent);
 }
 .account {
   display: flex;

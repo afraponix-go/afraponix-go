@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Brand } from '../../components/Brand'
 import './landing.css'
 
 const FEATURES = [
@@ -39,10 +40,7 @@ export function LandingPage() {
     <div className="lp">
       <header className="lp-nav">
         <div className="lp-nav-inner">
-          <div className="brand">
-            <span className="brand-mark" aria-hidden />
-            <span className="brand-name">Afraponix Go</span>
-          </div>
+          <Brand size={28} />
           <nav className="lp-nav-actions">
             <Link className="lp-btn ghost" to="/login">Sign in</Link>
             <Link className="lp-btn primary" to="/register">Get started</Link>

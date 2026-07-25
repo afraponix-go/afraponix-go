@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { login } from './api'
 import { useAuth } from './AuthContext'
 import { ApiError } from '../../lib/apiClient'
+import { Brand } from '../../components/Brand'
 import './auth.css'
 
 export function LoginPage() {
@@ -32,6 +33,9 @@ export function LoginPage() {
   return (
     <div className="auth-wrap">
       <form className="auth-card" onSubmit={onSubmit} noValidate>
+        <Link to="/welcome" className="auth-brand" aria-label="Afraponix Go home">
+          <Brand size={34} />
+        </Link>
         <h1>Sign in to Afraponix Go</h1>
         <p className="sub">Welcome back.</p>
         {error && <div className="auth-error">{error}</div>}

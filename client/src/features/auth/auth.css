@@ -204,3 +204,10 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Brand lockup at the top of the auth cards */
+.auth-brand {
+  display: inline-flex;
+  margin-bottom: 18px;
+  text-decoration: none;
+}
