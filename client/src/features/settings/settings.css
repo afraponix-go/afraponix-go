@@ -87,3 +87,77 @@
   color: var(--ink-soft);
   margin-top: 3px;
 }
+
+/* Sharing */
+.share-invite-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.share-invite-row .field {
+  min-width: 0;
+}
+.share-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.share-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2, transparent);
+}
+.share-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+.share-email {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+.share-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.share-controls select {
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.share-revoke {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.share-revoke:hover {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
+}
+.share-pending {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--warn);
+  background: var(--warn-wash);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
