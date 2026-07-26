@@ -10,8 +10,9 @@ import {
   Tooltip,
 } from 'recharts'
 import { useSystems } from '../systems/SystemContext'
-import { CHARTABLE, fetchSeries, type Chartable, type SeriesPoint } from './api'
+import { CHARTABLE, fetchSeries, rangeDays, type Chartable, type ChartRangeKey, type SeriesPoint } from './api'
 import { MetricChart } from './MetricChart'
+import { RangeSelector } from './RangeSelector'
 import '../dashboard/dashboard.css'
 import './charts.css'
 
@@ -22,12 +23,14 @@ export function ChartsPage() {
   const { activeId, activeSystem } = useSystems()
   const [selected, setSelected] = useState<string[]>(['temperature'])
   const [normalize, setNormalize] = useState(false)
+  const [range, setRange] = useState<ChartRangeKey>('90d')
+  const days = rangeDays(range)
 
   // One query per selected metric; results stay aligned with `selected` by index.
   const results = useQueries({
     queries: selected.map((key) => ({
-      queryKey: ['series', activeId, key],
-      queryFn: () => fetchSeries(activeId as string, key),
+      queryKey: ['series', activeId, key, range],
+      queryFn: () => fetchSeries(activeId as string, key, { days }),
       enabled: !!activeId,
     })),
   })
@@ -52,6 +55,9 @@ export function ChartsPage() {
       <div className="dash-head">
         <h1>Charts</h1>
         <span className="dash-sub">{activeSystem?.system_name}</span>
+      </div>
+      <div className="chart-range-bar">
+        <RangeSelector value={range} onChange={setRange} />
       </div>
 
       <div className="chip-row">

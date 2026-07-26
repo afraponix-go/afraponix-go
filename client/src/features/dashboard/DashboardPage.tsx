@@ -9,7 +9,7 @@ import { MetricChartModal } from '../charts/MetricChartModal'
 import './dashboard.css'
 import '../fish/fish.css'
 
-type ChartCfg = { title: string; unit: string; min?: number; max?: number; queryKey: QueryKey; queryFn: () => Promise<SeriesPoint[]> }
+type ChartCfg = { title: string; unit: string; min?: number; max?: number; queryKey: QueryKey; makeSeries: (days: number | null) => Promise<SeriesPoint[]> }
 
 type Status = 'good' | 'warn' | 'none'
 type MetricDef = {
@@ -158,7 +158,7 @@ export function DashboardPage() {
       min: c?.min,
       max: c?.max,
       queryKey: ['series', activeId, key],
-      queryFn: () => fetchSeries(activeId as string, key),
+      makeSeries: (days) => fetchSeries(activeId as string, key, { days }),
     })
   }
 
@@ -169,8 +169,8 @@ export function DashboardPage() {
       unit: metric === 'density' ? 'kg/m³' : 'kg',
       max: metric === 'density' ? systemMax : undefined,
       queryKey: ['fish-series', activeId, metric],
-      queryFn: async () => {
-        const pts = await fetchDensityHistory(activeId as string)
+      makeSeries: async (days) => {
+        const pts = await fetchDensityHistory(activeId as string, days ?? 3660)
         return pts.map((p) => {
           const d = new Date(p.date)
           return { date: p.date, label: `${d.getMonth() + 1}/${d.getDate()}`, value: metric === 'density' ? p.density : p.biomass_kg ?? 0 }
@@ -232,7 +232,7 @@ export function DashboardPage() {
           min={chart.min}
           max={chart.max}
           queryKey={chart.queryKey}
-          queryFn={chart.queryFn}
+          makeSeries={chart.makeSeries}
           onClose={() => setChart(null)}
         />
       )}

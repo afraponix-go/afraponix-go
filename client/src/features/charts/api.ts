@@ -29,8 +29,23 @@ const reading = z.object({
 
 export type SeriesPoint = { date: string; label: string; value: number }
 
-export async function fetchSeries(systemId: string, type: string, limit = 120): Promise<SeriesPoint[]> {
-  const data = await api<unknown[]>(`/data/nutrients/${systemId}?nutrient_type=${type}&limit=${limit}`)
+// Chart time ranges. days=null means "all time".
+export const CHART_RANGES = [
+  { key: '7d', label: '7D', days: 7 },
+  { key: '30d', label: '30D', days: 30 },
+  { key: '90d', label: '90D', days: 90 },
+  { key: '1y', label: '1Y', days: 365 },
+  { key: 'all', label: 'All', days: null },
+] as const
+export type ChartRangeKey = (typeof CHART_RANGES)[number]['key']
+export function rangeDays(key: ChartRangeKey): number | null {
+  return CHART_RANGES.find((r) => r.key === key)?.days ?? null
+}
+
+export async function fetchSeries(systemId: string, type: string, opts: { days?: number | null } = {}): Promise<SeriesPoint[]> {
+  const params = new URLSearchParams({ nutrient_type: type, limit: '1000' })
+  if (opts.days != null) params.set('days', String(opts.days))
+  const data = await api<unknown[]>(`/data/nutrients/${systemId}?${params.toString()}`)
   const rows = z.array(reading).safeParse(data)
   if (!rows.success) return []
 

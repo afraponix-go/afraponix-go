@@ -150,7 +150,7 @@ router.post('/water-quality/:systemId', async (req, res) => {
 // Nutrient Readings - GET all nutrient readings for a system
 router.get('/nutrients/:systemId', async (req, res) => {
     const { systemId } = req.params;
-    const { nutrient_type, limit } = req.query;
+    const { nutrient_type, limit, days } = req.query;
 
     if (!await verifySystemOwnership(systemId, req.user.userId)) {
         return res.status(403).json({ error: 'Access denied to this system' });
@@ -165,6 +165,14 @@ router.get('/nutrients/:systemId', async (req, res) => {
         if (nutrient_type) {
             query += ' AND nutrient_type = ?';
             params.push(nutrient_type);
+        }
+
+        // Optional time window (used by the charts' range selector). Clamped to a
+        // sane range; omit for "all time".
+        const dayWindow = parseInt(days, 10);
+        if (Number.isFinite(dayWindow) && dayWindow > 0) {
+            query += ' AND reading_date >= (NOW() - INTERVAL ? DAY)';
+            params.push(Math.min(dayWindow, 3660));
         }
 
         query += ' ORDER BY reading_date DESC';

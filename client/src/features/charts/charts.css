@@ -113,3 +113,10 @@
   background: color-mix(in srgb, var(--brand-green) 20%, transparent);
   border: 1px solid color-mix(in srgb, var(--brand-green) 38%, transparent);
 }
+
+/* Range selector bar above a chart */
+.chart-range-bar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+}
