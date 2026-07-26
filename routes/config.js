@@ -1,13 +1,15 @@
 const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, isAdmin } = require('../middleware/auth');
 const { getDatabase } = require('../database/init-mariadb');
 
 const router = express.Router();
 
-// All routes require authentication
+// SMTP configuration is server-wide, not per-user — restrict it to admins.
+// (Previously any authenticated user could read or overwrite it.)
 router.use(authenticateToken);
+router.use(isAdmin);
 
 // Get SMTP configuration
 router.get('/smtp', async (req, res) => {

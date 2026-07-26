@@ -161,3 +161,70 @@
   padding: 4px 10px;
   border-radius: 999px;
 }
+
+/* Admin */
+.set-card.wide {
+  max-width: 860px;
+}
+.admin-stats {
+  display: flex;
+  gap: 32px;
+}
+.admin-stats > div {
+  display: flex;
+  flex-direction: column;
+}
+.admin-stats b {
+  font-size: 26px;
+  font-family: var(--mono, inherit);
+  letter-spacing: -0.01em;
+}
+.admin-stats span {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+.admin-table-wrap {
+  overflow-x: auto;
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.admin-table th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  font-weight: 600;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.admin-table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.admin-user-name {
+  font-weight: 600;
+}
+.admin-user-email {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+.admin-table select {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.admin-actions {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}

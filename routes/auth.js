@@ -136,9 +136,11 @@ router.post('/register', async (req, res) => {
             console.log('📧 SMTP not configured - auto-verifying user for testing');
             await pool.execute('UPDATE users SET email_verified = 1 WHERE id = ?', [userId]);
 
-            // Create JWT token
+            // Create JWT token. Include userRole for parity with the login and
+            // verification tokens, so isAdmin works without a re-login. A fresh
+            // registration is always a basic user.
             const token = jwt.sign(
-                { userId, username, email },
+                { userId, username, email, userRole: 'basic', subscriptionStatus: 'basic' },
                 process.env.JWT_SECRET,
                 { expiresIn: '24h' }
             );
