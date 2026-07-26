@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
+const { canAccessSystem } = require('../utils/systemAccess');
 
 const router = express.Router();
 
@@ -69,15 +70,10 @@ router.get('/latest/:systemId', async (req, res) => {
 });
 
 // Helper function to verify system ownership
-async function verifySystemOwnership(systemId, userId) {
-    // Using connection pool - no manual connection management
-    try {
-        const pool = getDatabase();
-        const [rows] = await pool.execute('SELECT id FROM systems WHERE id = ? AND user_id = ?', 
-            [systemId, userId]);        return rows.length > 0;
-    } catch (error) {
-        throw error;
-    }
+// Access check that also honours accepted shares. Pass write=true on endpoints
+// that modify data so view-only collaborators are rejected.
+async function verifySystemOwnership(systemId, userId, write = false) {
+    return canAccessSystem(systemId, userId, { write });
 }
 
 // Water Quality endpoints - stores complete water quality snapshots
@@ -111,7 +107,7 @@ router.post('/water-quality/:systemId', async (req, res) => {
     const { systemId } = req.params;
     const data = req.body;
 
-    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+    if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
@@ -190,7 +186,7 @@ router.post('/nutrients/:systemId', async (req, res) => {
     const { systemId } = req.params;
     const { nutrients } = req.body; // Array of {type, value, unit, reading_date, source, notes}
 
-    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+    if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
@@ -305,7 +301,7 @@ router.post('/fish-health/:systemId', async (req, res) => {
     const { systemId } = req.params;
     const { date, fish_tank_id, count, mortality, average_weight, feed_consumption, feed_type, behavior, notes } = req.body;
 
-    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+    if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
@@ -354,7 +350,7 @@ router.post('/plant-growth/:systemId', async (req, res) => {
     const { systemId } = req.params;
     const { date, grow_bed_id, crop_type, count, harvest_weight, plants_harvested, new_seedlings, pest_control, health, growth_stage, notes, batch_id, seed_variety, batch_created_date, days_to_harvest } = req.body;
 
-    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+    if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
@@ -375,7 +371,7 @@ router.post('/plant-growth/:systemId', async (req, res) => {
 router.delete('/plant-growth/:systemId/:recordId', async (req, res) => {
     const { systemId, recordId } = req.params;
 
-    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+    if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
@@ -410,7 +406,7 @@ router.put('/plant-growth/:entryId', async (req, res) => {
         if (!entry) {            return res.status(404).json({ error: 'Plant growth record not found' });
         }
 
-        if (!await verifySystemOwnership(entry.system_id, req.user.userId)) {            return res.status(403).json({ error: 'Access denied to this system' });
+        if (!await verifySystemOwnership(entry.system_id, req.user.userId, true)) {            return res.status(403).json({ error: 'Access denied to this system' });
         }
 
         // Update the record
@@ -455,7 +451,7 @@ router.post('/operations/:systemId', async (req, res) => {
     const { systemId } = req.params;
     const { date, operation_type, water_volume, chemical_added, amount_added, downtime_duration, notes } = req.body;
 
-    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+    if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
@@ -522,7 +518,7 @@ router.post('/entries/fish-health', async (req, res) => {
         return res.status(400).json({ error: 'system_id is required in request body' });
     }
 
-    if (!await verifySystemOwnership(system_id, req.user.userId)) {
+    if (!await verifySystemOwnership(system_id, req.user.userId, true)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
@@ -565,7 +561,7 @@ router.delete('/fish-health/entry/:entryId', async (req, res) => {
         }
         
         const entry = entryRows[0];
-        if (!await verifySystemOwnership(entry.system_id, req.user.userId)) {            return res.status(403).json({ error: 'Access denied to this system' });
+        if (!await verifySystemOwnership(entry.system_id, req.user.userId, true)) {            return res.status(403).json({ error: 'Access denied to this system' });
         }
         
         // Delete the entry
@@ -592,7 +588,7 @@ router.put('/fish-health/entry/:entryId', async (req, res) => {
         }
         
         const entry = entryRows[0];
-        if (!await verifySystemOwnership(entry.system_id, req.user.userId)) {            return res.status(403).json({ error: 'Access denied to this system' });
+        if (!await verifySystemOwnership(entry.system_id, req.user.userId, true)) {            return res.status(403).json({ error: 'Access denied to this system' });
         }
         
         // Update the entry
@@ -612,7 +608,7 @@ router.put('/batch/:systemId/:batchId/grow-bed', async (req, res) => {
     const { systemId, batchId } = req.params;
     const { newGrowBedId } = req.body;
 
-    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+    if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
@@ -683,7 +679,7 @@ router.post('/import/:systemId/fish-health', async (req, res) => {
     const { systemId } = req.params;
     const { records } = req.body;
 
-    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+    if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
@@ -752,7 +748,7 @@ router.post('/import/:systemId/plant-growth', async (req, res) => {
     const { systemId } = req.params;
     const { records } = req.body;
 
-    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+    if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
@@ -819,7 +815,7 @@ router.post('/import/:systemId/nutrients', async (req, res) => {
     const { systemId } = req.params;
     const { records } = req.body;
 
-    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+    if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
@@ -904,7 +900,7 @@ router.post('/import/:systemId/operations', async (req, res) => {
     const { systemId } = req.params;
     const { records } = req.body;
 
-    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+    if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
@@ -964,7 +960,7 @@ router.post('/import/:systemId/water-quality', async (req, res) => {
     const { systemId } = req.params;
     const { records } = req.body;
 
-    if (!await verifySystemOwnership(systemId, req.user.userId)) {
+    if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 

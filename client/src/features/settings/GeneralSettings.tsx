@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
-import { updateSystem } from '../systems/api'
+import { updateSystem, isOwnedSystem } from '../systems/api'
 import { ApiError } from '../../lib/apiClient'
 import '../fish/fish.css'
 import '../dashboard/dashboard.css'
@@ -49,10 +49,16 @@ export function GeneralSettings() {
 
   if (!activeId) return <div className="empty">Select a system to edit its settings.</div>
 
+  const owner = isOwnedSystem(activeSystem)
+
   return (
     <div className="set-card">
       <h2 className="set-title">System details</h2>
-      <p className="set-sub">Rename this system or change its type. Tanks and beds are configured under Plants → Beds and the system wizard.</p>
+      <p className="set-sub">
+        {owner
+          ? 'Rename this system or change its type. Tanks and beds are configured under Plants → Beds and the system wizard.'
+          : 'This system was shared with you. Only its owner can change these details.'}
+      </p>
 
       <form className="mform" onSubmit={onSubmit}>
         {error && <div className="set-error">{error}</div>}
@@ -60,23 +66,25 @@ export function GeneralSettings() {
 
         <div className="field">
           <label htmlFor="sys-name">System name</label>
-          <input id="sys-name" value={name} onChange={(e) => setName(e.target.value)} />
+          <input id="sys-name" value={name} onChange={(e) => setName(e.target.value)} disabled={!owner} />
         </div>
 
         <div className="field">
           <label htmlFor="sys-type">System type</label>
-          <select id="sys-type" value={type} onChange={(e) => setType(e.target.value)}>
+          <select id="sys-type" value={type} onChange={(e) => setType(e.target.value)} disabled={!owner}>
             {SYSTEM_TYPES.map((t) => (
               <option key={t.value} value={t.value}>{t.label}</option>
             ))}
           </select>
         </div>
 
-        <div className="mform-actions">
-          <button className="btn" type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Saving…' : 'Save changes'}
-          </button>
-        </div>
+        {owner && (
+          <div className="mform-actions">
+            <button className="btn" type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? 'Saving…' : 'Save changes'}
+            </button>
+          </div>
+        )}
       </form>
     </div>
   )

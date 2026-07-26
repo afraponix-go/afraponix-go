@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
+import { isOwnedSystem } from '../systems/api'
 import { ApiError } from '../../lib/apiClient'
 import {
   PERMISSIONS,
@@ -74,6 +75,7 @@ export function SharingSettings() {
   }
 
   if (!activeId) return <div className="empty">Select a system to manage sharing.</div>
+  if (!isOwnedSystem(activeSystem)) return <div className="empty">Only the owner can manage sharing for this system.</div>
 
   const shares = sharesQ.data ?? []
   const pending = pendingQ.data ?? []

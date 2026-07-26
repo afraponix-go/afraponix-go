@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
+const { canAccessSystem } = require('../utils/systemAccess');
 
 const router = express.Router();
 
@@ -94,15 +95,10 @@ router.delete('/feeding-schedule/:systemId', async (req, res) => {
 });
 
 // Helper function to verify system ownership
-async function verifySystemOwnership(systemId, userId) {
-    // Using connection pool - no manual connection management
-    try {
-        const pool = getDatabase();
-        const [rows] = await pool.execute('SELECT id FROM systems WHERE id = ? AND user_id = ?', 
-            [systemId, userId]);        return rows.length > 0;
-    } catch (error) {
-        throw error;
-    }
+// Access check that also honours accepted shares. Pass write=true on endpoints
+// that modify data so view-only collaborators are rejected.
+async function verifySystemOwnership(systemId, userId, write = false) {
+    return canAccessSystem(systemId, userId, { write });
 }
 
 // Record fish harvest
@@ -117,7 +113,7 @@ router.post('/harvest', async (req, res) => {
     }
 
     // Verify system ownership
-    if (!await verifySystemOwnership(system_id, req.user.userId)) {
+    if (!await verifySystemOwnership(system_id, req.user.userId, true)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 

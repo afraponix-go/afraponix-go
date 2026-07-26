@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
-import { deleteSystem } from '../systems/api'
+import { deleteSystem, isOwnedSystem } from '../systems/api'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
 import '../fish/fish.css'
@@ -30,6 +30,7 @@ export function DangerZone() {
   })
 
   if (!activeId) return <div className="empty">Select a system first.</div>
+  if (!isOwnedSystem(activeSystem)) return <div className="empty">Only the owner can delete this system.</div>
 
   return (
     <div className="set-card danger">

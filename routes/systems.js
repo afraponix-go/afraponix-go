@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { getDatabase, getDatabaseConnection } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
+const { canAccessSystem } = require('../utils/systemAccess');
 
 const router = express.Router();
 
@@ -16,14 +17,23 @@ function generateSystemId() {
     return `system_${crypto.randomUUID()}`;
 }
 
-// Get all systems for authenticated user
+// Get all systems the user can see: their own plus any shared with them and
+// accepted. shared_permission is null for owned systems.
 router.get('/', async (req, res) => {
     try {
         const pool = getDatabase();
 
         const [systems] = await pool.execute(
-            'SELECT * FROM systems WHERE user_id = ? ORDER BY created_at DESC', 
-            [req.user.userId]
+            `SELECT s.*,
+                    CASE WHEN s.user_id = ? THEN NULL ELSE ss.permission_level END AS shared_permission,
+                    (s.user_id = ?) AS is_owner
+             FROM systems s
+             LEFT JOIN system_shares ss
+                    ON ss.system_id = s.id AND ss.shared_with_id = ? AND ss.status = 'accepted'
+             WHERE s.user_id = ? OR ss.id IS NOT NULL
+             GROUP BY s.id
+             ORDER BY s.created_at DESC`,
+            [req.user.userId, req.user.userId, req.user.userId, req.user.userId]
         );
 
         res.json(systems);
@@ -34,16 +44,16 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Get specific system
+// Get specific system (owner or an accepted share).
 router.get('/:id', async (req, res) => {
     try {
         const pool = getDatabase();
 
-        const [systemRows] = await pool.execute(
-            'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
-            [req.params.id, req.user.userId]
-        );
+        if (!(await canAccessSystem(req.params.id, req.user.userId))) {
+            return res.status(404).json({ error: 'System not found' });
+        }
 
+        const [systemRows] = await pool.execute('SELECT * FROM systems WHERE id = ?', [req.params.id]);
         if (systemRows.length === 0) {
             return res.status(404).json({ error: 'System not found' });
         }

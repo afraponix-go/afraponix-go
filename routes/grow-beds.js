@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
+const { canAccessSystem } = require('../utils/systemAccess');
 
 const router = express.Router();
 
@@ -8,9 +9,8 @@ const router = express.Router();
 router.use(authenticateToken);
 
 // Confirm the authenticated user owns the given system.
-async function verifyOwnership(pool, systemId, userId) {
-    const [rows] = await pool.execute('SELECT id FROM systems WHERE id = ? AND user_id = ?', [systemId, userId]);
-    return rows.length > 0;
+async function verifyOwnership(pool, systemId, userId, write = false) {
+    return canAccessSystem(systemId, userId, { write }, pool);
 }
 
 // Get all grow beds for a system
@@ -48,7 +48,7 @@ router.post('/system/:systemId', async (req, res) => {
     try {
         const pool = getDatabase();
 
-        if (!(await verifyOwnership(pool, req.params.systemId, req.user.userId))) {
+        if (!(await verifyOwnership(pool, req.params.systemId, req.user.userId, true))) {
             return res.status(404).json({ error: 'System not found or access denied' });
         }
 
@@ -200,7 +200,7 @@ router.put('/bed/:systemId/:bedNumber', async (req, res) => {
     try {
         const pool = getDatabase();
 
-        if (!(await verifyOwnership(pool, systemId, req.user.userId))) {
+        if (!(await verifyOwnership(pool, systemId, req.user.userId, true))) {
             return res.status(404).json({ error: 'System not found or access denied' });
         }
 

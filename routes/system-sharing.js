@@ -146,16 +146,15 @@ router.post('/invite', async (req, res) => {
         if (existingShare) {            return res.status(400).json({ error: 'System is already shared with this user' });
         }
 
-        // Create invitation
+        // Grant access immediately. There is no separate accept step, so the
+        // share is created 'accepted' and the recipient can use the system at once.
         const [result] = await pool.execute(`
             INSERT INTO system_shares (system_id, owner_id, shared_with_id, permission_level, status)
-            VALUES (?, ?, ?, ?, 'pending')
-        `, [system_id, req.user.userId, user.id, permission_level]);        
-        // TODO: Send email notification
-        // For now, we'll just return success
-        res.json({ 
-            success: true, 
-            message: 'Invitation sent successfully',
+            VALUES (?, ?, ?, ?, 'accepted')
+        `, [system_id, req.user.userId, user.id, permission_level]);
+        res.json({
+            success: true,
+            message: 'System shared successfully',
             invitation_id: result.insertId
         });
 

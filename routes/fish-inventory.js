@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
+const { canAccessSystem } = require('../utils/systemAccess');
 
 const router = express.Router();
 
@@ -29,10 +30,7 @@ router.get('/system/:systemId', async (req, res) => {
         const pool = getDatabase();
         
         // Verify system ownership
-        const systemRows = await executeQuery(pool,
-            'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
-            [systemId, req.user.userId]
-        );
+        const systemRows = ((await canAccessSystem(systemId, req.user.userId, { write: false }, pool)) ? [1] : []);
 
         if (!systemRows || systemRows.length === 0) {            return res.status(404).json({ error: 'System not found or access denied' });
         }
@@ -122,10 +120,7 @@ router.post('/add-fish', async (req, res) => {
 
         try {
             // Verify system ownership
-            const systemRows = await executeQuery(pool,
-                'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
-                [system_id, req.user.userId]
-            );
+            const systemRows = ((await canAccessSystem(system_id, req.user.userId, { write: true }, pool)) ? [1] : []);
 
             if (!systemRows || systemRows.length === 0) {
                 await executeQuery(pool, 'ROLLBACK');                return res.status(404).json({ error: 'System not found or access denied' });
@@ -199,10 +194,7 @@ router.post('/mortality', async (req, res) => {
 
         try {
             // Verify system ownership
-            const systemRows = await executeQuery(pool,
-                'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
-                [system_id, req.user.userId]
-            );
+            const systemRows = ((await canAccessSystem(system_id, req.user.userId, { write: true }, pool)) ? [1] : []);
 
             if (!systemRows || systemRows.length === 0) {
                 await executeQuery(pool, 'ROLLBACK');                return res.status(404).json({ error: 'System not found or access denied' });
@@ -291,10 +283,7 @@ router.post('/update-weight', async (req, res) => {
 
         try {
             // Verify system ownership
-            const systemRows = await executeQuery(pool,
-                'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
-                [system_id, req.user.userId]
-            );
+            const systemRows = ((await canAccessSystem(system_id, req.user.userId, { write: true }, pool)) ? [1] : []);
 
             if (!systemRows || systemRows.length === 0) {
                 await executeQuery(pool, 'ROLLBACK');                return res.status(404).json({ error: 'System not found or access denied' });
@@ -358,10 +347,7 @@ router.post('/move-fish', async (req, res) => {
 
         try {
             // Verify system ownership
-            const systemRows = await executeQuery(pool,
-                'SELECT * FROM systems WHERE id = ? AND user_id = ?',
-                [system_id, req.user.userId]
-            );
+            const systemRows = ((await canAccessSystem(system_id, req.user.userId, { write: true }, pool)) ? [1] : []);
             if (!systemRows || systemRows.length === 0) {
                 await executeQuery(pool, 'ROLLBACK');
                 return res.status(404).json({ error: 'System not found or access denied' });
@@ -465,10 +451,7 @@ router.post('/harvest', async (req, res) => {
 
         try {
             // Verify system ownership
-            const systemRows = await executeQuery(pool,
-                'SELECT * FROM systems WHERE id = ? AND user_id = ?',
-                [system_id, req.user.userId]
-            );
+            const systemRows = ((await canAccessSystem(system_id, req.user.userId, { write: true }, pool)) ? [1] : []);
             if (!systemRows || systemRows.length === 0) {
                 await executeQuery(pool, 'ROLLBACK');
                 return res.status(404).json({ error: 'System not found or access denied' });
@@ -627,10 +610,7 @@ router.get('/events/:systemId/:tankId', async (req, res) => {
         const pool = getDatabase();
         
         // Verify system ownership
-        const systemRows = await executeQuery(pool,
-            'SELECT * FROM systems WHERE id = ? AND user_id = ?', 
-            [systemId, req.user.userId]
-        );
+        const systemRows = ((await canAccessSystem(systemId, req.user.userId, { write: false }, pool)) ? [1] : []);
 
         if (!systemRows || systemRows.length === 0) {            return res.status(404).json({ error: 'System not found or access denied' });
         }

@@ -10,8 +10,25 @@ export const systemSchema = z.object({
   fish_tank_count: z.coerce.number().nullable().optional(),
   grow_bed_count: z.coerce.number().nullable().optional(),
   total_grow_area: z.coerce.number().nullable().optional(),
+  // Present only on the list endpoint. shared_permission is null for owned
+  // systems; is_owner is 1/0.
+  shared_permission: z.string().nullable().optional(),
+  is_owner: z.coerce.number().nullable().optional(),
 })
 export type System = z.infer<typeof systemSchema>
+
+// The owner sees is_owner=1 / shared_permission=null. A shared system has a
+// permission level and is_owner=0.
+export function isOwnedSystem(s: System | null | undefined): boolean {
+  if (!s) return false
+  if (s.is_owner != null) return s.is_owner === 1
+  return s.shared_permission == null
+}
+
+// Whether the current user can modify this system's data.
+export function canWriteSystem(s: System | null | undefined): boolean {
+  return isOwnedSystem(s) || s?.shared_permission === 'collaborator' || s?.shared_permission === 'admin'
+}
 
 export async function fetchSystems(): Promise<System[]> {
   const data = await api<unknown[]>('/systems')
