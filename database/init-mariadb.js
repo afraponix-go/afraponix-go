@@ -72,6 +72,7 @@ async function createTables(connection) {
             grow_bed_count INT DEFAULT 4,
             total_grow_volume DECIMAL(10,2) DEFAULT 800,
             total_grow_area DECIMAL(10,2) DEFAULT 2.0,
+            tracked_metrics TEXT DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         ) ENGINE=InnoDB`,

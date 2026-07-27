@@ -20,6 +20,22 @@ export const WATER_FIELDS = [
   { key: 'magnesium', label: 'Magnesium (Mg)', unit: 'ppm', step: '0.1', range: '12 - 18' },
 ] as const
 
+// Every trackable metric key (the master list a system chooses from).
+export const ALL_METRIC_KEYS: string[] = WATER_FIELDS.map((f) => f.key)
+
+// A system stores tracked_metrics as a JSON array string; null/absent means
+// "track everything". Returns the set of enabled metric keys.
+export function parseTrackedMetrics(raw: string | null | undefined): Set<string> {
+  if (raw == null) return new Set(ALL_METRIC_KEYS)
+  try {
+    const arr = JSON.parse(raw)
+    if (Array.isArray(arr)) return new Set(arr.filter((k): k is string => typeof k === 'string'))
+  } catch {
+    // fall through to "all"
+  }
+  return new Set(ALL_METRIC_KEYS)
+}
+
 export type WaterFieldKey = (typeof WATER_FIELDS)[number]['key']
 
 // ---- Write: one reading = several typed rows in nutrient_readings ----

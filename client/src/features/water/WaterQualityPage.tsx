@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
 import { ApiError } from '../../lib/apiClient'
-import { createWaterQualityReading, fetchWaterQualityHistory, WATER_FIELDS, type WaterFieldKey, type WaterQualityInput } from './api'
+import { createWaterQualityReading, fetchWaterQualityHistory, WATER_FIELDS, parseTrackedMetrics, type WaterFieldKey, type WaterQualityInput } from './api'
 import '../dashboard/dashboard.css'
 import './water.css'
 
@@ -10,6 +10,9 @@ const today = () => new Date().toISOString().slice(0, 10)
 
 export function WaterQualityPage() {
   const { activeId, activeSystem } = useSystems()
+  // Only capture the metrics this system tracks.
+  const tracked = parseTrackedMetrics(activeSystem?.tracked_metrics)
+  const fields = WATER_FIELDS.filter((f) => tracked.has(f.key))
   const qc = useQueryClient()
   const [values, setValues] = useState<Record<string, string>>({ date: today() })
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +42,7 @@ export function WaterQualityPage() {
     setError(null)
     const parsed: Partial<Record<WaterFieldKey, number>> = {}
     let hasValue = false
-    for (const f of WATER_FIELDS) {
+    for (const f of fields) {
       const raw = values[f.key]
       if (raw != null && raw !== '') {
         const n = Number(raw)
@@ -76,7 +79,7 @@ export function WaterQualityPage() {
             <label htmlFor="date">Date</label>
             <input id="date" type="date" value={values.date ?? ''} onChange={(e) => setValues((v) => ({ ...v, date: e.target.value }))} />
           </div>
-          {WATER_FIELDS.map((f) => (
+          {fields.map((f) => (
             <div className="field" key={f.key}>
               <label htmlFor={f.key}>
                 {f.label}
@@ -112,7 +115,7 @@ export function WaterQualityPage() {
             <thead>
               <tr>
                 <th>Date</th>
-                {WATER_FIELDS.map((f) => (
+                {fields.map((f) => (
                   <th key={f.key}>{f.label}</th>
                 ))}
               </tr>
@@ -121,7 +124,7 @@ export function WaterQualityPage() {
               {history.map((r) => (
                 <tr key={r.date}>
                   <td>{new Date(r.date).toLocaleDateString()}</td>
-                  {WATER_FIELDS.map((f) => {
+                  {fields.map((f) => {
                     const v = r[f.key]
                     return <td key={f.key}>{v == null || !Number.isFinite(v) ? '—' : v}</td>
                   })}

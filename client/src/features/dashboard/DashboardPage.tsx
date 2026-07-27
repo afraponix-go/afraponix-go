@@ -5,6 +5,7 @@ import { fetchLatestNutrients, type LatestNutrients, type NutrientReading } from
 import { fetchFishInventory, fetchDensityHistory, tankMaxDensity } from '../fish/api'
 import { sum, fmt, Stat } from '../fish/fishShared'
 import { CHARTABLE, fetchSeries, type SeriesPoint } from '../charts/api'
+import { parseTrackedMetrics, ALL_METRIC_KEYS } from '../water/api'
 import { MetricChartModal } from '../charts/MetricChartModal'
 import './dashboard.css'
 import '../fish/fish.css'
@@ -140,7 +141,16 @@ export function DashboardPage() {
   }
 
   const updated = latestDate(nutrients)
-  const presentNutrients = NUTRIENTS.filter((n) => nutrients[n.key] && Number.isFinite(nutrients[n.key].value))
+
+  // Only show the metrics this system tracks. A key that isn't a trackable
+  // metric at all (e.g. the derived "nitrogen" nutrient) is always shown.
+  const tracked = parseTrackedMetrics(activeSystem?.tracked_metrics)
+  const isTracked = (key: string) => tracked.has(key) || !ALL_METRIC_KEYS.includes(key)
+
+  const waterShown = WATER.filter((def) => isTracked(def.key))
+  const presentNutrients = NUTRIENTS.filter(
+    (n) => isTracked(n.key) && nutrients[n.key] && Number.isFinite(nutrients[n.key].value),
+  )
 
   const totalFish = sum(tanks, 'current_count')
   const totalBiomass = sum(tanks, 'biomass_kg')
@@ -207,12 +217,16 @@ export function DashboardPage() {
         </>
       )}
 
-      <h2 className="section-title">Water quality</h2>
-      <div className="metric-grid">
-        {WATER.map((def) => (
-          <WaterCard key={def.key} def={def} reading={nutrients[def.key]} onOpen={() => openParam(def.key, def.label, def.unit)} />
-        ))}
-      </div>
+      {waterShown.length > 0 && (
+        <>
+          <h2 className="section-title">Water quality</h2>
+          <div className="metric-grid">
+            {waterShown.map((def) => (
+              <WaterCard key={def.key} def={def} reading={nutrients[def.key]} onOpen={() => openParam(def.key, def.label, def.unit)} />
+            ))}
+          </div>
+        </>
+      )}
 
       {presentNutrients.length > 0 && (
         <>

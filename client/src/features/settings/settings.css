@@ -228,3 +228,70 @@
   gap: 6px;
   white-space: nowrap;
 }
+
+/* Tracked-metrics picker */
+.metrics-bulk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+.metrics-link {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.metrics-link:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.metric-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.metric-toggle:hover {
+  border-color: var(--line-strong);
+}
+.metric-toggle.on {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: var(--accent-wash);
+}
+.metric-toggle.locked {
+  cursor: default;
+  opacity: 0.7;
+}
+.metric-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  flex: none;
+}
+.metric-toggle-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.metric-toggle-unit {
+  color: var(--ink-faint);
+  font-weight: 400;
+}

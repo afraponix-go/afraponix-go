@@ -22,6 +22,7 @@ import { FishStockingCalculator } from '../features/calculator/FishStockingCalcu
 import { OperationsPage } from '../features/operations/OperationsPage'
 import { SettingsLayout } from '../features/settings/SettingsLayout'
 import { GeneralSettings } from '../features/settings/GeneralSettings'
+import { MetricsSettings } from '../features/settings/MetricsSettings'
 import { AccountSettings } from '../features/settings/AccountSettings'
 import { SharingSettings } from '../features/settings/SharingSettings'
 import { AdminSettings } from '../features/settings/AdminSettings'
@@ -123,6 +124,7 @@ export const router = createBrowserRouter([
             element: <SettingsLayout />,
             children: [
               { index: true, element: <GeneralSettings /> },
+              { path: 'metrics', element: <MetricsSettings /> },
               { path: 'account', element: <AccountSettings /> },
               { path: 'sharing', element: <SharingSettings /> },
               { path: 'admin', element: <AdminSettings /> },

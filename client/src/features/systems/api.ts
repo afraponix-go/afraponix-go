@@ -14,6 +14,8 @@ export const systemSchema = z.object({
   // systems; is_owner is 1/0.
   shared_permission: z.string().nullable().optional(),
   is_owner: z.coerce.number().nullable().optional(),
+  // JSON array of metric keys this system tracks; null = track everything.
+  tracked_metrics: z.string().nullable().optional(),
 })
 export type System = z.infer<typeof systemSchema>
 
@@ -63,6 +65,11 @@ export async function updateSystem(id: string, input: { system_name?: string; sy
 // Permanently delete a system and all its data (cascades server-side).
 export async function deleteSystem(id: string) {
   return api(`/systems/${id}`, { method: 'DELETE' })
+}
+
+// Set which water/nutrient metrics this system tracks (owner-only server-side).
+export async function updateTrackedMetrics(id: string, metrics: string[]) {
+  return api(`/systems/${id}/metrics`, { method: 'PUT', body: { metrics } })
 }
 
 // Add a fish tank to a system (used by the creation wizard).

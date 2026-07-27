@@ -187,6 +187,48 @@ router.put('/:id', async (req, res) => {
     }
 });
 
+// The metric keys a system may choose to track. Kept in sync with the client's
+// water-quality field list.
+const TRACKABLE_METRICS = new Set([
+    'ph', 'ec', 'dissolved_oxygen', 'temperature', 'humidity', 'salinity',
+    'ammonia', 'nitrite', 'nitrate', 'iron', 'potassium', 'calcium',
+    'phosphorus', 'magnesium'
+]);
+
+// Set which metrics this system tracks. Owner-only (it is system configuration).
+// Body: { metrics: string[] }. An empty array means "track none"; to reset to
+// "track all", send every key (the UI does this) — NULL is only the initial
+// default for systems that have never been configured.
+router.put('/:id/metrics', async (req, res) => {
+    const { metrics } = req.body;
+
+    if (!Array.isArray(metrics)) {
+        return res.status(400).json({ error: 'metrics must be an array of metric keys' });
+    }
+    const invalid = metrics.filter((m) => !TRACKABLE_METRICS.has(m));
+    if (invalid.length) {
+        return res.status(400).json({ error: `Unknown metric keys: ${invalid.join(', ')}` });
+    }
+
+    try {
+        const pool = getDatabase();
+        // Owner-only: match on user_id so a shared user cannot change it.
+        const [result] = await pool.execute(
+            'UPDATE systems SET tracked_metrics = ? WHERE id = ? AND user_id = ?',
+            [JSON.stringify([...new Set(metrics)]), req.params.id, req.user.userId]
+        );
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'System not found' });
+        }
+
+        const [rows] = await pool.execute('SELECT * FROM systems WHERE id = ?', [req.params.id]);
+        res.json(rows[0]);
+    } catch (error) {
+        console.error('Error updating tracked metrics:', error);
+        res.status(500).json({ error: 'Failed to update tracked metrics' });
+    }
+});
+
 // Create demo system using SQLite demo database
 router.post('/create-demo', async (req, res) => {
     const { system_name } = req.body;

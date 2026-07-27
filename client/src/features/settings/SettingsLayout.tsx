@@ -4,6 +4,7 @@ import { isOwnedSystem } from '../systems/api'
 import { SubTabLayout, type SubTab } from '../../app/SubTabLayout'
 
 const GENERAL: SubTab = { to: '/settings', label: 'General', end: true }
+const METRICS: SubTab = { to: '/settings/metrics', label: 'Metrics' }
 const ACCOUNT: SubTab = { to: '/settings/account', label: 'Account' }
 const SHARING: SubTab = { to: '/settings/sharing', label: 'Sharing' }
 const DANGER: SubTab = { to: '/settings/danger', label: 'Danger Zone' }
@@ -17,7 +18,7 @@ export function SettingsLayout() {
   const { activeSystem } = useSystems()
   const owner = isOwnedSystem(activeSystem)
 
-  const tabs: SubTab[] = [GENERAL, ACCOUNT]
+  const tabs: SubTab[] = [GENERAL, METRICS, ACCOUNT]
   if (owner) tabs.push(SHARING, DANGER)
   if (user?.userRole === 'admin') tabs.push(ADMIN)
 
