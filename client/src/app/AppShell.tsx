@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthContext'
 import { useSystems } from '../features/systems/SystemContext'
+import { isOwnedSystem } from '../features/systems/api'
 import { AddSystemModal } from '../features/systems/AddSystemModal'
 import { DashboardIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SettingsIcon } from './icons'
 import { Brand } from '../components/Brand'
@@ -19,7 +20,8 @@ const TABS = [
 
 export function AppShell() {
   const { user, signOut } = useAuth()
-  const { systems, activeId, setActiveId } = useSystems()
+  const { systems, activeId, activeSystem, setActiveId } = useSystems()
+  const activeShared = activeSystem != null && !isOwnedSystem(activeSystem)
   const [showAdd, setShowAdd] = useState(false)
   const name = user?.firstName || user?.email || 'Account'
   const initial = (user?.firstName?.[0] || user?.email?.[0] || '?').toUpperCase()
@@ -35,9 +37,15 @@ export function AppShell() {
                 {systems.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.system_name}
+                    {isOwnedSystem(s) ? '' : ' (shared)'}
                   </option>
                 ))}
               </select>
+              {activeShared && (
+                <span className="shared-badge" title={`Shared with you — ${activeSystem?.shared_permission} access`}>
+                  Shared
+                </span>
+              )}
             </label>
           )}
           <button className="sys-add" onClick={() => setShowAdd(true)} title="Add system" aria-label="Add system">

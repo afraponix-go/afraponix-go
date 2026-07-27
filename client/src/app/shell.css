@@ -63,6 +63,18 @@
   cursor: pointer;
   padding-right: 2px;
 }
+.shared-badge {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-wash);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
 .sys-select:focus-visible {
   box-shadow: none;
 }
