@@ -186,3 +186,61 @@
   border-radius: 3px;
   flex: none;
 }
+
+/* Quick-action buttons in the detail modal */
+.farm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.farm-act {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.farm-act:hover {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+  background: var(--surface-2);
+}
+.farm-act.sm {
+  font-size: 12px;
+  padding: 5px 10px;
+}
+.farm-act.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: transparent;
+}
+.farm-act.primary:hover {
+  background: color-mix(in srgb, var(--accent) 88%, black);
+  color: var(--accent-ink);
+}
+.farm-act.danger:hover {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
+}
+
+/* Batch rows gain trailing action buttons */
+.farm-batch-list li {
+  gap: 10px;
+}
+.farm-batch-name {
+  flex: 0 0 auto;
+}
+.farm-batch-list li b {
+  margin-left: 0;
+}
+.farm-batch-acts {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 6px;
+}

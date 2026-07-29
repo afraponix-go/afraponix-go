@@ -4,6 +4,10 @@ import { useSystems } from '../systems/SystemContext'
 import { fetchFishInventory, type FishTank } from '../fish/api'
 import { fetchGrowBedConfigs, type GrowBedConfig } from '../growbeds/api'
 import { fetchBatches, type Batch } from '../plants/batches'
+import { TankActionModal, type TankAction } from '../fish/TankActionModal'
+import { NewPlantingModal } from '../plants/NewPlantingModal'
+import { HarvestModal } from '../plants/HarvestModal'
+import { MoveBatchModal } from '../plants/MoveBatchModal'
 import { Modal } from '../../components/Modal'
 import '../dashboard/dashboard.css'
 import '../fish/fish.css'
@@ -13,10 +17,12 @@ import './farm.css'
 // Tanks are drawn at a larger scale than beds (as in the old app) so their real
 // circular footprint reads clearly next to the rectangular beds.
 const PX_M_TANK = 75
-const PX_M_BED = 50
+const PX_M_BED = 72 // beds get their own row, so we can draw them larger and clearer
 const GAP = 28
 const PAD = 28
 const MAX_ROW = 860
+const MIN_BED_W = 240
+const MIN_BED_H = 72
 const TANK_HEIGHT_M = 1.2 // standard assumed tank height for the volume→diameter calc
 const M2_PER_PLANT = 0.04 // 20cm × 20cm
 
@@ -36,6 +42,13 @@ type BedNode = {
   blocks: BedBlock[]
 }
 type Layout = { tanks: TankNode[]; beds: BedNode[]; width: number; height: number }
+
+// Quick actions launched from a detail modal, reusing the existing action modals.
+type FarmAction =
+  | { kind: 'plant'; bedId: number }
+  | { kind: 'harvest'; batch: Batch }
+  | { kind: 'move-batch'; batch: Batch }
+  | { kind: 'tank'; tank: FishTank; action: TankAction }
 
 function tankM3(t: FishTank): number {
   return (t.size_m3 && t.size_m3 > 0 ? t.size_m3 : (t.volume_liters ?? 0) / 1000) || 0
@@ -74,22 +87,16 @@ function computeLayout(tanks: FishTank[], beds: GrowBedConfig[], batches: Batch[
       return node
     })
 
-  // New band for the beds.
-  y += rowH + GAP * 1.4
-  x = PAD
-  rowH = 0
+  // New band for the beds — one bed per row so each reads clearly.
+  let bedY = y + rowH + GAP * 1.4
 
   const bedNodes: BedNode[] = beds
     .slice()
     .sort((a, b) => (a.bed_number ?? 0) - (b.bed_number ?? 0))
     .map((bed) => {
-      const w = Math.max(60, (bed.length_meters ?? 2) * PX_M_BED)
-      const h = Math.max(44, (bed.width_meters ?? 1.2) * PX_M_BED)
-      if (x + w > MAX_ROW && x > PAD) {
-        x = PAD
-        y += rowH + GAP
-        rowH = 0
-      }
+      const w = Math.max(MIN_BED_W, Math.min(MAX_ROW - PAD, (bed.length_meters ?? 2) * PX_M_BED))
+      const h = Math.max(MIN_BED_H, (bed.width_meters ?? 1.2) * PX_M_BED)
+      const bx0 = PAD
 
       const capacity = bedCapacity(bed)
       const bedBatches = batches.filter((b) => Number(b.grow_bed_id) === bed.id && b.remaining > 0)
@@ -97,22 +104,21 @@ function computeLayout(tanks: FishTank[], beds: GrowBedConfig[], batches: Batch[
 
       // Fill blocks left→right, each proportional to its share of capacity.
       const inner = w - 6
-      let bx = x + 3
+      let bx = bx0 + 3
       const blocks: BedBlock[] = bedBatches.map((batch, i) => {
-        const bw = Math.max(3, Math.min(inner - (bx - (x + 3)), (batch.remaining / capacity) * inner))
+        const bw = Math.max(3, Math.min(inner - (bx - (bx0 + 3)), (batch.remaining / capacity) * inner))
         const block: BedBlock = { batch, x: bx, w: bw, color: CROP_COLORS[i % CROP_COLORS.length] }
         bx += bw
         return block
       })
 
-      const node: BedNode = { kind: 'bed', bed, x, y, w, h, capacity, planted, blocks }
-      x += w + GAP
-      rowH = Math.max(rowH, h)
-      maxX = Math.max(maxX, x - GAP)
+      const node: BedNode = { kind: 'bed', bed, x: bx0, y: bedY, w, h, capacity, planted, blocks }
+      bedY += h + GAP
+      maxX = Math.max(maxX, bx0 + w)
       return node
     })
 
-  return { tanks: tankNodes, beds: bedNodes, width: maxX + PAD, height: y + rowH + PAD }
+  return { tanks: tankNodes, beds: bedNodes, width: maxX + PAD, height: bedY + PAD }
 }
 
 export function FarmLayout() {
@@ -120,6 +126,7 @@ export function FarmLayout() {
   const [zoom, setZoom] = useState(1)
   const [showLabels, setShowLabels] = useState(true)
   const [selected, setSelected] = useState<TankNode | BedNode | null>(null)
+  const [action, setAction] = useState<FarmAction | null>(null)
   const [hover, setHover] = useState<{ text: string[]; x: number; y: number } | null>(null)
 
   const tanksQ = useQuery({ queryKey: ['fish-inventory', activeId], queryFn: () => fetchFishInventory(activeId as string), enabled: !!activeId })
@@ -258,12 +265,36 @@ export function FarmLayout() {
         </div>
       )}
 
-      {selected && <DetailModal node={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <DetailModal
+          node={selected}
+          onClose={() => setSelected(null)}
+          onAction={(a) => {
+            setSelected(null)
+            setAction(a)
+          }}
+        />
+      )}
+
+      {action?.kind === 'plant' && <NewPlantingModal initialBedId={action.bedId} onClose={() => setAction(null)} />}
+      {action?.kind === 'harvest' && <HarvestModal batch={action.batch} onClose={() => setAction(null)} />}
+      {action?.kind === 'move-batch' && <MoveBatchModal batch={action.batch} onClose={() => setAction(null)} />}
+      {action?.kind === 'tank' && (
+        <TankActionModal systemId={activeId} tank={action.tank} tanks={tanksQ.data ?? []} action={action.action} onClose={() => setAction(null)} />
+      )}
     </div>
   )
 }
 
-function DetailModal({ node, onClose }: { node: TankNode | BedNode; onClose: () => void }) {
+function DetailModal({
+  node,
+  onClose,
+  onAction,
+}: {
+  node: TankNode | BedNode
+  onClose: () => void
+  onAction: (a: FarmAction) => void
+}) {
   if (node.kind === 'tank') {
     const t = node.tank
     return (
@@ -275,6 +306,13 @@ function DetailModal({ node, onClose }: { node: TankNode | BedNode; onClose: () 
           <div><dt>Volume</dt><dd>{t.volume_liters != null ? `${t.volume_liters} L` : '—'}</dd></div>
           <div><dt>Density</dt><dd>{(t.density_kg_m3 ?? 0).toFixed(2)} kg/m³</dd></div>
         </dl>
+        <div className="farm-actions">
+          <button className="farm-act" type="button" onClick={() => onAction({ kind: 'tank', tank: t, action: 'add' })}>+ Add fish</button>
+          <button className="farm-act" type="button" onClick={() => onAction({ kind: 'tank', tank: t, action: 'harvest' })}>Harvest</button>
+          <button className="farm-act" type="button" onClick={() => onAction({ kind: 'tank', tank: t, action: 'move' })}>Move</button>
+          <button className="farm-act" type="button" onClick={() => onAction({ kind: 'tank', tank: t, action: 'weight' })}>Weigh</button>
+          <button className="farm-act danger" type="button" onClick={() => onAction({ kind: 'tank', tank: t, action: 'mortality' })}>Loss</button>
+        </div>
       </Modal>
     )
   }
@@ -288,19 +326,28 @@ function DetailModal({ node, onClose }: { node: TankNode | BedNode; onClose: () 
         <div><dt>Capacity</dt><dd>{node.capacity} plants</dd></div>
         <div><dt>Planted</dt><dd>{node.planted} plants · {pct}% full</dd></div>
       </dl>
+
       {node.blocks.length > 0 ? (
         <ul className="farm-batch-list">
           {node.blocks.map((blk, i) => (
             <li key={i}>
               <span className="farm-batch-dot" style={{ background: blk.color }} />
-              {blk.batch.crop_type}
+              <span className="farm-batch-name">{blk.batch.crop_type}</span>
               <b>{blk.batch.remaining}</b>
+              <span className="farm-batch-acts">
+                <button className="farm-act sm" type="button" onClick={() => onAction({ kind: 'harvest', batch: blk.batch })}>Harvest</button>
+                <button className="farm-act sm" type="button" onClick={() => onAction({ kind: 'move-batch', batch: blk.batch })}>Move</button>
+              </span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="set-sub" style={{ marginBottom: 0 }}>No active plantings in this bed.</p>
+        <p className="set-sub" style={{ margin: '0 0 14px' }}>No active plantings in this bed.</p>
       )}
+
+      <div className="farm-actions">
+        <button className="farm-act primary" type="button" onClick={() => onAction({ kind: 'plant', bedId: b.id })}>+ Plant here</button>
+      </div>
     </Modal>
   )
 }
