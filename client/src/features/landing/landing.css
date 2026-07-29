@@ -47,12 +47,15 @@
   padding: 12px 22px;
 }
 .lp-btn.primary {
-  background: var(--accent);
-  color: var(--accent-ink);
+  background: var(--grad-brand);
+  background-size: 160% 160%;
+  color: #fff;
+  box-shadow: var(--shadow);
 }
 .lp-btn.primary:hover {
-  transform: translateY(-1px);
-  background: color-mix(in srgb, var(--accent) 88%, black);
+  transform: translateY(-2px);
+  background-position: 100% 0;
+  box-shadow: var(--shadow-lg);
 }
 .lp-btn.ghost {
   background: var(--surface);
@@ -81,7 +84,7 @@
   letter-spacing: -0.02em;
 }
 .lp-hero h1 .accent {
-  background: linear-gradient(90deg, var(--brand-deep), var(--brand-aqua));
+  background: var(--grad-word);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -264,7 +267,7 @@
   font-size: 40px;
   line-height: 1;
   letter-spacing: -0.02em;
-  background: linear-gradient(90deg, var(--brand-green), var(--brand-aqua));
+  background: var(--grad-word);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -312,4 +315,27 @@
   .lp-stats {
     gap: 24px;
   }
+}
+
+/* Signature eyebrow — uppercase label with a gradient dash */
+.lp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+.lp-eyebrow::before {
+  content: '';
+  width: 22px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--grad-word);
+}
+.lp-hero-text .lp-eyebrow {
+  margin-bottom: 18px;
 }

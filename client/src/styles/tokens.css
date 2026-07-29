@@ -1,48 +1,58 @@
 /* Afraponix Go — design tokens.
-   An aquaponics monitoring instrument: calm, precise, trustworthy. Neutrals are
-   biased cool (water/tech); brand green signals life/growth. Every component
-   consumes only these variables, so the whole app restyles from here. */
+   Reconciled to the official Afraponix design system (afraponix.com): the brand
+   palette (Deep Blue #334E9D primary, Blue Fish, Bio Green, Aquagreen), Inter,
+   the signature gradients, and dual-theme values. Token names are the app's own;
+   every component consumes only these variables, so the whole app restyles here. */
 
 :root {
-  /* Brand — the official Afraponix palette (see app-styles.css in the legacy
-     app). The vivid members are for fills, gradients and the logo; the darker
-     members are the ones safe to use as text/UI colour on a light surface. */
-  --color-deep-blue: #0051b1;
-  --color-bio-green: #80fb7b;
+  /* Brand identity colours — for gradients, fills, illustration and the logo.
+     The vivid greens/blue-fish are NOT for small text on white (contrast);
+     use --accent / --ink for text. */
+  --color-deep-blue: #334e9d;
   --color-blue-fish: #7baaee;
+  --color-bio-green: #80fb7d;
   --color-aqua-green: #8dfbcc;
 
-  /* Functional brand tokens — readable members of the palette above. */
-  --brand-deep: var(--color-deep-blue);
-  --brand-aqua: #5a8fd9; /* blue-fish-dark */
-  --brand-green: #40b93b; /* bio-green-darker */
+  /* Signature gradients (brand surfaces: hero, primary buttons, orbs) */
+  --grad-brand: linear-gradient(100deg, #334e9d 0%, #3e63c8 35%, #7baaee 62%, #80fb7d 100%);
+  --grad-word: linear-gradient(100deg, #334e9d, #2f9e7e 55%, #35c7a5); /* gradient display TEXT only */
+  --grad-soft: linear-gradient(135deg, #eef4fd, #eafbf1);
 
-  /* Neutrals — cool-biased, chosen not defaulted */
-  --bg: #f4f7fb;
+  /* Functional brand tokens — readable members of the palette. */
+  --brand-deep: var(--color-deep-blue);
+  --brand-aqua: #5a8fd9; /* blue-fish, darkened for UI */
+  --brand-green: #1a7a26; /* accessible green for TEXT/markers */
+
+  /* Neutrals — the system's cool-biased scale */
+  --bg: #f4f8fc;
   --surface: #ffffff;
-  --surface-2: #eef2f8;
-  --surface-3: #e6ecf4;
-  --ink: #101825;
-  --ink-soft: #46566a;
-  --ink-faint: #8090a2;
-  --line: #e3e9f1;
-  --line-strong: #d2dae6;
+  --surface-2: #f7fafe;
+  --surface-3: #eef3f9;
+  --ink: #16233f;
+  --ink-soft: #2b3a55;
+  --ink-faint: #5d6f8c;
+  --line: #e4ebf4;
+  --line-strong: #d6e0ec;
 
   /* Accent + semantics (semantics are distinct from the accent) */
   --accent: var(--brand-deep);
   --accent-ink: #ffffff;
-  --accent-wash: #e8f1fa;
-  --ok: #2c8f5c;
-  --ok-wash: #e2f2ea;
+  --accent-wash: #e9eff9;
+  --ok: #1a7a26;
+  --ok-wash: #e4f5e6;
   --warn: #b7791b;
   --warn-wash: #f7efdc;
   --danger: #ce3341;
   --danger-wash: #fbe9eb;
 
-  /* Radius scale */
+  /* Radius scale (system --radius is 22px for roomy brand surfaces; the app
+     keeps tighter functional radii for dense data UI, with --radius-xl for
+     hero/marketing cards). */
   --radius-sm: 8px;
   --radius: 12px;
   --radius-lg: 18px;
+  --radius-xl: 22px;
+  --radius-pill: 999px;
 
   /* Spacing scale */
   --space-1: 4px;
@@ -53,89 +63,71 @@
   --space-6: 32px;
   --space-7: 48px;
 
-  /* Type */
-  --sans: 'Geist Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+  /* Type — Inter is the brand typeface */
+  --sans: 'Inter Variable', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, monospace;
 
-  /* Layered elevation — soft, not flat */
-  --shadow-sm: 0 1px 2px rgba(16, 27, 45, 0.05);
-  --shadow: 0 1px 2px rgba(16, 27, 45, 0.04), 0 4px 12px rgba(16, 27, 45, 0.05);
-  --shadow-lg: 0 2px 4px rgba(16, 27, 45, 0.05), 0 12px 32px rgba(16, 27, 45, 0.09);
+  /* Layered elevation — soft, brand-tinted */
+  --shadow-sm: 0 1px 2px rgba(22, 35, 63, 0.05), 0 6px 20px rgba(22, 35, 63, 0.05);
+  --shadow: 0 1px 2px rgba(22, 35, 63, 0.05), 0 4px 14px rgba(22, 35, 63, 0.06);
+  --shadow-lg: 0 12px 40px rgba(51, 78, 157, 0.12);
 
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
-/* Dark theme — same care as light; not a naive invert */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0c131d;
-    --surface: #141d29;
-    --surface-2: #1b2634;
-    --surface-3: #223040;
-    --ink: #e9eef5;
-    --ink-soft: #a7b4c5;
-    --ink-faint: #74839a;
-    --line: #253243;
-    --line-strong: #32435a;
-    --accent: #57a8e8;
-    --accent-ink: #06131f;
-    --accent-wash: #14273b;
-    --ok: #4bb681;
-    --ok-wash: #12271d;
-    --warn: #d8a641;
-    --warn-wash: #2c2413;
-    --danger: #ef6673;
-    --danger-wash: #2f1a1e;
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 18px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.4), 0 16px 40px rgba(0, 0, 0, 0.5);
-  }
-}
+/* Dark theme — the system's deep-navy values ("power saver"). */
 :root[data-theme='dark'] {
-  --bg: #0c131d;
-  --surface: #141d29;
-  --surface-2: #1b2634;
-  --surface-3: #223040;
-  --ink: #e9eef5;
-  --ink-soft: #a7b4c5;
-  --ink-faint: #74839a;
-  --line: #253243;
-  --line-strong: #32435a;
-  --accent: #57a8e8;
+  --bg: #0a1324;
+  --surface: #111e38;
+  --surface-2: #0f1b33;
+  --surface-3: #16233f;
+  --ink: #eaf1fb;
+  --ink-soft: #c7d4e8;
+  --ink-faint: #93a4c0;
+  --line: rgba(255, 255, 255, 0.1);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --brand-green: #7be05a;
+  --accent: #5b7fe0;
   --accent-ink: #06131f;
-  --accent-wash: #14273b;
+  --accent-wash: #16233f;
+  --grad-soft: linear-gradient(135deg, #101d38, #0d2033);
   --ok: #4bb681;
   --ok-wash: #12271d;
   --warn: #d8a641;
   --warn-wash: #2c2413;
   --danger: #ef6673;
   --danger-wash: #2f1a1e;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.25);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 18px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.4), 0 16px 40px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 30px 70px -20px rgba(0, 0, 0, 0.6);
 }
-:root[data-theme='light'] {
-  --bg: #f4f7fb;
-  --surface: #ffffff;
-  --surface-2: #eef2f8;
-  --surface-3: #e6ecf4;
-  --ink: #101825;
-  --ink-soft: #46566a;
-  --ink-faint: #8090a2;
-  --line: #e3e9f1;
-  --line-strong: #d2dae6;
-  --accent: #1462a8;
-  --accent-ink: #ffffff;
-  --accent-wash: #e8f1fa;
-  --ok: #2c8f5c;
-  --ok-wash: #e2f2ea;
-  --warn: #b7791b;
-  --warn-wash: #f7efdc;
-  --danger: #ce3341;
-  --danger-wash: #fbe9eb;
-  --shadow-sm: 0 1px 2px rgba(16, 27, 45, 0.05);
-  --shadow: 0 1px 2px rgba(16, 27, 45, 0.04), 0 4px 12px rgba(16, 27, 45, 0.05);
-  --shadow-lg: 0 2px 4px rgba(16, 27, 45, 0.05), 0 12px 32px rgba(16, 27, 45, 0.09);
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0a1324;
+    --surface: #111e38;
+    --surface-2: #0f1b33;
+    --surface-3: #16233f;
+    --ink: #eaf1fb;
+    --ink-soft: #c7d4e8;
+    --ink-faint: #93a4c0;
+    --line: rgba(255, 255, 255, 0.1);
+    --line-strong: rgba(255, 255, 255, 0.16);
+    --brand-green: #7be05a;
+    --accent: #5b7fe0;
+    --accent-ink: #06131f;
+    --accent-wash: #16233f;
+    --grad-soft: linear-gradient(135deg, #101d38, #0d2033);
+    --ok: #4bb681;
+    --ok-wash: #12271d;
+    --warn: #d8a641;
+    --warn-wash: #2c2413;
+    --danger: #ef6673;
+    --danger-wash: #2f1a1e;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.25);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 18px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 30px 70px -20px rgba(0, 0, 0, 0.6);
+  }
 }
 
 * {

@@ -51,6 +51,7 @@ export function LandingPage() {
       <main>
         <section className="lp-hero">
           <div className="lp-hero-text">
+            <span className="lp-eyebrow">Aquaponics management</span>
             <h1>
               Intelligent Aquaponics
               <span className="accent"> Management</span>
@@ -97,6 +98,7 @@ export function LandingPage() {
 
         <section className="lp-section">
           <div className="lp-section-head">
+            <span className="lp-eyebrow">What it does</span>
             <h2>Everything you need to run an aquaponics operation</h2>
             <p>From daily water tests to harvest records — one system instead of a spreadsheet per job.</p>
           </div>
@@ -112,6 +114,7 @@ export function LandingPage() {
 
         <section className="lp-section alt">
           <div className="lp-section-head">
+            <span className="lp-eyebrow">The numbers</span>
             <h2>Maximise your agricultural ROI</h2>
             <p>What a well-managed, well-measured system makes possible.</p>
           </div>
