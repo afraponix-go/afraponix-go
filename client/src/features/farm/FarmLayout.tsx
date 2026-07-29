@@ -4,6 +4,7 @@ import { useSystems } from '../systems/SystemContext'
 import { fetchFishInventory, type FishTank } from '../fish/api'
 import { fetchGrowBedConfigs, type GrowBedConfig } from '../growbeds/api'
 import { fetchBatches, type Batch } from '../plants/batches'
+import { normalizeBedType, BED_TYPES } from '../plants/bedMath'
 import { TankActionModal, type TankAction } from '../fish/TankActionModal'
 import { NewPlantingModal } from '../plants/NewPlantingModal'
 import { HarvestModal } from '../plants/HarvestModal'
@@ -88,6 +89,28 @@ function buildBedViews(beds: GrowBedConfig[], batches: Batch[]): BedView[] {
     })
 }
 
+// Group bed views by normalised bed type, in the canonical BED_TYPES order,
+// with any unknown types appended after.
+type BedGroup = { type: string; label: string; beds: BedView[] }
+function groupBedsByType(views: BedView[]): BedGroup[] {
+  const byType = new Map<string, BedView[]>()
+  for (const bv of views) {
+    const type = normalizeBedType(bv.bed.bed_type) || 'other'
+    const list = byType.get(type)
+    if (list) list.push(bv)
+    else byType.set(type, [bv])
+  }
+  const order = BED_TYPES.map((t) => t.value)
+  const labelFor = (type: string) => BED_TYPES.find((t) => t.value === type)?.label ?? 'Other beds'
+  return [...byType.keys()]
+    .sort((a, b) => {
+      const ia = order.indexOf(a)
+      const ib = order.indexOf(b)
+      return (ia === -1 ? order.length : ia) - (ib === -1 ? order.length : ib)
+    })
+    .map((type) => ({ type, label: labelFor(type), beds: byType.get(type)! }))
+}
+
 export function FarmLayout() {
   const { activeId, activeSystem } = useSystems()
   const [view, setView] = useState<'fish' | 'plants'>('fish')
@@ -103,6 +126,7 @@ export function FarmLayout() {
 
   const tankLayout = useMemo(() => layoutTanks(tanksQ.data ?? []), [tanksQ.data])
   const bedViews = useMemo(() => buildBedViews(bedsQ.data ?? [], batchesQ.data ?? []), [bedsQ.data, batchesQ.data])
+  const bedGroups = useMemo(() => groupBedsByType(bedViews), [bedViews])
 
   if (!activeId) return <div className="empty">Select a system to see its layout.</div>
 
@@ -187,28 +211,37 @@ export function FarmLayout() {
       ) : bedViews.length === 0 ? (
         <div className="empty">No grow beds configured for this system yet.</div>
       ) : (
-        <div className="bed-bars">
-          {bedViews.map((bv) => (
-            <button key={bv.bed.id} type="button" className={`bed-bar${bv.planted > 0 ? ' active' : ''}`} onClick={() => setSelected(bv)}>
-              <div className="bed-bar-head">
-                <span className="bed-bar-name">{bv.bed.bed_name || `Bed ${bv.bed.bed_number}`}</span>
-                <span className="bed-bar-sub">
-                  {bv.bed.bed_type ?? 'bed'}
-                  {bv.bed.length_meters && bv.bed.width_meters ? ` · ${bv.bed.length_meters}×${bv.bed.width_meters} m` : ''}
-                </span>
-                <span className="bed-bar-stat">{bv.planted}/{bv.capacity} · {bv.pct}%</span>
-              </div>
-              <div className="bed-bar-track">
-                {bv.segments.map((s, i) => (
-                  <span
-                    key={i}
-                    className="bed-bar-seg"
-                    style={{ width: `${Math.max(1, (s.batch.remaining / bv.capacity) * 100)}%`, background: s.color }}
-                    title={`${s.batch.crop_type}: ${s.batch.remaining}`}
-                  />
+        <div className="bed-groups">
+          {bedGroups.map((group) => (
+            <section key={group.type} className="bed-group">
+              <h3 className="bed-group-head">
+                {group.label}
+                <span className="bed-group-count">{group.beds.length}</span>
+              </h3>
+              <div className="bed-bars">
+                {group.beds.map((bv) => (
+                  <button key={bv.bed.id} type="button" className={`bed-bar${bv.planted > 0 ? ' active' : ''}`} onClick={() => setSelected(bv)}>
+                    <div className="bed-bar-head">
+                      <span className="bed-bar-name">{bv.bed.bed_name || `Bed ${bv.bed.bed_number}`}</span>
+                      <span className="bed-bar-sub">
+                        {bv.bed.length_meters && bv.bed.width_meters ? `${bv.bed.length_meters}×${bv.bed.width_meters} m` : ''}
+                      </span>
+                      <span className="bed-bar-stat">{bv.planted}/{bv.capacity} · {bv.pct}%</span>
+                    </div>
+                    <div className="bed-bar-track">
+                      {bv.segments.map((s, i) => (
+                        <span
+                          key={i}
+                          className="bed-bar-seg"
+                          style={{ width: `${Math.max(1, (s.batch.remaining / bv.capacity) * 100)}%`, background: s.color }}
+                          title={`${s.batch.crop_type}: ${s.batch.remaining}`}
+                        />
+                      ))}
+                    </div>
+                  </button>
                 ))}
               </div>
-            </button>
+            </section>
           ))}
         </div>
       )}

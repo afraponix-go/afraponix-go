@@ -102,6 +102,20 @@ export function NewPlantingModal({ initialBedId, onClose }: { initialBedId?: num
         </div>
 
         <div className="field">
+          <label htmlFor="np-variety">Seed variety <span className="unit-hint">· optional</span></label>
+          <select id="np-variety" value={variety} onChange={(e) => setVariety(e.target.value)} disabled={!crop}>
+            <option value="">{crop ? 'Select variety…' : 'Choose a crop first'}</option>
+            {cropVarieties.map((v) => (
+              <option key={v.id} value={v.variety_name}>{v.variety_name}</option>
+            ))}
+            {crop && <option value={ADD_NEW}>+ Add new variety…</option>}
+          </select>
+          {variety === ADD_NEW && (
+            <input type="text" style={{ marginTop: 8 }} value={newVariety} onChange={(e) => setNewVariety(e.target.value)} placeholder="New variety name" autoFocus />
+          )}
+        </div>
+
+        <div className="field">
           <label htmlFor="np-bed">Grow bed</label>
           <select id="np-bed" value={bed} onChange={(e) => setBed(e.target.value)}>
             <option value="">Select a bed…</option>
@@ -138,20 +152,6 @@ export function NewPlantingModal({ initialBedId, onClose }: { initialBedId?: num
             <label htmlFor="np-days">Days to harvest <span className="unit-hint">· optional</span></label>
             <input id="np-days" type="number" min="1" step="1" inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value)} placeholder={cropDef?.days_to_harvest ? String(cropDef.days_to_harvest) : 'e.g. 45'} />
           </div>
-        </div>
-
-        <div className="field">
-          <label htmlFor="np-variety">Seed variety <span className="unit-hint">· optional</span></label>
-          <select id="np-variety" value={variety} onChange={(e) => setVariety(e.target.value)} disabled={!crop}>
-            <option value="">{crop ? 'Select variety…' : 'Choose a crop first'}</option>
-            {cropVarieties.map((v) => (
-              <option key={v.id} value={v.variety_name}>{v.variety_name}</option>
-            ))}
-            {crop && <option value={ADD_NEW}>+ Add new variety…</option>}
-          </select>
-          {variety === ADD_NEW && (
-            <input type="text" style={{ marginTop: 8 }} value={newVariety} onChange={(e) => setNewVariety(e.target.value)} placeholder="New variety name" autoFocus />
-          )}
         </div>
 
         <div className="field">
