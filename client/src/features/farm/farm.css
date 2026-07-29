@@ -1,0 +1,188 @@
+/* Farm Layout — top-down SVG map of tanks and beds. */
+.farm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.farm-labels-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.farm-labels-toggle input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+}
+
+.farm-legend {
+  display: flex;
+  gap: 16px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+.farm-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.farm-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--line-strong);
+}
+.farm-swatch.tank {
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--brand-aqua) 30%, transparent);
+  border-color: var(--accent);
+}
+.farm-swatch.planted {
+  background: color-mix(in srgb, var(--brand-green, #4f9d3a) 30%, transparent);
+  border-color: color-mix(in srgb, var(--brand-green, #4f9d3a) 55%, var(--line));
+}
+.farm-swatch.unplanted {
+  background: var(--surface-2);
+}
+
+/* Viewport */
+.farm-viewport {
+  position: relative;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(var(--surface-2) 1px, transparent 1px) 0 0 / 100% 25px,
+    linear-gradient(90deg, var(--surface-2) 1px, transparent 1px) 0 0 / 25px 100%,
+    var(--surface);
+  padding: 8px;
+  max-height: 72vh;
+}
+.farm-svg {
+  display: block;
+}
+
+.farm-node {
+  cursor: pointer;
+}
+
+/* Tanks */
+.farm-tank {
+  fill: color-mix(in srgb, var(--brand-aqua) 22%, var(--surface));
+  stroke: var(--accent);
+  stroke-width: 2;
+  transition: fill 0.15s;
+}
+.farm-node:hover .farm-tank {
+  fill: color-mix(in srgb, var(--brand-aqua) 34%, var(--surface));
+}
+.farm-tank-label {
+  font: 600 13px var(--sans);
+  fill: var(--ink);
+}
+.farm-tank-sub {
+  font: 500 11px var(--sans);
+  fill: var(--ink-faint);
+}
+
+/* Beds */
+.farm-bed {
+  fill: var(--surface-2);
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+  transition: stroke 0.15s;
+}
+.farm-bed.active {
+  stroke: color-mix(in srgb, var(--brand-green, #4f9d3a) 55%, var(--line-strong));
+}
+.farm-node:hover .farm-bed {
+  stroke: var(--accent);
+}
+.farm-bed-label {
+  font: 600 12px var(--sans);
+  fill: var(--ink-soft);
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 3px;
+}
+
+/* Hover tooltip */
+.farm-tip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 8px 11px;
+  max-width: 240px;
+}
+.farm-tip-title {
+  font-weight: 650;
+  font-size: 13px;
+  color: var(--ink);
+}
+.farm-tip-line {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-top: 1px;
+}
+
+/* Detail modal */
+.farm-dl {
+  margin: 0 0 12px;
+  display: grid;
+  gap: 8px;
+}
+.farm-dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.farm-dl dt {
+  color: var(--ink-faint);
+}
+.farm-dl dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink);
+}
+.farm-batch-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.farm-batch-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+.farm-batch-list b {
+  margin-left: auto;
+  font-family: var(--mono);
+  color: var(--ink);
+}
+.farm-batch-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+}

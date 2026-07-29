@@ -7,6 +7,7 @@ import { AppShell } from './AppShell'
 import { SubTabLayout, Placeholder } from './SubTabLayout'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { ChartsPage } from '../features/charts/ChartsPage'
+import { FarmLayout } from '../features/farm/FarmLayout'
 import { WaterQualityPage } from '../features/water/WaterQualityPage'
 import { FishOverview } from '../features/fish/FishOverview'
 import { FishDensity } from '../features/fish/FishDensity'
@@ -31,6 +32,7 @@ import { DangerZone } from '../features/settings/DangerZone'
 const DASHBOARD_TABS = [
   { to: '/', label: 'Overview', end: true },
   { to: '/charts', label: 'Charts' },
+  { to: '/layout', label: 'Farm Layout' },
 ]
 const DATA_TABS = [
   { to: '/data', label: 'Water Quality', end: true },
@@ -73,6 +75,7 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <DashboardPage /> },
               { path: 'charts', element: <ChartsPage /> },
+              { path: 'layout', element: <FarmLayout /> },
             ],
           },
           // Calculator (Fish Stocking · Nutrient Dosing)
