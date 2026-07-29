@@ -18,6 +18,7 @@ export function recordPlanting(
     grow_bed_id: number
     crop_type: string
     count: number
+    plants_per_m2?: number
     growth_stage?: string
     seed_variety?: string
     days_to_harvest?: number
@@ -32,6 +33,7 @@ export function recordPlanting(
       grow_bed_id: input.grow_bed_id,
       crop_type: input.crop_type,
       count: input.count,
+      plants_per_m2: input.plants_per_m2 ?? null,
       new_seedlings: input.count,
       health: 'good',
       growth_stage: input.growth_stage ?? 'seedling',

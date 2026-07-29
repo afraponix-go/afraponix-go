@@ -219,6 +219,11 @@
   color: var(--ink-faint);
   font-weight: 400;
 }
+.mform .field-hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
 .mform input,
 .mform select {
   font: inherit;

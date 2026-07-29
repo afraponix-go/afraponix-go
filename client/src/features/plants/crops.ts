@@ -11,6 +11,22 @@ export type CropOption = {
   custom: boolean
 }
 
+// Fallback planting density when a crop has no spacing set: 20×20 cm = 25/m².
+export const DEFAULT_PLANTS_PER_M2 = 25
+
+// Plants per m² from a square spacing in cm (20 cm → 25/m²).
+export function plantsPerM2FromSpacing(spacingCm?: number | null): number | null {
+  if (!spacingCm || spacingCm <= 0) return null
+  const perRow = 100 / spacingCm
+  return Math.round(perRow * perRow)
+}
+
+// The equivalent square spacing (cm) for a given density — for display only.
+export function spacingFromPlantsPerM2(density?: number | null): number | null {
+  if (!density || density <= 0) return null
+  return Math.round((100 / Math.sqrt(density)) * 10) / 10
+}
+
 const userCropSchema = z.object({
   crop_code: z.string().nullable().optional(),
   crop_name: z.string(),

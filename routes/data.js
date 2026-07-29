@@ -356,7 +356,7 @@ router.get('/plant-growth/:systemId', async (req, res) => {
 
 router.post('/plant-growth/:systemId', async (req, res) => {
     const { systemId } = req.params;
-    const { date, grow_bed_id, crop_type, count, harvest_weight, plants_harvested, new_seedlings, pest_control, health, growth_stage, notes, batch_id, seed_variety, batch_created_date, days_to_harvest } = req.body;
+    const { date, grow_bed_id, crop_type, count, plants_per_m2, harvest_weight, plants_harvested, new_seedlings, pest_control, health, growth_stage, notes, batch_id, seed_variety, batch_created_date, days_to_harvest } = req.body;
 
     if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
         return res.status(403).json({ error: 'Access denied to this system' });
@@ -365,10 +365,10 @@ router.post('/plant-growth/:systemId', async (req, res) => {
     // Using connection pool - no manual connection management
     try {
         const pool = getDatabase();
-        const [result] = await pool.execute(`INSERT INTO plant_growth 
-            (system_id, grow_bed_id, date, crop_type, count, harvest_weight, plants_harvested, new_seedlings, pest_control, health, growth_stage, notes, batch_id, seed_variety, batch_created_date, days_to_harvest) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
-            [systemId, grow_bed_id, date, crop_type, count || null, harvest_weight || null, plants_harvested || null, new_seedlings || null, pest_control || null, health || null, growth_stage || null, notes || null, batch_id || null, seed_variety || null, batch_created_date || null, days_to_harvest || null]);        res.status(201).json({ id: result.insertId, message: 'Plant growth data saved' });
+        const [result] = await pool.execute(`INSERT INTO plant_growth
+            (system_id, grow_bed_id, date, crop_type, count, plants_per_m2, harvest_weight, plants_harvested, new_seedlings, pest_control, health, growth_stage, notes, batch_id, seed_variety, batch_created_date, days_to_harvest)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [systemId, grow_bed_id, date, crop_type, count || null, plants_per_m2 || null, harvest_weight || null, plants_harvested || null, new_seedlings || null, pest_control || null, health || null, growth_stage || null, notes || null, batch_id || null, seed_variety || null, batch_created_date || null, days_to_harvest || null]);        res.status(201).json({ id: result.insertId, message: 'Plant growth data saved' });
     } catch (error) {
         console.error('Error saving plant growth data:', error);
         res.status(500).json({ error: 'Failed to save data' });

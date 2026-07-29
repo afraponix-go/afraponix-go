@@ -57,6 +57,7 @@ router.get('/batches/:systemId', async (req, res) => {
                 gb.bed_name, gb.bed_type, gb.bed_number,
                 MAX(pg.seed_variety)                                AS seed_variety,
                 MAX(pg.days_to_harvest)                             AS days_to_harvest,
+                MAX(pg.plants_per_m2)                               AS plants_per_m2,
                 COALESCE(MIN(pg.batch_created_date), MIN(pg.date))  AS planted_date,
                 MAX(pg.date)                                        AS last_event_date,
                 -- Planting quantity: for non-harvest rows use new_seedlings, or
@@ -99,6 +100,7 @@ router.get('/batches/:systemId', async (req, res) => {
                 bed_number: r.bed_number,
                 seed_variety: r.seed_variety,
                 days_to_harvest: dth,
+                plants_per_m2: r.plants_per_m2 != null ? Number(r.plants_per_m2) : null,
                 planted_date: r.planted_date ? String(r.planted_date).slice(0, 10) : null,
                 last_event_date: r.last_event_date ? String(r.last_event_date).slice(0, 10) : null,
                 planted,

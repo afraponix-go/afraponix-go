@@ -4,7 +4,7 @@ import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
 import { useSystems } from '../systems/SystemContext'
 import { fetchGrowBeds } from '../growbeds/api'
-import { fetchCropOptions } from './crops'
+import { fetchCropOptions, plantsPerM2FromSpacing, spacingFromPlantsPerM2, DEFAULT_PLANTS_PER_M2 } from './crops'
 import { fetchSeedVarieties, addSeedVariety } from './cropsAdmin'
 import { recordPlanting } from './plantGrowth'
 
@@ -27,6 +27,7 @@ export function NewPlantingModal({ initialBedId, onClose }: { initialBedId?: num
   const [bed, setBed] = useState(initialBedId != null ? String(initialBedId) : '')
   const [crop, setCrop] = useState('')
   const [count, setCount] = useState('')
+  const [density, setDensity] = useState('')
   const [stage, setStage] = useState('seedling')
   const [variety, setVariety] = useState('')
   const [newVariety, setNewVariety] = useState('')
@@ -37,6 +38,11 @@ export function NewPlantingModal({ initialBedId, onClose }: { initialBedId?: num
   const cropDef = useMemo(() => crops.find((c) => c.value === crop), [crops, crop])
   const cropVarieties = useMemo(() => allVarieties.filter((v) => v.crop_type === crop), [allVarieties, crop])
 
+  // Planting density: defaults from the crop's spacing, but editable per planting.
+  const densityNum = Number(density) > 0 ? Number(density) : (plantsPerM2FromSpacing(cropDef?.plant_spacing_cm) ?? DEFAULT_PLANTS_PER_M2)
+  const areaUsed = Number(count) > 0 ? Number(count) / densityNum : 0
+  const spacingCm = spacingFromPlantsPerM2(densityNum)
+
   function pickCrop(value: string) {
     setCrop(value)
     setVariety('') // varieties are crop-specific
@@ -44,6 +50,8 @@ export function NewPlantingModal({ initialBedId, onClose }: { initialBedId?: num
     const def = crops.find((c) => c.value === value)
     // Prefill days-to-harvest from the crop reference when the field is empty.
     if (def?.days_to_harvest != null && !days) setDays(String(def.days_to_harvest))
+    // Default the planting density from the crop's spacing (user can override).
+    setDensity(String(plantsPerM2FromSpacing(def?.plant_spacing_cm) ?? DEFAULT_PLANTS_PER_M2))
   }
 
   const mutation = useMutation({
@@ -62,6 +70,7 @@ export function NewPlantingModal({ initialBedId, onClose }: { initialBedId?: num
         grow_bed_id: Number(bed),
         crop_type: crop,
         count: Number(count),
+        plants_per_m2: densityNum,
         growth_stage: stage,
         seed_variety: sv || undefined,
         days_to_harvest: days ? Number(days) : undefined,
@@ -134,13 +143,23 @@ export function NewPlantingModal({ initialBedId, onClose }: { initialBedId?: num
             <input id="np-count" type="number" min="1" step="1" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} placeholder="e.g. 24" />
           </div>
           <div className="field">
-            <label htmlFor="np-stage">Growth stage</label>
-            <select id="np-stage" value={stage} onChange={(e) => setStage(e.target.value)}>
-              {STAGES.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
-            </select>
+            <label htmlFor="np-density">Plants per m² <span className="unit-hint">· from crop, editable</span></label>
+            <input id="np-density" type="number" min="1" step="0.5" inputMode="decimal" value={density} onChange={(e) => setDensity(e.target.value)} disabled={!crop} placeholder={String(plantsPerM2FromSpacing(cropDef?.plant_spacing_cm) ?? DEFAULT_PLANTS_PER_M2)} />
           </div>
+        </div>
+        {crop && (
+          <p className="field-hint">
+            ≈ {spacingCm} cm spacing{areaUsed > 0 ? ` · ${areaUsed.toFixed(2)} m² for ${count} plants` : ''}
+          </p>
+        )}
+
+        <div className="field">
+          <label htmlFor="np-stage">Growth stage</label>
+          <select id="np-stage" value={stage} onChange={(e) => setStage(e.target.value)}>
+            {STAGES.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
         </div>
 
         <div className="field-row">

@@ -17,6 +17,7 @@ export const batchSchema = z.object({
   bed_number: numish,
   seed_variety: z.string().nullable().optional(),
   days_to_harvest: numish,
+  plants_per_m2: numish,
   planted_date: z.string().nullable().optional(),
   last_event_date: z.string().nullable().optional(),
   planted: num,

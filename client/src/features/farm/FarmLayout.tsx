@@ -5,6 +5,7 @@ import { fetchFishInventory, type FishTank } from '../fish/api'
 import { fetchGrowBedConfigs, type GrowBedConfig } from '../growbeds/api'
 import { fetchBatches, type Batch } from '../plants/batches'
 import { normalizeBedType, BED_TYPES } from '../plants/bedMath'
+import { fetchCropOptions, plantsPerM2FromSpacing, DEFAULT_PLANTS_PER_M2 } from '../plants/crops'
 import { TankActionModal, type TankAction } from '../fish/TankActionModal'
 import { NewPlantingModal } from '../plants/NewPlantingModal'
 import { HarvestModal } from '../plants/HarvestModal'
@@ -22,13 +23,13 @@ const TANK_GAP = 28
 const TANK_PAD = 28
 const TANK_MAX_ROW = 860
 const TANK_HEIGHT_M = 1.2 // standard assumed tank height for volume→diameter
-const M2_PER_PLANT = 0.04 // 20cm × 20cm
-
 const CROP_COLORS = ['#4f9d3a', '#2fabc6', '#8e5bd0', '#e0803a', '#c0392b', '#1aa5a5', '#c9a227', '#334e9d']
 
 type TankNode = { kind: 'tank'; tank: FishTank; x: number; y: number; d: number }
-type BedSegment = { batch: Batch; color: string }
-type BedView = { kind: 'bed'; bed: GrowBedConfig; capacity: number; planted: number; pct: number; segments: BedSegment[] }
+type BedSegment = { batch: Batch; color: string; area: number }
+// Bed fill is measured by area: each batch consumes remaining ÷ its planting
+// density (plants/m²), summed against the bed's effective growing area.
+type BedView = { kind: 'bed'; bed: GrowBedConfig; areaM2: number; usedM2: number; planted: number; pct: number; segments: BedSegment[] }
 
 // Quick actions launched from a detail modal, reusing the existing action modals.
 type FarmAction =
@@ -45,10 +46,10 @@ function tankDiameterPx(m3: number): number {
   const dM = 2 * Math.sqrt(m3 / (Math.PI * TANK_HEIGHT_M))
   return Math.max(52, Math.min(190, dM * PX_M_TANK))
 }
-function bedCapacity(bed: GrowBedConfig): number {
-  if (bed.plant_capacity && bed.plant_capacity > 0) return bed.plant_capacity
-  const eq = bed.equivalent_m2 ?? (bed.length_meters ?? 2) * (bed.width_meters ?? 1.2)
-  return Math.max(1, Math.floor(eq / M2_PER_PLANT))
+// Effective growing area of a bed (m²) — the denominator for the fill bar.
+function bedArea(bed: GrowBedConfig): number {
+  const eq = bed.equivalent_m2 ?? bed.area_m2 ?? (bed.length_meters ?? 2) * (bed.width_meters ?? 1.2)
+  return eq > 0 ? eq : 1
 }
 
 function layoutTanks(tanks: FishTank[]): { nodes: TankNode[]; width: number; height: number } {
@@ -75,17 +76,29 @@ function layoutTanks(tanks: FishTank[]): { nodes: TankNode[]; width: number; hei
   return { nodes, width: maxX + TANK_PAD, height: y + rowH + TANK_PAD }
 }
 
-function buildBedViews(beds: GrowBedConfig[], batches: Batch[]): BedView[] {
+// Planting density (plants/m²) for a batch: the value captured with the
+// planting, else the crop's spacing default, else the flat fallback.
+function batchDensity(batch: Batch, densityByCrop: Map<string, number>): number {
+  if (batch.plants_per_m2 && batch.plants_per_m2 > 0) return batch.plants_per_m2
+  return densityByCrop.get(batch.crop_type) ?? DEFAULT_PLANTS_PER_M2
+}
+
+function buildBedViews(beds: GrowBedConfig[], batches: Batch[], densityByCrop: Map<string, number>): BedView[] {
   return beds
     .slice()
     .sort((a, b) => (a.bed_number ?? 0) - (b.bed_number ?? 0))
     .map((bed) => {
-      const capacity = bedCapacity(bed)
+      const areaM2 = bedArea(bed)
       const bedBatches = batches.filter((b) => Number(b.grow_bed_id) === bed.id && b.remaining > 0)
       const planted = bedBatches.reduce((n, b) => n + b.remaining, 0)
-      const segments: BedSegment[] = bedBatches.map((batch, i) => ({ batch, color: CROP_COLORS[i % CROP_COLORS.length] }))
-      const pct = capacity > 0 ? Math.min(100, Math.round((planted / capacity) * 100)) : 0
-      return { kind: 'bed', bed, capacity, planted, pct, segments }
+      const segments: BedSegment[] = bedBatches.map((batch, i) => ({
+        batch,
+        color: CROP_COLORS[i % CROP_COLORS.length],
+        area: batch.remaining / batchDensity(batch, densityByCrop),
+      }))
+      const usedM2 = segments.reduce((a, s) => a + s.area, 0)
+      const pct = areaM2 > 0 ? Math.min(100, Math.round((usedM2 / areaM2) * 100)) : 0
+      return { kind: 'bed', bed, areaM2, usedM2, planted, pct, segments }
     })
 }
 
@@ -123,9 +136,19 @@ export function FarmLayout() {
   const tanksQ = useQuery({ queryKey: ['fish-inventory', activeId], queryFn: () => fetchFishInventory(activeId as string), enabled: !!activeId })
   const bedsQ = useQuery({ queryKey: ['grow-bed-configs', activeId], queryFn: () => fetchGrowBedConfigs(activeId as string), enabled: !!activeId })
   const batchesQ = useQuery({ queryKey: ['batches', activeId], queryFn: () => fetchBatches(activeId as string), enabled: !!activeId })
+  const cropsQ = useQuery({ queryKey: ['crop-options', activeId], queryFn: () => fetchCropOptions(activeId as string), enabled: !!activeId })
+
+  const densityByCrop = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const c of cropsQ.data ?? []) {
+      const d = plantsPerM2FromSpacing(c.plant_spacing_cm)
+      if (d) m.set(c.value, d)
+    }
+    return m
+  }, [cropsQ.data])
 
   const tankLayout = useMemo(() => layoutTanks(tanksQ.data ?? []), [tanksQ.data])
-  const bedViews = useMemo(() => buildBedViews(bedsQ.data ?? [], batchesQ.data ?? []), [bedsQ.data, batchesQ.data])
+  const bedViews = useMemo(() => buildBedViews(bedsQ.data ?? [], batchesQ.data ?? [], densityByCrop), [bedsQ.data, batchesQ.data, densityByCrop])
   const bedGroups = useMemo(() => groupBedsByType(bedViews), [bedViews])
 
   if (!activeId) return <div className="empty">Select a system to see its layout.</div>
@@ -226,15 +249,15 @@ export function FarmLayout() {
                       <span className="bed-bar-sub">
                         {bv.bed.length_meters && bv.bed.width_meters ? `${bv.bed.length_meters}×${bv.bed.width_meters} m` : ''}
                       </span>
-                      <span className="bed-bar-stat">{bv.planted}/{bv.capacity} · {bv.pct}%</span>
+                      <span className="bed-bar-stat">{bv.planted} plants · {bv.usedM2.toFixed(1)}/{bv.areaM2.toFixed(1)} m² · {bv.pct}%</span>
                     </div>
                     <div className="bed-bar-track">
                       {bv.segments.map((s, i) => (
                         <span
                           key={i}
                           className="bed-bar-seg"
-                          style={{ width: `${Math.max(1, (s.batch.remaining / bv.capacity) * 100)}%`, background: s.color }}
-                          title={`${s.batch.crop_type}: ${s.batch.remaining}`}
+                          style={{ width: `${Math.max(1, (s.area / bv.areaM2) * 100)}%`, background: s.color }}
+                          title={`${s.batch.crop_type}: ${s.batch.remaining} plants · ${s.area.toFixed(2)} m²`}
                         />
                       ))}
                     </div>
@@ -303,8 +326,8 @@ function DetailModal({
       <dl className="farm-dl">
         <div><dt>Type</dt><dd>{b.bed_type ?? '—'}</dd></div>
         <div><dt>Dimensions</dt><dd>{b.length_meters ?? '?'} × {b.width_meters ?? '?'} m</dd></div>
-        <div><dt>Capacity</dt><dd>{node.capacity} plants</dd></div>
-        <div><dt>Planted</dt><dd>{node.planted} plants · {node.pct}% full</dd></div>
+        <div><dt>Growing area</dt><dd>{node.areaM2.toFixed(1)} m²</dd></div>
+        <div><dt>Planted</dt><dd>{node.planted} plants · {node.usedM2.toFixed(1)} m² · {node.pct}% full</dd></div>
       </dl>
 
       {node.segments.length > 0 ? (
