@@ -20,12 +20,13 @@
     "test:coverage": "jest --coverage",
     "test:auth": "jest tests/integration/authentication.test.js --verbose",
     "test:security": "node testing/auth-scanner.js && npm run test:auth",
-    "pretest": "node testing/auth-scanner.js || echo '\u26a0\ufe0f Authentication issues detected - tests will show details'"
+    "pretest": "node testing/auth-scanner.js || echo '⚠️ Authentication issues detected - tests will show details'"
   },
   "dependencies": {
     "axios": "^1.11.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
     "express": "^4.18.2",
     "express-rate-limit": "^6.10.0",
     "helmet": "^7.0.0",
@@ -41,7 +42,6 @@
     "@babel/core": "^7.28.3",
     "@babel/preset-env": "^7.28.3",
     "babel-jest": "^30.0.5",
-    "dotenv": "^17.2.1",
     "dotenv-cli": "^7.4.4",
     "jest": "^30.0.5",
     "jest-environment-jsdom": "^30.0.5",
