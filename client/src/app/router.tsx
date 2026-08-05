@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { LoginPage } from '../features/auth/LoginPage'
 import { RegisterPage } from '../features/auth/RegisterPage'
+import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
 import { LandingPage } from '../features/landing/LandingPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AppShell } from './AppShell'
@@ -62,6 +63,7 @@ export const router = createBrowserRouter([
   { path: '/welcome', element: <LandingPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
+  { path: '/verify-email', element: <VerifyEmailPage /> },
   {
     element: <ProtectedRoute />,
     children: [

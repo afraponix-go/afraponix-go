@@ -63,6 +63,14 @@ export async function verifyCode(email: string, code: string) {
   return loginResponse.parse(data)
 }
 
+// Confirm the account from the token in the verification email's link. On
+// success the backend verifies the account and returns a token, so the user is
+// signed straight in — same as the code path.
+export async function verifyEmailToken(token: string) {
+  const data = await api('/auth/verify-email', { method: 'POST', body: { token } })
+  return loginResponse.parse(data)
+}
+
 // Email another verification code.
 export async function resendVerification(email: string) {
   const data = await api('/auth/resend-verification', { method: 'POST', body: { email } })

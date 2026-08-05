@@ -201,10 +201,9 @@ app.use('/api/crop-knowledge', cropKnowledgeRoutes);
 app.use('/api/custom-crops', customCropsRoutes);
 app.use('/api/import', dataImportRoutes);
 
-// Email verification route - serve main page with token parameter
-app.get('/verify-email', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
+// /verify-email is a client-side route in the React app — the SPA fallback
+// below serves it. (The legacy handler that served the old index.html here
+// hung on "Initializing…" and never consumed the token.)
 
 // Password reset route - serve reset password page
 app.get('/reset-password', (req, res) => {
