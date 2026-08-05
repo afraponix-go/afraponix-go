@@ -25,6 +25,12 @@ const mysql = require('mysql2/promise');
 
 const ROOT = path.join(__dirname, '..');
 
+// Load .env directly (like server.js does). In production this runs via a plain
+// `npm run db:bootstrap`, without the `dotenv -e` CLI wrapper the dev/staging
+// npm scripts use, so read it here. Non-overriding: an explicit `dotenv -e`
+// (dev/staging) still takes precedence over these values.
+require('dotenv').config({ path: path.join(ROOT, '.env') });
+
 // Ordered on purpose — not globbed. Later steps depend on tables created by
 // earlier ones (crops/nutrients before anything with a foreign key to them).
 const STEPS = [
