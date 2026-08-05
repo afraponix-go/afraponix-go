@@ -201,14 +201,9 @@ app.use('/api/crop-knowledge', cropKnowledgeRoutes);
 app.use('/api/custom-crops', customCropsRoutes);
 app.use('/api/import', dataImportRoutes);
 
-// /verify-email is a client-side route in the React app — the SPA fallback
-// below serves it. (The legacy handler that served the old index.html here
-// hung on "Initializing…" and never consumed the token.)
-
-// Password reset route - serve reset password page
-app.get('/reset-password', (req, res) => {
-    res.sendFile(path.join(__dirname, 'reset-password.html'));
-});
+// /verify-email, /forgot-password and /reset-password are client-side routes in
+// the React app — the SPA fallback below serves them. (The legacy handlers that
+// served the old index.html / reset-password.html here are gone.)
 
 // Favicon route
 app.get('/favicon.ico', (req, res) => {

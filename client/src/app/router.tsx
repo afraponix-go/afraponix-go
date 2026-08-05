@@ -2,6 +2,8 @@ import { createBrowserRouter } from 'react-router-dom'
 import { LoginPage } from '../features/auth/LoginPage'
 import { RegisterPage } from '../features/auth/RegisterPage'
 import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
+import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '../features/auth/ResetPasswordPage'
 import { LandingPage } from '../features/landing/LandingPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AppShell } from './AppShell'
@@ -64,6 +66,8 @@ export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
   { path: '/verify-email', element: <VerifyEmailPage /> },
+  { path: '/forgot-password', element: <ForgotPasswordPage /> },
+  { path: '/reset-password', element: <ResetPasswordPage /> },
   {
     element: <ProtectedRoute />,
     children: [

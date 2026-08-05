@@ -77,6 +77,17 @@ export async function resendVerification(email: string) {
   return loginResponse.parse(data)
 }
 
+// Request a password-reset email. The backend always responds the same way
+// (never revealing whether the address exists), so callers just show its message.
+export async function forgotPassword(email: string): Promise<{ message?: string }> {
+  return api('/auth/forgot-password', { method: 'POST', body: { email } })
+}
+
+// Set a new password using the token from the reset email's link.
+export async function resetPassword(token: string, password: string): Promise<{ message?: string }> {
+  return api('/auth/reset-password', { method: 'POST', body: { token, password } })
+}
+
 export async function fetchCurrentUser(): Promise<User> {
   const data = await api<{ user?: unknown } | unknown>('/auth/user')
   // Backend returns either { user } or the user object directly depending on route.
