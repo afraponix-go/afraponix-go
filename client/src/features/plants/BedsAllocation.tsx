@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { useSystems } from '../systems/SystemContext'
 import { fetchGrowBedConfigs, deleteBed, type GrowBedConfig } from '../growbeds/api'
-import { fetchBatches, type Batch, type BatchStatus } from './batches'
+import { fetchBatches, type Batch } from './batches'
 import { prettyCrop } from './api'
 import { BedConfigModal } from './BedConfigModal'
 import { NewPlantingModal } from './NewPlantingModal'
@@ -13,8 +13,6 @@ import '../dashboard/dashboard.css'
 import '../fish/fish.css'
 import '../growbeds/growbeds.css'
 import './plants.css'
-
-const STATUS: Record<BatchStatus, string> = { growing: 'growing', approaching: 'approaching', ready: 'ready', harvested: 'harvested' }
 
 function fullnessClass(pct: number) {
   return pct >= 80 ? 'high' : pct >= 50 ? 'medium' : 'low'

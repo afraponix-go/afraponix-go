@@ -57,6 +57,7 @@ const STEPS = [
   { type: 'sql', file: 'database/migrations/2026-07-system-id-cascade-fks.sql', label: 'Cascading system foreign keys' },
   { type: 'sql', file: 'database/migrations/2026-07-widen-plant-growth-batch-id.sql', label: 'Widen plant_growth batch_id' },
   { type: 'sql', file: 'database/migrations/2026-07-system-tracked-metrics.sql', label: 'Per-system tracked metrics' },
+  { type: 'sql', file: 'database/migrations/2026-07-plant-growth-plants-per-m2.sql', label: 'Planting density (plants/m²)' },
   { type: 'node', file: 'database/migrations/2026-07-backfill-nutrient-readings.js', label: 'Backfill nutrient readings' },
 ];
 

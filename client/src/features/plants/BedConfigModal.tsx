@@ -4,7 +4,7 @@ import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
 import { useSystems } from '../systems/SystemContext'
 import { saveBedConfig, type BedConfigPayload, type GrowBedConfig } from '../growbeds/api'
-import { BED_TYPES, bedShape, computeBed, normalizeBedType, type BedInputs } from './bedMath'
+import { BED_TYPES, bedShape, computeBed, normalizeBedType } from './bedMath'
 
 const numOrNull = (s: string): number | null => (s.trim() === '' || isNaN(Number(s)) ? null : Number(s))
 
@@ -36,7 +36,9 @@ export function BedConfigModal({
 
   const shape = bedShape(type)
 
-  const inputs: BedInputs = {
+  // Fields inferred as number|null (not the optional BedInputs shape) so they
+  // satisfy the non-optional BedConfigPayload below; still assignable to BedInputs.
+  const inputs = {
     length_meters: numOrNull(length),
     width_meters: numOrNull(width),
     height_meters: numOrNull(height),

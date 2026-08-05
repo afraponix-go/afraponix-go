@@ -3,7 +3,15 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
+
+// The React rebuild (client/) builds to client/dist. When that build is present
+// we serve it as the primary front-end; otherwise we fall back to the legacy
+// public/ app at the repo root. This lets prod ship the new SPA while dev keeps
+// running Vite on its own port.
+const CLIENT_DIST = path.join(__dirname, 'client', 'dist');
+const SERVE_CLIENT = fs.existsSync(path.join(CLIENT_DIST, 'index.html'));
 
 const authRoutes = require('./routes/auth');
 const systemRoutes = require('./routes/systems');
@@ -165,7 +173,11 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files
+// Serve the built React app first (hashed assets + its index.html at "/"),
+// then fall back to the legacy root for any assets it still references.
+if (SERVE_CLIENT) {
+    app.use(express.static(CLIENT_DIST));
+}
 app.use(express.static(path.join(__dirname)));
 
 // Routes
@@ -214,6 +226,16 @@ app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({ error: 'Something went wrong!' });
 });
+
+// SPA fallback: any non-API GET that didn't match a static file or an explicit
+// route above is a client-side route — hand it the React app's index.html so
+// deep links (e.g. /plants, /settings) load and React Router takes over.
+if (SERVE_CLIENT) {
+    app.get('*', (req, res, next) => {
+        if (req.path.startsWith('/api/')) return next();
+        res.sendFile(path.join(CLIENT_DIST, 'index.html'));
+    });
+}
 
 // 404 handler
 app.use((req, res) => {
