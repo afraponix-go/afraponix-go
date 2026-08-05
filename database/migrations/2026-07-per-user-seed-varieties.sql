@@ -14,9 +14,12 @@ ALTER TABLE seed_varieties DROP INDEX IF EXISTS unique_crop_variety;
 ALTER TABLE seed_varieties ADD UNIQUE KEY IF NOT EXISTS unique_user_crop_variety (user_id, crop_type, variety_name);
 
 -- 3. Seed every user with a copy of the template (user_id IS NULL) varieties.
---    Idempotent: skips varieties the user already has.
-INSERT INTO seed_varieties (user_id, crop_type, variety_name)
-SELECT u.id, sv.crop_type, sv.variety_name
+--    Fully idempotent: DISTINCT collapses any duplicate template rows (NULL
+--    user_id isn't deduped by the unique key, so re-seeding the template can
+--    accumulate copies), NOT EXISTS skips varieties the user already has, and
+--    INSERT IGNORE is the final backstop against any residual collision.
+INSERT IGNORE INTO seed_varieties (user_id, crop_type, variety_name)
+SELECT DISTINCT u.id, sv.crop_type, sv.variety_name
 FROM users u CROSS JOIN seed_varieties sv
 WHERE sv.user_id IS NULL
   AND NOT EXISTS (
