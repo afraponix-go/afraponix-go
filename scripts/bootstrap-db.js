@@ -10,8 +10,10 @@
  *
  *     npm run db:bootstrap
  *
- * Every step is idempotent, so it is safe to re-run against an existing
- * database; that is also how migrations get applied after a deploy.
+ * Each step is applied once and recorded in a schema_migrations ledger, so a
+ * redeploy re-applies only new steps (and is otherwise a near-instant no-op).
+ * The core schema still runs every time (idempotent). Steps should still be
+ * written idempotently as a safety net. BOOTSTRAP_FORCE=1 re-runs every step.
  *
  * Deliberately excluded: demo/sample data and diagnostics (create-demo-data.js,
  * simple-demo-creator.js, *-diagnostic.js, populate-sample-*). Demo content is
@@ -65,6 +67,9 @@ const STEPS = [
   { type: 'sql', file: 'database/migrations/2026-07-system-tracked-metrics.sql', label: 'Per-system tracked metrics' },
   { type: 'sql', file: 'database/migrations/2026-07-plant-growth-plants-per-m2.sql', label: 'Planting density (plants/m²)' },
   { type: 'node', file: 'database/migrations/2026-07-backfill-nutrient-readings.js', label: 'Backfill nutrient readings' },
+  // One-time cleanup of NULL-user seed variety rows that accumulated when the
+  // reference-data step re-ran on every deploy (before migration tracking).
+  { type: 'sql', file: 'database/migrations/2026-08-dedupe-seed-variety-template.sql', label: 'Dedupe seed variety template' },
 ];
 
 function dbConfig() {
@@ -123,41 +128,69 @@ function runNodeScript(absPath) {
   return result.stdout || '';
 }
 
+// The steps below are applied once and recorded in this table, so a redeploy is
+// a near-instant no-op instead of re-running (and re-seeding) everything.
+async function ensureMigrationsTable(conn) {
+  await conn.query(`CREATE TABLE IF NOT EXISTS schema_migrations (
+    name VARCHAR(255) NOT NULL PRIMARY KEY,
+    applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+}
+
 async function main() {
   const cfg = dbConfig();
   console.log(`\n🌱 Bootstrapping ${cfg.database} at ${cfg.host}:${cfg.port}\n`);
 
   await waitForDatabase();
 
-  // 1. Core schema — the same routine the server runs at startup.
+  // 1. Core schema — the same routine the server runs at startup. Always run:
+  //    it is idempotent (CREATE TABLE IF NOT EXISTS) and cheap, and guarantees
+  //    the base tables exist regardless of the migration ledger's state.
   console.log('→ Core schema (init-mariadb)');
   const { initializeDatabase } = require(path.join(ROOT, 'database/init-mariadb'));
   await initializeDatabase();
 
-  // 2. Everything the server does not create on its own.
-  let step = 1;
-  for (const { type, file, label } of STEPS) {
-    const absPath = path.join(ROOT, file);
-    const tag = `[${String(step).padStart(2, '0')}/${STEPS.length}]`;
-    step++;
+  // 2. Everything the server does not create on its own — each step applied once
+  //    and recorded in schema_migrations. Set BOOTSTRAP_FORCE=1 to re-run every
+  //    step (e.g. to re-seed reference data after editing a seed script).
+  const force = !!process.env.BOOTSTRAP_FORCE;
+  const tracker = await mysql.createConnection(dbConfig());
+  try {
+    await ensureMigrationsTable(tracker);
+    const [rows] = await tracker.query('SELECT name FROM schema_migrations');
+    const applied = new Set(rows.map((r) => r.name));
 
-    if (!fs.existsSync(absPath)) {
-      console.log(`${tag} ⏭  ${label} — skipped, ${file} not found`);
-      continue;
-    }
+    let step = 1;
+    for (const { type, file, label } of STEPS) {
+      const absPath = path.join(ROOT, file);
+      const tag = `[${String(step).padStart(2, '0')}/${STEPS.length}]`;
+      step++;
 
-    try {
-      if (type === 'sql') {
-        await runSqlFile(absPath);
-      } else {
-        runNodeScript(absPath);
+      if (!force && applied.has(file)) {
+        console.log(`${tag} ⏭  ${label} — already applied`);
+        continue;
       }
-      console.log(`${tag} ✅ ${label}`);
-    } catch (error) {
-      console.error(`${tag} ❌ ${label} (${file})`);
-      console.error(`      ${error.message}`);
-      throw new Error(`Bootstrap failed at: ${file}`);
+      if (!fs.existsSync(absPath)) {
+        console.log(`${tag} ⏭  ${label} — skipped, ${file} not found`);
+        continue;
+      }
+
+      try {
+        if (type === 'sql') {
+          await runSqlFile(absPath);
+        } else {
+          runNodeScript(absPath);
+        }
+        await tracker.query('INSERT IGNORE INTO schema_migrations (name) VALUES (?)', [file]);
+        console.log(`${tag} ✅ ${label}`);
+      } catch (error) {
+        console.error(`${tag} ❌ ${label} (${file})`);
+        console.error(`      ${error.message}`);
+        throw new Error(`Bootstrap failed at: ${file}`);
+      }
     }
+  } finally {
+    await tracker.end();
   }
 
   console.log('\n✅ Database ready.\n');
