@@ -301,6 +301,7 @@ async function createTables(connection) {
             size_m3 DECIMAL(8,2) NOT NULL,
             volume_liters DECIMAL(10,2) NOT NULL,
             fish_type VARCHAR(100) NOT NULL,
+            current_fish_count INT NOT NULL DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE,
             UNIQUE(system_id, tank_number)
