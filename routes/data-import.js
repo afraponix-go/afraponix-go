@@ -650,8 +650,8 @@ async function importWaterNutrientsData(pool, systemId, headers, dataRows, impor
                 // Insert new water quality record
                 await pool.execute(`
                     INSERT INTO water_quality
-                    (system_id, date, ph, ec, temperature, dissolved_oxygen, humidity, ammonia, nitrite, nitrate, iron, potassium, calcium, phosphorus, magnesium, salinity)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (system_id, date, ph, ec, temperature, dissolved_oxygen, humidity, ammonia, nitrite, nitrate, iron, potassium, calcium, phosphorus, magnesium, salinity, source, import_session_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `, [
                     systemId,
                     formattedDate,
@@ -668,7 +668,9 @@ async function importWaterNutrientsData(pool, systemId, headers, dataRows, impor
                     calciumIndex >= 0 ? parseFloat(row[calciumIndex]) || null : null,
                     phosphorusIndex >= 0 ? parseFloat(row[phosphorusIndex]) || null : null,
                     magnesiumIndex >= 0 ? parseFloat(row[magnesiumIndex]) || null : null,
-                    salinityIndex >= 0 ? parseFloat(row[salinityIndex]) || null : null
+                    salinityIndex >= 0 ? parseFloat(row[salinityIndex]) || null : null,
+                    'import',
+                    importSessionId
                 ]);
                 importCount++;
                 console.log(`✅ Inserted new water quality record for ${formattedDate}`);
@@ -869,9 +871,9 @@ async function importWaterQualityData(pool, systemId, headers, dataRows, importS
                 duplicateCount++;
             } else {
                 await pool.execute(`
-                    INSERT INTO water_quality 
-                    (system_id, date, ph, temperature, dissolved_oxygen, ammonia, nitrite, nitrate, salinity, source) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO water_quality
+                    (system_id, date, ph, temperature, dissolved_oxygen, ammonia, nitrite, nitrate, salinity, source, import_session_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `, [
                     systemId,
                     formattedDate,
@@ -882,7 +884,8 @@ async function importWaterQualityData(pool, systemId, headers, dataRows, importS
                     isNaN(parseFloat(row[6])) ? null : parseFloat(row[6]),
                     isNaN(parseFloat(row[7])) ? null : parseFloat(row[7]),
                     isNaN(parseFloat(row[8])) ? null : parseFloat(row[8]),
-                    'import'
+                    'import',
+                    importSessionId
                 ]);
                 importCount++;
             }
@@ -916,30 +919,44 @@ async function importFishHealthData(pool, systemId, headers, dataRows, importSes
 
             const formattedDate = date.toISOString().slice(0, 19).replace('T', ' ');
 
-            // Check for duplicate entry
+            // Resolve the tank by its number (CSV holds e.g. "Tank_1", "Tank 1" or "1").
+            const tankNum = parseInt(String(row[2] ?? '').replace(/\D/g, ''), 10);
+            let fishTankId = null;
+            if (!isNaN(tankNum)) {
+                const [tanks] = await pool.execute(
+                    'SELECT id FROM fish_tanks WHERE system_id = ? AND tank_number = ? LIMIT 1',
+                    [systemId, tankNum]
+                );
+                if (tanks.length > 0) fishTankId = tanks[0].id;
+            }
+
+            // Check for duplicate entry (same tank + date)
             const [existing] = await pool.execute(`
-                SELECT id FROM fish_health 
-                WHERE system_id = ? AND date = ? AND tank_id = ?
-            `, [systemId, formattedDate, row[2] || null]);
+                SELECT id FROM fish_health
+                WHERE system_id = ? AND date = ? AND (fish_tank_id <=> ?)
+            `, [systemId, formattedDate, fishTankId]);
 
             if (existing.length > 0) {
                 duplicateCount++;
             } else {
+                // CSV columns: [date, system, tank, species, quantity, weight, feed, mortality, notes].
+                // The schema has no species/source columns, so fold species into notes.
+                const species = String(row[3] ?? '').trim();
+                const note = [species ? `Species: ${species}` : '', row[8] || ''].filter(Boolean).join(' — ') || null;
                 await pool.execute(`
-                    INSERT INTO fish_health 
-                    (system_id, date, tank_id, species, quantity, weight, feed_amount, mortality, notes, source) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO fish_health
+                    (system_id, fish_tank_id, date, count, average_weight, feed_consumption, mortality, notes, import_session_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `, [
                     systemId,
+                    fishTankId,
                     formattedDate,
-                    row[2] || null,
-                    row[3] || null,
                     isNaN(parseInt(row[4])) ? null : parseInt(row[4]),
                     isNaN(parseFloat(row[5])) ? null : parseFloat(row[5]),
                     isNaN(parseFloat(row[6])) ? null : parseFloat(row[6]),
                     isNaN(parseInt(row[7])) ? null : parseInt(row[7]),
-                    row[8] || null,
-                    'import'
+                    note,
+                    importSessionId
                 ]);
                 importCount++;
             }
@@ -1003,13 +1020,18 @@ router.delete('/undo/:historyId', authenticateToken, async (req, res) => {
         }
 
         const importRecord = importDetails[0];
-        const { system_id, import_session_id, import_type } = importRecord;
+        const { import_session_id, import_type } = importRecord;
 
-        // Delete imported records from nutrient_readings using import_session_id
-        const [deleteResult] = await pool.execute(
-            'DELETE FROM nutrient_readings WHERE import_session_id = ?',
-            [import_session_id]
-        );
+        // Every import type tags its rows with import_session_id, so remove them
+        // from each table an import can write to.
+        let recordsDeleted = 0;
+        for (const table of ['nutrient_readings', 'water_quality', 'fish_health']) {
+            const [del] = await pool.execute(
+                `DELETE FROM ${table} WHERE import_session_id = ?`,
+                [import_session_id]
+            );
+            recordsDeleted += del.affectedRows;
+        }
 
         // Delete the import history record
         await pool.execute(
@@ -1020,7 +1042,7 @@ router.delete('/undo/:historyId', authenticateToken, async (req, res) => {
         res.json({
             success: true,
             message: `Successfully undone import: ${importRecord.file_name}`,
-            recordsDeleted: deleteResult.affectedRows,
+            recordsDeleted,
             importType: import_type
         });
 

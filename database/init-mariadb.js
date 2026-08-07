@@ -97,6 +97,8 @@ async function createTables(connection) {
             humidity DECIMAL(8,2),
             salinity DECIMAL(8,2),
             notes TEXT,
+            source VARCHAR(20) DEFAULT 'manual',
+            import_session_id VARCHAR(255) DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
         ) ENGINE=InnoDB`,
@@ -156,6 +158,7 @@ async function createTables(connection) {
             feed_consumption DECIMAL(8,2),
             behavior TEXT,
             notes TEXT,
+            import_session_id VARCHAR(255) DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (system_id) REFERENCES systems (id) ON DELETE CASCADE
         ) ENGINE=InnoDB`,

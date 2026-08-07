@@ -68,6 +68,7 @@ const STEPS = [
   { type: 'sql', file: 'database/migrations/2026-07-plant-growth-plants-per-m2.sql', label: 'Planting density (plants/m²)' },
   { type: 'sql', file: 'database/migrations/2026-08-fish-tanks-current-fish-count.sql', label: 'fish_tanks.current_fish_count column' },
   { type: 'sql', file: 'database/migrations/2026-08-reconcile-schema-drift.sql', label: 'Reconcile schema drift (missing columns)' },
+  { type: 'sql', file: 'database/migrations/2026-08-import-columns.sql', label: 'Import source/session columns' },
   { type: 'node', file: 'database/migrations/2026-07-backfill-nutrient-readings.js', label: 'Backfill nutrient readings' },
   // One-time cleanup of NULL-user seed variety rows that accumulated when the
   // reference-data step re-ran on every deploy (before migration tracking).

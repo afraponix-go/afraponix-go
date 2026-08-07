@@ -24,6 +24,7 @@ import { BedsAllocation } from '../features/plants/BedsAllocation'
 import { Crops } from '../features/plants/CropsPage'
 import { FishStockingCalculator } from '../features/calculator/FishStockingCalculator'
 import { OperationsPage } from '../features/operations/OperationsPage'
+import { ImportExportPage } from '../features/importexport/ImportExportPage'
 import { SettingsLayout } from '../features/settings/SettingsLayout'
 import { GeneralSettings } from '../features/settings/GeneralSettings'
 import { MetricsSettings } from '../features/settings/MetricsSettings'
@@ -101,7 +102,7 @@ export const router = createBrowserRouter([
               { index: true, element: <WaterQualityPage /> },
               { path: 'fish', element: <FishDataCapture /> },
               { path: 'operations', element: <OperationsPage /> },
-              { path: 'import-export', element: <Placeholder title="Import / Export" note="Bulk import and export of system data." /> },
+              { path: 'import-export', element: <ImportExportPage /> },
             ],
           },
           // Fish (Overview · Density · Tank Information · Fish Health)
