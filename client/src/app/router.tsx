@@ -39,6 +39,7 @@ const DASHBOARD_TABS = [
 ]
 const DATA_TABS = [
   { to: '/data', label: 'Water Quality', end: true },
+  { to: '/data/fish', label: 'Fish' },
   { to: '/data/operations', label: 'Operations' },
   { to: '/data/import-export', label: 'Import / Export' },
 ]
@@ -51,7 +52,6 @@ const FISH_TABS = [
   { to: '/fish/density', label: 'Density' },
   { to: '/fish/tanks', label: 'Tank Information' },
   { to: '/fish/health', label: 'Fish Health' },
-  { to: '/fish/capture', label: 'Data Capture' },
 ]
 const PLANTS_TABS = [
   { to: '/plants', label: 'Overview', end: true },
@@ -93,17 +93,18 @@ export const router = createBrowserRouter([
               { path: 'nutrients', element: <Placeholder title="Nutrient Dosing" note="Crop-target-based dosing calculator (reservoir volume, target EC, current levels). Coming next." /> },
             ],
           },
-          // Data Capture (Water Quality · Operations · Import/Export)
+          // Data Capture (Water Quality · Fish · Operations · Import/Export)
           {
             path: 'data',
             element: <SubTabLayout items={DATA_TABS} />,
             children: [
               { index: true, element: <WaterQualityPage /> },
+              { path: 'fish', element: <FishDataCapture /> },
               { path: 'operations', element: <OperationsPage /> },
               { path: 'import-export', element: <Placeholder title="Import / Export" note="Bulk import and export of system data." /> },
             ],
           },
-          // Fish (Overview · Tank Information · Fish Health · Data Capture)
+          // Fish (Overview · Density · Tank Information · Fish Health)
           {
             path: 'fish',
             element: <SubTabLayout items={FISH_TABS} />,
@@ -112,7 +113,6 @@ export const router = createBrowserRouter([
               { path: 'density', element: <FishDensity /> },
               { path: 'tanks', element: <TankInformation /> },
               { path: 'health', element: <FishHealth /> },
-              { path: 'capture', element: <FishDataCapture /> },
             ],
           },
           // Plants (Overview · Plantings · Harvest · Beds & Allocation · Crops)
