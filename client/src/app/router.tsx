@@ -7,7 +7,7 @@ import { ResetPasswordPage } from '../features/auth/ResetPasswordPage'
 import { LandingPage } from '../features/landing/LandingPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AppShell } from './AppShell'
-import { SubTabLayout, Placeholder } from './SubTabLayout'
+import { SubTabLayout } from './SubTabLayout'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { ChartsPage } from '../features/charts/ChartsPage'
 import { FarmLayout } from '../features/farm/FarmLayout'
@@ -23,6 +23,7 @@ import { Harvest } from '../features/plants/Harvest'
 import { BedsAllocation } from '../features/plants/BedsAllocation'
 import { Crops } from '../features/plants/CropsPage'
 import { FishStockingCalculator } from '../features/calculator/FishStockingCalculator'
+import { NutrientDosingCalculator } from '../features/calculator/NutrientDosingCalculator'
 import { OperationsPage } from '../features/operations/OperationsPage'
 import { ImportExportPage } from '../features/importexport/ImportExportPage'
 import { SettingsLayout } from '../features/settings/SettingsLayout'
@@ -91,7 +92,7 @@ export const router = createBrowserRouter([
             element: <SubTabLayout items={CALC_TABS} />,
             children: [
               { index: true, element: <FishStockingCalculator /> },
-              { path: 'nutrients', element: <Placeholder title="Nutrient Dosing" note="Crop-target-based dosing calculator (reservoir volume, target EC, current levels). Coming next." /> },
+              { path: 'nutrients', element: <NutrientDosingCalculator /> },
             ],
           },
           // Data Capture (Water Quality · Fish · Operations · Import/Export)
