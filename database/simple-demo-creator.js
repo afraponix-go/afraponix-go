@@ -40,31 +40,33 @@ class SimpleDemoCreator {
                 [systemId, systemId]
             );
 
-            // Add some sample water quality data (last 7 days)
-            const waterQualityData = [];
+            // Water quality lives in nutrient_readings (one typed row per metric) —
+            // that's what the app reads, not the legacy water_quality table. Seed
+            // 7 days of core params there.
+            const nutrientRows = [];
             const now = new Date();
             for (let i = 0; i < 7; i++) {
                 const date = new Date(now);
                 date.setDate(date.getDate() - i);
-                const dateStr = date.toISOString().slice(0, 19).replace('T', ' ');
-                
-                // Generate realistic values with slight variations
-                const ph = (7.0 + Math.random() * 0.4).toFixed(2);
-                const temperature = (24 + Math.random() * 2).toFixed(1);
-                const dissolvedOxygen = (6 + Math.random() * 2).toFixed(1);
-                const ammonia = (Math.random() * 0.25).toFixed(2);
-                
-                waterQualityData.push([
-                    systemId, dateStr, temperature, ph, dissolvedOxygen, ammonia, null, null
-                ]);
+                const readingDate = `${date.toISOString().slice(0, 10)} 12:00:00`;
+                const metrics = [
+                    ['ph', (7.0 + Math.random() * 0.4).toFixed(2), ''],
+                    ['temperature', (24 + Math.random() * 2).toFixed(1), '°C'],
+                    ['dissolved_oxygen', (6 + Math.random() * 2).toFixed(1), 'mg/L'],
+                    ['ammonia', (Math.random() * 0.25).toFixed(2), 'ppm'],
+                    ['nitrate', (10 + Math.random() * 20).toFixed(0), 'ppm'],
+                ];
+                for (const [type, value, unit] of metrics) {
+                    nutrientRows.push([systemId, type, value, unit, readingDate, 'demo', 'Demo system data']);
+                }
             }
 
-            if (waterQualityData.length > 0) {
+            if (nutrientRows.length > 0) {
                 await this.mysql.query(
-                    `INSERT INTO water_quality 
-                     (system_id, date, temperature, ph, dissolved_oxygen, ammonia, nitrite, nitrate) 
+                    `INSERT INTO nutrient_readings
+                     (system_id, nutrient_type, value, unit, reading_date, source, notes)
                      VALUES ?`,
-                    [waterQualityData]
+                    [nutrientRows]
                 );
             }
 

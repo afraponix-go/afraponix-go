@@ -190,18 +190,34 @@ class SQLiteDemoImporter {
             console.log('Step 4: Importing water quality data...');
             const waterQuality = await this.querySQLite('SELECT * FROM water_quality ORDER BY date DESC');
             
+            // Water quality and nutrients are ONE table (nutrient_readings), one
+            // typed row per metric — the app reads water quality from there, not
+            // the legacy water_quality table. The demo's core water params
+            // (ph/temp/DO/humidity/salinity) only live in the SQLite water_quality
+            // table, so write those here. ammonia/nitrite/nitrate come from the
+            // nutrient_readings import below, so skip them to avoid duplicates.
+            const CORE_PARAMS = [
+                ['ph', 'ph', ''],
+                ['temperature', 'temperature', '°C'],
+                ['dissolved_oxygen', 'dissolved_oxygen', 'mg/L'],
+                ['humidity', 'humidity', '%'],
+                ['salinity', 'salinity', 'ppt'],
+            ];
+            let wqRows = 0;
             for (const record of waterQuality) {
                 const adjustedDate = this.getAdjustedDate(record.date, dateOffset);
-                
-                await this.mysql.execute(`
-                    INSERT INTO water_quality (system_id, date, temperature, ph, ammonia, nitrite, nitrate, 
-                                             dissolved_oxygen, humidity, salinity, notes, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-                `, [newSystemId, adjustedDate, record.temperature, record.ph, record.ammonia, record.nitrite,
-                    record.nitrate, record.dissolved_oxygen, record.humidity, record.salinity, 
-                    record.notes || 'Demo system data']);
+                const readingDate = `${adjustedDate} 12:00:00`;
+                for (const [col, type, unit] of CORE_PARAMS) {
+                    const value = record[col];
+                    if (value === null || value === undefined || value === '') continue;
+                    await this.mysql.execute(`
+                        INSERT INTO nutrient_readings (system_id, nutrient_type, value, unit, reading_date, source, notes, created_at)
+                        VALUES (?, ?, ?, ?, ?, 'demo', ?, NOW())
+                    `, [newSystemId, type, value, unit, readingDate, record.notes || 'Demo system data']);
+                    wqRows++;
+                }
             }
-            console.log(`✅ Imported ${waterQuality.length} water quality records`);
+            console.log(`✅ Imported ${wqRows} water-quality readings across ${waterQuality.length} dates`);
 
             // 5. Import nutrient readings with adjusted dates relative to today
             console.log('Step 5: Importing nutrient readings...');
