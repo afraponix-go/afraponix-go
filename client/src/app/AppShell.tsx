@@ -6,6 +6,7 @@ import { isOwnedSystem } from '../features/systems/api'
 import { AddSystemModal } from '../features/systems/AddSystemModal'
 import { DashboardIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SettingsIcon } from './icons'
 import { Brand } from '../components/Brand'
+import { ThemeToggle } from './ThemeToggle'
 import './shell.css'
 
 // Bottom tab bar matching the original app's information architecture.
@@ -51,6 +52,7 @@ export function AppShell() {
           <button className="sys-add" onClick={() => setShowAdd(true)} title="Add system" aria-label="Add system">
             {systems.length > 0 ? '+' : '+ Add system'}
           </button>
+          <ThemeToggle />
           <div className="user-chip" title={user?.email ?? undefined}>
             <span className="avatar">{initial}</span>
             <span className="who">{name}</span>

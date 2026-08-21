@@ -6,6 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Afraponix Go — aquaponics management: monitor water quality, fish and plants in one place." />
     <title>Afraponix Go</title>
+    <script>
+      // Apply the saved theme before first paint so there's no flash. No stored
+      // choice = follow the OS (handled by prefers-color-scheme in the CSS).
+      try {
+        var t = localStorage.getItem('afraponix_theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
