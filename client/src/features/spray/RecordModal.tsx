@@ -211,6 +211,23 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
           </p>
         )}
 
+        <div className="field">
+          <label htmlFor="rec-operator">Operator</label>
+          {addingOp ? (
+            <div className="spray-op-add">
+              <input type="text" value={newOp} onChange={(e) => setNewOp(e.target.value)} placeholder="New operator name" autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (newOp.trim()) addOpMut.mutate(newOp.trim()) } }} />
+              <button type="button" className="btn" disabled={addOpMut.isPending || !newOp.trim()} onClick={() => addOpMut.mutate(newOp.trim())}>{addOpMut.isPending ? 'Adding…' : 'Add'}</button>
+              <button type="button" className="ghost" onClick={() => { setAddingOp(false); setNewOp('') }}>Cancel</button>
+            </div>
+          ) : (
+            <select id="rec-operator" value={operator} onChange={(e) => { if (e.target.value === '__add__') setAddingOp(true); else setOperator(e.target.value) }}>
+              <option value="">—</option>
+              {operators.map((o) => <option key={o.id} value={o.name}>{o.name}</option>)}
+              <option value="__add__">＋ Add new operator…</option>
+            </select>
+          )}
+        </div>
         <div className="field-row">
           <div className="field">
             <label htmlFor="rec-weather">Conditions</label>
@@ -219,26 +236,9 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
             </select>
           </div>
           <div className="field">
-            <label htmlFor="rec-operator">Operator</label>
-            {addingOp ? (
-              <div className="spray-numunit">
-                <input type="text" value={newOp} onChange={(e) => setNewOp(e.target.value)} placeholder="New operator name" autoFocus
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (newOp.trim()) addOpMut.mutate(newOp.trim()) } }} />
-                <button type="button" className="row-btn" disabled={addOpMut.isPending || !newOp.trim()} onClick={() => addOpMut.mutate(newOp.trim())}>Add</button>
-                <button type="button" className="link-btn" onClick={() => { setAddingOp(false); setNewOp('') }}>Cancel</button>
-              </div>
-            ) : (
-              <select id="rec-operator" value={operator} onChange={(e) => { if (e.target.value === '__add__') setAddingOp(true); else setOperator(e.target.value) }}>
-                <option value="">—</option>
-                {operators.map((o) => <option key={o.id} value={o.name}>{o.name}</option>)}
-                <option value="__add__">＋ Add new operator…</option>
-              </select>
-            )}
+            <label htmlFor="rec-notes">Notes</label>
+            <input id="rec-notes" type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="optional" />
           </div>
-        </div>
-        <div className="field">
-          <label htmlFor="rec-notes">Notes</label>
-          <input id="rec-notes" type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="optional" />
         </div>
         <p className="hint spray-rec-hint">Effectiveness is rated later, from the log.</p>
         <div className="mform-actions">

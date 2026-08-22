@@ -133,3 +133,8 @@
 .spray-hold-item { display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; font-size: 13px; }
 .spray-hold-crop { font-weight: 600; }
 .spray-hold-meta { color: var(--ink-soft); font-size: 12.5px; }
+
+/* Add-operator inline row (full width) */
+.spray-op-add { display: flex; align-items: center; gap: 8px; }
+.spray-op-add input { flex: 1 1 auto; width: auto; min-width: 0; }
+.spray-op-add .btn, .spray-op-add .ghost { flex: 0 0 auto; width: auto; white-space: nowrap; }
