@@ -25,6 +25,7 @@ export function Seedlings() {
   const [transplant, setTransplant] = useState<Seedling | null>(null)
   const [confirmDel, setConfirmDel] = useState<Seedling | null>(null)
   const [showDone, setShowDone] = useState(false)
+  const [filter, setFilter] = useState<'all' | 'ready' | 'nursery' | 'transplanted'>('all')
 
   const { data: seedlings = [], isLoading } = useQuery({ queryKey: ['seedlings', activeId], queryFn: () => fetchSeedlings(activeId as string), enabled: !!activeId })
   const del = useMutation({
@@ -84,6 +85,21 @@ export function Seedlings() {
     )
   }
 
+  const doneRow = (s: Seedling) => {
+    const pct = germPct(s)
+    return (
+      <div key={s.id} className="seedling-done-row">
+        <span className="dr-name">{s.crop_name ?? 'Crop'}{s.seed_variety ? ` · ${s.seed_variety}` : ''}</span>
+        <span className="dr-meta">{s.total_sown.toLocaleString()} sown{pct != null ? ` · ${pct}% germ` : ''}</span>
+        <span className="dr-tp">→ {(s.transplanted_count ?? 0).toLocaleString()} on {s.transplant_date}{s.actual_transplant_days != null ? ` · ${s.actual_transplant_days}d` : ''}</span>
+        <span className="dr-actions">
+          <button className="link-btn" onClick={() => setSow({ seedling: s })}>Edit</button>
+          <button className="link-btn danger" onClick={() => setConfirmDel(s)}>Delete</button>
+        </span>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="feed-head">
@@ -100,37 +116,55 @@ export function Seedlings() {
         </div>
       )}
 
+      {seedlings.length > 0 && (
+        <div className="seedling-filter" role="group" aria-label="Filter">
+          {([
+            { key: 'all', label: 'All', n: seedlings.length },
+            { key: 'ready', label: 'Ready', n: ready.length },
+            { key: 'nursery', label: 'In nursery', n: nursery.length },
+            { key: 'transplanted', label: 'Transplanted', n: transplanted.length },
+          ] as const).map((f) => (
+            <button key={f.key} type="button" className={filter === f.key ? 'active' : ''} onClick={() => setFilter(f.key)}>
+              {f.label} <span className="sf-count">{f.n}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {isLoading ? (
         <div className="empty">Loading…</div>
       ) : seedlings.length === 0 ? (
         <div className="empty">No sowings yet. Add one to start tracking germination and transplant timing.</div>
       ) : (
         <>
-          {ready.length > 0 && (
+          {(filter === 'all' || filter === 'ready') && ready.length > 0 && (
             <section className="seedling-section">
-              <div className="seedling-section-head ready"><h3>Ready to transplant</h3><span className="seedling-section-count">{ready.length}</span></div>
+              {filter === 'all' && <div className="seedling-section-head ready"><h3>Ready to transplant</h3><span className="seedling-section-count">{ready.length}</span></div>}
               <div className="seedling-cards">{ready.map(card)}</div>
             </section>
           )}
 
-          {nursery.length > 0 && (
+          {(filter === 'all' || filter === 'nursery') && nursery.length > 0 && (
             <section className="seedling-section">
-              <div className="seedling-section-head"><h3>In nursery</h3><span className="seedling-section-count">{nursery.length}</span></div>
+              {filter === 'all' && <div className="seedling-section-head"><h3>In nursery</h3><span className="seedling-section-count">{nursery.length}</span></div>}
               <div className="seedling-cards">{nursery.map(card)}</div>
             </section>
           )}
 
-          {active.length === 0 && transplanted.length > 0 && <div className="empty">Nothing in the nursery — all sowings have been transplanted.</div>}
-
-          {transplanted.length > 0 && (
+          {(filter === 'all' || filter === 'transplanted') && transplanted.length > 0 && (
             <section className="seedling-section">
-              <button type="button" className="seedling-done-toggle" onClick={() => setShowDone((v) => !v)} aria-expanded={showDone}>
-                <span className={`seedling-chev ${showDone ? 'open' : ''}`} aria-hidden>▸</span>
-                Transplanted <span className="seedling-section-count">{transplanted.length}</span>
-              </button>
-              {showDone && <div className="seedling-cards" style={{ marginTop: 12 }}>{transplanted.map(card)}</div>}
+              {filter === 'all' ? (
+                <button type="button" className="seedling-done-toggle" onClick={() => setShowDone((v) => !v)} aria-expanded={showDone}>
+                  <span className={`seedling-chev ${showDone ? 'open' : ''}`} aria-hidden>▸</span>
+                  Transplanted <span className="seedling-section-count">{transplanted.length}</span>
+                </button>
+              ) : null}
+              {(filter === 'transplanted' || showDone) && <div className="seedling-done-list">{transplanted.map(doneRow)}</div>}
             </section>
           )}
+
+          {filter === 'ready' && ready.length === 0 && <div className="empty">Nothing ready to transplant.</div>}
+          {filter === 'nursery' && nursery.length === 0 && <div className="empty">Nothing in the nursery.</div>}
         </>
       )}
 

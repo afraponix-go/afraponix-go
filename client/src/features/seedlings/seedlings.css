@@ -62,3 +62,25 @@
 .seedling-done-toggle:hover { color: var(--ink); }
 .seedling-chev { display: inline-block; transition: transform .15s; font-size: 12px; }
 .seedling-chev.open { transform: rotate(90deg); }
+
+/* Top filter (segmented) */
+.seedling-filter { display: inline-flex; gap: 4px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px; margin-bottom: 18px; flex-wrap: wrap; }
+.seedling-filter button { appearance: none; border: 0; background: transparent; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-soft); padding: 6px 14px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.seedling-filter button:hover { color: var(--ink); }
+.seedling-filter button.active { background: var(--surface); color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.sf-count { font-size: 11px; font-weight: 700; color: var(--ink-faint); }
+.seedling-filter button.active .sf-count { color: var(--accent); }
+
+/* Flattened transplanted rows */
+.seedling-done-list { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-top: 12px; background: var(--surface); }
+.seedling-done-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 13px; }
+.seedling-done-row:first-child { border-top: 0; }
+.dr-name { font-weight: 600; flex: 1 1 38%; min-width: 0; }
+.dr-meta { color: var(--ink-faint); flex: 1 1 24%; }
+.dr-tp { color: var(--ink-soft); flex: 1 1 30%; font-variant-numeric: tabular-nums; }
+.dr-actions { display: flex; gap: 10px; flex: 0 0 auto; margin-left: auto; }
+@media (max-width: 640px) {
+  .seedling-done-row { flex-wrap: wrap; gap: 4px 12px; }
+  .dr-name { flex-basis: 100%; }
+  .dr-actions { margin-left: 0; }
+}
