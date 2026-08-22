@@ -13,6 +13,9 @@
   width: 100%;
   max-width: 440px;
   max-height: calc(100vh - 40px);
+  /* dvh excludes the mobile browser toolbars, so the card never runs taller
+     than the visible screen (which would hide the action bar behind them). */
+  max-height: calc(100dvh - 40px);
   display: flex;
   flex-direction: column;
   background: var(--surface);
@@ -53,6 +56,33 @@
 .modal-body {
   padding: 20px;
   overflow-y: auto;
+}
+/* Keep the Cancel/Save bar pinned to the bottom of the scrolling body so it
+   stays reachable when the form is taller than the screen. Negative margins
+   bleed it across the body's padding so scrolled content never shows beneath. */
+.modal-body .mform-actions {
+  position: sticky;
+  bottom: 0;
+  margin: 20px -20px -20px;
+  padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+
+/* On phones, dock the modal as a bottom sheet: full width, rounded top, and
+   as tall as the visible viewport allows. */
+@media (max-width: 560px) {
+  .modal-backdrop {
+    padding: 0;
+    place-items: end center;
+  }
+  .modal-card,
+  .modal-card.wide {
+    max-width: none;
+    max-height: 92dvh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    border-bottom: 0;
+  }
 }
 @keyframes modal-fade {
   from {
