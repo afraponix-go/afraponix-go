@@ -183,7 +183,7 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
           <span className="hint spray-scope-hint">The plant batches in the selected beds are logged as sprayed.</span>
         </div>
 
-        <div className="field-row">
+        <div className="field-row spray-qd-row">
           <div className="field">
             <label htmlFor="rec-qty">Quantity applied</label>
             <div className="spray-numunit">
