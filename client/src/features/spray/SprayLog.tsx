@@ -32,19 +32,31 @@ export function SprayLog() {
       ) : (
         <div className="log-table-wrap">
           <table className="log-table">
-            <thead><tr><th>Date</th><th>Product</th><th>Programme</th><th>Amount</th><th>Conditions</th><th className="r">Effect.</th><th></th></tr></thead>
+            <thead><tr><th>Date</th><th>Product</th><th>Applied to</th><th>Quantity</th><th>Dilution</th><th>Conditions</th><th className="r">Effect.</th><th></th></tr></thead>
             <tbody>
-              {log.map((l) => (
-                <tr key={l.id}>
-                  <td>{l.application_date}</td>
-                  <td><b>{l.product_name ?? '—'}</b>{l.notes && <div className="log-note">{l.notes}</div>}</td>
-                  <td>{l.plan_name ?? '—'}</td>
-                  <td>{l.amount ?? l.rate ?? '—'}</td>
-                  <td>{l.weather ?? '—'}</td>
-                  <td className="r">{l.effectiveness != null ? `${l.effectiveness}/5` : '—'}</td>
-                  <td className="r"><button className="link-btn danger" onClick={() => setConfirmDel(l)}>Delete</button></td>
-                </tr>
-              ))}
+              {log.map((l) => {
+                const qty = l.quantity != null && l.quantity !== '' ? `${Number(l.quantity)} ${l.quantity_unit ?? ''}`.trim() : '—'
+                const dil = l.dilution_value != null && l.dilution_value !== '' ? `${Number(l.dilution_value)} ${l.dilution_unit ?? ''}`.trim() : '—'
+                const beds = [...new Set(l.targets.map((t) => t.bed_name).filter(Boolean))]
+                const batches = l.targets.filter((t) => t.batch_id)
+                const crops = [...new Set(batches.map((t) => t.crop_type).filter(Boolean))]
+                const scopeText = l.scope === 'system' ? `Entire system${beds.length ? ` (${beds.length} beds)` : ''}` : beds.length ? beds.join(', ') : l.bed_name ?? '—'
+                return (
+                  <tr key={l.id}>
+                    <td>{l.application_date}</td>
+                    <td><b>{l.product_name ?? '—'}</b>{l.plan_name && <div className="log-note">{l.plan_name}</div>}{l.notes && <div className="log-note">{l.notes}</div>}</td>
+                    <td>
+                      {scopeText}
+                      {batches.length > 0 && <div className="log-note">{batches.length} batch{batches.length === 1 ? '' : 'es'}{crops.length ? ` · ${crops.join(', ')}` : ''}</div>}
+                    </td>
+                    <td>{qty}</td>
+                    <td>{dil}</td>
+                    <td>{l.weather ?? '—'}</td>
+                    <td className="r">{l.effectiveness != null ? `${l.effectiveness}/5` : '—'}</td>
+                    <td className="r"><button className="link-btn danger" onClick={() => setConfirmDel(l)}>Delete</button></td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

@@ -56,16 +56,22 @@ export type DueItem = {
   done: boolean
 }
 
+export type SprayTarget = { grow_bed_id: number | null; bed_name: string | null; batch_id: string | null; crop_type: string | null }
 export type LogEntry = {
   id: number
   plan_id: number | null
   product_id: number | null
   product_name: string | null
+  grow_bed_id: number | null
+  bed_name: string | null
+  scope: string | null
+  targets: SprayTarget[]
   application_date: string
   rate: string | null
-  amount: string | null
-  area: string | null
-  dilution: string | null
+  quantity: number | string | null
+  quantity_unit: string | null
+  dilution_value: number | string | null
+  dilution_unit: string | null
   weather: string | null
   effectiveness: number | null
   operator: string | null
@@ -117,11 +123,13 @@ export type LogInput = {
   plan_id?: number | null
   product_id?: number | null
   product_name?: string | null
+  bed_ids?: number[]
   application_date: string
   rate?: string | null
-  amount?: string | null
-  area?: string | null
-  dilution?: string | null
+  quantity?: number | null
+  quantity_unit?: string | null
+  dilution_value?: number | null
+  dilution_unit?: string | null
   weather?: string | null
   effectiveness?: number | null
   operator?: string | null
@@ -129,12 +137,13 @@ export type LogInput = {
 }
 export const recordApplication = (input: LogInput) => api('/spray/log', { method: 'POST', body: input })
 export const deleteLog = (id: number) => api(`/spray/log/${id}`, { method: 'DELETE' })
+export const setProgrammeStatus = (id: number, status: 'active' | 'paused') => api(`/spray/programmes/${id}`, { method: 'PUT', body: { status } })
 
 export async function fetchDue(systemId: string, date?: string): Promise<{ date: string; due: DueItem[] }> {
   return api(`/spray/due/${systemId}${date ? `?date=${date}` : ''}`)
 }
 
-export type CalendarDayItem = { plan_name: string; product_name: string; category: string; fish_safety: FishSafety; applied: boolean }
+export type CalendarDayItem = { plan_id: number; plan_name: string; product_id: number; product_name: string; category: string; fish_safety: FishSafety; rate: string | null; applied: boolean }
 export async function fetchCalendar(systemId: string, year: number, month: number): Promise<{ year: number; month: number; days: Record<string, CalendarDayItem[]> }> {
   return api(`/spray/calendar/${systemId}?year=${year}&month=${month}`)
 }

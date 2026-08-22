@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
 import { Modal } from '../../components/Modal'
-import { fetchProgrammes, fetchDue, deleteProgramme, WEEKDAY_LABEL, type Programme } from './api'
+import { fetchProgrammes, fetchDue, deleteProgramme, setProgrammeStatus, WEEKDAY_LABEL, type Programme } from './api'
 import { CATEGORY_LABEL, FishBadge } from './shared'
 import { ProgrammeModal } from './ProgrammeModal'
 import { RecordModal, type RecordPrefill } from './RecordModal'
@@ -20,6 +20,14 @@ export function Programmes() {
   const del = useMutation({
     mutationFn: (p: Programme) => deleteProgramme(p.id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['spray-programmes'] }); qc.invalidateQueries({ queryKey: ['spray-due'] }); setConfirmDel(null) },
+  })
+  const statusMut = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: 'active' | 'paused' }) => setProgrammeStatus(id, status),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['spray-programmes'] })
+      qc.invalidateQueries({ queryKey: ['spray-due'] })
+      qc.invalidateQueries({ queryKey: ['spray-calendar'] })
+    },
   })
 
   if (!activeId) return <div className="empty">Select a system to manage spray programmes.</div>
@@ -65,8 +73,9 @@ export function Programmes() {
           {programmes.map((p) => (
             <div key={p.id} className={`spray-card ${p.status !== 'active' ? 'inactive' : ''}`}>
               <div className="spray-card-head">
-                <span className="spray-card-name">{p.name}{p.status !== 'active' && <span className="spray-inactive-tag">inactive</span>}</span>
+                <span className="spray-card-name">{p.name}{p.status !== 'active' && <span className="spray-inactive-tag">paused</span>}</span>
                 <span className="crop-card-actions">
+                  <button className="link-btn" disabled={statusMut.isPending} onClick={() => statusMut.mutate({ id: p.id, status: p.status === 'active' ? 'paused' : 'active' })}>{p.status === 'active' ? 'Pause' : 'Resume'}</button>
                   <button className="link-btn" onClick={() => setEdit({ programme: p })}>Edit</button>
                   <button className="link-btn danger" onClick={() => setConfirmDel(p)}>Delete</button>
                 </span>

@@ -2,53 +2,81 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
-import { recordApplication, fetchProducts, type LogInput } from './api'
+import { fetchGrowBeds } from '../growbeds/api'
+import { recordApplication, fetchProducts, fetchProgrammes, type LogInput } from './api'
 import { CATEGORY_LABEL, todayISO } from './shared'
 import './spray.css'
 
 const WEATHER = ['', 'Sunny', 'Cloudy', 'Overcast', 'Windy', 'Calm', 'Morning', 'Evening']
+const QTY_UNITS = ['L', 'ml', 'g', 'kg']
+const DIL_UNITS = ['ml/10L', 'g/10L', 'ml/L', 'g/L', '%', 'ratio']
 
-// Prefill for recording an application — from a due item, a plan product, or blank.
+// Prefill for recording an application — from a due item, a calendar day, or blank.
 export type RecordPrefill = {
   plan_id?: number | null
   product_id?: number | null
   product_name?: string | null
   rate?: string | null
+  date?: string | null
+}
+
+// Parse a catalogue rate like "100 ml per 10L" into a numeric dilution.
+function parseDilution(rate?: string | null): { value: number; unit: string } | null {
+  if (!rate) return null
+  let m = rate.match(/([\d.]+)\s*(ml|g|kg)\s*(?:per|\/)\s*([\d.]+)\s*l/i)
+  if (m) return { value: Number(m[1]), unit: `${m[2].toLowerCase()}/${Number(m[3])}L` }
+  m = rate.match(/([\d.]+)\s*(ml|g|kg)\s*\/\s*l/i)
+  if (m) return { value: Number(m[1]), unit: `${m[2].toLowerCase()}/L` }
+  return null
 }
 
 export function RecordModal({ systemId, prefill, onClose }: { systemId: string; prefill?: RecordPrefill; onClose: () => void }) {
   const qc = useQueryClient()
   const { data: products = [] } = useQuery({ queryKey: ['spray-products'], queryFn: fetchProducts })
+  const { data: programmes = [] } = useQuery({ queryKey: ['spray-programmes', systemId], queryFn: () => fetchProgrammes(systemId) })
+  const { data: beds = [] } = useQuery({ queryKey: ['grow-beds', systemId], queryFn: () => fetchGrowBeds(systemId) })
 
-  const [date, setDate] = useState(todayISO())
+  const initDil = parseDilution(prefill?.rate)
+  const [date, setDate] = useState(prefill?.date ?? todayISO())
   const [productId, setProductId] = useState<number | null>(prefill?.product_id ?? null)
   const [productName, setProductName] = useState(prefill?.product_name ?? '')
-  const [amount, setAmount] = useState('')
-  const [area, setArea] = useState('')
+  const [wholeSystem, setWholeSystem] = useState(true)
+  const [bedIds, setBedIds] = useState<number[]>([])
+  const toggleBed = (id: number) => setBedIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
   const [rate, setRate] = useState(prefill?.rate ?? '')
-  const [dilution, setDilution] = useState('')
+  const [quantity, setQuantity] = useState('')
+  const [quantityUnit, setQuantityUnit] = useState('L')
+  const [dilValue, setDilValue] = useState(initDil ? String(initDil.value) : '')
+  const [dilUnit, setDilUnit] = useState(initDil?.unit && DIL_UNITS.includes(initDil.unit) ? initDil.unit : 'ml/10L')
   const [weather, setWeather] = useState('')
   const [effectiveness, setEffectiveness] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
 
+  // Products in the programme being recorded against come first, then the rest.
+  const planProductIds = useMemo(() => {
+    const plan = programmes.find((p) => p.id === prefill?.plan_id)
+    return new Set((plan?.products ?? []).map((pp) => pp.product_id))
+  }, [programmes, prefill?.plan_id])
+  const inProgramme = products.filter((p) => planProductIds.has(p.id))
+  const others = products.filter((p) => !planProductIds.has(p.id))
   const grouped = useMemo(() => {
     const byCat: Record<string, typeof products> = {}
-    for (const p of products) (byCat[p.category] ??= []).push(p)
+    for (const p of others) (byCat[p.category] ??= []).push(p)
     return byCat
-  }, [products])
+  }, [others])
 
-  // Pick a catalogue product → fill the name and auto-populate its recommended dose.
   const onSelectProduct = (val: string) => {
-    if (val === 'other' || val === '') {
-      setProductId(null)
-      return
-    }
+    if (val === 'other' || val === '') { setProductId(null); return }
     const p = products.find((x) => x.id === Number(val))
     if (!p) return
     setProductId(p.id)
     setProductName(p.product_name)
-    if (p.default_rate) setRate(p.default_rate)
+    if (p.default_rate) {
+      setRate(p.default_rate)
+      const d = parseDilution(p.default_rate)
+      if (d) { setDilValue(String(d.value)); if (DIL_UNITS.includes(d.unit)) setDilUnit(d.unit) }
+    }
   }
   const selValue = productId != null ? String(productId) : (productName ? 'other' : '')
 
@@ -59,11 +87,13 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
         plan_id: prefill?.plan_id ?? null,
         product_id: productId,
         product_name: productName.trim() || null,
+        bed_ids: wholeSystem ? [] : bedIds,
         application_date: date,
         rate: rate.trim() || null,
-        amount: amount.trim() || null,
-        area: area.trim() || null,
-        dilution: dilution.trim() || null,
+        quantity: quantity ? Number(quantity) : null,
+        quantity_unit: quantity ? quantityUnit : null,
+        dilution_value: dilValue ? Number(dilValue) : null,
+        dilution_unit: dilValue ? dilUnit : null,
         weather: weather || null,
         effectiveness: effectiveness ? Number(effectiveness) : null,
         notes: notes.trim() || null,
@@ -100,6 +130,11 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
             <label htmlFor="rec-prodsel">Product</label>
             <select id="rec-prodsel" value={selValue} onChange={(e) => onSelectProduct(e.target.value)}>
               <option value="">Select a product…</option>
+              {inProgramme.length > 0 && (
+                <optgroup label="In this programme">
+                  {inProgramme.map((p) => <option key={p.id} value={p.id}>{p.product_name}</option>)}
+                </optgroup>
+              )}
               {Object.keys(grouped).sort().map((cat) => (
                 <optgroup key={cat} label={CATEGORY_LABEL[cat] ?? cat}>
                   {grouped[cat].map((p) => <option key={p.id} value={p.id}>{p.product_name}</option>)}
@@ -115,26 +150,51 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
             <input id="rec-product" type="text" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Product used" />
           </div>
         )}
+
+        <div className="field">
+          <label>Apply to</label>
+          <div className="spray-scope">
+            <label className="spray-scope-all">
+              <input type="checkbox" checked={wholeSystem} onChange={(e) => setWholeSystem(e.target.checked)} />
+              <span>Entire system</span>
+            </label>
+            {!wholeSystem && (
+              beds.length === 0 ? <span className="spray-scope-empty">No grow beds configured.</span> : (
+                <div className="spray-beds">
+                  {beds.map((b) => (
+                    <label key={b.id} className="spray-bed">
+                      <input type="checkbox" checked={bedIds.includes(b.id)} onChange={() => toggleBed(b.id)} />
+                      <span>{b.bed_name || `Bed ${b.id}`}</span>
+                    </label>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+          <span className="hint spray-scope-hint">The plant batches in the selected beds are logged as sprayed.</span>
+        </div>
+
         <div className="field-row">
           <div className="field">
-            <label htmlFor="rec-rate">Rate <span className="unit-hint">· recommended dose</span></label>
-            <input id="rec-rate" type="text" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="e.g. 100 ml / 10L" />
+            <label htmlFor="rec-qty">Quantity applied</label>
+            <div className="spray-numunit">
+              <input id="rec-qty" type="number" min="0" step="any" inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="e.g. 15" />
+              <select value={quantityUnit} onChange={(e) => setQuantityUnit(e.target.value)}>
+                {QTY_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+              </select>
+            </div>
           </div>
           <div className="field">
-            <label htmlFor="rec-amount">Amount used</label>
-            <input id="rec-amount" type="text" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 200 ml" />
+            <label htmlFor="rec-dil">Dilution <span className="unit-hint">{rate ? `· rec. ${rate}` : ''}</span></label>
+            <div className="spray-numunit">
+              <input id="rec-dil" type="number" min="0" step="any" inputMode="decimal" value={dilValue} onChange={(e) => setDilValue(e.target.value)} placeholder="e.g. 100" />
+              <select value={dilUnit} onChange={(e) => setDilUnit(e.target.value)}>
+                {DIL_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+              </select>
+            </div>
           </div>
         </div>
-        <div className="field-row">
-          <div className="field">
-            <label htmlFor="rec-area">Area treated</label>
-            <input id="rec-area" type="text" value={area} onChange={(e) => setArea(e.target.value)} placeholder="e.g. 12 m² / 3 beds" />
-          </div>
-          <div className="field">
-            <label htmlFor="rec-dilution">Dilution / mixing</label>
-            <input id="rec-dilution" type="text" value={dilution} onChange={(e) => setDilution(e.target.value)} placeholder="e.g. 1:100" />
-          </div>
-        </div>
+
         <div className="field-row">
           <div className="field">
             <label htmlFor="rec-weather">Conditions</label>

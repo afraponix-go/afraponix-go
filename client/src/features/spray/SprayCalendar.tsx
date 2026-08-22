@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
 import { fetchCalendar } from './api'
+import { RecordModal, type RecordPrefill } from './RecordModal'
 import './spray.css'
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -17,6 +18,7 @@ export function SprayCalendar() {
   const { activeId } = useSystems()
   const now = new Date()
   const [ym, setYm] = useState({ year: now.getFullYear(), month: now.getMonth() + 1 })
+  const [record, setRecord] = useState<RecordPrefill | null>(null)
   const { data, isLoading } = useQuery({
     queryKey: ['spray-calendar', activeId, ym.year, ym.month],
     queryFn: () => fetchCalendar(activeId as string, ym.year, ym.month),
@@ -61,9 +63,15 @@ export function SprayCalendar() {
                 <div className="cal-daynum">{day}</div>
                 <div className="cal-items">
                   {items.map((it, idx) => (
-                    <div key={idx} className={`cal-item fish-${it.fish_safety} ${it.applied ? 'applied' : ''}`} title={`${it.product_name} · ${it.plan_name}${it.applied ? ' · recorded' : ''}`}>
+                    <button
+                      key={idx}
+                      type="button"
+                      className={`cal-item fish-${it.fish_safety} ${it.applied ? 'applied' : ''}`}
+                      title={`${it.product_name} · ${it.plan_name}${it.applied ? ' · recorded' : ' · click to record'}`}
+                      onClick={() => setRecord({ plan_id: it.plan_id, product_id: it.product_id, product_name: it.product_name, rate: it.rate, date })}
+                    >
                       <span className="cal-dot" />{it.product_name}
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -71,6 +79,8 @@ export function SprayCalendar() {
           })}
         </div>
       )}
+
+      {record && activeId && <RecordModal systemId={activeId} prefill={record} onClose={() => setRecord(null)} />}
     </div>
   )
 }

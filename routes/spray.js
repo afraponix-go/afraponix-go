@@ -154,7 +154,7 @@ router.post('/programmes/:systemId', async (req, res) => {
         if (!b.name) return res.status(400).json({ error: 'name is required' });
         const [result] = await pool.execute(
             'INSERT INTO spray_plans (system_id, name, notes, start_date, end_date, status) VALUES (?, ?, ?, ?, ?, ?)',
-            [req.params.systemId, String(b.name).slice(0, 255), b.notes || null, b.start_date || null, b.end_date || null, b.status === 'inactive' ? 'inactive' : 'active']
+            [req.params.systemId, String(b.name).slice(0, 255), b.notes || null, b.start_date || null, b.end_date || null, (b.status === 'paused' || b.status === 'inactive') ? 'paused' : 'active']
         );
         await replacePlanProducts(pool, result.insertId, b.products);
         res.json({ success: true, id: result.insertId });
@@ -173,7 +173,7 @@ router.put('/programmes/:id', async (req, res) => {
         await pool.execute(
             'UPDATE spray_plans SET name=?, notes=?, start_date=?, end_date=?, status=? WHERE id=?',
             [String(b.name ?? plan.name).slice(0, 255), b.notes ?? plan.notes, b.start_date ?? plan.start_date, b.end_date ?? plan.end_date,
-             b.status === 'inactive' ? 'inactive' : 'active', req.params.id]
+             (b.status === 'paused' || b.status === 'inactive') ? 'paused' : 'active', req.params.id]
         );
         if (Array.isArray(b.products)) await replacePlanProducts(pool, Number(req.params.id), b.products);
         res.json({ success: true });
@@ -204,15 +204,26 @@ router.get('/log/:systemId', async (req, res) => {
         if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
         const limit = Math.min(500, Number(req.query.limit) || 200);
         const [rows] = await pool.query(
-            `SELECT l.id, l.system_id, l.plan_id, l.product_id, l.product_name,
+            `SELECT l.id, l.system_id, l.plan_id, l.product_id, l.product_name, l.grow_bed_id, l.bed_name, l.scope,
                     DATE_FORMAT(l.application_date, '%Y-%m-%d') AS application_date,
-                    l.rate, l.amount, l.area, l.dilution, l.weather, l.effectiveness, l.operator, l.notes, l.created_at,
+                    l.rate, l.quantity, l.quantity_unit, l.dilution_value, l.dilution_unit,
+                    l.weather, l.effectiveness, l.operator, l.notes, l.created_at,
                     pl.name AS plan_name
              FROM spray_log l LEFT JOIN spray_plans pl ON pl.id = l.plan_id
              WHERE l.system_id = ? ORDER BY l.application_date DESC, l.id DESC LIMIT ?`,
             [req.params.systemId, limit]
         );
-        res.json({ log: rows });
+        // Attach the beds + batches each application covered.
+        const ids = rows.map((r) => r.id);
+        const byLog = new Map();
+        if (ids.length) {
+            const [targets] = await pool.query('SELECT log_id, grow_bed_id, bed_name, batch_id, crop_type FROM spray_log_targets WHERE log_id IN (?)', [ids]);
+            for (const t of targets) {
+                if (!byLog.has(t.log_id)) byLog.set(t.log_id, []);
+                byLog.get(t.log_id).push({ grow_bed_id: t.grow_bed_id, bed_name: t.bed_name, batch_id: t.batch_id, crop_type: t.crop_type });
+            }
+        }
+        res.json({ log: rows.map((r) => ({ ...r, targets: byLog.get(r.id) || [] })) });
     } catch (error) {
         console.error('Failed to load spray log:', error);
         res.status(500).json({ error: 'Failed to load spray log' });
@@ -231,14 +242,64 @@ router.post('/log', async (req, res) => {
             const [pr] = await pool.execute('SELECT product_name FROM spray_products WHERE id = ?', [b.product_id]);
             productName = pr.length ? pr[0].product_name : null;
         }
+
+        // Scope: a set of beds, or the whole system (all beds). Validate the given
+        // bed ids belong to this system.
+        const reqBedIds = Array.isArray(b.bed_ids) ? b.bed_ids.map(Number).filter(Boolean) : [];
+        const wholeSystem = reqBedIds.length === 0;
+        const [systemBeds] = await pool.execute('SELECT id, bed_name FROM grow_beds WHERE system_id = ?', [b.system_id]);
+        const bedName = new Map(systemBeds.map((x) => [x.id, x.bed_name]));
+        const targetBedIds = wholeSystem ? systemBeds.map((x) => x.id) : reqBedIds.filter((id) => bedName.has(id));
+
+        // Active batches (planted > harvested) in the targeted beds — snapshotted.
+        let batchRows = [];
+        if (targetBedIds.length) {
+            const [rows] = await pool.query(
+                `SELECT gb.id AS grow_bed_id, gb.bed_name, pg.batch_id, MAX(pg.crop_type) AS crop_type,
+                        COALESCE(SUM(CASE WHEN COALESCE(pg.plants_harvested,0) > 0 THEN 0 ELSE COALESCE(NULLIF(pg.new_seedlings,0), pg.count, 0) END), 0) AS planted,
+                        COALESCE(SUM(pg.plants_harvested), 0) AS harvested
+                 FROM plant_growth pg JOIN grow_beds gb ON gb.id = pg.grow_bed_id
+                 WHERE pg.system_id = ? AND pg.grow_bed_id IN (?) AND pg.batch_id IS NOT NULL AND pg.batch_id <> ''
+                 GROUP BY pg.batch_id, gb.id, gb.bed_name
+                 HAVING planted > harvested`,
+                [b.system_id, targetBedIds]
+            );
+            batchRows = rows;
+        }
+
+        const num = (v) => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Number(v));
         const eff = b.effectiveness ? Math.max(1, Math.min(5, Number(b.effectiveness))) : null;
+        // Keep the single grow_bed_id/bed_name for a quick summary when one bed.
+        const singleBed = !wholeSystem && targetBedIds.length === 1 ? targetBedIds[0] : null;
         const [result] = await pool.execute(
-            `INSERT INTO spray_log (system_id, plan_id, product_id, product_name, application_date, rate, amount, area, dilution, weather, effectiveness, operator, notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [b.system_id, b.plan_id || null, b.product_id || null, productName, b.application_date, b.rate || null, b.amount || null,
-             b.area || null, b.dilution || null, b.weather || null, eff, b.operator || null, b.notes || null]
+            `INSERT INTO spray_log (system_id, plan_id, product_id, product_name, grow_bed_id, bed_name, scope, application_date, rate,
+                                    quantity, quantity_unit, dilution_value, dilution_unit, weather, effectiveness, operator, notes)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [b.system_id, b.plan_id || null, b.product_id || null, productName, singleBed, singleBed ? bedName.get(singleBed) : null,
+             wholeSystem ? 'system' : 'beds', b.application_date, b.rate || null,
+             num(b.quantity), b.quantity_unit || null, num(b.dilution_value), b.dilution_unit || null,
+             b.weather || null, eff, b.operator || null, b.notes || null]
         );
-        res.json({ success: true, id: result.insertId });
+        const logId = result.insertId;
+
+        // One target row per bed sprayed, expanded to the batches growing in it
+        // (a bed with no active planting still records the bed).
+        const batchesByBed = new Map();
+        for (const r of batchRows) {
+            if (!batchesByBed.has(r.grow_bed_id)) batchesByBed.set(r.grow_bed_id, []);
+            batchesByBed.get(r.grow_bed_id).push(r);
+        }
+        for (const bedId of targetBedIds) {
+            const batches = batchesByBed.get(bedId) || [];
+            if (batches.length === 0) {
+                await pool.execute('INSERT INTO spray_log_targets (log_id, grow_bed_id, bed_name, batch_id, crop_type) VALUES (?, ?, ?, NULL, NULL)', [logId, bedId, bedName.get(bedId) || null]);
+            } else {
+                for (const bt of batches) {
+                    await pool.execute('INSERT INTO spray_log_targets (log_id, grow_bed_id, bed_name, batch_id, crop_type) VALUES (?, ?, ?, ?, ?)', [logId, bedId, bt.bed_name, bt.batch_id, bt.crop_type]);
+                }
+            }
+        }
+        res.json({ success: true, id: logId, beds: targetBedIds.length, batches: batchRows.length });
     } catch (error) {
         console.error('Failed to record spray application:', error);
         res.status(500).json({ error: 'Failed to record application' });
@@ -323,7 +384,11 @@ router.get('/calendar/:systemId', async (req, res) => {
             for (const plan of plans) {
                 for (const p of planProds[plan.id]) {
                     if (!p.days.includes(dow)) continue;
-                    items.push({ plan_name: plan.name, product_name: p.product_name, category: p.category, fish_safety: p.fish_safety, applied: appliedSet.has(`${date}|${p.product_id}`) });
+                    items.push({
+                        plan_id: plan.id, plan_name: plan.name, product_id: p.product_id, product_name: p.product_name,
+                        category: p.category, fish_safety: p.fish_safety, rate: p.rate || p.default_rate,
+                        applied: appliedSet.has(`${date}|${p.product_id}`),
+                    });
                 }
             }
             if (items.length) days[date] = items;
