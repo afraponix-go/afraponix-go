@@ -163,13 +163,29 @@ class SQLiteDemoImporter {
             console.log('Step 3: Importing grow beds...');
             const growBeds = await this.querySQLite('SELECT * FROM grow_beds ORDER BY bed_number');
             
+            // Water-holding volume, matching the app's bedMath so demo beds behave
+            // like ones configured in-app: area beds hold area×height of water (media
+            // only ~40%); NFT/vertical hold their reservoir (their water sits in the
+            // shared sump, not the bed). The SQLite volume_liters is geometric, which
+            // overstates media/tower/NFT.
+            const bedWaterLiters = (bed) => {
+                const num = (v) => Number(v) || 0;
+                const t = String(bed.bed_type || '').toLowerCase().trim();
+                const norm = ({ deep_water_culture: 'dwc', raft: 'dwc', 'flood-drain': 'media', flood_drain: 'media', ebb_flow: 'media', tower: 'vertical' })[t] || t;
+                if (norm === 'nft' || norm === 'vertical') {
+                    return num(bed.reservoir_volume_liters) || num(bed.reservoir_volume);
+                }
+                const frac = norm === 'media' ? 0.4 : 1.0;
+                return Math.round(num(bed.length_meters) * num(bed.width_meters) * num(bed.height_meters) * 1000 * frac);
+            };
+
             for (const bed of growBeds) {
                 await this.mysql.execute(`
-                    INSERT INTO grow_beds (system_id, bed_number, bed_type, bed_name, volume_liters, area_m2, 
-                                         length_meters, width_meters, height_meters, plant_capacity, vertical_count, 
+                    INSERT INTO grow_beds (system_id, bed_number, bed_type, bed_name, volume_liters, area_m2,
+                                         length_meters, width_meters, height_meters, plant_capacity, vertical_count,
                                          plants_per_vertical, equivalent_m2, reservoir_volume, reservoir_volume_liters)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                `, [newSystemId, bed.bed_number, bed.bed_type, bed.bed_name, bed.volume_liters, bed.area_m2,
+                `, [newSystemId, bed.bed_number, bed.bed_type, bed.bed_name, bedWaterLiters(bed), bed.area_m2,
                     bed.length_meters, bed.width_meters, bed.height_meters, bed.plant_capacity, bed.vertical_count,
                     bed.plants_per_vertical, bed.equivalent_m2, bed.reservoir_volume, bed.reservoir_volume_liters]);
             }

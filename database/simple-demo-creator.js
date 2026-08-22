@@ -31,12 +31,14 @@ class SimpleDemoCreator {
             );
 
             // Create two grow beds (equivalent_m2 is NOT NULL; for a media bed it
-            // equals the grow area)
+            // equals the grow area). volume_liters is the WATER volume — media beds
+            // hold ~40% of their geometric volume, matching the app's bedMath
+            // (2.0 m² × 0.3 m × 1000 × 0.4 = 240 L; × 0.4 m = 320 L).
             await this.mysql.execute(
                 `INSERT INTO grow_beds (system_id, bed_number, bed_name, bed_type, area_m2, equivalent_m2, height_meters, volume_liters)
                  VALUES
-                 (?, 1, 'Grow Bed 1', 'media', 2.0, 2.0, 0.3, 600),
-                 (?, 2, 'Grow Bed 2', 'media', 2.0, 2.0, 0.4, 800)`,
+                 (?, 1, 'Grow Bed 1', 'media', 2.0, 2.0, 0.3, 240),
+                 (?, 2, 'Grow Bed 2', 'media', 2.0, 2.0, 0.4, 320)`,
                 [systemId, systemId]
             );
 
