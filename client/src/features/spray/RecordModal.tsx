@@ -1,9 +1,9 @@
-import { useState, type FormEvent } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMemo, useState, type FormEvent } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
-import { recordApplication, type LogInput } from './api'
-import { todayISO } from './shared'
+import { recordApplication, fetchProducts, type LogInput } from './api'
+import { CATEGORY_LABEL, todayISO } from './shared'
 import './spray.css'
 
 const WEATHER = ['', 'Sunny', 'Cloudy', 'Overcast', 'Windy', 'Calm', 'Morning', 'Evening']
@@ -18,7 +18,10 @@ export type RecordPrefill = {
 
 export function RecordModal({ systemId, prefill, onClose }: { systemId: string; prefill?: RecordPrefill; onClose: () => void }) {
   const qc = useQueryClient()
+  const { data: products = [] } = useQuery({ queryKey: ['spray-products'], queryFn: fetchProducts })
+
   const [date, setDate] = useState(todayISO())
+  const [productId, setProductId] = useState<number | null>(prefill?.product_id ?? null)
   const [productName, setProductName] = useState(prefill?.product_name ?? '')
   const [amount, setAmount] = useState('')
   const [area, setArea] = useState('')
@@ -29,13 +32,33 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
 
+  const grouped = useMemo(() => {
+    const byCat: Record<string, typeof products> = {}
+    for (const p of products) (byCat[p.category] ??= []).push(p)
+    return byCat
+  }, [products])
+
+  // Pick a catalogue product → fill the name and auto-populate its recommended dose.
+  const onSelectProduct = (val: string) => {
+    if (val === 'other' || val === '') {
+      setProductId(null)
+      return
+    }
+    const p = products.find((x) => x.id === Number(val))
+    if (!p) return
+    setProductId(p.id)
+    setProductName(p.product_name)
+    if (p.default_rate) setRate(p.default_rate)
+  }
+  const selValue = productId != null ? String(productId) : (productName ? 'other' : '')
+
   const mut = useMutation({
     mutationFn: () => {
       const input: LogInput = {
         system_id: systemId,
         plan_id: prefill?.plan_id ?? null,
-        product_id: prefill?.product_id ?? null,
-        product_name: productName.trim() || prefill?.product_name || null,
+        product_id: productId,
+        product_name: productName.trim() || null,
         application_date: date,
         rate: rate.trim() || null,
         amount: amount.trim() || null,
@@ -60,7 +83,7 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
     e.preventDefault()
     setError(null)
     if (!date) return setError('Enter the application date.')
-    if (!productName.trim() && !prefill?.product_name) return setError('Enter the product used.')
+    if (!productName.trim()) return setError('Choose or name the product used.')
     mut.mutate()
   }
 
@@ -74,18 +97,32 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
             <input id="rec-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="rec-product">Product</label>
-            <input id="rec-product" type="text" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Product used" />
+            <label htmlFor="rec-prodsel">Product</label>
+            <select id="rec-prodsel" value={selValue} onChange={(e) => onSelectProduct(e.target.value)}>
+              <option value="">Select a product…</option>
+              {Object.keys(grouped).sort().map((cat) => (
+                <optgroup key={cat} label={CATEGORY_LABEL[cat] ?? cat}>
+                  {grouped[cat].map((p) => <option key={p.id} value={p.id}>{p.product_name}</option>)}
+                </optgroup>
+              ))}
+              <option value="other">Other (type below)</option>
+            </select>
           </div>
         </div>
+        {selValue === 'other' && (
+          <div className="field">
+            <label htmlFor="rec-product">Product name</label>
+            <input id="rec-product" type="text" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Product used" />
+          </div>
+        )}
         <div className="field-row">
+          <div className="field">
+            <label htmlFor="rec-rate">Rate <span className="unit-hint">· recommended dose</span></label>
+            <input id="rec-rate" type="text" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="e.g. 100 ml / 10L" />
+          </div>
           <div className="field">
             <label htmlFor="rec-amount">Amount used</label>
             <input id="rec-amount" type="text" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 200 ml" />
-          </div>
-          <div className="field">
-            <label htmlFor="rec-rate">Rate</label>
-            <input id="rec-rate" type="text" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="e.g. 100 ml / 10L" />
           </div>
         </div>
         <div className="field-row">

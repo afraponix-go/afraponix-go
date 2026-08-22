@@ -40,11 +40,12 @@ export function ProgrammeModal({ systemId, programme, onClose }: { systemId: str
     return byCat
   }, [products, filter])
 
-  const toggle = (productId: number, category: string) => {
+  const toggle = (p: { id: number; category: string; default_rate: string | null }) => {
     setSel((s) => {
       const next = { ...s }
-      if (next[productId]) delete next[productId]
-      else next[productId] = { days: (defaultDays[category] ?? 'mon').split(','), rate: '' }
+      if (next[p.id]) delete next[p.id]
+      // Pre-fill the recommended dose from the catalogue (editable).
+      else next[p.id] = { days: (defaultDays[p.category] ?? 'mon').split(','), rate: p.default_rate ?? '' }
       return next
     })
   }
@@ -108,7 +109,7 @@ export function ProgrammeModal({ systemId, programme, onClose }: { systemId: str
                 return (
                   <div key={p.id} className={`pm-prod ${on ? 'on' : ''}`}>
                     <label className="pm-prod-main">
-                      <input type="checkbox" checked={on} onChange={() => toggle(p.id, p.category)} />
+                      <input type="checkbox" checked={on} onChange={() => toggle(p)} />
                       <span className="pm-prod-name">{p.product_name}</span>
                       <FishBadge safety={p.fish_safety} note={p.fish_note} />
                     </label>
