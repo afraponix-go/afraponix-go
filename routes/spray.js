@@ -306,6 +306,26 @@ router.post('/log', async (req, res) => {
     }
 });
 
+// Update the effectiveness rating (assessed after the spray, not at logging) and
+// optionally the notes — tracked separately from the application record.
+router.put('/log/:id', async (req, res) => {
+    try {
+        const pool = getDatabase();
+        const [rows] = await pool.execute(
+            'SELECT l.id FROM spray_log l JOIN systems s ON s.id = l.system_id WHERE l.id = ? AND s.user_id = ?',
+            [req.params.id, req.user.userId]
+        );
+        if (rows.length === 0) return res.status(404).json({ error: 'Not found or access denied' });
+        const b = req.body || {};
+        const eff = b.effectiveness == null || b.effectiveness === '' ? null : Math.max(1, Math.min(5, Number(b.effectiveness)));
+        await pool.execute('UPDATE spray_log SET effectiveness = ? WHERE id = ?', [eff, req.params.id]);
+        res.json({ success: true, effectiveness: eff });
+    } catch (error) {
+        console.error('Failed to update spray log:', error);
+        res.status(500).json({ error: 'Failed to update spray log' });
+    }
+});
+
 router.delete('/log/:id', async (req, res) => {
     try {
         const pool = getDatabase();

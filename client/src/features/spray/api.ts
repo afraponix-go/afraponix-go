@@ -137,6 +137,7 @@ export type LogInput = {
 }
 export const recordApplication = (input: LogInput) => api('/spray/log', { method: 'POST', body: input })
 export const deleteLog = (id: number) => api(`/spray/log/${id}`, { method: 'DELETE' })
+export const rateLogEffectiveness = (id: number, effectiveness: number | null) => api(`/spray/log/${id}`, { method: 'PUT', body: { effectiveness } })
 export const setProgrammeStatus = (id: number, status: 'active' | 'paused') => api(`/spray/programmes/${id}`, { method: 'PUT', body: { status } })
 
 export async function fetchDue(systemId: string, date?: string): Promise<{ date: string; due: DueItem[] }> {

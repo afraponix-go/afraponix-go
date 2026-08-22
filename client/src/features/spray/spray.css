@@ -122,3 +122,6 @@
 .spray-beds { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 12px; padding-left: 24px; }
 .spray-scope-empty { color: var(--ink-faint); font-size: 13px; padding-left: 24px; }
 .spray-scope-hint { display: block; margin-top: 6px; }
+
+.spray-rec-hint { color: var(--ink-faint); font-size: 12px; margin: 2px 0 0; }
+.log-eff-select { font: inherit; font-size: 12px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }

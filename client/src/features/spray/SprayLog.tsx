@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
 import { Modal } from '../../components/Modal'
-import { fetchLog, deleteLog, type LogEntry } from './api'
+import { fetchLog, deleteLog, rateLogEffectiveness, type LogEntry } from './api'
 import { RecordModal } from './RecordModal'
 import './spray.css'
 
@@ -15,6 +15,10 @@ export function SprayLog() {
   const del = useMutation({
     mutationFn: (l: LogEntry) => deleteLog(l.id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['spray-log'] }); qc.invalidateQueries({ queryKey: ['spray-due'] }); qc.invalidateQueries({ queryKey: ['spray-calendar'] }); setConfirmDel(null) },
+  })
+  const rate = useMutation({
+    mutationFn: ({ id, eff }: { id: number; eff: number | null }) => rateLogEffectiveness(id, eff),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['spray-log'] }),
   })
 
   if (!activeId) return <div className="empty">Select a system to see the spray log.</div>
@@ -32,7 +36,7 @@ export function SprayLog() {
       ) : (
         <div className="log-table-wrap">
           <table className="log-table">
-            <thead><tr><th>Date</th><th>Product</th><th>Applied to</th><th>Quantity</th><th>Dilution</th><th>Conditions</th><th className="r">Effect.</th><th></th></tr></thead>
+            <thead><tr><th>Date</th><th>Product</th><th>Applied to</th><th>Quantity</th><th>Dilution</th><th>Conditions</th><th>Effectiveness</th><th></th></tr></thead>
             <tbody>
               {log.map((l) => {
                 const qty = l.quantity != null && l.quantity !== '' ? `${Number(l.quantity)} ${l.quantity_unit ?? ''}`.trim() : '—'
@@ -52,7 +56,12 @@ export function SprayLog() {
                     <td>{qty}</td>
                     <td>{dil}</td>
                     <td>{l.weather ?? '—'}</td>
-                    <td className="r">{l.effectiveness != null ? `${l.effectiveness}/5` : '—'}</td>
+                    <td>
+                      <select className="log-eff-select" value={l.effectiveness ?? ''} disabled={rate.isPending} onChange={(e) => rate.mutate({ id: l.id, eff: e.target.value ? Number(e.target.value) : null })}>
+                        <option value="">Rate…</option>
+                        {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}/5</option>)}
+                      </select>
+                    </td>
                     <td className="r"><button className="link-btn danger" onClick={() => setConfirmDel(l)}>Delete</button></td>
                   </tr>
                 )

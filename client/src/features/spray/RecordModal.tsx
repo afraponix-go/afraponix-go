@@ -49,7 +49,6 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
   const [dilValue, setDilValue] = useState(initDil ? String(initDil.value) : '')
   const [dilUnit, setDilUnit] = useState(initDil?.unit && DIL_UNITS.includes(initDil.unit) ? initDil.unit : 'ml/10L')
   const [weather, setWeather] = useState('')
-  const [effectiveness, setEffectiveness] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -95,7 +94,6 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
         dilution_value: dilValue ? Number(dilValue) : null,
         dilution_unit: dilValue ? dilUnit : null,
         weather: weather || null,
-        effectiveness: effectiveness ? Number(effectiveness) : null,
         notes: notes.trim() || null,
       }
       return recordApplication(input)
@@ -185,7 +183,7 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
             </div>
           </div>
           <div className="field">
-            <label htmlFor="rec-dil">Dilution <span className="unit-hint">{rate ? `· rec. ${rate}` : ''}</span></label>
+            <label htmlFor="rec-dil">Dilution</label>
             <div className="spray-numunit">
               <input id="rec-dil" type="number" min="0" step="any" inputMode="decimal" value={dilValue} onChange={(e) => setDilValue(e.target.value)} placeholder="e.g. 100" />
               <select value={dilUnit} onChange={(e) => setDilUnit(e.target.value)}>
@@ -194,6 +192,7 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
             </div>
           </div>
         </div>
+        {rate && <p className="hint spray-rec-hint">Recommended dose: {rate}</p>}
 
         <div className="field-row">
           <div className="field">
@@ -203,14 +202,11 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
             </select>
           </div>
           <div className="field">
-            <label htmlFor="rec-eff">Effectiveness (1–5)</label>
-            <input id="rec-eff" type="number" min="1" max="5" step="1" value={effectiveness} onChange={(e) => setEffectiveness(e.target.value)} placeholder="—" />
+            <label htmlFor="rec-notes">Notes</label>
+            <input id="rec-notes" type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="optional" />
           </div>
         </div>
-        <div className="field">
-          <label htmlFor="rec-notes">Notes</label>
-          <textarea id="rec-notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </div>
+        <p className="hint spray-rec-hint">Effectiveness is rated later, from the log.</p>
         <div className="mform-actions">
           <button type="button" className="ghost" onClick={onClose}>Cancel</button>
           <button type="submit" className="btn" disabled={mut.isPending}>{mut.isPending ? 'Saving…' : 'Record'}</button>
