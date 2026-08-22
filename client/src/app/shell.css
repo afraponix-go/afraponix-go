@@ -280,6 +280,24 @@
   border-bottom: 1px solid var(--line);
   margin-bottom: 22px;
   overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+  -webkit-overflow-scrolling: touch;
+}
+.subtabs::-webkit-scrollbar {
+  display: none; /* Chrome/Safari — clean strip, scroll by swipe */
+}
+/* Fade the overflowing edge(s) to signal the strip scrolls horizontally. */
+.subtabs[data-fade='right'] {
+  -webkit-mask-image: linear-gradient(to right, #000 82%, transparent);
+  mask-image: linear-gradient(to right, #000 82%, transparent);
+}
+.subtabs[data-fade='left'] {
+  -webkit-mask-image: linear-gradient(to left, #000 82%, transparent);
+  mask-image: linear-gradient(to left, #000 82%, transparent);
+}
+.subtabs[data-fade='both'] {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
 }
 .subtabs a {
   padding: 10px 14px;
@@ -289,6 +307,7 @@
   font-size: 14px;
   border-bottom: 2px solid transparent;
   white-space: nowrap;
+  flex: 0 0 auto;
 }
 .subtabs a:hover {
   color: var(--ink);
