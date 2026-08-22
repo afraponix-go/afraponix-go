@@ -76,6 +76,8 @@ const STEPS = [
   { type: 'sql', file: 'database/migrations/2026-08-system-crop-targets.sql', label: 'Per-system crop target overrides table' },
   { type: 'node', file: 'database/migrations/2026-08-cherry-tomatoes-crop.js', label: 'Ensure cherry_tomatoes crop + targets' },
   { type: 'sql', file: 'database/migrations/2026-08-system-target-crop.sql', label: 'Per-system dashboard reference crop table' },
+  { type: 'sql', file: 'database/migrations/2026-08-spray-tables.sql', label: 'Spray programmes v2 tables (catalog, plans, log)' },
+  { type: 'node', file: 'database/migrations/2026-08-spray-catalog-seed.js', label: 'Spray product catalog (BCF, fish-safety)' },
   { type: 'node', file: 'database/migrations/2026-07-backfill-nutrient-readings.js', label: 'Backfill nutrient readings' },
   // One-time cleanup of NULL-user seed variety rows that accumulated when the
   // reference-data step re-ran on every deploy (before migration tracking).

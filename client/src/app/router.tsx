@@ -26,6 +26,10 @@ import { Crops } from '../features/plants/CropsPage'
 import { FishStockingCalculator } from '../features/calculator/FishStockingCalculator'
 import { NutrientDosingCalculator } from '../features/calculator/NutrientDosingCalculator'
 import { OperationsPage } from '../features/operations/OperationsPage'
+import { Programmes } from '../features/spray/Programmes'
+import { SprayCalendar } from '../features/spray/SprayCalendar'
+import { SprayLog } from '../features/spray/SprayLog'
+import { SprayCatalog } from '../features/spray/SprayCatalog'
 import { ImportExportPage } from '../features/importexport/ImportExportPage'
 import { SettingsLayout } from '../features/settings/SettingsLayout'
 import { GeneralSettings } from '../features/settings/GeneralSettings'
@@ -62,6 +66,12 @@ const PLANTS_TABS = [
   { to: '/plants/harvest', label: 'Harvest' },
   { to: '/plants/beds', label: 'Beds' },
   { to: '/plants/crops', label: 'Crops' },
+]
+const SPRAY_TABS = [
+  { to: '/spray', label: 'Programmes', end: true },
+  { to: '/spray/calendar', label: 'Calendar' },
+  { to: '/spray/log', label: 'Log' },
+  { to: '/spray/catalog', label: 'Catalogue' },
 ]
 
 export const router = createBrowserRouter([
@@ -129,6 +139,17 @@ export const router = createBrowserRouter([
               { path: 'harvest', element: <Harvest /> },
               { path: 'beds', element: <BedsAllocation /> },
               { path: 'crops', element: <Crops /> },
+            ],
+          },
+          // Spray (Programmes · Calendar · Log · Catalogue)
+          {
+            path: 'spray',
+            element: <SubTabLayout items={SPRAY_TABS} />,
+            children: [
+              { index: true, element: <Programmes /> },
+              { path: 'calendar', element: <SprayCalendar /> },
+              { path: 'log', element: <SprayLog /> },
+              { path: 'catalog', element: <SprayCatalog /> },
             ],
           },
           // Settings (grow-bed config lives under Plants → Beds & Allocation)

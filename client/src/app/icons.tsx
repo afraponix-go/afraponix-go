@@ -53,6 +53,16 @@ export const PlantIcon = svg(
   </>,
 )
 
+export const SprayIcon = svg(
+  <>
+    <path d="M9 4h4v4H9z" />
+    <path d="M9 8h4l1 3v9a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-9l1-3Z" />
+    <path d="M13 5h3" />
+    <path d="M13 3h2" />
+    <path d="M18 6l1-1M18 9l1 0M18 12l1 1" />
+  </>,
+)
+
 export const SettingsIcon = svg(
   <>
     <circle cx="12" cy="12" r="3" />

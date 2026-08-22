@@ -4,7 +4,7 @@ import { useAuth } from '../features/auth/AuthContext'
 import { useSystems } from '../features/systems/SystemContext'
 import { isOwnedSystem } from '../features/systems/api'
 import { AddSystemModal } from '../features/systems/AddSystemModal'
-import { DashboardIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SettingsIcon } from './icons'
+import { DashboardIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SprayIcon, SettingsIcon } from './icons'
 import { Brand } from '../components/Brand'
 import { ThemeToggle } from './ThemeToggle'
 import './shell.css'
@@ -16,6 +16,7 @@ const TABS = [
   { to: '/data', label: 'Data Capture', Icon: DataCaptureIcon },
   { to: '/fish', label: 'Fish', Icon: FishIcon },
   { to: '/plants', label: 'Plants', Icon: PlantIcon },
+  { to: '/spray', label: 'Spray', Icon: SprayIcon },
   { to: '/settings', label: 'Settings', Icon: SettingsIcon },
 ]
 
