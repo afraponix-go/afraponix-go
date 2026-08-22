@@ -140,3 +140,20 @@
   color: var(--ok, #2e9e5b);
   font-weight: 600;
 }
+
+.nd-vol-hint {
+  display: block;
+  margin-top: 6px;
+}
+.nd-vol-reset {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+}
+.nd-vol-reset:hover {
+  text-decoration: underline;
+}

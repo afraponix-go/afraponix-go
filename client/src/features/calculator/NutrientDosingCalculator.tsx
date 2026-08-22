@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
+import { fetchFishInventory } from '../fish/api'
+import { fetchGrowBedConfigs } from '../growbeds/api'
 import { fetchCrops, fetchRanges, fetchLatestLevels, computeDoses, DOSING_NUTRIENTS } from './nutrientDosing'
 import '../dashboard/dashboard.css'
 import './calculator.css'
@@ -16,6 +18,27 @@ export function NutrientDosingCalculator() {
   const cropsQ = useQuery({ queryKey: ['ck-crops'], queryFn: fetchCrops })
   const rangesQ = useQuery({ queryKey: ['ck-ranges', cropCode], queryFn: () => fetchRanges(cropCode), enabled: !!cropCode })
   const latestQ = useQuery({ queryKey: ['nutrients-latest', activeId], queryFn: () => fetchLatestLevels(activeId as string), enabled: !!activeId })
+  const tanksQ = useQuery({ queryKey: ['fish-inventory', activeId], queryFn: () => fetchFishInventory(activeId as string), enabled: !!activeId })
+  const bedsQ = useQuery({ queryKey: ['grow-bed-configs', activeId], queryFn: () => fetchGrowBedConfigs(activeId as string), enabled: !!activeId })
+
+  // The system's water volume: fish tanks + grow beds (bed volumes already
+  // account for the media water fraction). Used to pre-fill the reservoir field.
+  const systemVolume = useMemo(() => {
+    const tankL = (tanksQ.data ?? []).reduce(
+      (s, t) => s + (t.size_m3 && t.size_m3 > 0 ? t.size_m3 * 1000 : t.volume_liters ?? 0),
+      0,
+    )
+    const bedL = (bedsQ.data ?? []).reduce((s, b) => s + (b.volume_liters ?? 0), 0)
+    return Math.round(tankL + bedL)
+  }, [tanksQ.data, bedsQ.data])
+
+  // Pre-fill the reservoir from the system, until the user edits it. Re-fills
+  // when the active system changes.
+  const [volumeTouched, setVolumeTouched] = useState(false)
+  useEffect(() => setVolumeTouched(false), [activeId])
+  useEffect(() => {
+    if (!volumeTouched && systemVolume > 0) setVolume(String(systemVolume))
+  }, [systemVolume, volumeTouched])
 
   const latest = latestQ.data ?? {}
   const crop = cropsQ.data?.find((c) => c.code === cropCode)
@@ -55,7 +78,18 @@ export function NutrientDosingCalculator() {
           </div>
           <div className="field">
             <label htmlFor="nd-vol">Reservoir volume <span className="hint">(litres)</span></label>
-            <input id="nd-vol" type="number" min="0" step="10" inputMode="decimal" value={volume} onChange={(e) => setVolume(e.target.value)} placeholder="e.g. 2000" />
+            <input id="nd-vol" type="number" min="0" step="10" inputMode="decimal" value={volume} onChange={(e) => { setVolume(e.target.value); setVolumeTouched(true) }} placeholder="e.g. 2000" />
+            {systemVolume > 0 && (
+              <span className="hint nd-vol-hint">
+                {volumeTouched && Number(volume) !== systemVolume ? (
+                  <button type="button" className="nd-vol-reset" onClick={() => { setVolume(String(systemVolume)); setVolumeTouched(false) }}>
+                    ↺ Use system volume ({systemVolume.toLocaleString()} L)
+                  </button>
+                ) : (
+                  <>From your tanks + grow beds ({systemVolume.toLocaleString()} L)</>
+                )}
+              </span>
+            )}
           </div>
 
           {crop && (crop.default_ec_min || crop.default_ph_min) && (
