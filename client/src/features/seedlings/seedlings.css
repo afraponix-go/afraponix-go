@@ -50,3 +50,15 @@
 .tray-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px; }
 .tray-total { font-size: 13px; color: var(--ink-soft); }
 .tray-total b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* Grouped sections + collapsible transplanted */
+.seedling-section { margin-bottom: 6px; }
+.seedling-section-head { display: flex; align-items: baseline; gap: 8px; margin: 22px 0 12px; }
+.seedling-section-head h3 { margin: 0; font-size: 14px; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-soft); }
+.seedling-section-head.ready h3 { color: var(--warn); }
+.seedling-section-count { font-size: 12px; font-weight: 700; color: var(--ink-faint); background: var(--surface-2); border-radius: 999px; padding: 1px 8px; }
+.seedling-section-head.ready .seedling-section-count { color: var(--warn); background: var(--warn-wash); }
+.seedling-done-toggle { display: inline-flex; align-items: center; gap: 8px; margin: 22px 0 0; font: inherit; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-soft); background: none; border: 0; cursor: pointer; padding: 0; }
+.seedling-done-toggle:hover { color: var(--ink); }
+.seedling-chev { display: inline-block; transition: transform .15s; font-size: 12px; }
+.seedling-chev.open { transform: rotate(90deg); }

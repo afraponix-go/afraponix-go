@@ -24,6 +24,7 @@ export function Seedlings() {
   const [germ, setGerm] = useState<Seedling | null>(null)
   const [transplant, setTransplant] = useState<Seedling | null>(null)
   const [confirmDel, setConfirmDel] = useState<Seedling | null>(null)
+  const [showDone, setShowDone] = useState(false)
 
   const { data: seedlings = [], isLoading } = useQuery({ queryKey: ['seedlings', activeId], queryFn: () => fetchSeedlings(activeId as string), enabled: !!activeId })
   const del = useMutation({
@@ -36,7 +37,52 @@ export function Seedlings() {
   const active = seedlings.filter((s) => s.status !== 'transplanted')
   const germRates = seedlings.map(germPct).filter((p): p is number => p != null)
   const avgGerm = germRates.length ? Math.round((germRates.reduce((a, b) => a + b, 0) / germRates.length) * 10) / 10 : null
-  const readyCount = active.filter((s) => (s.days_to_transplant_remaining ?? 1) <= 0).length
+
+  const rem = (s: Seedling) => s.days_to_transplant_remaining ?? 999
+  const ready = active.filter((s) => rem(s) <= 0).sort((a, b) => rem(a) - rem(b))
+  const nursery = active.filter((s) => rem(s) > 0).sort((a, b) => rem(a) - rem(b))
+  const transplanted = seedlings.filter((s) => s.status === 'transplanted').sort((a, b) => (b.transplant_date ?? '').localeCompare(a.transplant_date ?? ''))
+
+  const card = (s: Seedling) => {
+    const pct = germPct(s)
+    const rd = readiness(s)
+    return (
+      <div key={s.id} className={`seedling-card ${s.status === 'transplanted' ? 'done' : ''}`}>
+        <div className="seedling-card-head">
+          <span className="seedling-name">{s.crop_name ?? 'Crop'}{s.seed_variety ? ` · ${s.seed_variety}` : ''}</span>
+          <span className={`seedling-badge st-${s.status}`}>{STATUS_LABEL[s.status] ?? s.status}</span>
+        </div>
+        <div className="seedling-meta">Sown {s.sow_date} · {
+          s.tray_groups.length === 1
+            ? `${s.tray_groups[0].trays} tray${s.tray_groups[0].trays === 1 ? '' : 's'} × ${s.tray_groups[0].cells}`
+            : s.tray_groups.map((g) => `${g.trays}×${g.cells}`).join(' + ')
+        } = <b>{s.total_sown.toLocaleString()}</b></div>
+        <div className="seedling-facts">
+          <div className="seedling-fact">
+            <span className="k">Germination</span>
+            <span className="v">{pct != null ? `${pct}%` : '—'}{s.actual_germ_days != null ? ` · ${s.actual_germ_days}d actual` : ''}{s.predicted_germ_days != null ? ` / ${s.predicted_germ_days}d pred.` : ''}</span>
+          </div>
+          <div className="seedling-fact">
+            <span className="k">Transplant</span>
+            <span className="v">
+              {s.status === 'transplanted'
+                ? `${(s.transplanted_count ?? 0).toLocaleString()} on ${s.transplant_date}${s.actual_transplant_days != null ? ` · ${s.actual_transplant_days}d` : ''}`
+                : s.predicted_transplant_date ? `by ${s.predicted_transplant_date}` : '—'}
+            </span>
+          </div>
+        </div>
+        {rd && <div className={`seedling-ready ${rd.cls}`}>{rd.text}</div>}
+        <div className="seedling-actions">
+          {s.status !== 'transplanted' && <button className="row-btn" onClick={() => setGerm(s)}>{s.germinated_count != null ? 'Edit germination' : 'Record germination'}</button>}
+          {s.status !== 'transplanted' && <button className="row-btn" onClick={() => setTransplant(s)}>Transplant</button>}
+          <span className="seedling-links">
+            <button className="link-btn" onClick={() => setSow({ seedling: s })}>Edit</button>
+            <button className="link-btn danger" onClick={() => setConfirmDel(s)}>Delete</button>
+          </span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -50,7 +96,7 @@ export function Seedlings() {
         <div className="seedling-summary">
           <div className="seedling-stat"><b>{active.length}</b><span>in nursery</span></div>
           <div className="seedling-stat"><b>{avgGerm != null ? `${avgGerm}%` : '—'}</b><span>avg germination</span></div>
-          <div className="seedling-stat"><b>{readyCount}</b><span>ready to transplant</span></div>
+          <div className="seedling-stat"><b>{ready.length}</b><span>ready to transplant</span></div>
         </div>
       )}
 
@@ -59,52 +105,33 @@ export function Seedlings() {
       ) : seedlings.length === 0 ? (
         <div className="empty">No sowings yet. Add one to start tracking germination and transplant timing.</div>
       ) : (
-        <div className="seedling-cards">
-          {seedlings.map((s) => {
-            const pct = germPct(s)
-            const ready = readiness(s)
-            return (
-              <div key={s.id} className={`seedling-card ${s.status === 'transplanted' ? 'done' : ''}`}>
-                <div className="seedling-card-head">
-                  <span className="seedling-name">{s.crop_name ?? 'Crop'}{s.seed_variety ? ` · ${s.seed_variety}` : ''}</span>
-                  <span className={`seedling-badge st-${s.status}`}>{STATUS_LABEL[s.status] ?? s.status}</span>
-                </div>
+        <>
+          {ready.length > 0 && (
+            <section className="seedling-section">
+              <div className="seedling-section-head ready"><h3>Ready to transplant</h3><span className="seedling-section-count">{ready.length}</span></div>
+              <div className="seedling-cards">{ready.map(card)}</div>
+            </section>
+          )}
 
-                <div className="seedling-meta">Sown {s.sow_date} · {
-                  s.tray_groups.length === 1
-                    ? `${s.tray_groups[0].trays} tray${s.tray_groups[0].trays === 1 ? '' : 's'} × ${s.tray_groups[0].cells}`
-                    : s.tray_groups.map((g) => `${g.trays}×${g.cells}`).join(' + ')
-                } = <b>{s.total_sown.toLocaleString()}</b></div>
+          {nursery.length > 0 && (
+            <section className="seedling-section">
+              <div className="seedling-section-head"><h3>In nursery</h3><span className="seedling-section-count">{nursery.length}</span></div>
+              <div className="seedling-cards">{nursery.map(card)}</div>
+            </section>
+          )}
 
-                <div className="seedling-facts">
-                  <div className="seedling-fact">
-                    <span className="k">Germination</span>
-                    <span className="v">{pct != null ? `${pct}%` : '—'}{s.actual_germ_days != null ? ` · ${s.actual_germ_days}d actual` : ''}{s.predicted_germ_days != null ? ` / ${s.predicted_germ_days}d pred.` : ''}</span>
-                  </div>
-                  <div className="seedling-fact">
-                    <span className="k">Transplant</span>
-                    <span className="v">
-                      {s.status === 'transplanted'
-                        ? `${(s.transplanted_count ?? 0).toLocaleString()} on ${s.transplant_date}${s.actual_transplant_days != null ? ` · ${s.actual_transplant_days}d` : ''}`
-                        : s.predicted_transplant_date ? `by ${s.predicted_transplant_date}` : '—'}
-                    </span>
-                  </div>
-                </div>
+          {active.length === 0 && transplanted.length > 0 && <div className="empty">Nothing in the nursery — all sowings have been transplanted.</div>}
 
-                {ready && <div className={`seedling-ready ${ready.cls}`}>{ready.text}</div>}
-
-                <div className="seedling-actions">
-                  {s.status !== 'transplanted' && <button className="row-btn" onClick={() => setGerm(s)}>{s.germinated_count != null ? 'Edit germination' : 'Record germination'}</button>}
-                  {s.status !== 'transplanted' && <button className="row-btn" onClick={() => setTransplant(s)}>Transplant</button>}
-                  <span className="seedling-links">
-                    <button className="link-btn" onClick={() => setSow({ seedling: s })}>Edit</button>
-                    <button className="link-btn danger" onClick={() => setConfirmDel(s)}>Delete</button>
-                  </span>
-                </div>
-              </div>
-            )
-          })}
-        </div>
+          {transplanted.length > 0 && (
+            <section className="seedling-section">
+              <button type="button" className="seedling-done-toggle" onClick={() => setShowDone((v) => !v)} aria-expanded={showDone}>
+                <span className={`seedling-chev ${showDone ? 'open' : ''}`} aria-hidden>▸</span>
+                Transplanted <span className="seedling-section-count">{transplanted.length}</span>
+              </button>
+              {showDone && <div className="seedling-cards" style={{ marginTop: 12 }}>{transplanted.map(card)}</div>}
+            </section>
+          )}
+        </>
       )}
 
       {sow && activeId && <SowModal systemId={activeId} seedling={sow.seedling} onClose={() => setSow(null)} />}
