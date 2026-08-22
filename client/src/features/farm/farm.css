@@ -68,6 +68,19 @@
 }
 .farm-svg {
   display: block;
+  /* Scale to fit the container width when not zoomed in; height follows the
+     viewBox aspect ratio. Zoom > 1 lifts the cap (inline) so it overflow-scrolls. */
+  height: auto;
+}
+
+@media (max-width: 560px) {
+  /* Let the legend flow left instead of being pushed off the right edge. */
+  .farm-legend {
+    margin-left: 0;
+  }
+  .farm-toolbar {
+    gap: 12px;
+  }
 }
 
 .farm-node {

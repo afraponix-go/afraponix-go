@@ -204,7 +204,7 @@ export function FarmLayout() {
           <div className="empty">No fish tanks configured for this system yet.</div>
         ) : (
           <div className="farm-viewport" onMouseLeave={() => setHover(null)}>
-            <svg className="farm-svg" width={tankLayout.width * zoom} height={tankLayout.height * zoom} viewBox={`0 0 ${tankLayout.width} ${tankLayout.height}`} role="img" aria-label="Fish tank layout">
+            <svg className="farm-svg" width={tankLayout.width * zoom} height={tankLayout.height * zoom} viewBox={`0 0 ${tankLayout.width} ${tankLayout.height}`} preserveAspectRatio="xMinYMin meet" style={{ maxWidth: zoom <= 1 ? '100%' : 'none' }} role="img" aria-label="Fish tank layout">
               {tankLayout.nodes.map((n) => (
                 <g
                   key={`tank-${n.tank.fish_tank_id}`}
