@@ -415,3 +415,39 @@
   font-size: 13px;
   width: 150px;
 }
+
+/* Crop targets modal */
+.nd-stage {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.nd-stage button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 8px 18px;
+  cursor: pointer;
+}
+.nd-stage button + button { border-left: 1px solid var(--line); }
+.nd-stage button.active { background: var(--primary); color: #fff; }
+
+.ct-source { margin: 2px 0 10px; font-size: 13px; color: var(--ink-soft); }
+.ct-note-ok {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.ct-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }
+.ct-actions-right { display: flex; gap: 8px; margin-left: auto; }
+.ct-admin-hint { margin: 10px 0 0; font-size: 12px; color: var(--ink-faint); }
+.cc-targets-hint { margin: 2px 0 0; font-size: 12.5px; color: var(--ink-faint); }

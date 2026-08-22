@@ -13,6 +13,7 @@ import {
   type SeedVariety,
 } from './cropsAdmin'
 import { CustomCropModal } from './CustomCropModal'
+import { CropTargetsModal } from './CropTargetsModal'
 import '../dashboard/dashboard.css'
 import '../fish/fish.css'
 import './plants.css'
@@ -75,6 +76,7 @@ export function Crops() {
   const { activeId } = useSystems()
   const qc = useQueryClient()
   const [cropModal, setCropModal] = useState<{ crop?: CustomCrop } | null>(null)
+  const [targetsFor, setTargetsFor] = useState<{ code: string; name: string } | null>(null)
   const [confirmDel, setConfirmDel] = useState<CustomCrop | null>(null)
   const [search, setSearch] = useState('')
   const [addingFor, setAddingFor] = useState<string | null>(null)
@@ -124,6 +126,7 @@ export function Crops() {
               {e.category && <span className="crop-cat">{e.category}</span>}
               {e.customCrop && (
                 <span className="crop-card-actions">
+                  {activeId && <button className="link-btn" onClick={() => setTargetsFor({ code: e.customCrop!.crop_code || slug(e.customCrop!.crop_name), name: e.customCrop!.crop_name })}>Targets</button>}
                   <button className="link-btn" onClick={() => setCropModal({ crop: e.customCrop })}>Edit</button>
                   <button className="link-btn danger" onClick={() => setConfirmDel(e.customCrop!)}>Delete</button>
                 </span>
@@ -155,6 +158,7 @@ export function Crops() {
       </div>
 
       {cropModal && <CustomCropModal crop={cropModal.crop} onClose={() => setCropModal(null)} />}
+      {targetsFor && activeId && <CropTargetsModal systemId={activeId} cropCode={targetsFor.code} cropName={targetsFor.name} onClose={() => setTargetsFor(null)} />}
       {confirmDel && (
         <Modal title="Delete custom crop" onClose={() => setConfirmDel(null)}>
           <p style={{ marginTop: 0, color: 'var(--ink-soft)' }}>Delete <b>{confirmDel.crop_name}</b>? This can't be undone.</p>

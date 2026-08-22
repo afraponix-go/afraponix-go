@@ -9,15 +9,6 @@ const label = (s: string) => s.split('_').map((w) => w.charAt(0).toUpperCase() +
 const numOrU = (s: string): number | undefined => (s.trim() === '' || isNaN(Number(s)) ? undefined : Number(s))
 const slug = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
 
-const NUTRIENTS = [
-  { key: 'targetN', label: 'N' },
-  { key: 'targetP', label: 'P' },
-  { key: 'targetK', label: 'K' },
-  { key: 'targetCa', label: 'Ca' },
-  { key: 'targetMg', label: 'Mg' },
-  { key: 'targetFe', label: 'Fe' },
-] as const
-
 export function CustomCropModal({ crop, onClose }: { crop?: CustomCrop; onClose: () => void }) {
   const qc = useQueryClient()
   const editing = !!crop
@@ -29,7 +20,9 @@ export function CustomCropModal({ crop, onClose }: { crop?: CustomCrop; onClose:
   const [days, setDays] = useState(crop?.growth_days != null ? String(crop.growth_days) : '')
   const [ecMin, setEcMin] = useState(crop?.ec_min != null ? String(crop.ec_min) : '')
   const [ecMax, setEcMax] = useState(crop?.ec_max != null ? String(crop.ec_max) : '')
-  const [nutrients, setNutrients] = useState<Record<string, string>>({
+  // Targets are edited per system in the Targets modal now; keep the crop's
+  // existing values here only so an Edit-crop save passes them through unchanged.
+  const [nutrients] = useState<Record<string, string>>({
     targetN: crop?.target_n != null ? String(crop.target_n) : '',
     targetP: crop?.target_p != null ? String(crop.target_p) : '',
     targetK: crop?.target_k != null ? String(crop.target_k) : '',
@@ -119,15 +112,9 @@ export function CustomCropModal({ crop, onClose }: { crop?: CustomCrop; onClose:
           </div>
         </div>
 
-        <label className="field-label">Nutrient targets <span className="unit-hint">(ppm · optional)</span></label>
-        <div className="nutrient-grid">
-          {NUTRIENTS.map((nu) => (
-            <div className="field" key={nu.key}>
-              <label htmlFor={`cc-${nu.key}`}>{nu.label}</label>
-              <input id={`cc-${nu.key}`} type="number" min="0" step="any" inputMode="decimal" value={nutrients[nu.key]} onChange={(e) => setNutrients((v) => ({ ...v, [nu.key]: e.target.value }))} />
-            </div>
-          ))}
-        </div>
+        {editing && (
+          <p className="cc-targets-hint">Nutrient targets are set per system under <b>Targets</b> on the crop card.</p>
+        )}
 
         <div className="mform-actions">
           <button type="button" className="ghost" onClick={onClose}>Cancel</button>

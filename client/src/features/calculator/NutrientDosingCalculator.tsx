@@ -18,7 +18,8 @@ import {
   type NutrientKey,
   type Product,
 } from './nutrientDosing'
-import { fetchDosingCrops, fetchRecommendedTargets, type Stage } from './cropData'
+import { fetchDosingCrops } from './cropData'
+import { fetchCropTargets, type Stage } from '../plants/cropTargets'
 import '../dashboard/dashboard.css'
 import './calculator.css'
 
@@ -59,29 +60,22 @@ export function NutrientDosingCalculator() {
   const otherCrops = useMemo(() => crops.filter((c) => !c.inSystem), [crops])
   const selectedCrop = useMemo(() => crops.find((c) => c.code === cropCode), [crops, cropCode])
 
-  // Recommended targets from the shared reference, per stage. Fruiting crops
-  // carry a 'fruiting' stage as well as 'vegetative'; its presence is what marks
-  // a crop as fruiting (and shows the stage toggle).
-  const vegQ = useQuery({
-    queryKey: ['dosing-rec', cropCode, 'vegetative'],
-    queryFn: () => fetchRecommendedTargets(cropCode, 'vegetative'),
-    enabled: !!cropCode,
+  // Effective targets for this system + crop + stage, resolving a per-system
+  // override over the global default (server-side). `stages` reports whether the
+  // crop carries a fruiting stage (which shows the toggle).
+  const targetsQ = useQuery({
+    queryKey: ['crop-targets', activeId, cropCode, stage],
+    queryFn: () => fetchCropTargets(activeId as string, cropCode, stage),
+    enabled: !!activeId && !!cropCode,
   })
-  const fruitQ = useQuery({
-    queryKey: ['dosing-rec', cropCode, 'fruiting'],
-    queryFn: () => fetchRecommendedTargets(cropCode, 'fruiting'),
-    enabled: !!cropCode,
-  })
-  const isFruiting = !!fruitQ.data
-
-  // A user's own saved targets (custom_crops) override the vegetative/leafy
-  // stage; the fruiting stage always comes from the shared reference.
-  const customVeg = stage !== 'fruiting' ? selectedCrop?.targets ?? null : null
-  const recData = stage === 'fruiting' ? fruitQ.data ?? null : vegQ.data ?? null
-  const stageLoading = stage === 'fruiting' ? fruitQ.isLoading : vegQ.isLoading
-  const resolvedTargets = customVeg ?? recData
-  const targetsLoading = !!cropCode && !customVeg && stageLoading
-  const noSavedTargets = !!selectedCrop && !resolvedTargets && !stageLoading
+  const isFruiting = !!targetsQ.data?.stages?.includes('fruiting')
+  const targetSource = targetsQ.data?.source
+  const eff = targetsQ.data?.effective ?? null
+  const resolvedTargets: Levels | null = eff
+    ? { n: eff.n ?? 0, p: eff.p ?? 0, k: eff.k ?? 0, ca: eff.ca ?? 0, mg: eff.mg ?? 0, fe: eff.fe ?? 0 }
+    : null
+  const targetsLoading = !!cropCode && targetsQ.isLoading
+  const noSavedTargets = !!selectedCrop && !targetsQ.isLoading && targetSource === 'none'
 
   const latestQ = useQuery({ queryKey: ['nutrients-latest', activeId], queryFn: () => fetchLatestLevels(activeId as string), enabled: !!activeId })
   const tanksQ = useQuery({ queryKey: ['fish-inventory', activeId], queryFn: () => fetchFishInventory(activeId as string), enabled: !!activeId })
@@ -187,7 +181,7 @@ export function NutrientDosingCalculator() {
             {selectedCrop && (
               <span className="hint nd-vol-hint">
                 {selectedCrop.inSystem ? 'Planted in this system' : 'Not currently in this system'}
-                {customVeg ? ' · using this crop’s saved targets' : resolvedTargets ? ' · recommended targets' : ''}
+                {targetSource === 'system' ? ' · your system override' : targetSource === 'default' ? ' · recommended targets' : ''}
               </span>
             )}
           </div>

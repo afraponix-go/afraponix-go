@@ -53,6 +53,9 @@ const CROP_ANCHORS = [
   { code: 'strawberries', stage: 'fruiting', anchorN: 55 },
   { code: 'tomatoes', stage: 'vegetative', anchorN: 70 },
   { code: 'tomatoes', stage: 'fruiting', anchorN: 60 },
+  // Cherry tomatoes share the tomato anchors.
+  { code: 'cherry_tomatoes', stage: 'vegetative', anchorN: 70 },
+  { code: 'cherry_tomatoes', stage: 'fruiting', anchorN: 60 },
 ];
 
 const round1 = (n) => Math.round(n * 10) / 10;
