@@ -31,6 +31,7 @@ const seedVarietiesRoutes = require('./routes/seed-varieties');
 const cropKnowledgeRoutes = require('./routes/crop-knowledge');
 const customCropsRoutes = require('./routes/custom-crops');
 const dataImportRoutes = require('./routes/data-import');
+const dosingRoutes = require('./routes/dosing');
 const { initializeDatabase, initializeConnectionPool, closeConnectionPool } = require('./database/init-mariadb');
 const sensorCollector = require('./services/sensor-collector');
 
@@ -200,6 +201,7 @@ app.use('/api/seed-varieties', seedVarietiesRoutes);
 app.use('/api/crop-knowledge', cropKnowledgeRoutes);
 app.use('/api/custom-crops', customCropsRoutes);
 app.use('/api/import', dataImportRoutes);
+app.use('/api/dosing', dosingRoutes);
 
 // /verify-email, /forgot-password and /reset-password are client-side routes in
 // the React app — the SPA fallback below serves them. (The legacy handlers that

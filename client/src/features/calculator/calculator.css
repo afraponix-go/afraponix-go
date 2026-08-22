@@ -303,3 +303,42 @@
   background: var(--surface);
   color: var(--ink);
 }
+
+/* Fertilisers header (with reset) + mixing schedule */
+.nd-fert-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.nd-mixes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.nd-mix {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  padding: 10px 14px;
+}
+.nd-mix-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+.nd-mix-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  padding: 3px 0;
+}
+.nd-mix-row b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
 import { fetchFishInventory } from '../fish/api'
 import { fetchGrowBedConfigs } from '../growbeds/api'
@@ -13,6 +13,9 @@ import {
   ecFromLevels,
   emptyLevels,
   fetchLatestLevels,
+  fetchUserProducts,
+  saveUserProducts,
+  mixSchedule,
   type Levels,
   type NutrientKey,
   type Product,
@@ -34,8 +37,20 @@ export function NutrientDosingCalculator() {
   const [target, setTarget] = useState<Levels>(CROP_TARGETS.aquaponic.lettuce)
   const [current, setCurrent] = useState<Levels>(emptyLevels)
   const [currentTouched, setCurrentTouched] = useState(false)
-  const [products, setProducts] = useState<Product[]>(DEFAULT_PRODUCTS)
   const [newProd, setNewProd] = useState<{ name: string } & Record<NutrientKey, string>>({ name: '', n: '', p: '', k: '', ca: '', mg: '', fe: '' })
+
+  // Fertiliser list is saved per user account. Load it (null = use defaults),
+  // then every add/remove/reset persists the whole list.
+  const [products, setProducts] = useState<Product[]>(DEFAULT_PRODUCTS)
+  const [productsInit, setProductsInit] = useState(false)
+  const productsQ = useQuery({ queryKey: ['dosing-products'], queryFn: fetchUserProducts })
+  const saveProductsMut = useMutation({ mutationFn: (list: Product[]) => saveUserProducts(list) })
+  useEffect(() => {
+    if (productsInit || productsQ.isLoading) return
+    setProducts(productsQ.data ?? DEFAULT_PRODUCTS)
+    setProductsInit(true)
+  }, [productsQ.data, productsQ.isLoading, productsInit])
+  const updateProducts = (next: Product[]) => { setProducts(next); saveProductsMut.mutate(next) }
 
   const latestQ = useQuery({ queryKey: ['nutrients-latest', activeId], queryFn: () => fetchLatestLevels(activeId as string), enabled: !!activeId })
   const tanksQ = useQuery({ queryKey: ['fish-inventory', activeId], queryFn: () => fetchFishInventory(activeId as string), enabled: !!activeId })
@@ -80,9 +95,10 @@ export function NutrientDosingCalculator() {
   function addProduct() {
     const name = newProd.name.trim()
     if (!name) return
-    setProducts((p) => [...p, { name, n: numOr0(newProd.n), p: numOr0(newProd.p), k: numOr0(newProd.k), ca: numOr0(newProd.ca), mg: numOr0(newProd.mg), fe: numOr0(newProd.fe) }])
+    updateProducts([...products, { name, n: numOr0(newProd.n), p: numOr0(newProd.p), k: numOr0(newProd.k), ca: numOr0(newProd.ca), mg: numOr0(newProd.mg), fe: numOr0(newProd.fe) }])
     setNewProd({ name: '', n: '', p: '', k: '', ca: '', mg: '', fe: '' })
   }
+  const mixes = useMemo(() => mixSchedule(result.doses, products), [result.doses, products])
 
   return (
     <div>
@@ -151,14 +167,19 @@ export function NutrientDosingCalculator() {
           </div>
 
           <hr className="calc-divider" />
-          <div className="calc-sub">Fertilisers</div>
-          <p className="calc-result-hint" style={{ marginTop: 0 }}>Products the calculator can dose with, and their element %.</p>
+          <div className="calc-sub nd-fert-head">
+            Fertilisers
+            {JSON.stringify(products) !== JSON.stringify(DEFAULT_PRODUCTS) && (
+              <button type="button" className="nd-vol-reset" onClick={() => updateProducts(DEFAULT_PRODUCTS)}>↺ Reset to defaults</button>
+            )}
+          </div>
+          <p className="calc-result-hint" style={{ marginTop: 0 }}>Products the calculator can dose with — saved to your account. Add or remove to match what you have.</p>
           <div className="nd-prod-list">
             {products.map((p, i) => (
               <div className="nd-prod" key={i}>
                 <span className="nd-prod-name">{p.name}</span>
                 <span className="nd-prod-comp">{KEYS.filter((k) => p[k] > 0).map((k) => `${k.toUpperCase()} ${p[k]}%`).join(' · ') || '—'}</span>
-                <button type="button" className="nd-prod-x" title="Remove" onClick={() => setProducts((list) => list.filter((_, j) => j !== i))}>×</button>
+                <button type="button" className="nd-prod-x" title="Remove" onClick={() => updateProducts(products.filter((_, j) => j !== i))}>×</button>
               </div>
             ))}
           </div>
@@ -190,6 +211,40 @@ export function NutrientDosingCalculator() {
                   <tbody>
                     {result.doses.map((d) => (
                       <tr key={d.name}><td><b>{d.name}</b></td><td className="r">{d.grams.toFixed(1)} g</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {(mixes.A.length > 0 || mixes.B.length > 0 || mixes.C.length > 0) && (
+                <>
+                  <div className="calc-sub" style={{ marginTop: 22 }}>Mixing schedule</div>
+                  <p className="calc-result-hint" style={{ marginTop: 0 }}>Dissolve each mix in its own water before adding to the reservoir — never combine calcium with the phosphate/sulphate mix in one concentrate (it precipitates).</p>
+                  <div className="nd-mixes">
+                    {([
+                      { key: 'A', title: 'Mix A · Calcium', rows: mixes.A },
+                      { key: 'B', title: 'Mix B · Potassium / Phosphorus', rows: mixes.B },
+                      { key: 'C', title: 'Mix C · Micronutrients', rows: mixes.C },
+                    ] as const).filter((m) => m.rows.length > 0).map((m) => (
+                      <div className="nd-mix" key={m.key}>
+                        <div className="nd-mix-title">{m.title}</div>
+                        {m.rows.map((d) => (
+                          <div className="nd-mix-row" key={d.name}><span>{d.name}</span><b>{d.grams.toFixed(1)} g</b></div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              <div className="calc-sub" style={{ marginTop: 22 }}>Maintenance schedule</div>
+              <p className="calc-result-hint" style={{ marginTop: 0 }}>Top-ups to hold the level: about a quarter weekly, or the full amount monthly.</p>
+              <div className="nd-table-wrap">
+                <table className="nd-table">
+                  <thead><tr><th>Fertiliser</th><th className="r">Weekly (25%)</th><th className="r">Monthly (100%)</th></tr></thead>
+                  <tbody>
+                    {result.doses.map((d) => (
+                      <tr key={d.name}><td><b>{d.name}</b></td><td className="r">{(d.grams * 0.25).toFixed(1)} g</td><td className="r">{d.grams.toFixed(1)} g</td></tr>
                     ))}
                   </tbody>
                 </table>

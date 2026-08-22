@@ -57,7 +57,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // active-system selection.
     resetClientState()
     setToken(token)
-    const resolved = u ?? (await fetchCurrentUser())
+    // The login/register/verify payloads are a trimmed user (no terms
+    // acceptance, no verified flag), so always resolve the canonical record
+    // from /auth/user — otherwise the terms gate would re-trigger on every
+    // login for someone who already accepted. Fall back to the payload user
+    // only if that fetch fails.
+    let resolved = u
+    try {
+      resolved = await fetchCurrentUser()
+    } catch {
+      if (!resolved) throw new Error('Could not load your account. Please try again.')
+    }
     setUser(resolved)
     setStatus('authenticated')
   }

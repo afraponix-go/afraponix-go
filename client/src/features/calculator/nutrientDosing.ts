@@ -118,6 +118,37 @@ export function computeDose(
   return { doses, achieved, finalLevels }
 }
 
+// Group the dosed products into mixes that must not be combined in one stock
+// concentrate — calcium salts precipitate with phosphates/sulphates. Mirrors
+// the source calculator: Mix A calcium-led, Mix B potassium/phosphorus, Mix C
+// the rest (micros).
+export type MixGroups = { A: DoseResult[]; B: DoseResult[]; C: DoseResult[] }
+export function mixSchedule(doses: DoseResult[], products: Product[]): MixGroups {
+  const byName = new Map(products.map((p) => [p.name, p]))
+  const A: DoseResult[] = []
+  const B: DoseResult[] = []
+  const C: DoseResult[] = []
+  for (const d of doses) {
+    const p = byName.get(d.name)
+    if (p && p.ca > 0 && p.ca >= p.k) A.push(d)
+    else if (p && (p.k > 0 || p.p > 0)) B.push(d)
+    else C.push(d)
+  }
+  return { A, B, C }
+}
+
+// The signed-in user's saved fertiliser list (null = not customised → defaults).
+export async function fetchUserProducts(): Promise<Product[] | null> {
+  const data = await api<{ products: Product[] | null }>(`/dosing/products`)
+  // Treat an empty saved list as "not customised" so a user can never be left
+  // with zero fertilisers (and no possible dose) — callers fall back to defaults.
+  return Array.isArray(data?.products) && data.products.length > 0 ? data.products : null
+}
+
+export async function saveUserProducts(products: Product[]): Promise<void> {
+  await api(`/dosing/products`, { method: 'PUT', body: { products } })
+}
+
 // Current levels from the system's latest readings (single nutrient_readings
 // table). Top-level or under a `nutrients` key.
 export async function fetchLatestLevels(systemId: string): Promise<Record<string, number>> {
