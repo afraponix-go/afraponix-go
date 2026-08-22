@@ -23,6 +23,7 @@ import { Plantings } from '../features/plants/Plantings'
 import { Harvest } from '../features/plants/Harvest'
 import { BedsAllocation } from '../features/plants/BedsAllocation'
 import { Crops } from '../features/plants/CropsPage'
+import { Seedlings } from '../features/seedlings/Seedlings'
 import { FishStockingCalculator } from '../features/calculator/FishStockingCalculator'
 import { NutrientDosingCalculator } from '../features/calculator/NutrientDosingCalculator'
 import { OperationsPage } from '../features/operations/OperationsPage'
@@ -63,6 +64,7 @@ const FISH_TABS = [
 ]
 const PLANTS_TABS = [
   { to: '/plants', label: 'Overview', end: true },
+  { to: '/plants/seedlings', label: 'Seedlings' },
   { to: '/plants/plantings', label: 'Plantings' },
   { to: '/plants/harvest', label: 'Harvest' },
   { to: '/plants/beds', label: 'Beds' },
@@ -136,6 +138,7 @@ export const router = createBrowserRouter([
             element: <SubTabLayout items={PLANTS_TABS} />,
             children: [
               { index: true, element: <PlantsOverview /> },
+              { path: 'seedlings', element: <Seedlings /> },
               { path: 'plantings', element: <Plantings /> },
               { path: 'harvest', element: <Harvest /> },
               { path: 'beds', element: <BedsAllocation /> },

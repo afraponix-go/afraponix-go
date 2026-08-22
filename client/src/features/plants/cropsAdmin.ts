@@ -41,6 +41,8 @@ export const customCropSchema = z.object({
   category: z.string().nullable().optional(),
   plant_spacing: numish,
   growth_days: numish,
+  germination_days: numish,
+  days_to_transplant: numish,
   difficulty: z.string().nullable().optional(),
   season: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
@@ -60,6 +62,8 @@ export type CustomCropInput = {
   category?: string
   plantSpacing?: number
   growthDays?: number
+  germinationDays?: number
+  daysToTransplant?: number
   ecMin?: number
   ecMax?: number
   targetN?: number

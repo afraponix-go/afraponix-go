@@ -18,6 +18,8 @@ export function CustomCropModal({ crop, onClose }: { crop?: CustomCrop; onClose:
   const [category, setCategory] = useState(crop?.category ?? 'leafy_greens')
   const [spacing, setSpacing] = useState(crop?.plant_spacing != null ? String(crop.plant_spacing) : '')
   const [days, setDays] = useState(crop?.growth_days != null ? String(crop.growth_days) : '')
+  const [germDays, setGermDays] = useState(crop?.germination_days != null ? String(crop.germination_days) : '')
+  const [transplantDays, setTransplantDays] = useState(crop?.days_to_transplant != null ? String(crop.days_to_transplant) : '')
   const [ecMin, setEcMin] = useState(crop?.ec_min != null ? String(crop.ec_min) : '')
   const [ecMax, setEcMax] = useState(crop?.ec_max != null ? String(crop.ec_max) : '')
   // Targets are edited per system in the Targets modal now; keep the crop's
@@ -43,6 +45,8 @@ export function CustomCropModal({ crop, onClose }: { crop?: CustomCrop; onClose:
         category,
         plantSpacing: numOrU(spacing),
         growthDays: numOrU(days),
+        germinationDays: numOrU(germDays),
+        daysToTransplant: numOrU(transplantDays),
         ecMin: min,
         ecMax: max,
         targetEc: min != null && max != null ? Math.round(((min + max) / 2) * 100) / 100 : min ?? max,
@@ -109,6 +113,17 @@ export function CustomCropModal({ crop, onClose }: { crop?: CustomCrop; onClose:
           <div className="field">
             <label htmlFor="cc-ecmax">EC max</label>
             <input id="cc-ecmax" type="number" min="0" step="any" inputMode="decimal" value={ecMax} onChange={(e) => setEcMax(e.target.value)} placeholder="1.6" />
+          </div>
+        </div>
+
+        <div className="field-row">
+          <div className="field">
+            <label htmlFor="cc-germ">Days to germinate</label>
+            <input id="cc-germ" type="number" min="0" step="1" inputMode="numeric" value={germDays} onChange={(e) => setGermDays(e.target.value)} placeholder="3" />
+          </div>
+          <div className="field">
+            <label htmlFor="cc-transplant">Days to transplant</label>
+            <input id="cc-transplant" type="number" min="0" step="1" inputMode="numeric" value={transplantDays} onChange={(e) => setTransplantDays(e.target.value)} placeholder="21" />
           </div>
         </div>
 

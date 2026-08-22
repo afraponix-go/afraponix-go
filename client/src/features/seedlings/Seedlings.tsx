@@ -1,0 +1,120 @@
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useSystems } from '../systems/SystemContext'
+import { Modal } from '../../components/Modal'
+import { fetchSeedlings, deleteSeedling, germPct, type Seedling } from './api'
+import { SowModal } from './SowModal'
+import { GerminationModal } from './GerminationModal'
+import { TransplantModal } from './TransplantModal'
+import './seedlings.css'
+
+const STATUS_LABEL: Record<string, string> = { sown: 'Sown', germinated: 'Germinated', transplanted: 'Transplanted' }
+
+function readiness(s: Seedling): { text: string; cls: string } | null {
+  if (s.status === 'transplanted') return null
+  if (s.days_to_transplant_remaining == null) return null
+  if (s.days_to_transplant_remaining <= 0) return { text: 'Ready to transplant', cls: 'ready' }
+  return { text: `Transplant in ${s.days_to_transplant_remaining} day${s.days_to_transplant_remaining === 1 ? '' : 's'}`, cls: 'soon' }
+}
+
+export function Seedlings() {
+  const { activeId } = useSystems()
+  const qc = useQueryClient()
+  const [sow, setSow] = useState<{ seedling?: Seedling } | null>(null)
+  const [germ, setGerm] = useState<Seedling | null>(null)
+  const [transplant, setTransplant] = useState<Seedling | null>(null)
+  const [confirmDel, setConfirmDel] = useState<Seedling | null>(null)
+
+  const { data: seedlings = [], isLoading } = useQuery({ queryKey: ['seedlings', activeId], queryFn: () => fetchSeedlings(activeId as string), enabled: !!activeId })
+  const del = useMutation({
+    mutationFn: (s: Seedling) => deleteSeedling(s.id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['seedlings'] }); setConfirmDel(null) },
+  })
+
+  if (!activeId) return <div className="empty">Select a system to track seedlings.</div>
+
+  const active = seedlings.filter((s) => s.status !== 'transplanted')
+  const germRates = seedlings.map(germPct).filter((p): p is number => p != null)
+  const avgGerm = germRates.length ? Math.round((germRates.reduce((a, b) => a + b, 0) / germRates.length) * 10) / 10 : null
+  const readyCount = active.filter((s) => (s.days_to_transplant_remaining ?? 1) <= 0).length
+
+  return (
+    <div>
+      <div className="feed-head">
+        <h2 className="section-title" style={{ margin: 0 }}>Seedlings</h2>
+        <button className="btn feed-btn" onClick={() => setSow({})}>+ New sowing</button>
+      </div>
+      <p className="seedling-lead">Track nursery batches from sowing to transplant — germination %, days to germinate, and time to transplant.</p>
+
+      {seedlings.length > 0 && (
+        <div className="seedling-summary">
+          <div className="seedling-stat"><b>{active.length}</b><span>in nursery</span></div>
+          <div className="seedling-stat"><b>{avgGerm != null ? `${avgGerm}%` : '—'}</b><span>avg germination</span></div>
+          <div className="seedling-stat"><b>{readyCount}</b><span>ready to transplant</span></div>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="empty">Loading…</div>
+      ) : seedlings.length === 0 ? (
+        <div className="empty">No sowings yet. Add one to start tracking germination and transplant timing.</div>
+      ) : (
+        <div className="seedling-cards">
+          {seedlings.map((s) => {
+            const pct = germPct(s)
+            const ready = readiness(s)
+            return (
+              <div key={s.id} className={`seedling-card ${s.status === 'transplanted' ? 'done' : ''}`}>
+                <div className="seedling-card-head">
+                  <span className="seedling-name">{s.crop_name ?? 'Crop'}{s.seed_variety ? ` · ${s.seed_variety}` : ''}</span>
+                  <span className={`seedling-badge st-${s.status}`}>{STATUS_LABEL[s.status] ?? s.status}</span>
+                </div>
+
+                <div className="seedling-meta">Sown {s.sow_date} · {s.trays} tray{s.trays === 1 ? '' : 's'} × {s.cells_per_tray} = <b>{s.total_sown.toLocaleString()}</b></div>
+
+                <div className="seedling-facts">
+                  <div className="seedling-fact">
+                    <span className="k">Germination</span>
+                    <span className="v">{pct != null ? `${pct}%` : '—'}{s.actual_germ_days != null ? ` · ${s.actual_germ_days}d actual` : ''}{s.predicted_germ_days != null ? ` / ${s.predicted_germ_days}d pred.` : ''}</span>
+                  </div>
+                  <div className="seedling-fact">
+                    <span className="k">Transplant</span>
+                    <span className="v">
+                      {s.status === 'transplanted'
+                        ? `${(s.transplanted_count ?? 0).toLocaleString()} on ${s.transplant_date}${s.actual_transplant_days != null ? ` · ${s.actual_transplant_days}d` : ''}`
+                        : s.predicted_transplant_date ? `by ${s.predicted_transplant_date}` : '—'}
+                    </span>
+                  </div>
+                </div>
+
+                {ready && <div className={`seedling-ready ${ready.cls}`}>{ready.text}</div>}
+
+                <div className="seedling-actions">
+                  {s.status !== 'transplanted' && <button className="row-btn" onClick={() => setGerm(s)}>{s.germinated_count != null ? 'Edit germination' : 'Record germination'}</button>}
+                  {s.status !== 'transplanted' && <button className="row-btn" onClick={() => setTransplant(s)}>Transplant</button>}
+                  <span className="seedling-links">
+                    <button className="link-btn" onClick={() => setSow({ seedling: s })}>Edit</button>
+                    <button className="link-btn danger" onClick={() => setConfirmDel(s)}>Delete</button>
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {sow && activeId && <SowModal systemId={activeId} seedling={sow.seedling} onClose={() => setSow(null)} />}
+      {germ && <GerminationModal seedling={germ} onClose={() => setGerm(null)} />}
+      {transplant && activeId && <TransplantModal systemId={activeId} seedling={transplant} onClose={() => setTransplant(null)} />}
+      {confirmDel && (
+        <Modal title="Delete sowing" onClose={() => setConfirmDel(null)}>
+          <p style={{ marginTop: 0, color: 'var(--ink-soft)' }}>Delete this {confirmDel.crop_name ?? 'seedling'} sowing? Any bed planting already created from it is kept.</p>
+          <div className="mform-actions">
+            <button type="button" className="ghost" onClick={() => setConfirmDel(null)}>Cancel</button>
+            <button type="button" className="btn btn-danger" disabled={del.isPending} onClick={() => del.mutate(confirmDel)}>{del.isPending ? 'Deleting…' : 'Delete'}</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
