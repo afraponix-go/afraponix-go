@@ -5,6 +5,10 @@
   background: color-mix(in srgb, #0a1019 55%, transparent);
   backdrop-filter: blur(2px);
   display: grid;
+  /* Pin the column to the full viewport width. Without this the implicit column
+     is content-sized, so a card with width:100% collapses to its content width
+     (and on iOS the wide native select/date controls blow it past the screen). */
+  grid-template-columns: 1fr;
   place-items: center;
   padding: 20px;
   animation: modal-fade 0.15s ease;
@@ -56,6 +60,7 @@
 .modal-body {
   padding: 20px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 /* Keep the Cancel/Save bar pinned to the bottom of the scrolling body so it
    stays reachable when the form is taller than the screen. Negative margins
