@@ -71,6 +71,7 @@ const STEPS = [
   { type: 'sql', file: 'database/migrations/2026-08-import-columns.sql', label: 'Import source/session columns' },
   { type: 'sql', file: 'database/migrations/2026-08-user-terms.sql', label: 'User terms acceptance columns' },
   { type: 'sql', file: 'database/migrations/2026-08-user-dosing-products.sql', label: 'Per-user dosing products table' },
+  { type: 'node', file: 'database/migrations/2026-08-crop-target-ratios.js', label: 'Aquaponic crop nutrient targets (ratio model, veg/fruiting stages)' },
   { type: 'node', file: 'database/migrations/2026-07-backfill-nutrient-readings.js', label: 'Backfill nutrient readings' },
   // One-time cleanup of NULL-user seed variety rows that accumulated when the
   // reference-data step re-ran on every deploy (before migration tracking).

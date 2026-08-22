@@ -18,7 +18,7 @@ import {
   type NutrientKey,
   type Product,
 } from './nutrientDosing'
-import { fetchDosingCrops, fetchRecommendedTargets } from './cropData'
+import { fetchDosingCrops, fetchRecommendedTargets, type Stage } from './cropData'
 import '../dashboard/dashboard.css'
 import './calculator.css'
 
@@ -28,6 +28,7 @@ const fmt = (n: number, d = 1) => (n >= 100 ? Math.round(n).toLocaleString() : n
 export function NutrientDosingCalculator() {
   const { activeId } = useSystems()
   const [cropCode, setCropCode] = useState('')
+  const [stage, setStage] = useState<Stage>('vegetative')
   const [volume, setVolume] = useState('')
   const [startingEC, setStartingEC] = useState('')
 
@@ -58,17 +59,29 @@ export function NutrientDosingCalculator() {
   const otherCrops = useMemo(() => crops.filter((c) => !c.inSystem), [crops])
   const selectedCrop = useMemo(() => crops.find((c) => c.code === cropCode), [crops, cropCode])
 
-  // A crop's targets come from its own saved levels; if it has none, fall back
-  // to the shared recommended reference.
-  const needRec = !!selectedCrop && !selectedCrop.targets
-  const recQ = useQuery({
-    queryKey: ['dosing-rec-targets', cropCode],
-    queryFn: () => fetchRecommendedTargets(cropCode),
-    enabled: !!cropCode && needRec,
+  // Recommended targets from the shared reference, per stage. Fruiting crops
+  // carry a 'fruiting' stage as well as 'vegetative'; its presence is what marks
+  // a crop as fruiting (and shows the stage toggle).
+  const vegQ = useQuery({
+    queryKey: ['dosing-rec', cropCode, 'vegetative'],
+    queryFn: () => fetchRecommendedTargets(cropCode, 'vegetative'),
+    enabled: !!cropCode,
   })
-  const resolvedTargets = selectedCrop?.targets ?? (needRec ? recQ.data ?? null : null)
-  const targetsLoading = needRec && recQ.isLoading
-  const noSavedTargets = !!selectedCrop && !selectedCrop.targets && !recQ.isLoading && !recQ.data
+  const fruitQ = useQuery({
+    queryKey: ['dosing-rec', cropCode, 'fruiting'],
+    queryFn: () => fetchRecommendedTargets(cropCode, 'fruiting'),
+    enabled: !!cropCode,
+  })
+  const isFruiting = !!fruitQ.data
+
+  // A user's own saved targets (custom_crops) override the vegetative/leafy
+  // stage; the fruiting stage always comes from the shared reference.
+  const customVeg = stage !== 'fruiting' ? selectedCrop?.targets ?? null : null
+  const recData = stage === 'fruiting' ? fruitQ.data ?? null : vegQ.data ?? null
+  const stageLoading = stage === 'fruiting' ? fruitQ.isLoading : vegQ.isLoading
+  const resolvedTargets = customVeg ?? recData
+  const targetsLoading = !!cropCode && !customVeg && stageLoading
+  const noSavedTargets = !!selectedCrop && !resolvedTargets && !stageLoading
 
   const latestQ = useQuery({ queryKey: ['nutrients-latest', activeId], queryFn: () => fetchLatestLevels(activeId as string), enabled: !!activeId })
   const tanksQ = useQuery({ queryKey: ['fish-inventory', activeId], queryFn: () => fetchFishInventory(activeId as string), enabled: !!activeId })
@@ -81,13 +94,15 @@ export function NutrientDosingCalculator() {
     if (!cropCode && crops.length) setCropCode(crops[0].code)
   }, [crops, cropCode])
 
-  // Targets follow the selected crop (still editable after). Reset the "touched"
-  // guard whenever the crop changes so the new crop's targets load.
-  useEffect(() => { setTargetTouched(false) }, [cropCode])
+  // Targets follow the selected crop + stage (still editable after). Reset to
+  // the vegetative stage and clear the "touched" guard on a crop change; clear
+  // it again on a stage change so the new stage's targets load.
+  useEffect(() => { setStage('vegetative'); setTargetTouched(false) }, [cropCode])
+  useEffect(() => { setTargetTouched(false) }, [stage])
   useEffect(() => {
     if (targetTouched) return
     setTarget(resolvedTargets ?? emptyLevels())
-  }, [resolvedTargets, targetTouched, cropCode])
+  }, [resolvedTargets, targetTouched, cropCode, stage])
 
   // Current levels pre-fill from the latest readings, until edited.
   useEffect(() => {
@@ -129,7 +144,7 @@ export function NutrientDosingCalculator() {
   }
   const mixes = useMemo(() => mixSchedule(result.doses, products), [result.doses, products])
 
-  const cropName = selectedCrop?.name ?? 'this crop'
+  const cropName = selectedCrop ? `${selectedCrop.name}${isFruiting ? ` (${stage})` : ''}` : 'this crop'
 
   return (
     <div>
@@ -172,10 +187,21 @@ export function NutrientDosingCalculator() {
             {selectedCrop && (
               <span className="hint nd-vol-hint">
                 {selectedCrop.inSystem ? 'Planted in this system' : 'Not currently in this system'}
-                {selectedCrop.targets ? ' · using this crop’s saved targets' : recQ.data ? ' · using recommended targets' : ''}
+                {customVeg ? ' · using this crop’s saved targets' : resolvedTargets ? ' · recommended targets' : ''}
               </span>
             )}
           </div>
+
+          {isFruiting && (
+            <div className="field">
+              <label>Growth stage</label>
+              <div className="nd-stage" role="group" aria-label="Growth stage">
+                <button type="button" className={stage === 'vegetative' ? 'active' : ''} onClick={() => setStage('vegetative')}>Vegetative</button>
+                <button type="button" className={stage === 'fruiting' ? 'active' : ''} onClick={() => setStage('fruiting')}>Fruiting</button>
+              </div>
+              <span className="hint nd-vol-hint">Fruiting crop — targets shift to higher K &amp; Ca once fruit sets.</span>
+            </div>
+          )}
 
           <div className="io-row">
             <div className="field">

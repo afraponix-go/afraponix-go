@@ -342,3 +342,30 @@
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
+
+/* Growth-stage segmented toggle (fruiting crops) */
+.nd-stage {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.nd-stage button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 8px 18px;
+  cursor: pointer;
+}
+.nd-stage button + button {
+  border-left: 1px solid var(--line);
+}
+.nd-stage button.active {
+  background: var(--primary);
+  color: #fff;
+}

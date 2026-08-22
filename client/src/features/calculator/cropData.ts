@@ -59,10 +59,12 @@ const NUTRIENT_CODE_TO_KEY: Record<string, NutrientKey> = {
   nitrogen: 'n', phosphorus: 'p', potassium: 'k', calcium: 'ca', magnesium: 'mg', iron: 'fe',
 }
 
-export async function fetchRecommendedTargets(code: string): Promise<Levels | null> {
+export type Stage = 'vegetative' | 'fruiting'
+
+async function fetchStageRanges(code: string, stage: string): Promise<Levels | null> {
   try {
     const data = await api<{ ranges?: Record<string, { target?: number }> }>(
-      `/crop-knowledge/crops/${encodeURIComponent(code)}/nutrient-ranges`,
+      `/crop-knowledge/crops/${encodeURIComponent(code)}/nutrient-ranges?stage=${encodeURIComponent(stage)}`,
     )
     const ranges = data?.ranges
     if (!ranges) return null
@@ -79,4 +81,15 @@ export async function fetchRecommendedTargets(code: string): Promise<Levels | nu
   } catch {
     return null
   }
+}
+
+// Recommended targets from the shared reference for a crop + growth stage.
+// Fruiting crops carry a 'fruiting' stage; everything else lives under
+// 'vegetative'. Falls back to the legacy 'general' stage for crops seeded
+// before stages existed, so nothing regresses.
+export async function fetchRecommendedTargets(code: string, stage: Stage = 'vegetative'): Promise<Levels | null> {
+  const primary = await fetchStageRanges(code, stage)
+  if (primary) return primary
+  if (stage === 'vegetative') return fetchStageRanges(code, 'general')
+  return null
 }
