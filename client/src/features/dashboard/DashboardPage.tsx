@@ -38,13 +38,13 @@ const WATER: MetricDef[] = [
   { key: 'dissolved_oxygen', label: 'Dissolved O₂', unit: 'mg/L', digits: 1, status: (v) => (v >= 5 ? 'good' : 'warn') },
   { key: 'ammonia', label: 'Ammonia', unit: 'ppm', digits: 2, status: (v) => (v < 1 ? 'good' : 'warn') },
   { key: 'nitrite', label: 'Nitrite', unit: 'ppm', digits: 2, status: (v) => (v < 1 ? 'good' : 'warn') },
-  { key: 'nitrate', label: 'Nitrate', unit: 'ppm', digits: 1 },
   { key: 'ec', label: 'EC', unit: 'µS/cm', digits: 0 },
   { key: 'humidity', label: 'Humidity', unit: '%', digits: 0 },
   { key: 'salinity', label: 'Salinity', unit: 'ppt', digits: 2 },
 ]
 
 const NUTRIENTS: { key: string; label: string }[] = [
+  { key: 'nitrate', label: 'Nitrate (N)' },
   { key: 'nitrogen', label: 'Nitrogen (N)' },
   { key: 'phosphorus', label: 'Phosphorus (P)' },
   { key: 'potassium', label: 'Potassium (K)' },
@@ -172,9 +172,11 @@ export function DashboardPage() {
   const isTracked = (key: string) => tracked.has(key) || !ALL_METRIC_KEYS.includes(key)
 
   const waterShown = WATER.filter((def) => isTracked(def.key))
-  const presentNutrients = NUTRIENTS.filter(
+  let presentNutrients = NUTRIENTS.filter(
     (n) => isTracked(n.key) && nutrients[n.key] && Number.isFinite(nutrients[n.key].value),
   )
+  // Nitrate and nitrogen are the same N reading — show only nitrate when present.
+  if (presentNutrients.some((n) => n.key === 'nitrate')) presentNutrients = presentNutrients.filter((n) => n.key !== 'nitrogen')
 
   const totalFish = sum(tanks, 'current_count')
   const totalBiomass = sum(tanks, 'biomass_kg')

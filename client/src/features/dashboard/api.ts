@@ -35,7 +35,7 @@ export type SystemTargets = {
 
 // nutrient_readings key -> band key
 export const NUTRIENT_BAND_KEY: Record<string, BandKey> = {
-  nitrogen: 'n', phosphorus: 'p', potassium: 'k', calcium: 'ca', magnesium: 'mg', iron: 'fe',
+  nitrate: 'n', nitrogen: 'n', phosphorus: 'p', potassium: 'k', calcium: 'ca', magnesium: 'mg', iron: 'fe',
 }
 
 export async function fetchSystemTargets(systemId: string): Promise<SystemTargets> {
