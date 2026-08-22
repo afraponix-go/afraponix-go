@@ -21,37 +21,6 @@ export const NUTRIENTS: { key: NutrientKey; label: string; readKey: string }[] =
   { key: 'fe', label: 'Iron (Fe)', readKey: 'iron' },
 ]
 
-export const CROPS = [
-  { code: 'lettuce', name: 'Lettuce' },
-  { code: 'tomato', name: 'Tomatoes' },
-  { code: 'cucumber', name: 'Cucumbers' },
-  { code: 'basil', name: 'Basil' },
-  { code: 'garlic', name: 'Garlic' },
-  { code: 'potato', name: 'Potatoes' },
-]
-
-export type SystemType = 'hydroponic' | 'aquaponic'
-
-// Target levels (ppm). Aquaponic targets are lower — the fish supply some.
-export const CROP_TARGETS: Record<SystemType, Record<string, Levels>> = {
-  hydroponic: {
-    lettuce: { n: 120, p: 35, k: 180, ca: 80, mg: 30, fe: 2 },
-    tomato: { n: 190, p: 50, k: 275, ca: 150, mg: 50, fe: 4 },
-    cucumber: { n: 160, p: 45, k: 210, ca: 120, mg: 40, fe: 3.5 },
-    basil: { n: 130, p: 30, k: 160, ca: 90, mg: 35, fe: 2.5 },
-    garlic: { n: 175, p: 40, k: 200, ca: 100, mg: 45, fe: 3 },
-    potato: { n: 150, p: 65, k: 250, ca: 60, mg: 40, fe: 3 },
-  },
-  aquaponic: {
-    lettuce: { n: 80, p: 15, k: 120, ca: 60, mg: 20, fe: 1.5 },
-    tomato: { n: 120, p: 35, k: 200, ca: 100, mg: 40, fe: 3 },
-    cucumber: { n: 100, p: 30, k: 150, ca: 80, mg: 30, fe: 2.5 },
-    basil: { n: 90, p: 20, k: 110, ca: 70, mg: 25, fe: 2 },
-    garlic: { n: 100, p: 20, k: 150, ca: 80, mg: 35, fe: 2 },
-    potato: { n: 90, p: 30, k: 180, ca: 45, mg: 30, fe: 2 },
-  },
-}
-
 export type Product = { name: string } & Levels
 
 // Fertiliser products and their element composition (%). Users can edit/extend.

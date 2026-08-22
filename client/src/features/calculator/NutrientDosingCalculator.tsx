@@ -4,8 +4,6 @@ import { useSystems } from '../systems/SystemContext'
 import { fetchFishInventory } from '../fish/api'
 import { fetchGrowBedConfigs } from '../growbeds/api'
 import {
-  CROPS,
-  CROP_TARGETS,
   DEFAULT_PRODUCTS,
   NUTRIENTS,
   KEYS,
@@ -19,8 +17,8 @@ import {
   type Levels,
   type NutrientKey,
   type Product,
-  type SystemType,
 } from './nutrientDosing'
+import { fetchDosingCrops, fetchRecommendedTargets } from './cropData'
 import '../dashboard/dashboard.css'
 import './calculator.css'
 
@@ -29,12 +27,12 @@ const fmt = (n: number, d = 1) => (n >= 100 ? Math.round(n).toLocaleString() : n
 
 export function NutrientDosingCalculator() {
   const { activeId } = useSystems()
-  const [cropCode, setCropCode] = useState('lettuce')
-  const [systemType, setSystemType] = useState<SystemType>('aquaponic')
+  const [cropCode, setCropCode] = useState('')
   const [volume, setVolume] = useState('')
   const [startingEC, setStartingEC] = useState('')
 
-  const [target, setTarget] = useState<Levels>(CROP_TARGETS.aquaponic.lettuce)
+  const [target, setTarget] = useState<Levels>(emptyLevels)
+  const [targetTouched, setTargetTouched] = useState(false)
   const [current, setCurrent] = useState<Levels>(emptyLevels)
   const [currentTouched, setCurrentTouched] = useState(false)
   const [newProd, setNewProd] = useState<{ name: string } & Record<NutrientKey, string>>({ name: '', n: '', p: '', k: '', ca: '', mg: '', fe: '' })
@@ -52,14 +50,44 @@ export function NutrientDosingCalculator() {
   }, [productsQ.data, productsQ.isLoading, productsInit])
   const updateProducts = (next: Product[]) => { setProducts(next); saveProductsMut.mutate(next) }
 
+  // Crops come from the user's own list; the ones planted in this system are
+  // flagged so the picker can offer them first.
+  const cropsQ = useQuery({ queryKey: ['dosing-crops', activeId], queryFn: () => fetchDosingCrops(activeId as string), enabled: !!activeId })
+  const crops = cropsQ.data ?? []
+  const inSystemCrops = useMemo(() => crops.filter((c) => c.inSystem), [crops])
+  const otherCrops = useMemo(() => crops.filter((c) => !c.inSystem), [crops])
+  const selectedCrop = useMemo(() => crops.find((c) => c.code === cropCode), [crops, cropCode])
+
+  // A crop's targets come from its own saved levels; if it has none, fall back
+  // to the shared recommended reference.
+  const needRec = !!selectedCrop && !selectedCrop.targets
+  const recQ = useQuery({
+    queryKey: ['dosing-rec-targets', cropCode],
+    queryFn: () => fetchRecommendedTargets(cropCode),
+    enabled: !!cropCode && needRec,
+  })
+  const resolvedTargets = selectedCrop?.targets ?? (needRec ? recQ.data ?? null : null)
+  const targetsLoading = needRec && recQ.isLoading
+  const noSavedTargets = !!selectedCrop && !selectedCrop.targets && !recQ.isLoading && !recQ.data
+
   const latestQ = useQuery({ queryKey: ['nutrients-latest', activeId], queryFn: () => fetchLatestLevels(activeId as string), enabled: !!activeId })
   const tanksQ = useQuery({ queryKey: ['fish-inventory', activeId], queryFn: () => fetchFishInventory(activeId as string), enabled: !!activeId })
   const bedsQ = useQuery({ queryKey: ['grow-bed-configs', activeId], queryFn: () => fetchGrowBedConfigs(activeId as string), enabled: !!activeId })
 
-  // Targets follow the crop + system-type preset (still editable after).
+  // Reset the crop selection when the active system changes; the effect below
+  // then defaults to the first crop of the new system.
+  useEffect(() => { setCropCode(''); setTargetTouched(false) }, [activeId])
   useEffect(() => {
-    setTarget(CROP_TARGETS[systemType][cropCode])
-  }, [cropCode, systemType])
+    if (!cropCode && crops.length) setCropCode(crops[0].code)
+  }, [crops, cropCode])
+
+  // Targets follow the selected crop (still editable after). Reset the "touched"
+  // guard whenever the crop changes so the new crop's targets load.
+  useEffect(() => { setTargetTouched(false) }, [cropCode])
+  useEffect(() => {
+    if (targetTouched) return
+    setTarget(resolvedTargets ?? emptyLevels())
+  }, [resolvedTargets, targetTouched, cropCode])
 
   // Current levels pre-fill from the latest readings, until edited.
   useEffect(() => {
@@ -88,9 +116,10 @@ export function NutrientDosingCalculator() {
   const targetEC = ecFromLevels(target)
   const result = useMemo(() => computeDose(volumeL, current, target, products), [volumeL, current, target, products])
   const finalEC = ecFromLevels(result.finalLevels)
+  const targetsEmpty = KEYS.every((k) => !(target[k] > 0))
 
   const setCur = (k: NutrientKey, v: string) => { setCurrent((c) => ({ ...c, [k]: numOr0(v) })); setCurrentTouched(true) }
-  const setTgt = (k: NutrientKey, v: string) => setTarget((t) => ({ ...t, [k]: numOr0(v) }))
+  const setTgt = (k: NutrientKey, v: string) => { setTarget((t) => ({ ...t, [k]: numOr0(v) })); setTargetTouched(true) }
 
   function addProduct() {
     const name = newProd.name.trim()
@@ -99,6 +128,8 @@ export function NutrientDosingCalculator() {
     setNewProd({ name: '', n: '', p: '', k: '', ca: '', mg: '', fe: '' })
   }
   const mixes = useMemo(() => mixSchedule(result.doses, products), [result.doses, products])
+
+  const cropName = selectedCrop?.name ?? 'this crop'
 
   return (
     <div>
@@ -123,20 +154,27 @@ export function NutrientDosingCalculator() {
             )}
           </div>
 
-          <div className="io-row">
-            <div className="field">
-              <label htmlFor="nd-crop">Crop</label>
-              <select id="nd-crop" value={cropCode} onChange={(e) => setCropCode(e.target.value)}>
-                {CROPS.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
-              </select>
-            </div>
-            <div className="field">
-              <label htmlFor="nd-sys">System</label>
-              <select id="nd-sys" value={systemType} onChange={(e) => setSystemType(e.target.value as SystemType)}>
-                <option value="aquaponic">Aquaponics</option>
-                <option value="hydroponic">Hydroponics</option>
-              </select>
-            </div>
+          <div className="field">
+            <label htmlFor="nd-crop">Crop</label>
+            <select id="nd-crop" value={cropCode} onChange={(e) => setCropCode(e.target.value)} disabled={!activeId || crops.length === 0}>
+              {crops.length === 0 && <option value="">{cropsQ.isLoading ? 'Loading crops…' : 'No crops — add one on the Crops page'}</option>}
+              {inSystemCrops.length > 0 && (
+                <optgroup label="In your system">
+                  {inSystemCrops.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+                </optgroup>
+              )}
+              {otherCrops.length > 0 && (
+                <optgroup label={inSystemCrops.length > 0 ? 'Other crops' : 'Crops'}>
+                  {otherCrops.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+                </optgroup>
+              )}
+            </select>
+            {selectedCrop && (
+              <span className="hint nd-vol-hint">
+                {selectedCrop.inSystem ? 'Planted in this system' : 'Not currently in this system'}
+                {selectedCrop.targets ? ' · using this crop’s saved targets' : recQ.data ? ' · using recommended targets' : ''}
+              </span>
+            )}
           </div>
 
           <div className="io-row">
@@ -153,7 +191,13 @@ export function NutrientDosingCalculator() {
           <hr className="calc-divider" />
           <div className="calc-sub">Levels (ppm)</div>
           <p className="calc-result-hint" style={{ marginTop: 0 }}>
-            {activeId ? 'Current pre-filled from your latest readings; targets from the crop preset — edit any value.' : 'Enter current levels; targets come from the crop preset.'}
+            {targetsLoading
+              ? 'Loading recommended targets…'
+              : noSavedTargets
+                ? `No recommended targets are saved for ${cropName} yet — enter them below, or add them on the Crops page.`
+                : activeId
+                  ? 'Current pre-filled from your latest readings; targets from the crop — edit any value.'
+                  : 'Enter current levels; targets come from the selected crop.'}
           </p>
           <div className="nd-levels">
             <div className="nd-lv-head"><span></span><span>Current</span><span>Target</span></div>
@@ -198,12 +242,16 @@ export function NutrientDosingCalculator() {
         <div>
           {volumeL <= 0 ? (
             <div className="empty">Enter your reservoir volume to see the dose.</div>
+          ) : noSavedTargets && targetsEmpty ? (
+            <div className="empty">No recommended targets are saved for {cropName} yet. Enter target levels on the left to calculate a dose, or add them on the Crops page.</div>
+          ) : targetsEmpty ? (
+            <div className="empty">Set target levels to calculate a dose.</div>
           ) : result.doses.length === 0 ? (
             <div className="empty">Nothing to add — current levels already meet the targets.</div>
           ) : (
             <>
               <p className="calc-result-hint">
-                Add these to {volumeL.toLocaleString()} L to reach the {CROPS.find((c) => c.code === cropCode)?.name} ({systemType === 'aquaponic' ? 'aquaponic' : 'hydroponic'}) targets.
+                Add these to {volumeL.toLocaleString()} L to reach the {cropName} targets.
               </p>
               <div className="nd-table-wrap">
                 <table className="nd-table">
