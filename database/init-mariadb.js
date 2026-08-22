@@ -57,6 +57,8 @@ async function createTables(connection) {
             verification_token TEXT,
             verification_token_expiry TIMESTAMP NULL,
             verification_code VARCHAR(6),
+            terms_version VARCHAR(20) DEFAULT NULL,
+            terms_accepted_at DATETIME DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB`,
 

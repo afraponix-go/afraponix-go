@@ -665,7 +665,7 @@ router.get('/user', authenticateToken, async (req, res) => {
         const pool = getDatabase();
         
         const [result] = await pool.execute(
-            'SELECT id, username, email, first_name, last_name, user_role, subscription_status FROM users WHERE id = ?',
+            'SELECT id, username, email, first_name, last_name, user_role, subscription_status, terms_version, terms_accepted_at FROM users WHERE id = ?',
             [userId]
         );
 
@@ -694,6 +694,25 @@ router.get('/user', authenticateToken, async (req, res) => {
 
 // Update the signed-in user's own profile (name only; email is the login
 // identifier and is not changed here).
+// Record that the signed-in user accepted the terms (a given version).
+router.post('/accept-terms', authenticateToken, async (req, res) => {
+    try {
+        const { version } = req.body;
+        if (!version || typeof version !== 'string') {
+            return res.status(400).json({ error: 'Terms version is required' });
+        }
+        const pool = getDatabase();
+        await pool.execute(
+            'UPDATE users SET terms_version = ?, terms_accepted_at = NOW() WHERE id = ?',
+            [version.slice(0, 20), req.user.userId]
+        );
+        res.json({ success: true, termsVersion: version });
+    } catch (error) {
+        console.error('Failed to record terms acceptance:', error);
+        res.status(500).json({ error: 'Failed to record terms acceptance' });
+    }
+});
+
 router.put('/profile', authenticateToken, async (req, res) => {
     const { firstName, lastName } = req.body;
 

@@ -4,6 +4,7 @@ import { RegisterPage } from '../features/auth/RegisterPage'
 import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '../features/auth/ResetPasswordPage'
+import { TermsPage } from '../features/legal/TermsPage'
 import { LandingPage } from '../features/landing/LandingPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AppShell } from './AppShell'
@@ -70,6 +71,7 @@ export const router = createBrowserRouter([
   { path: '/verify-email', element: <VerifyEmailPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },
+  { path: '/terms', element: <TermsPage /> },
   {
     element: <ProtectedRoute />,
     children: [

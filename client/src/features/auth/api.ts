@@ -14,6 +14,7 @@ function normalizeUser(raw: unknown): unknown {
     userRole: r.userRole ?? r.user_role,
     subscriptionStatus: r.subscriptionStatus ?? r.subscription_status,
     emailVerified: r.emailVerified ?? r.email_verified,
+    termsVersion: r.termsVersion ?? r.terms_version ?? null,
   }
 }
 
@@ -29,6 +30,7 @@ export const userSchema = z.preprocess(
     userRole: z.string().optional(),
     subscriptionStatus: z.string().optional(),
     emailVerified: z.boolean().optional(),
+    termsVersion: z.string().nullable().optional(),
   }),
 )
 export type User = z.infer<typeof userSchema>
@@ -107,4 +109,9 @@ export async function updateProfile(firstName: string, lastName: string): Promis
 // Change the signed-in user's own password (requires the current one).
 export async function changePassword(currentPassword: string, newPassword: string) {
   return api('/auth/password', { method: 'PUT', body: { currentPassword, newPassword } })
+}
+
+// Record that the signed-in user accepted a given terms version.
+export async function acceptTerms(version: string) {
+  return api('/auth/accept-terms', { method: 'POST', body: { version } })
 }
