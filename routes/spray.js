@@ -38,6 +38,44 @@ async function planProducts(pool, planId) {
 
 router.get('/categories', (req, res) => res.json({ categories: SPRAY_CATEGORIES, defaultDays: CATEGORY_DEFAULT_DAYS }));
 
+// ------------------------------------------------------------- operators (per user)
+
+router.get('/operators', async (req, res) => {
+    try {
+        const pool = getDatabase();
+        const [rows] = await pool.execute('SELECT id, name FROM spray_operators WHERE user_id = ? ORDER BY name', [req.user.userId]);
+        res.json({ operators: rows });
+    } catch (error) {
+        console.error('Failed to load operators:', error);
+        res.status(500).json({ error: 'Failed to load operators' });
+    }
+});
+
+router.post('/operators', async (req, res) => {
+    try {
+        const name = String((req.body && req.body.name) || '').trim().slice(0, 120);
+        if (!name) return res.status(400).json({ error: 'name is required' });
+        const pool = getDatabase();
+        await pool.execute('INSERT IGNORE INTO spray_operators (user_id, name) VALUES (?, ?)', [req.user.userId, name]);
+        const [rows] = await pool.execute('SELECT id, name FROM spray_operators WHERE user_id = ? AND name = ?', [req.user.userId, name]);
+        res.json({ success: true, operator: rows[0] || null });
+    } catch (error) {
+        console.error('Failed to add operator:', error);
+        res.status(500).json({ error: 'Failed to add operator' });
+    }
+});
+
+router.delete('/operators/:id', async (req, res) => {
+    try {
+        const pool = getDatabase();
+        await pool.execute('DELETE FROM spray_operators WHERE id = ? AND user_id = ?', [req.params.id, req.user.userId]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Failed to delete operator:', error);
+        res.status(500).json({ error: 'Failed to delete operator' });
+    }
+});
+
 // Global catalog + this user's custom products.
 router.get('/products', async (req, res) => {
     try {

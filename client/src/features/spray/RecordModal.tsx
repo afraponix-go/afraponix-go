@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
 import { fetchGrowBeds } from '../growbeds/api'
-import { recordApplication, fetchProducts, fetchProgrammes, type LogInput } from './api'
+import { recordApplication, fetchProducts, fetchProgrammes, fetchOperators, addOperator, type LogInput } from './api'
 import { CATEGORY_LABEL, todayISO } from './shared'
 import './spray.css'
 
@@ -35,6 +35,7 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
   const { data: products = [] } = useQuery({ queryKey: ['spray-products'], queryFn: fetchProducts })
   const { data: programmes = [] } = useQuery({ queryKey: ['spray-programmes', systemId], queryFn: () => fetchProgrammes(systemId) })
   const { data: beds = [] } = useQuery({ queryKey: ['grow-beds', systemId], queryFn: () => fetchGrowBeds(systemId) })
+  const { data: operators = [] } = useQuery({ queryKey: ['spray-operators'], queryFn: fetchOperators })
 
   const initDil = parseDilution(prefill?.rate)
   const [date, setDate] = useState(prefill?.date ?? todayISO())
@@ -50,8 +51,15 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
   const [dilUnit, setDilUnit] = useState(initDil?.unit && DIL_UNITS.includes(initDil.unit) ? initDil.unit : 'ml/10L')
   const [weather, setWeather] = useState('')
   const [operator, setOperator] = useState('')
+  const [addingOp, setAddingOp] = useState(false)
+  const [newOp, setNewOp] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
+
+  const addOpMut = useMutation({
+    mutationFn: (name: string) => addOperator(name),
+    onSuccess: (d) => { qc.invalidateQueries({ queryKey: ['spray-operators'] }); if (d.operator) setOperator(d.operator.name); setAddingOp(false); setNewOp('') },
+  })
 
   // Products in the programme being recorded against come first, then the rest.
   const planProductIds = useMemo(() => {
@@ -212,7 +220,20 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
           </div>
           <div className="field">
             <label htmlFor="rec-operator">Operator</label>
-            <input id="rec-operator" type="text" value={operator} onChange={(e) => setOperator(e.target.value)} placeholder="who applied it" />
+            {addingOp ? (
+              <div className="spray-numunit">
+                <input type="text" value={newOp} onChange={(e) => setNewOp(e.target.value)} placeholder="New operator name" autoFocus
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (newOp.trim()) addOpMut.mutate(newOp.trim()) } }} />
+                <button type="button" className="row-btn" disabled={addOpMut.isPending || !newOp.trim()} onClick={() => addOpMut.mutate(newOp.trim())}>Add</button>
+                <button type="button" className="link-btn" onClick={() => { setAddingOp(false); setNewOp('') }}>Cancel</button>
+              </div>
+            ) : (
+              <select id="rec-operator" value={operator} onChange={(e) => { if (e.target.value === '__add__') setAddingOp(true); else setOperator(e.target.value) }}>
+                <option value="">—</option>
+                {operators.map((o) => <option key={o.id} value={o.name}>{o.name}</option>)}
+                <option value="__add__">＋ Add new operator…</option>
+              </select>
+            )}
           </div>
         </div>
         <div className="field">

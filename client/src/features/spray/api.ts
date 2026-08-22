@@ -83,6 +83,14 @@ export type LogEntry = {
   plan_name: string | null
 }
 
+export type Operator = { id: number; name: string }
+export async function fetchOperators(): Promise<Operator[]> {
+  const d = await api<{ operators: Operator[] }>('/spray/operators')
+  return d.operators
+}
+export const addOperator = (name: string) => api<{ operator: Operator | null }>('/spray/operators', { method: 'POST', body: { name } })
+export const deleteOperator = (id: number) => api(`/spray/operators/${id}`, { method: 'DELETE' })
+
 export type SprayCategory = { code: string; label: string }
 export const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 export const WEEKDAY_LABEL: Record<string, string> = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' }

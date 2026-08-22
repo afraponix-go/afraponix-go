@@ -6,6 +6,7 @@ import { SubTabLayout, type SubTab } from '../../app/SubTabLayout'
 const GENERAL: SubTab = { to: '/settings', label: 'General', end: true }
 const METRICS: SubTab = { to: '/settings/metrics', label: 'Metrics' }
 const ACCOUNT: SubTab = { to: '/settings/account', label: 'Account' }
+const OPERATORS: SubTab = { to: '/settings/operators', label: 'Operators' }
 const SHARING: SubTab = { to: '/settings/sharing', label: 'Sharing' }
 const DANGER: SubTab = { to: '/settings/danger', label: 'Danger Zone' }
 const ADMIN: SubTab = { to: '/settings/admin', label: 'Admin' }
@@ -18,7 +19,7 @@ export function SettingsLayout() {
   const { activeSystem } = useSystems()
   const owner = isOwnedSystem(activeSystem)
 
-  const tabs: SubTab[] = [GENERAL, METRICS, ACCOUNT]
+  const tabs: SubTab[] = [GENERAL, METRICS, ACCOUNT, OPERATORS]
   if (owner) tabs.push(SHARING, DANGER)
   if (user?.userRole === 'admin') tabs.push(ADMIN)
 

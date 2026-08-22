@@ -35,6 +35,7 @@ import { SettingsLayout } from '../features/settings/SettingsLayout'
 import { GeneralSettings } from '../features/settings/GeneralSettings'
 import { MetricsSettings } from '../features/settings/MetricsSettings'
 import { AccountSettings } from '../features/settings/AccountSettings'
+import { OperatorsSettings } from '../features/settings/OperatorsSettings'
 import { SharingSettings } from '../features/settings/SharingSettings'
 import { AdminSettings } from '../features/settings/AdminSettings'
 import { DangerZone } from '../features/settings/DangerZone'
@@ -160,6 +161,7 @@ export const router = createBrowserRouter([
               { index: true, element: <GeneralSettings /> },
               { path: 'metrics', element: <MetricsSettings /> },
               { path: 'account', element: <AccountSettings /> },
+              { path: 'operators', element: <OperatorsSettings /> },
               { path: 'sharing', element: <SharingSettings /> },
               { path: 'admin', element: <AdminSettings /> },
               { path: 'danger', element: <DangerZone /> },
