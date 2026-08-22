@@ -70,7 +70,11 @@ export function Seedlings() {
                   <span className={`seedling-badge st-${s.status}`}>{STATUS_LABEL[s.status] ?? s.status}</span>
                 </div>
 
-                <div className="seedling-meta">Sown {s.sow_date} · {s.trays} tray{s.trays === 1 ? '' : 's'} × {s.cells_per_tray} = <b>{s.total_sown.toLocaleString()}</b></div>
+                <div className="seedling-meta">Sown {s.sow_date} · {
+                  s.tray_groups.length === 1
+                    ? `${s.tray_groups[0].trays} tray${s.tray_groups[0].trays === 1 ? '' : 's'} × ${s.tray_groups[0].cells}`
+                    : s.tray_groups.map((g) => `${g.trays}×${g.cells}`).join(' + ')
+                } = <b>{s.total_sown.toLocaleString()}</b></div>
 
                 <div className="seedling-facts">
                   <div className="seedling-fact">

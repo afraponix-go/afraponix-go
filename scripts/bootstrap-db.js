@@ -84,6 +84,7 @@ const STEPS = [
   { type: 'node', file: 'database/migrations/2026-08-spray-catalog-compliance.js', label: 'Spray catalogue: PHI + resistance group backfill' },
   { type: 'sql', file: 'database/migrations/2026-08-spray-operators.sql', label: 'Per-user spray operators' },
   { type: 'sql', file: 'database/migrations/2026-08-seedlings.sql', label: 'Seedling (nursery) batches + crop germ/transplant days' },
+  { type: 'sql', file: 'database/migrations/2026-08-seedling-tray-groups.sql', label: 'Seedling mixed tray sizes (tray_groups)' },
   { type: 'node', file: 'database/migrations/2026-07-backfill-nutrient-readings.js', label: 'Backfill nutrient readings' },
   // One-time cleanup of NULL-user seed variety rows that accumulated when the
   // reference-data step re-ran on every deploy (before migration tracking).

@@ -19,10 +19,30 @@ async function ownedSeedling(pool, id, userId) {
 const numOrNull = (v) => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Number(v));
 const intOrNull = (v) => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Math.round(Number(v)));
 
+// Parse the stored tray groups (mixed sizes) or fall back to single trays×cells,
+// returning the normalized groups and the total seeds sown.
+function trayInfo(row) {
+    let groups = null;
+    try { groups = row.tray_groups ? JSON.parse(row.tray_groups) : null; } catch { groups = null; }
+    if (!Array.isArray(groups) || groups.length === 0) groups = [{ trays: Number(row.trays) || 0, cells: Number(row.cells_per_tray) || 0 }];
+    groups = groups.map((g) => ({ trays: Math.max(0, Math.round(Number(g.trays) || 0)), cells: Math.max(0, Math.round(Number(g.cells) || 0)) })).filter((g) => g.trays > 0 && g.cells > 0);
+    const total = groups.reduce((s, g) => s + g.trays * g.cells, 0);
+    return { groups, total };
+}
+
+// Derive the stored columns from an optional tray_groups input array.
+function trayFieldsFrom(trayGroups, fallbackTrays, fallbackCells) {
+    let groups = Array.isArray(trayGroups) ? trayGroups : null;
+    groups = (groups || []).map((g) => ({ trays: Math.max(0, Math.round(Number(g.trays) || 0)), cells: Math.max(0, Math.round(Number(g.cells) || 0)) })).filter((g) => g.trays > 0 && g.cells > 0);
+    if (groups.length === 0) {
+        return { json: null, trays: Math.max(1, intOrNull(fallbackTrays) || 1), cells: Math.max(1, intOrNull(fallbackCells) || 128) };
+    }
+    return { json: JSON.stringify(groups), trays: groups.reduce((s, g) => s + g.trays, 0), cells: groups.length === 1 ? groups[0].cells : null };
+}
+
 const SELECT_COLS = `
   id, system_id, crop_code, crop_name, seed_variety,
-  DATE_FORMAT(sow_date, '%Y-%m-%d') AS sow_date, trays, cells_per_tray,
-  (trays * cells_per_tray) AS total_sown,
+  DATE_FORMAT(sow_date, '%Y-%m-%d') AS sow_date, trays, cells_per_tray, tray_groups,
   predicted_germ_days, predicted_transplant_days,
   DATE_FORMAT(germination_date, '%Y-%m-%d') AS germination_date, germinated_count,
   DATE_FORMAT(transplant_date, '%Y-%m-%d') AS transplant_date, transplanted_count,
@@ -40,7 +60,8 @@ router.get('/:systemId', async (req, res) => {
             `SELECT ${SELECT_COLS} FROM seedling_batches WHERE system_id = ? ORDER BY (status = 'transplanted'), sow_date DESC, id DESC`,
             [req.params.systemId]
         );
-        res.json({ seedlings: rows });
+        const seedlings = rows.map((r) => { const t = trayInfo(r); return { ...r, tray_groups: t.groups, total_sown: t.total }; });
+        res.json({ seedlings });
     } catch (error) {
         console.error('Failed to load seedlings:', error);
         res.status(500).json({ error: 'Failed to load seedlings' });
@@ -53,11 +74,12 @@ router.post('/:systemId', async (req, res) => {
         if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
         const b = req.body || {};
         if (!b.sow_date) return res.status(400).json({ error: 'sow_date is required' });
+        const tf = trayFieldsFrom(b.tray_groups, b.trays, b.cells_per_tray);
         const [result] = await pool.execute(
-            `INSERT INTO seedling_batches (system_id, crop_code, crop_name, seed_variety, sow_date, trays, cells_per_tray, predicted_germ_days, predicted_transplant_days, notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO seedling_batches (system_id, crop_code, crop_name, seed_variety, sow_date, trays, cells_per_tray, tray_groups, predicted_germ_days, predicted_transplant_days, notes)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [req.params.systemId, b.crop_code || null, b.crop_name || null, b.seed_variety || null, b.sow_date,
-             Math.max(1, intOrNull(b.trays) || 1), Math.max(1, intOrNull(b.cells_per_tray) || 128),
+             tf.trays, tf.cells, tf.json,
              intOrNull(b.predicted_germ_days), intOrNull(b.predicted_transplant_days), b.notes || null]
         );
         res.json({ success: true, id: result.insertId });
@@ -79,12 +101,15 @@ router.put('/:id', async (req, res) => {
         const germinationDate = val('germination_date', sb.germination_date);
         let status = sb.status;
         if (status !== 'transplanted') status = germinationDate ? 'germinated' : 'sown';
+        const tf = b.tray_groups !== undefined
+            ? trayFieldsFrom(b.tray_groups, val('trays', sb.trays), val('cells_per_tray', sb.cells_per_tray))
+            : { json: sb.tray_groups, trays: Math.max(1, intOrNull(val('trays', sb.trays)) || 1), cells: intOrNull(val('cells_per_tray', sb.cells_per_tray)) };
         await pool.execute(
-            `UPDATE seedling_batches SET crop_code=?, crop_name=?, seed_variety=?, sow_date=?, trays=?, cells_per_tray=?,
+            `UPDATE seedling_batches SET crop_code=?, crop_name=?, seed_variety=?, sow_date=?, trays=?, cells_per_tray=?, tray_groups=?,
                 predicted_germ_days=?, predicted_transplant_days=?, germination_date=?, germinated_count=?, notes=?, status=?
              WHERE id=?`,
             [val('crop_code', sb.crop_code), val('crop_name', sb.crop_name), val('seed_variety', sb.seed_variety),
-             val('sow_date', sb.sow_date), Math.max(1, intOrNull(val('trays', sb.trays)) || 1), Math.max(1, intOrNull(val('cells_per_tray', sb.cells_per_tray)) || 1),
+             val('sow_date', sb.sow_date), tf.trays, tf.cells, tf.json,
              intOrNull(val('predicted_germ_days', sb.predicted_germ_days)), intOrNull(val('predicted_transplant_days', sb.predicted_transplant_days)),
              germinationDate || null, intOrNull(val('germinated_count', sb.germinated_count)), val('notes', sb.notes), status, req.params.id]
         );

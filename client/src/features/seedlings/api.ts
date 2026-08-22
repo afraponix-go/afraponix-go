@@ -1,6 +1,7 @@
 import { api } from '../../lib/apiClient'
 
 export type SeedlingStatus = 'sown' | 'germinated' | 'transplanted'
+export type TrayGroup = { trays: number; cells: number }
 
 export type Seedling = {
   id: number
@@ -10,6 +11,7 @@ export type Seedling = {
   sow_date: string
   trays: number
   cells_per_tray: number
+  tray_groups: TrayGroup[]
   total_sown: number
   predicted_germ_days: number | null
   predicted_transplant_days: number | null
@@ -37,8 +39,7 @@ export type SowInput = {
   crop_name?: string | null
   seed_variety?: string | null
   sow_date: string
-  trays?: number
-  cells_per_tray?: number
+  tray_groups?: TrayGroup[]
   predicted_germ_days?: number | null
   predicted_transplant_days?: number | null
   notes?: string | null

@@ -39,3 +39,14 @@
 @media (max-width: 480px) {
   .seedling-tray-row { flex-direction: column; }
 }
+
+/* Tray-groups editor (multiple tray sizes) */
+.tray-groups { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 10px; margin-bottom: 12px; }
+.tray-head { display: grid; grid-template-columns: 1fr 1fr 32px; gap: 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-faint); padding: 2px 0 6px; }
+.tray-row { display: grid; grid-template-columns: 1fr 1fr 32px; gap: 8px; align-items: center; margin-bottom: 6px; }
+.tray-row input { width: 100%; min-width: 0; box-sizing: border-box; font: inherit; font-size: 14px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.tray-x { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft); border-radius: 8px; width: 32px; height: 34px; cursor: pointer; font-size: 16px; }
+.tray-x:disabled { opacity: .35; cursor: default; }
+.tray-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px; }
+.tray-total { font-size: 13px; color: var(--ink-soft); }
+.tray-total b { color: var(--ink); font-variant-numeric: tabular-nums; }
