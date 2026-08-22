@@ -36,7 +36,7 @@ export function SprayLog() {
       ) : (
         <div className="log-table-wrap">
           <table className="log-table">
-            <thead><tr><th>Date</th><th>Product</th><th>Applied to</th><th>Quantity</th><th>Dilution</th><th>Conditions</th><th>Effectiveness</th><th></th></tr></thead>
+            <thead><tr><th>Date</th><th>Product</th><th>Applied to</th><th>Quantity</th><th>Dilution</th><th>Operator</th><th>Effectiveness</th><th></th></tr></thead>
             <tbody>
               {log.map((l) => {
                 const qty = l.quantity != null && l.quantity !== '' ? `${Number(l.quantity)} ${l.quantity_unit ?? ''}`.trim() : '—'
@@ -47,7 +47,7 @@ export function SprayLog() {
                 const scopeText = l.scope === 'system' ? `Entire system${beds.length ? ` (${beds.length} beds)` : ''}` : beds.length ? beds.join(', ') : l.bed_name ?? '—'
                 return (
                   <tr key={l.id}>
-                    <td>{l.application_date}</td>
+                    <td>{l.application_date}{l.phi_days ? <div className="log-note">PHI {l.phi_days}d · harvest ≥ {l.harvest_safe_date}</div> : null}</td>
                     <td><b>{l.product_name ?? '—'}</b>{l.plan_name && <div className="log-note">{l.plan_name}</div>}{l.notes && <div className="log-note">{l.notes}</div>}</td>
                     <td>
                       {scopeText}
@@ -55,7 +55,7 @@ export function SprayLog() {
                     </td>
                     <td>{qty}</td>
                     <td>{dil}</td>
-                    <td>{l.weather ?? '—'}</td>
+                    <td>{l.operator ?? '—'}{l.weather && <div className="log-note">{l.weather}</div>}</td>
                     <td>
                       <select className="log-eff-select" value={l.effectiveness ?? ''} disabled={rate.isPending} onChange={(e) => rate.mutate({ id: l.id, eff: e.target.value ? Number(e.target.value) : null })}>
                         <option value="">Rate…</option>

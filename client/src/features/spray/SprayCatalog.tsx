@@ -29,6 +29,8 @@ function ProductModal({ product, onClose }: { product?: SprayProduct; onClose: (
     target: product?.target ?? '',
     default_rate: product?.default_rate ?? '',
     interval_days: product?.interval_days != null ? String(product.interval_days) : '',
+    phi_days: product?.phi_days != null ? String(product.phi_days) : '',
+    resistance_group: product?.resistance_group ?? '',
     fish_safety: (product?.fish_safety ?? 'caution') as FishSafety,
     fish_note: product?.fish_note ?? '',
     compatibility_notes: product?.compatibility_notes ?? '',
@@ -45,6 +47,8 @@ function ProductModal({ product, onClose }: { product?: SprayProduct; onClose: (
         target: f.target.trim() || null,
         default_rate: f.default_rate.trim() || null,
         interval_days: f.interval_days ? Number(f.interval_days) : null,
+        phi_days: f.phi_days ? Number(f.phi_days) : null,
+        resistance_group: f.resistance_group.trim() || null,
         fish_safety: f.fish_safety,
         fish_note: f.fish_note.trim() || null,
         compatibility_notes: f.compatibility_notes.trim() || null,
@@ -94,6 +98,16 @@ function ProductModal({ product, onClose }: { product?: SprayProduct; onClose: (
           <div className="field">
             <label htmlFor="pr-int">Interval (days)</label>
             <input id="pr-int" type="number" min="1" value={f.interval_days} onChange={(e) => set('interval_days', e.target.value)} />
+          </div>
+        </div>
+        <div className="field-row">
+          <div className="field">
+            <label htmlFor="pr-phi">PHI <span className="unit-hint">(pre-harvest, days)</span></label>
+            <input id="pr-phi" type="number" min="0" value={f.phi_days} onChange={(e) => set('phi_days', e.target.value)} placeholder="0" />
+          </div>
+          <div className="field">
+            <label htmlFor="pr-group">Resistance group</label>
+            <input id="pr-group" type="text" value={f.resistance_group} onChange={(e) => set('resistance_group', e.target.value)} placeholder="e.g. IRAC 3A / FRAC M01" />
           </div>
         </div>
         <div className="field-row">
@@ -172,6 +186,8 @@ export function SprayCatalog() {
                       {p.active_ingredient && <span>{p.active_ingredient}</span>}
                       {p.default_rate && <span>· {p.default_rate}</span>}
                       {p.interval_days != null && <span>· every {p.interval_days}d</span>}
+                      {p.phi_days != null && <span>· PHI {p.phi_days}d</span>}
+                      {p.resistance_group && <span>· {p.resistance_group}</span>}
                     </div>
                     {p.target && <div className="cat-item-target">Target: {p.target}</div>}
                     {p.fish_note && <div className="cat-item-fishnote">🐟 {p.fish_note}</div>}

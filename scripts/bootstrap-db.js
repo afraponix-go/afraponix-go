@@ -80,6 +80,8 @@ const STEPS = [
   { type: 'node', file: 'database/migrations/2026-08-spray-catalog-seed.js', label: 'Spray product catalog (BCF, fish-safety)' },
   { type: 'sql', file: 'database/migrations/2026-08-spray-log-numeric.sql', label: 'Spray log: bed scope + numeric quantity/dilution' },
   { type: 'sql', file: 'database/migrations/2026-08-spray-log-targets.sql', label: 'Spray log targets (multi-bed + batches)' },
+  { type: 'sql', file: 'database/migrations/2026-08-spray-log-phi.sql', label: 'Spray log: PHI snapshot column' },
+  { type: 'node', file: 'database/migrations/2026-08-spray-catalog-compliance.js', label: 'Spray catalogue: PHI + resistance group backfill' },
   { type: 'node', file: 'database/migrations/2026-07-backfill-nutrient-readings.js', label: 'Backfill nutrient readings' },
   // One-time cleanup of NULL-user seed variety rows that accumulated when the
   // reference-data step re-ran on every deploy (before migration tracking).

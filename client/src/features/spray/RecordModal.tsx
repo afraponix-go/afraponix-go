@@ -49,6 +49,7 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
   const [dilValue, setDilValue] = useState(initDil ? String(initDil.value) : '')
   const [dilUnit, setDilUnit] = useState(initDil?.unit && DIL_UNITS.includes(initDil.unit) ? initDil.unit : 'ml/10L')
   const [weather, setWeather] = useState('')
+  const [operator, setOperator] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -78,6 +79,7 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
     }
   }
   const selValue = productId != null ? String(productId) : (productName ? 'other' : '')
+  const selectedProduct = products.find((p) => p.id === productId)
 
   const mut = useMutation({
     mutationFn: () => {
@@ -94,6 +96,7 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
         dilution_value: dilValue ? Number(dilValue) : null,
         dilution_unit: dilValue ? dilUnit : null,
         weather: weather || null,
+        operator: operator.trim() || null,
         notes: notes.trim() || null,
       }
       return recordApplication(input)
@@ -193,6 +196,12 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
           </div>
         </div>
         {rate && <p className="hint spray-rec-hint">Recommended dose: {rate}</p>}
+        {selectedProduct && (selectedProduct.phi_days != null || selectedProduct.resistance_group) && (
+          <p className="hint spray-rec-hint">
+            {selectedProduct.phi_days != null && <>PHI {selectedProduct.phi_days} day{selectedProduct.phi_days === 1 ? '' : 's'}{selectedProduct.resistance_group ? ' · ' : ''}</>}
+            {selectedProduct.resistance_group && <>Group {selectedProduct.resistance_group}</>}
+          </p>
+        )}
 
         <div className="field-row">
           <div className="field">
@@ -202,9 +211,13 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
             </select>
           </div>
           <div className="field">
-            <label htmlFor="rec-notes">Notes</label>
-            <input id="rec-notes" type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="optional" />
+            <label htmlFor="rec-operator">Operator</label>
+            <input id="rec-operator" type="text" value={operator} onChange={(e) => setOperator(e.target.value)} placeholder="who applied it" />
           </div>
+        </div>
+        <div className="field">
+          <label htmlFor="rec-notes">Notes</label>
+          <input id="rec-notes" type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="optional" />
         </div>
         <p className="hint spray-rec-hint">Effectiveness is rated later, from the log.</p>
         <div className="mform-actions">

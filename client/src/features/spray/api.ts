@@ -15,6 +15,8 @@ export type SprayProduct = {
   fish_safety: FishSafety
   fish_note: string | null
   compatibility_notes: string | null
+  phi_days: number | null
+  resistance_group: string | null
   custom: boolean
 }
 
@@ -72,6 +74,8 @@ export type LogEntry = {
   quantity_unit: string | null
   dilution_value: number | string | null
   dilution_unit: string | null
+  phi_days: number | null
+  harvest_safe_date: string | null
   weather: string | null
   effectiveness: number | null
   operator: string | null
@@ -92,7 +96,7 @@ export async function fetchProducts(): Promise<SprayProduct[]> {
   return d.products
 }
 
-export type ProductInput = Partial<Pick<SprayProduct, 'category' | 'product_name' | 'active_ingredient' | 'target' | 'default_rate' | 'interval_days' | 'fish_safety' | 'fish_note' | 'compatibility_notes'>>
+export type ProductInput = Partial<Pick<SprayProduct, 'category' | 'product_name' | 'active_ingredient' | 'target' | 'default_rate' | 'interval_days' | 'fish_safety' | 'fish_note' | 'compatibility_notes' | 'phi_days' | 'resistance_group'>>
 export const addProduct = (input: ProductInput) => api('/spray/products', { method: 'POST', body: input })
 export const updateProduct = (id: number, input: ProductInput) => api(`/spray/products/${id}`, { method: 'PUT', body: input })
 export const deleteProduct = (id: number) => api(`/spray/products/${id}`, { method: 'DELETE' })
@@ -150,3 +154,19 @@ export async function fetchCalendar(systemId: string, year: number, month: numbe
 }
 
 export const FISH_LABEL: Record<FishSafety, string> = { safe: 'Fish-safe', caution: 'Caution', toxic: 'Fish-toxic' }
+
+export type HarvestHold = {
+  batch_id: string
+  crop_type: string | null
+  bed_name: string | null
+  grow_bed_id: number | null
+  product_name: string | null
+  application_date: string
+  phi_days: number
+  harvest_safe_date: string
+  days_remaining: number
+}
+export async function fetchHarvestHolds(systemId: string): Promise<HarvestHold[]> {
+  const d = await api<{ holds: HarvestHold[] }>(`/spray/harvest-holds/${systemId}`)
+  return d.holds
+}

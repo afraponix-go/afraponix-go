@@ -206,7 +206,8 @@ router.get('/log/:systemId', async (req, res) => {
         const [rows] = await pool.query(
             `SELECT l.id, l.system_id, l.plan_id, l.product_id, l.product_name, l.grow_bed_id, l.bed_name, l.scope,
                     DATE_FORMAT(l.application_date, '%Y-%m-%d') AS application_date,
-                    l.rate, l.quantity, l.quantity_unit, l.dilution_value, l.dilution_unit,
+                    l.rate, l.quantity, l.quantity_unit, l.dilution_value, l.dilution_unit, l.phi_days,
+                    DATE_FORMAT(DATE_ADD(l.application_date, INTERVAL COALESCE(l.phi_days,0) DAY), '%Y-%m-%d') AS harvest_safe_date,
                     l.weather, l.effectiveness, l.operator, l.notes, l.created_at,
                     pl.name AS plan_name
              FROM spray_log l LEFT JOIN spray_plans pl ON pl.id = l.plan_id
@@ -236,11 +237,16 @@ router.post('/log', async (req, res) => {
         const pool = getDatabase();
         if (!b.system_id || !b.application_date) return res.status(400).json({ error: 'system_id and application_date are required' });
         if (!(await ownsSystem(pool, b.system_id, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
-        // Snapshot the product name so history survives product deletion.
+        // Snapshot the product name + PHI so history and the harvest-safe date
+        // survive later product changes.
         let productName = b.product_name || null;
-        if (!productName && b.product_id) {
-            const [pr] = await pool.execute('SELECT product_name FROM spray_products WHERE id = ?', [b.product_id]);
-            productName = pr.length ? pr[0].product_name : null;
+        let phiDays = b.phi_days != null && b.phi_days !== '' ? Number(b.phi_days) : null;
+        if (b.product_id) {
+            const [pr] = await pool.execute('SELECT product_name, phi_days FROM spray_products WHERE id = ?', [b.product_id]);
+            if (pr.length) {
+                if (!productName) productName = pr[0].product_name;
+                if (phiDays == null && pr[0].phi_days != null) phiDays = Number(pr[0].phi_days);
+            }
         }
 
         // Scope: a set of beds, or the whole system (all beds). Validate the given
@@ -273,12 +279,12 @@ router.post('/log', async (req, res) => {
         const singleBed = !wholeSystem && targetBedIds.length === 1 ? targetBedIds[0] : null;
         const [result] = await pool.execute(
             `INSERT INTO spray_log (system_id, plan_id, product_id, product_name, grow_bed_id, bed_name, scope, application_date, rate,
-                                    quantity, quantity_unit, dilution_value, dilution_unit, weather, effectiveness, operator, notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                                    quantity, quantity_unit, dilution_value, dilution_unit, phi_days, weather, effectiveness, operator, notes)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [b.system_id, b.plan_id || null, b.product_id || null, productName, singleBed, singleBed ? bedName.get(singleBed) : null,
              wholeSystem ? 'system' : 'beds', b.application_date, b.rate || null,
-             num(b.quantity), b.quantity_unit || null, num(b.dilution_value), b.dilution_unit || null,
-             b.weather || null, eff, b.operator || null, b.notes || null]
+             num(b.quantity), b.quantity_unit || null, num(b.dilution_value), b.dilution_unit || null, phiDays,
+             b.weather || null, eff, (b.operator || '').trim() || null, b.notes || null]
         );
         const logId = result.insertId;
 
@@ -417,6 +423,29 @@ router.get('/calendar/:systemId', async (req, res) => {
     } catch (error) {
         console.error('Failed to load spray calendar:', error);
         res.status(500).json({ error: 'Failed to load spray calendar' });
+    }
+});
+
+// Batches still within a pre-harvest interval — do not harvest until the date.
+router.get('/harvest-holds/:systemId', async (req, res) => {
+    try {
+        const pool = getDatabase();
+        if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        const [rows] = await pool.query(
+            `SELECT t.batch_id, t.crop_type, t.bed_name, t.grow_bed_id, l.product_name,
+                    DATE_FORMAT(l.application_date, '%Y-%m-%d') AS application_date, l.phi_days,
+                    DATE_FORMAT(DATE_ADD(l.application_date, INTERVAL l.phi_days DAY), '%Y-%m-%d') AS harvest_safe_date,
+                    DATEDIFF(DATE_ADD(l.application_date, INTERVAL l.phi_days DAY), CURDATE()) AS days_remaining
+             FROM spray_log l JOIN spray_log_targets t ON t.log_id = l.id
+             WHERE l.system_id = ? AND l.phi_days IS NOT NULL AND l.phi_days > 0 AND t.batch_id IS NOT NULL
+               AND DATE_ADD(l.application_date, INTERVAL l.phi_days DAY) >= CURDATE()
+             ORDER BY harvest_safe_date ASC, t.crop_type`,
+            [req.params.systemId]
+        );
+        res.json({ holds: rows });
+    } catch (error) {
+        console.error('Failed to load harvest holds:', error);
+        res.status(500).json({ error: 'Failed to load harvest holds' });
     }
 });
 

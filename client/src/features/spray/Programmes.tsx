@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
 import { Modal } from '../../components/Modal'
-import { fetchProgrammes, fetchDue, deleteProgramme, setProgrammeStatus, WEEKDAY_LABEL, type Programme } from './api'
+import { fetchProgrammes, fetchDue, fetchHarvestHolds, deleteProgramme, setProgrammeStatus, WEEKDAY_LABEL, type Programme } from './api'
 import { CATEGORY_LABEL, FishBadge } from './shared'
 import { ProgrammeModal } from './ProgrammeModal'
 import { RecordModal, type RecordPrefill } from './RecordModal'
@@ -17,6 +17,7 @@ export function Programmes() {
 
   const { data: programmes = [], isLoading } = useQuery({ queryKey: ['spray-programmes', activeId], queryFn: () => fetchProgrammes(activeId as string), enabled: !!activeId })
   const { data: dueData } = useQuery({ queryKey: ['spray-due', activeId], queryFn: () => fetchDue(activeId as string), enabled: !!activeId })
+  const { data: holds = [] } = useQuery({ queryKey: ['spray-holds', activeId], queryFn: () => fetchHarvestHolds(activeId as string), enabled: !!activeId })
   const del = useMutation({
     mutationFn: (p: Programme) => deleteProgramme(p.id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['spray-programmes'] }); qc.invalidateQueries({ queryKey: ['spray-due'] }); setConfirmDel(null) },
@@ -42,6 +43,20 @@ export function Programmes() {
         <button className="btn feed-btn" onClick={() => setEdit({})}>+ New programme</button>
       </div>
       <p className="spray-lead">Plan your pest, disease and foliar‑feed sprays. Products are flagged for fish safety — never let a fish‑toxic spray reach the system water.</p>
+
+      {holds.length > 0 && (
+        <div className="spray-hold">
+          <div className="spray-hold-head">⚠ Harvest hold — do not harvest these batches yet (pre‑harvest interval)</div>
+          <div className="spray-hold-list">
+            {holds.map((h, i) => (
+              <div key={i} className="spray-hold-item">
+                <span className="spray-hold-crop">{h.crop_type ?? 'Batch'}{h.bed_name ? ` · ${h.bed_name}` : ''}</span>
+                <span className="spray-hold-meta">{h.product_name} · harvest from <b>{h.harvest_safe_date}</b> ({h.days_remaining} day{h.days_remaining === 1 ? '' : 's'} left)</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {due.length > 0 && (
         <div className="spray-due">

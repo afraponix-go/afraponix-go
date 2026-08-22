@@ -125,3 +125,11 @@
 
 .spray-rec-hint { color: var(--ink-faint); font-size: 12px; margin: 2px 0 0; }
 .log-eff-select { font: inherit; font-size: 12px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+
+/* Harvest-hold (PHI) banner */
+.spray-hold { border: 1px solid var(--warn); background: var(--warn-wash); border-radius: var(--radius-lg, 14px); padding: 12px 16px; margin-bottom: 20px; }
+.spray-hold-head { font-weight: 700; font-size: 14px; color: var(--warn); margin-bottom: 8px; }
+.spray-hold-list { display: flex; flex-direction: column; gap: 6px; }
+.spray-hold-item { display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; font-size: 13px; }
+.spray-hold-crop { font-weight: 600; }
+.spray-hold-meta { color: var(--ink-soft); font-size: 12.5px; }
