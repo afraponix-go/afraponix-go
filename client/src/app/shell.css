@@ -320,3 +320,57 @@
     padding: 8px 14px;
   }
 }
+
+/* ---------- Responsive header + nav (mobile) ---------- */
+.account { position: relative; }
+.account-actions { display: flex; align-items: center; gap: 10px; }
+.account-menu-btn { display: none; align-items: center; justify-content: center; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); cursor: pointer; }
+
+.popover-backdrop { position: fixed; inset: 0; z-index: 25; }
+
+.account-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 30;
+  min-width: 200px; padding: 6px; display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 10px 34px rgba(0,0,0,.20);
+}
+.account-menu-who { font-size: 12px; color: var(--ink-faint); font-weight: 600; padding: 6px 10px 8px; }
+.account-menu-item { display: flex; align-items: center; gap: 8px; text-align: left; width: 100%; font: inherit; font-size: 14px; font-weight: 500; padding: 10px 10px; border: 0; background: transparent; color: var(--ink); border-radius: 10px; cursor: pointer; }
+.account-menu-item:hover { background: var(--surface-2); }
+.account-menu-item.danger { color: var(--danger); }
+.account-menu-item.as-toggle { padding: 6px 8px; }
+
+/* Bottom-nav "More" overflow */
+.bottomnav .more-toggle { display: none; border: 0; background: transparent; cursor: pointer; }
+.more-toggle .more-dots { font-size: 20px; line-height: 1; height: 24px; display: grid; place-items: center; }
+.more-sheet {
+  position: absolute; right: 8px; bottom: calc(100% + 8px); z-index: 30;
+  min-width: 190px; padding: 6px; display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 10px 34px rgba(0,0,0,.20);
+}
+.more-item { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 10px; text-decoration: none; color: var(--ink-soft); font-weight: 600; font-size: 14px; }
+.more-item:hover { background: var(--surface-2); color: var(--ink); }
+.more-item.active { color: var(--accent); background: var(--accent-wash); }
+.more-item-icon { flex: 0 0 auto; }
+
+@media (max-width: 767px) {
+  .topbar { gap: 10px; padding: 0 14px; }
+  .topbar > .brand { flex: 0 0 auto; }
+  .account { flex: 1; min-width: 0; justify-content: flex-end; }
+  .sys-switch { flex: 1; min-width: 0; }
+  .sys-select { max-width: none; width: 100%; min-width: 0; }
+  .account-actions { display: none; }
+  .account-menu-btn { display: inline-flex; flex: 0 0 auto; }
+}
+
+/* Show "More" and hide the overflow tabs only where they don't fit */
+@media (max-width: 559px) {
+  .bottomnav .tab-overflow { display: none; }
+  .bottomnav .more-toggle { display: flex; }
+}
+
+/* Power-saver toggle rendered inside the account menu (show its label, flatten) */
+.account-menu .as-toggle .saver { border: 0; background: transparent; padding: 4px 2px; height: auto; width: 100%; justify-content: flex-start; }
+.account-menu .as-toggle .saver:hover { color: var(--ink); }
+.account-menu .as-toggle .saver-label { display: inline; }
