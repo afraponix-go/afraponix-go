@@ -157,3 +157,149 @@
 .nd-vol-reset:hover {
   text-decoration: underline;
 }
+
+/* Nutrient dosing v2 — layout helpers (self-contained) */
+.io-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.io-btn {
+  font: inherit;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+.io-btn.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.io-btn.primary:hover {
+  background: color-mix(in srgb, var(--accent) 88%, black);
+}
+
+/* Current/target level grid */
+.nd-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.nd-lv-head,
+.nd-lv-row {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+}
+.nd-lv-head {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+.nd-lv-head span:not(:first-child) {
+  text-align: right;
+  padding-right: 12px;
+}
+.nd-lv-row label {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  margin: 0;
+}
+.nd-lv-row input {
+  font: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  text-align: right;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+}
+.nd-lv-row input:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+
+/* Fertiliser list */
+.nd-prod-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.nd-prod {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 13px;
+}
+.nd-prod-name {
+  font-weight: 600;
+  color: var(--ink);
+}
+.nd-prod-comp {
+  margin-left: auto;
+  color: var(--ink-faint);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nd-prod-x {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink-faint);
+  cursor: pointer;
+  line-height: 1;
+}
+.nd-prod-x:hover {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
+}
+.nd-add summary {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+}
+.nd-add-name {
+  font: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 10px 0 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+}
+.nd-add-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.nd-add-grid input {
+  font: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 4px;
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
