@@ -436,7 +436,7 @@
   cursor: pointer;
 }
 .nd-stage button + button { border-left: 1px solid var(--line); }
-.nd-stage button.active { background: var(--primary); color: #fff; }
+.nd-stage button.active { background: var(--accent); color: var(--accent-ink); }
 
 .ct-source { margin: 2px 0 10px; font-size: 13px; color: var(--ink-soft); }
 .ct-note-ok {

@@ -8,7 +8,6 @@ import {
   NUTRIENTS,
   KEYS,
   computeDose,
-  ecFromLevels,
   emptyLevels,
   fetchLatestLevels,
   fetchUserProducts,
@@ -122,10 +121,13 @@ export function NutrientDosingCalculator() {
   }, [systemVolume, volumeTouched])
 
   const volumeL = Number(volume) > 0 ? Number(volume) : 0
-  const targetEC = ecFromLevels(target)
   const result = useMemo(() => computeDose(volumeL, current, target, products), [volumeL, current, target, products])
-  const finalEC = ecFromLevels(result.finalLevels)
   const targetsEmpty = KEYS.every((k) => !(target[k] > 0))
+  // EC is a poor proxy for nutrition in aquaponics and is not derived from the
+  // targets — show the crop's hydroponic-derived EC guide band for reference.
+  const ecGuide = selectedCrop && selectedCrop.ecMin != null && selectedCrop.ecMax != null
+    ? `${selectedCrop.ecMin}–${selectedCrop.ecMax}`
+    : selectedCrop && selectedCrop.ecMin != null ? String(selectedCrop.ecMin) : null
 
   const setCur = (k: NutrientKey, v: string) => { setCurrent((c) => ({ ...c, [k]: numOr0(v) })); setCurrentTouched(true) }
   const setTgt = (k: NutrientKey, v: string) => { setTarget((t) => ({ ...t, [k]: numOr0(v) })); setTargetTouched(true) }
@@ -199,14 +201,15 @@ export function NutrientDosingCalculator() {
 
           <div className="io-row">
             <div className="field">
-              <label htmlFor="nd-ec0">Starting EC <span className="hint">(mS/cm)</span></label>
-              <input id="nd-ec0" type="number" min="0" step="0.1" inputMode="decimal" value={startingEC} onChange={(e) => setStartingEC(e.target.value)} placeholder="current EC" />
+              <label htmlFor="nd-ec0">Your EC <span className="hint">(mS/cm)</span></label>
+              <input id="nd-ec0" type="number" min="0" step="0.1" inputMode="decimal" value={startingEC} onChange={(e) => setStartingEC(e.target.value)} placeholder="measured EC" />
             </div>
             <div className="field">
-              <label htmlFor="nd-ec1">Target EC <span className="hint">(auto)</span></label>
-              <input id="nd-ec1" type="number" value={targetEC.toFixed(2)} readOnly tabIndex={-1} />
+              <label htmlFor="nd-ec1">EC guide <span className="hint">(mS/cm)</span></label>
+              <input id="nd-ec1" type="text" value={ecGuide ?? '—'} readOnly tabIndex={-1} />
             </div>
           </div>
+          <p className="calc-result-hint" style={{ marginTop: 0 }}>EC is a rough guide only in aquaponics — dose to the nutrient targets below, not to EC.</p>
 
           <hr className="calc-divider" />
           <div className="calc-sub">Levels (ppm)</div>
@@ -319,10 +322,6 @@ export function NutrientDosingCalculator() {
               </div>
 
               <div className="calc-sub" style={{ marginTop: 22 }}>Projected result</div>
-              <div className="metric-grid">
-                <div className="metric"><div className="label">EC after dosing</div><div className="value">{finalEC.toFixed(2)}<span className="unit">mS/cm</span></div></div>
-                <div className="metric"><div className="label">Target EC</div><div className="value">{targetEC.toFixed(2)}<span className="unit">mS/cm</span></div></div>
-              </div>
               <div className="nd-table-wrap" style={{ marginTop: 14 }}>
                 <table className="nd-table">
                   <thead><tr><th>Element</th><th className="r">Current</th><th className="r">Projected</th><th className="r">Target</th></tr></thead>

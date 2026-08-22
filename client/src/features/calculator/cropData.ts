@@ -15,6 +15,8 @@ export type DosingCrop = {
   name: string
   inSystem: boolean
   targets: Levels | null
+  ecMin: number | null
+  ecMax: number | null
 }
 
 // Same slug rule the planting/allocation code uses, so a crop_type recorded in
@@ -45,7 +47,7 @@ export async function fetchDosingCrops(systemId: string): Promise<DosingCrop[]> 
       ca: c.target_ca ?? 0, mg: c.target_mg ?? 0, fe: c.target_fe ?? 0,
     }
     const hasTargets = KEYS.some((k) => (t[k] || 0) > 0)
-    list.push({ code, name: c.crop_name, inSystem: inUse.has(code), targets: hasTargets ? t : null })
+    list.push({ code, name: c.crop_name, inSystem: inUse.has(code), targets: hasTargets ? t : null, ecMin: c.ec_min ?? null, ecMax: c.ec_max ?? null })
   }
 
   // In-system crops first, then alphabetical within each group.
