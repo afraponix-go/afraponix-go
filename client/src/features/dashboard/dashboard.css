@@ -143,3 +143,26 @@
   color: var(--ink);
   max-width: 240px;
 }
+
+/* Nutrient band status pills + reference-crop selector */
+.status.band-good { background: var(--ok-wash); color: var(--ok); }
+.status.band-low, .status.band-high { background: var(--warn-wash); color: var(--warn); }
+
+.dash-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 26px 0 12px;
+}
+.ref-crop { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-soft); }
+.ref-crop select {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}

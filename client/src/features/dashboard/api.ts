@@ -20,3 +20,37 @@ export async function fetchLatestNutrients(systemId: string): Promise<LatestNutr
   const parsed = z.record(z.string(), nutrientReading).safeParse(data)
   return parsed.success ? parsed.data : {}
 }
+
+// Per-nutrient target bands the dashboard scores readings against — either the
+// system's pinned primary crop+stage, or (default) the most-demanding levels
+// across the crops planted in the system.
+export type BandKey = 'n' | 'p' | 'k' | 'ca' | 'mg' | 'fe'
+export type Band = { floor: number | null; target: number | null; high?: number }
+export type SystemTargets = {
+  mode: 'auto' | 'primary'
+  primary: { crop: string; stage: 'vegetative' | 'fruiting' } | null
+  bands: Record<BandKey, Band | null>
+  options: { code: string; name: string; hasFruiting: boolean }[]
+}
+
+// nutrient_readings key -> band key
+export const NUTRIENT_BAND_KEY: Record<string, BandKey> = {
+  nitrogen: 'n', phosphorus: 'p', potassium: 'k', calcium: 'ca', magnesium: 'mg', iron: 'fe',
+}
+
+export async function fetchSystemTargets(systemId: string): Promise<SystemTargets> {
+  return api<SystemTargets>(`/dosing/system-nutrient-targets/${systemId}`)
+}
+
+export async function setReferenceCrop(systemId: string, crop: string | null, stage?: 'vegetative' | 'fruiting') {
+  return api(`/dosing/system-nutrient-targets/${systemId}`, { method: 'PUT', body: { crop, stage } })
+}
+
+// Classify a reading against a band.
+export type BandStatus = 'low' | 'good' | 'high' | 'none'
+export function bandStatus(value: number, band?: Band | null): BandStatus {
+  if (!band || band.target == null) return 'none'
+  if (band.floor != null && value < band.floor) return 'low'
+  if (band.high != null && value > band.high) return 'high'
+  return 'good'
+}

@@ -1,7 +1,16 @@
 import { useState, type KeyboardEvent } from 'react'
-import { useQuery, type QueryKey } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
-import { fetchLatestNutrients, type LatestNutrients, type NutrientReading } from './api'
+import {
+  fetchLatestNutrients,
+  fetchSystemTargets,
+  setReferenceCrop,
+  bandStatus,
+  NUTRIENT_BAND_KEY,
+  type Band,
+  type LatestNutrients,
+  type NutrientReading,
+} from './api'
 import { fetchFishInventory, fetchDensityHistory, tankMaxDensity } from '../fish/api'
 import { sum, fmt, Stat } from '../fish/fishShared'
 import { CHARTABLE, fetchSeries, type SeriesPoint } from '../charts/api'
@@ -88,8 +97,10 @@ function WaterCard({ def, reading, onOpen }: { def: MetricDef; reading?: Nutrien
   )
 }
 
-function NutrientTile({ label, reading, onOpen }: { label: string; reading: NutrientReading; onOpen?: () => void }) {
+function NutrientTile({ label, reading, band, onOpen }: { label: string; reading: NutrientReading; band?: Band | null; onOpen?: () => void }) {
   const badge = sourceBadge(reading.source)
+  const status = bandStatus(reading.value, band)
+  const statusText = status === 'low' ? 'Low' : status === 'high' ? 'High' : status === 'good' ? 'In range' : null
   return (
     <div {...clickProps(onOpen)}>
       <div className="label">{label}</div>
@@ -97,9 +108,11 @@ function NutrientTile({ label, reading, onOpen }: { label: string; reading: Nutr
         {reading.value.toFixed(reading.value >= 100 ? 0 : 2)}
         {reading.unit && <span className="unit">{reading.unit}</span>}
       </div>
-      <span className="source" title={`${badge.label} reading`}>
-        {badge.icon} {badge.label}
-      </span>
+      {statusText && band?.target != null ? (
+        <span className={`status band-${status}`} title={`Target ${band.target}${band.floor != null ? ` · floor ${band.floor}` : ''}`}>{statusText}</span>
+      ) : (
+        <span className="source" title={`${badge.label} reading`}>{badge.icon} {badge.label}</span>
+      )}
     </div>
   )
 }
@@ -126,6 +139,17 @@ export function DashboardPage() {
     queryKey: ['fish-inventory', activeId],
     queryFn: () => fetchFishInventory(activeId as string),
     enabled: !!activeId,
+  })
+
+  const qc = useQueryClient()
+  const { data: sysTargets } = useQuery({
+    queryKey: ['system-targets', activeId],
+    queryFn: () => fetchSystemTargets(activeId as string),
+    enabled: !!activeId,
+  })
+  const setRef = useMutation({
+    mutationFn: ({ crop, stage }: { crop: string | null; stage?: 'vegetative' | 'fruiting' }) => setReferenceCrop(activeId as string, crop, stage),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['system-targets', activeId] }),
   })
 
   if (systemsLoading) return <div className="empty">Loading systems…</div>
@@ -189,6 +213,27 @@ export function DashboardPage() {
     })
   }
 
+  // Reference-crop selector for the nutrient target bands.
+  const refValue = sysTargets?.mode === 'primary' && sysTargets.primary
+    ? `${sysTargets.primary.crop}|${sysTargets.primary.stage}`
+    : 'auto'
+  const refOptions: { value: string; label: string }[] = [{ value: 'auto', label: 'Auto — most demanding' }]
+  for (const o of sysTargets?.options ?? []) {
+    if (o.hasFruiting) {
+      refOptions.push({ value: `${o.code}|vegetative`, label: `${o.name} · Vegetative` })
+      refOptions.push({ value: `${o.code}|fruiting`, label: `${o.name} · Fruiting` })
+    } else {
+      refOptions.push({ value: `${o.code}|vegetative`, label: o.name })
+    }
+  }
+  if (sysTargets?.primary && !refOptions.some((r) => r.value === refValue)) {
+    refOptions.push({ value: refValue, label: `${sysTargets.primary.crop} · ${sysTargets.primary.stage}` })
+  }
+  const onRefChange = (v: string) => {
+    if (v === 'auto') setRef.mutate({ crop: null })
+    else { const [c, s] = v.split('|'); setRef.mutate({ crop: c, stage: s as 'vegetative' | 'fruiting' }) }
+  }
+
   return (
     <div>
       <div className="dash-head">
@@ -230,10 +275,20 @@ export function DashboardPage() {
 
       {presentNutrients.length > 0 && (
         <>
-          <h2 className="section-title">Nutrient levels</h2>
+          <div className="dash-section-head">
+            <h2 className="section-title" style={{ margin: 0 }}>Nutrient levels</h2>
+            {(sysTargets?.options.length ?? 0) > 0 && (
+              <label className="ref-crop">
+                <span>Targets for</span>
+                <select value={refValue} onChange={(e) => onRefChange(e.target.value)}>
+                  {refOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </label>
+            )}
+          </div>
           <div className="metric-grid">
             {presentNutrients.map((n) => (
-              <NutrientTile key={n.key} label={n.label} reading={nutrients[n.key]} onOpen={() => openParam(n.key, n.label)} />
+              <NutrientTile key={n.key} label={n.label} reading={nutrients[n.key]} band={sysTargets?.bands[NUTRIENT_BAND_KEY[n.key]]} onOpen={() => openParam(n.key, n.label)} />
             ))}
           </div>
         </>

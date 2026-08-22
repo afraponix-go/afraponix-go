@@ -246,4 +246,163 @@ router.put('/admin/targets/:cropCode', requireAdmin, async (req, res) => {
     }
 });
 
+// ---------------------------------------------------- dashboard scoring
+
+const slug = (s) => String(s || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+const prettyName = (code) => String(code || '').split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+// Default targets AND floors (min_value) for a crop + stage, veg -> general
+// fallback. Returns { n:{target,floor}, ... } or null.
+async function defaultTargetsFull(pool, cropCode, stage) {
+    const read = async (stageCode) => {
+        const [rows] = await pool.execute(
+            `SELECT n.code AS nutrient, cnt.target_value AS val, cnt.min_value AS floor
+             FROM crop_nutrient_targets cnt
+             JOIN crops c ON c.id = cnt.crop_id
+             JOIN nutrients n ON n.id = cnt.nutrient_id
+             JOIN growth_stages gs ON gs.id = cnt.growth_stage_id
+             WHERE c.code = ? AND gs.code = ?`,
+            [cropCode, stageCode]
+        );
+        if (rows.length === 0) return null;
+        const out = {};
+        for (const k of KEYS) out[k] = { target: null, floor: null };
+        for (const r of rows) { const key = KEY_BY_NUTRIENT[r.nutrient]; if (key) out[key] = { target: numOrNull(r.val), floor: numOrNull(r.floor) }; }
+        return out;
+    };
+    let out = await read(stage);
+    if (!out && stage === 'vegetative') out = await read('general');
+    return out;
+}
+
+// Effective target + floor per nutrient for one crop + stage in a system:
+// override (aim) over default (aim), with the floor always from the default.
+async function cropBand(pool, systemId, userId, cropCode, stage) {
+    let def = await defaultTargetsFull(pool, cropCode, stage);
+    if (!def && stage === 'vegetative') {
+        const cc = await customCropTargets(pool, userId, cropCode);
+        if (cc) { def = {}; for (const k of KEYS) def[k] = { target: cc[k], floor: null }; }
+    }
+    const ov = await systemOverride(pool, systemId, cropCode, stage);
+    const out = {};
+    for (const k of KEYS) {
+        const target = (ov && ov[k] != null) ? ov[k] : (def ? def[k].target : null);
+        let floor = def ? def[k].floor : null;
+        if (floor == null && target != null) floor = Math.round(target * 0.8 * 10) / 10;
+        out[k] = { target, floor };
+    }
+    return out;
+}
+
+async function inSystemCropTypes(pool, systemId) {
+    const [a] = await pool.execute('SELECT DISTINCT crop_type FROM plant_allocations WHERE system_id = ?', [systemId]);
+    const [g] = await pool.execute("SELECT DISTINCT crop_type FROM plant_growth WHERE system_id = ? AND crop_type IS NOT NULL AND crop_type <> ''", [systemId]);
+    const set = new Set();
+    for (const r of [...a, ...g]) if (r.crop_type) set.add(slug(r.crop_type));
+    return [...set];
+}
+
+async function fruitingCropTypes(pool, systemId) {
+    const [rows] = await pool.execute(
+        "SELECT DISTINCT crop_type FROM plant_growth WHERE system_id = ? AND LOWER(growth_stage) IN ('flowering','fruiting','harvest','harvest_ready')",
+        [systemId]
+    );
+    const set = new Set();
+    for (const r of rows) if (r.crop_type) set.add(slug(r.crop_type));
+    return set;
+}
+
+async function cropNameMap(pool, userId, codes) {
+    const map = {};
+    if (!codes.length) return map;
+    const [globals] = await pool.query('SELECT code, name FROM crops WHERE code IN (?)', [codes]);
+    for (const r of globals) map[r.code] = r.name;
+    const [customs] = await pool.query('SELECT crop_code, crop_name FROM custom_crops WHERE user_id = ? AND crop_code IN (?)', [userId, codes]);
+    for (const r of customs) if (!map[r.crop_code]) map[r.crop_code] = r.crop_name;
+    return map;
+}
+
+// Per-nutrient target bands the dashboard scores readings against. Either the
+// system's pinned primary crop+stage, or (default) the most-demanding levels
+// across the crops planted in the system, each judged at its current stage.
+router.get('/system-nutrient-targets/:systemId', authenticateToken, async (req, res) => {
+    try {
+        const { systemId } = req.params;
+        const pool = getDatabase();
+        if (!(await ownsSystem(pool, systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+
+        // Selectable crops = the ones planted in this system (with stage info).
+        const inSystem = await inSystemCropTypes(pool, systemId);
+        const nameMap = await cropNameMap(pool, req.user.userId, inSystem);
+        const options = [];
+        for (const code of inSystem) {
+            const stages = await cropStages(pool, code);
+            options.push({ code, name: nameMap[code] || prettyName(code), hasFruiting: stages.includes('fruiting') });
+        }
+        options.sort((a, b) => a.name.localeCompare(b.name));
+
+        const [primaryRows] = await pool.execute('SELECT crop_code, stage FROM system_target_crop WHERE system_id = ?', [systemId]);
+        const primary = primaryRows.length ? { crop: primaryRows[0].crop_code, stage: primaryRows[0].stage } : null;
+
+        // Which crop+stage pairs to score against.
+        let toScore = [];
+        if (primary) {
+            toScore = [{ code: primary.crop, stage: primary.stage }];
+        } else {
+            const fruiting = await fruitingCropTypes(pool, systemId);
+            for (const opt of options) {
+                const stage = fruiting.has(opt.code) && opt.hasFruiting ? 'fruiting' : 'vegetative';
+                toScore.push({ code: opt.code, stage });
+            }
+        }
+
+        // Aggregate: per nutrient, the highest floor and highest target win.
+        const bands = {};
+        for (const k of KEYS) bands[k] = null;
+        for (const { code, stage } of toScore) {
+            const band = await cropBand(pool, systemId, req.user.userId, code, stage);
+            for (const k of KEYS) {
+                const { target, floor } = band[k];
+                if (target == null && floor == null) continue;
+                const cur = bands[k] || { floor: null, target: null };
+                if (target != null) cur.target = cur.target == null ? target : Math.max(cur.target, target);
+                if (floor != null) cur.floor = cur.floor == null ? floor : Math.max(cur.floor, floor);
+                bands[k] = cur;
+            }
+        }
+        for (const k of KEYS) {
+            if (bands[k] && bands[k].target != null) bands[k].high = Math.round(bands[k].target * 1.5 * 10) / 10;
+        }
+
+        res.json({ mode: primary ? 'primary' : 'auto', primary, bands, options });
+    } catch (error) {
+        console.error('Failed to load system nutrient targets:', error);
+        res.status(500).json({ error: 'Failed to load system nutrient targets' });
+    }
+});
+
+// Pin (or clear) the system's primary reference crop for dashboard scoring.
+router.put('/system-nutrient-targets/:systemId', authenticateToken, async (req, res) => {
+    try {
+        const { systemId } = req.params;
+        const pool = getDatabase();
+        if (!(await ownsSystem(pool, systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+
+        const crop = req.body && req.body.crop ? String(req.body.crop).slice(0, 50) : null;
+        if (!crop) {
+            await pool.execute('DELETE FROM system_target_crop WHERE system_id = ?', [systemId]);
+            return res.json({ success: true, primary: null });
+        }
+        const stage = validStage(req.body && req.body.stage) ? req.body.stage : 'vegetative';
+        await pool.execute(
+            'INSERT INTO system_target_crop (system_id, crop_code, stage) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE crop_code = VALUES(crop_code), stage = VALUES(stage)',
+            [systemId, crop, stage]
+        );
+        res.json({ success: true, primary: { crop, stage } });
+    } catch (error) {
+        console.error('Failed to set system reference crop:', error);
+        res.status(500).json({ error: 'Failed to set reference crop' });
+    }
+});
+
 module.exports = router;
