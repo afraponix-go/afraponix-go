@@ -56,7 +56,8 @@
 .pm-prod { padding: 6px 0; border-top: 1px solid var(--line); }
 .pm-cat:first-child .pm-cat-head { margin-top: 2px; }
 .pm-prod-main { display: flex; align-items: center; justify-content: flex-start; gap: 8px; cursor: pointer; }
-.pm-prod-main input[type="checkbox"] { flex: 0 0 auto; }
+/* Override the global .mform input { width:100% } for the row checkbox. */
+.pm-prod-main input[type="checkbox"] { width: 16px; min-width: 16px; height: 16px; padding: 0; flex: 0 0 auto; margin: 0; }
 .pm-prod-name { font-weight: 600; font-size: 13.5px; flex: 1; }
 .pm-prod-cfg { display: flex; align-items: center; gap: 10px; margin: 6px 0 2px 24px; flex-wrap: wrap; }
 .pm-days { display: inline-flex; gap: 3px; }
