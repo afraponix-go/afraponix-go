@@ -87,6 +87,8 @@ const STEPS = [
   // after every spray table exists; behaviour-neutral until Phase 1b).
   { type: 'sql', file: 'database/migrations/2026-08-programme-core.sql', label: 'Operations: unified programme core tables' },
   { type: 'node', file: 'database/migrations/2026-08-programme-backfill-spray.js', label: 'Operations: fold spray programmes into the unified core' },
+  // Phase 1b: spray-specific convenience columns on the unified log (faithful port).
+  { type: 'sql', file: 'database/migrations/2026-08-programme-log-spray-cols.sql', label: 'Operations: spray columns on programme_log' },
   { type: 'sql', file: 'database/migrations/2026-08-seedlings.sql', label: 'Seedling (nursery) batches + crop germ/transplant days' },
   { type: 'sql', file: 'database/migrations/2026-08-seedling-tray-groups.sql', label: 'Seedling mixed tray sizes (tray_groups)' },
   { type: 'node', file: 'database/migrations/2026-07-backfill-nutrient-readings.js', label: 'Backfill nutrient readings' },

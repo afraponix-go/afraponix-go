@@ -14,21 +14,25 @@ async function ownsSystem(pool, systemId, userId) {
     return rows.length > 0;
 }
 
-// Verify the caller owns the system a plan belongs to; returns the plan row or null.
+// Verify the caller owns the system a programme belongs to; returns its row or null.
+// (Reads the unified `programmes` table — spray is one programme type.)
 async function ownedPlan(pool, planId, userId) {
     const [rows] = await pool.execute(
-        'SELECT p.* FROM spray_plans p JOIN systems s ON s.id = p.system_id WHERE p.id = ? AND s.user_id = ?',
+        "SELECT p.* FROM programmes p JOIN systems s ON s.id = p.system_id WHERE p.id = ? AND p.type = 'spray' AND s.user_id = ?",
         [planId, userId]
     );
     return rows.length ? rows[0] : null;
 }
 
+// The spray products scheduled in a programme, in the shape the UI expects
+// (`days` = the item's weekdays split out). Only spray items (spray_product_id set).
 async function planProducts(pool, planId) {
     const [rows] = await pool.execute(
-        `SELECT spp.id, spp.product_id, spp.rate, spp.days,
+        `SELECT pi.id, pi.spray_product_id AS product_id, pi.rate, pi.weekdays AS days,
                 p.product_name, p.category, p.fish_safety, p.fish_note, p.default_rate, p.interval_days, p.active_ingredient, p.target
-         FROM spray_plan_products spp JOIN spray_products p ON p.id = spp.product_id
-         WHERE spp.plan_id = ? ORDER BY p.category, p.product_name`,
+         FROM programme_items pi JOIN spray_products p ON p.id = pi.spray_product_id
+         WHERE pi.programme_id = ? AND pi.spray_product_id IS NOT NULL
+         ORDER BY p.category, p.product_name`,
         [planId]
     );
     return rows.map((r) => ({ ...r, days: r.days ? r.days.split(',').filter(Boolean) : [] }));
@@ -154,12 +158,13 @@ router.delete('/products/:id', async (req, res) => {
 // ------------------------------------------------------------- programmes (plans)
 
 async function replacePlanProducts(pool, planId, products) {
-    await pool.execute('DELETE FROM spray_plan_products WHERE plan_id = ?', [planId]);
+    // Only replace the spray items — leaves any dosing/operating items untouched.
+    await pool.execute('DELETE FROM programme_items WHERE programme_id = ? AND spray_product_id IS NOT NULL', [planId]);
     for (const p of products || []) {
         if (!p || !p.product_id) continue;
         const days = Array.isArray(p.days) ? p.days.filter((d) => WEEKDAYS.includes(d)).join(',') : (typeof p.days === 'string' ? p.days : '');
         await pool.execute(
-            'INSERT IGNORE INTO spray_plan_products (plan_id, product_id, rate, days) VALUES (?, ?, ?, ?)',
+            "INSERT IGNORE INTO programme_items (programme_id, spray_product_id, rate, schedule_kind, weekdays) VALUES (?, ?, ?, 'weekdays', ?)",
             [planId, Number(p.product_id), p.rate || null, days]
         );
     }
@@ -172,7 +177,7 @@ router.get('/programmes/:systemId', async (req, res) => {
         const [plans] = await pool.execute(
             `SELECT id, system_id, name, notes, DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date,
                     DATE_FORMAT(end_date, '%Y-%m-%d') AS end_date, status, created_at
-             FROM spray_plans WHERE system_id = ? ORDER BY status, created_at DESC`,
+             FROM programmes WHERE system_id = ? AND type = 'spray' ORDER BY status, created_at DESC`,
             [req.params.systemId]
         );
         const out = [];
@@ -191,7 +196,7 @@ router.post('/programmes/:systemId', async (req, res) => {
         const b = req.body || {};
         if (!b.name) return res.status(400).json({ error: 'name is required' });
         const [result] = await pool.execute(
-            'INSERT INTO spray_plans (system_id, name, notes, start_date, end_date, status) VALUES (?, ?, ?, ?, ?, ?)',
+            "INSERT INTO programmes (system_id, type, name, notes, start_date, end_date, status) VALUES (?, 'spray', ?, ?, ?, ?, ?)",
             [req.params.systemId, String(b.name).slice(0, 255), b.notes || null, b.start_date || null, b.end_date || null, (b.status === 'paused' || b.status === 'inactive') ? 'paused' : 'active']
         );
         await replacePlanProducts(pool, result.insertId, b.products);
@@ -209,7 +214,7 @@ router.put('/programmes/:id', async (req, res) => {
         if (!plan) return res.status(404).json({ error: 'Programme not found or access denied' });
         const b = req.body || {};
         await pool.execute(
-            'UPDATE spray_plans SET name=?, notes=?, start_date=?, end_date=?, status=? WHERE id=?',
+            'UPDATE programmes SET name=?, notes=?, start_date=?, end_date=?, status=? WHERE id=?',
             [String(b.name ?? plan.name).slice(0, 255), b.notes ?? plan.notes, b.start_date ?? plan.start_date, b.end_date ?? plan.end_date,
              (b.status === 'paused' || b.status === 'inactive') ? 'paused' : 'active', req.params.id]
         );
@@ -226,7 +231,9 @@ router.delete('/programmes/:id', async (req, res) => {
         const pool = getDatabase();
         const plan = await ownedPlan(pool, req.params.id, req.user.userId);
         if (!plan) return res.status(404).json({ error: 'Programme not found or access denied' });
-        await pool.execute('DELETE FROM spray_plans WHERE id = ?', [req.params.id]);
+        // programme_items cascade; programme_log has no FK on programme_id so the
+        // logged history is kept (matching the old spray behaviour).
+        await pool.execute('DELETE FROM programmes WHERE id = ?', [req.params.id]);
         res.json({ success: true });
     } catch (error) {
         console.error('Failed to delete spray programme:', error);
@@ -242,21 +249,21 @@ router.get('/log/:systemId', async (req, res) => {
         if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
         const limit = Math.min(500, Number(req.query.limit) || 200);
         const [rows] = await pool.query(
-            `SELECT l.id, l.system_id, l.plan_id, l.product_id, l.product_name, l.grow_bed_id, l.bed_name, l.scope,
-                    DATE_FORMAT(l.application_date, '%Y-%m-%d') AS application_date,
+            `SELECT l.id, l.system_id, l.programme_id AS plan_id, l.spray_product_id AS product_id, l.product_name, l.grow_bed_id, l.bed_name, l.scope,
+                    DATE_FORMAT(l.event_date, '%Y-%m-%d') AS application_date,
                     l.rate, l.quantity, l.quantity_unit, l.dilution_value, l.dilution_unit, l.phi_days,
-                    DATE_FORMAT(DATE_ADD(l.application_date, INTERVAL COALESCE(l.phi_days,0) DAY), '%Y-%m-%d') AS harvest_safe_date,
-                    l.weather, l.effectiveness, l.operator, l.notes, l.created_at,
+                    DATE_FORMAT(DATE_ADD(l.event_date, INTERVAL COALESCE(l.phi_days,0) DAY), '%Y-%m-%d') AS harvest_safe_date,
+                    l.weather, l.effectiveness, l.operator_name AS operator, l.notes, l.created_at,
                     pl.name AS plan_name
-             FROM spray_log l LEFT JOIN spray_plans pl ON pl.id = l.plan_id
-             WHERE l.system_id = ? ORDER BY l.application_date DESC, l.id DESC LIMIT ?`,
+             FROM programme_log l LEFT JOIN programmes pl ON pl.id = l.programme_id
+             WHERE l.system_id = ? AND l.type = 'spray' ORDER BY l.event_date DESC, l.id DESC LIMIT ?`,
             [req.params.systemId, limit]
         );
         // Attach the beds + batches each application covered.
         const ids = rows.map((r) => r.id);
         const byLog = new Map();
         if (ids.length) {
-            const [targets] = await pool.query('SELECT log_id, grow_bed_id, bed_name, batch_id, crop_type FROM spray_log_targets WHERE log_id IN (?)', [ids]);
+            const [targets] = await pool.query('SELECT log_id, grow_bed_id, bed_name, batch_id, crop_type FROM programme_log_targets WHERE log_id IN (?)', [ids]);
             for (const t of targets) {
                 if (!byLog.has(t.log_id)) byLog.set(t.log_id, []);
                 byLog.get(t.log_id).push({ grow_bed_id: t.grow_bed_id, bed_name: t.bed_name, batch_id: t.batch_id, crop_type: t.crop_type });
@@ -315,11 +322,17 @@ router.post('/log', async (req, res) => {
         const eff = b.effectiveness ? Math.max(1, Math.min(5, Number(b.effectiveness))) : null;
         // Keep the single grow_bed_id/bed_name for a quick summary when one bed.
         const singleBed = !wholeSystem && targetBedIds.length === 1 ? targetBedIds[0] : null;
+        // Link to the scheduled programme item (programme + product), if any.
+        let itemId = null;
+        if (b.plan_id && b.product_id) {
+            const [it] = await pool.execute('SELECT id FROM programme_items WHERE programme_id = ? AND spray_product_id = ? LIMIT 1', [b.plan_id, b.product_id]);
+            if (it.length) itemId = it[0].id;
+        }
         const [result] = await pool.execute(
-            `INSERT INTO spray_log (system_id, plan_id, product_id, product_name, grow_bed_id, bed_name, scope, application_date, rate,
-                                    quantity, quantity_unit, dilution_value, dilution_unit, phi_days, weather, effectiveness, operator, notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [b.system_id, b.plan_id || null, b.product_id || null, productName, singleBed, singleBed ? bedName.get(singleBed) : null,
+            `INSERT INTO programme_log (system_id, programme_id, item_id, type, spray_product_id, product_name, grow_bed_id, bed_name, scope, event_date, rate,
+                                    quantity, quantity_unit, dilution_value, dilution_unit, phi_days, weather, effectiveness, operator_name, notes)
+             VALUES (?, ?, ?, 'spray', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [b.system_id, b.plan_id || null, itemId, b.product_id || null, productName, singleBed, singleBed ? bedName.get(singleBed) : null,
              wholeSystem ? 'system' : 'beds', b.application_date, b.rate || null,
              num(b.quantity), b.quantity_unit || null, num(b.dilution_value), b.dilution_unit || null, phiDays,
              b.weather || null, eff, (b.operator || '').trim() || null, b.notes || null]
@@ -336,10 +349,10 @@ router.post('/log', async (req, res) => {
         for (const bedId of targetBedIds) {
             const batches = batchesByBed.get(bedId) || [];
             if (batches.length === 0) {
-                await pool.execute('INSERT INTO spray_log_targets (log_id, grow_bed_id, bed_name, batch_id, crop_type) VALUES (?, ?, ?, NULL, NULL)', [logId, bedId, bedName.get(bedId) || null]);
+                await pool.execute('INSERT INTO programme_log_targets (log_id, grow_bed_id, bed_name, batch_id, crop_type) VALUES (?, ?, ?, NULL, NULL)', [logId, bedId, bedName.get(bedId) || null]);
             } else {
                 for (const bt of batches) {
-                    await pool.execute('INSERT INTO spray_log_targets (log_id, grow_bed_id, bed_name, batch_id, crop_type) VALUES (?, ?, ?, ?, ?)', [logId, bedId, bt.bed_name, bt.batch_id, bt.crop_type]);
+                    await pool.execute('INSERT INTO programme_log_targets (log_id, grow_bed_id, bed_name, batch_id, crop_type) VALUES (?, ?, ?, ?, ?)', [logId, bedId, bt.bed_name, bt.batch_id, bt.crop_type]);
                 }
             }
         }
@@ -356,13 +369,13 @@ router.put('/log/:id', async (req, res) => {
     try {
         const pool = getDatabase();
         const [rows] = await pool.execute(
-            'SELECT l.id FROM spray_log l JOIN systems s ON s.id = l.system_id WHERE l.id = ? AND s.user_id = ?',
+            'SELECT l.id FROM programme_log l JOIN systems s ON s.id = l.system_id WHERE l.id = ? AND s.user_id = ?',
             [req.params.id, req.user.userId]
         );
         if (rows.length === 0) return res.status(404).json({ error: 'Not found or access denied' });
         const b = req.body || {};
         const eff = b.effectiveness == null || b.effectiveness === '' ? null : Math.max(1, Math.min(5, Number(b.effectiveness)));
-        await pool.execute('UPDATE spray_log SET effectiveness = ? WHERE id = ?', [eff, req.params.id]);
+        await pool.execute('UPDATE programme_log SET effectiveness = ? WHERE id = ?', [eff, req.params.id]);
         res.json({ success: true, effectiveness: eff });
     } catch (error) {
         console.error('Failed to update spray log:', error);
@@ -374,11 +387,12 @@ router.delete('/log/:id', async (req, res) => {
     try {
         const pool = getDatabase();
         const [rows] = await pool.execute(
-            'SELECT l.id FROM spray_log l JOIN systems s ON s.id = l.system_id WHERE l.id = ? AND s.user_id = ?',
+            'SELECT l.id FROM programme_log l JOIN systems s ON s.id = l.system_id WHERE l.id = ? AND s.user_id = ?',
             [req.params.id, req.user.userId]
         );
         if (rows.length === 0) return res.status(404).json({ error: 'Not found or access denied' });
-        await pool.execute('DELETE FROM spray_log WHERE id = ?', [req.params.id]);
+        // programme_log_targets cascade on delete.
+        await pool.execute('DELETE FROM programme_log WHERE id = ?', [req.params.id]);
         res.json({ success: true });
     } catch (error) {
         console.error('Failed to delete spray log entry:', error);
@@ -397,8 +411,8 @@ router.get('/due/:systemId', async (req, res) => {
         const today = (req.query.date && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date)) ? req.query.date : new Date().toISOString().slice(0, 10);
         const todayDow = WEEKDAYS[new Date(today + 'T00:00:00').getDay()];
 
-        const [plans] = await pool.execute("SELECT * FROM spray_plans WHERE system_id = ? AND status = 'active'", [req.params.systemId]);
-        const [loggedToday] = await pool.execute('SELECT product_id FROM spray_log WHERE system_id = ? AND application_date = ?', [req.params.systemId, today]);
+        const [plans] = await pool.execute("SELECT * FROM programmes WHERE system_id = ? AND type = 'spray' AND status = 'active'", [req.params.systemId]);
+        const [loggedToday] = await pool.execute("SELECT spray_product_id AS product_id FROM programme_log WHERE system_id = ? AND type = 'spray' AND event_date = ?", [req.params.systemId, today]);
         const doneSet = new Set(loggedToday.map((r) => r.product_id));
 
         const due = [];
@@ -434,10 +448,10 @@ router.get('/calendar/:systemId', async (req, res) => {
         const from = `${year}-${mm}-01`;
         const to = `${year}-${mm}-${String(daysInMonth).padStart(2, '0')}`;
 
-        const [plans] = await pool.execute("SELECT * FROM spray_plans WHERE system_id = ? AND status = 'active'", [req.params.systemId]);
+        const [plans] = await pool.execute("SELECT * FROM programmes WHERE system_id = ? AND type = 'spray' AND status = 'active'", [req.params.systemId]);
         const planProds = {};
         for (const plan of plans) planProds[plan.id] = await planProducts(pool, plan.id);
-        const [applied] = await pool.execute("SELECT DATE_FORMAT(application_date, '%Y-%m-%d') AS application_date, product_id FROM spray_log WHERE system_id = ? AND application_date BETWEEN ? AND ?", [req.params.systemId, from, to]);
+        const [applied] = await pool.execute("SELECT DATE_FORMAT(event_date, '%Y-%m-%d') AS application_date, spray_product_id AS product_id FROM programme_log WHERE system_id = ? AND type = 'spray' AND event_date BETWEEN ? AND ?", [req.params.systemId, from, to]);
         const appliedSet = new Set(applied.map((r) => `${r.application_date}|${r.product_id}`));
 
         const days = {};
@@ -471,12 +485,12 @@ router.get('/harvest-holds/:systemId', async (req, res) => {
         if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
         const [rows] = await pool.query(
             `SELECT t.batch_id, t.crop_type, t.bed_name, t.grow_bed_id, l.product_name,
-                    DATE_FORMAT(l.application_date, '%Y-%m-%d') AS application_date, l.phi_days,
-                    DATE_FORMAT(DATE_ADD(l.application_date, INTERVAL l.phi_days DAY), '%Y-%m-%d') AS harvest_safe_date,
-                    DATEDIFF(DATE_ADD(l.application_date, INTERVAL l.phi_days DAY), CURDATE()) AS days_remaining
-             FROM spray_log l JOIN spray_log_targets t ON t.log_id = l.id
-             WHERE l.system_id = ? AND l.phi_days IS NOT NULL AND l.phi_days > 0 AND t.batch_id IS NOT NULL
-               AND DATE_ADD(l.application_date, INTERVAL l.phi_days DAY) >= CURDATE()
+                    DATE_FORMAT(l.event_date, '%Y-%m-%d') AS application_date, l.phi_days,
+                    DATE_FORMAT(DATE_ADD(l.event_date, INTERVAL l.phi_days DAY), '%Y-%m-%d') AS harvest_safe_date,
+                    DATEDIFF(DATE_ADD(l.event_date, INTERVAL l.phi_days DAY), CURDATE()) AS days_remaining
+             FROM programme_log l JOIN programme_log_targets t ON t.log_id = l.id
+             WHERE l.system_id = ? AND l.type = 'spray' AND l.phi_days IS NOT NULL AND l.phi_days > 0 AND t.batch_id IS NOT NULL
+               AND DATE_ADD(l.event_date, INTERVAL l.phi_days DAY) >= CURDATE()
              ORDER BY harvest_safe_date ASC, t.crop_type`,
             [req.params.systemId]
         );
