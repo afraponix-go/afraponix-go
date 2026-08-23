@@ -16,7 +16,7 @@ const TABS = [
   { to: '/data', label: 'Data Capture', Icon: DataCaptureIcon },
   { to: '/fish', label: 'Fish', Icon: FishIcon },
   { to: '/plants', label: 'Plants', Icon: PlantIcon },
-  { to: '/spray', label: 'Spray', Icon: SprayIcon },
+  { to: '/operations', label: 'Operations', Icon: SprayIcon },
   { to: '/calculator', label: 'Calculator', Icon: CalculatorIcon },
   { to: '/settings', label: 'Settings', Icon: SettingsIcon },
 ]

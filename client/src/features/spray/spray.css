@@ -143,3 +143,32 @@
 @media (max-width: 480px) {
   .spray-qd-row { flex-direction: column; }
 }
+
+/* New-programme type picker (Phase 0 shell — spray active, others coming) */
+.np-new { position: relative; }
+.np-backdrop { position: fixed; inset: 0; z-index: 20; }
+.np-menu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 21;
+  min-width: 232px; padding: 6px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; box-shadow: var(--shadow-lg, 0 12px 40px rgba(22,35,63,.14));
+  display: flex; flex-direction: column; gap: 2px;
+}
+.np-item {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%; text-align: left; font: inherit; font-size: 14px; font-weight: 600;
+  color: var(--ink); background: none; border: 0; border-radius: 8px;
+  padding: 9px 10px; cursor: pointer;
+}
+.np-item:hover:not(:disabled) { background: var(--surface-2); }
+.np-item:disabled { color: var(--ink-faint); cursor: default; font-weight: 500; }
+.np-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.np-dot.spray { background: var(--ok, #2f9e7e); }
+.np-dot.dosing { background: var(--accent, #334E9D); }
+.np-dot.operating { background: #b5893a; }
+.np-soon {
+  margin-left: auto; font-size: 10.5px; font-weight: 700; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--ink-faint);
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 999px; padding: 1px 7px;
+}

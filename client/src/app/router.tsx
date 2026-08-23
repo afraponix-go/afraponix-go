@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { LoginPage } from '../features/auth/LoginPage'
 import { RegisterPage } from '../features/auth/RegisterPage'
 import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
@@ -49,7 +49,7 @@ const DASHBOARD_TABS = [
 const DATA_TABS = [
   { to: '/data', label: 'Water Quality', end: true },
   { to: '/data/fish', label: 'Fish' },
-  { to: '/data/operations', label: 'Operations' },
+  { to: '/data/operations', label: 'Maintenance' },
   { to: '/data/import-export', label: 'Import / Export' },
 ]
 const CALC_TABS = [
@@ -70,11 +70,11 @@ const PLANTS_TABS = [
   { to: '/plants/beds', label: 'Beds' },
   { to: '/plants/crops', label: 'Crops' },
 ]
-const SPRAY_TABS = [
-  { to: '/spray', label: 'Programmes', end: true },
-  { to: '/spray/calendar', label: 'Calendar' },
-  { to: '/spray/log', label: 'Log' },
-  { to: '/spray/catalog', label: 'Catalogue' },
+const OPERATIONS_TABS = [
+  { to: '/operations', label: 'Programmes', end: true },
+  { to: '/operations/calendar', label: 'Calendar' },
+  { to: '/operations/log', label: 'Log' },
+  { to: '/operations/catalog', label: 'Catalogue' },
 ]
 
 export const router = createBrowserRouter([
@@ -145,10 +145,11 @@ export const router = createBrowserRouter([
               { path: 'crops', element: <Crops /> },
             ],
           },
-          // Spray (Programmes · Calendar · Log · Catalogue)
+          // Operations (Programmes · Calendar · Log · Catalogue). Spray is the
+          // first programme type; dosing + operating follow in later phases.
           {
-            path: 'spray',
-            element: <SubTabLayout items={SPRAY_TABS} />,
+            path: 'operations',
+            element: <SubTabLayout items={OPERATIONS_TABS} />,
             children: [
               { index: true, element: <Programmes /> },
               { path: 'calendar', element: <SprayCalendar /> },
@@ -156,6 +157,11 @@ export const router = createBrowserRouter([
               { path: 'catalog', element: <SprayCatalog /> },
             ],
           },
+          // Keep old /spray links working (bookmarks, back button).
+          { path: 'spray', element: <Navigate to="/operations" replace /> },
+          { path: 'spray/calendar', element: <Navigate to="/operations/calendar" replace /> },
+          { path: 'spray/log', element: <Navigate to="/operations/log" replace /> },
+          { path: 'spray/catalog', element: <Navigate to="/operations/catalog" replace /> },
           // Settings (grow-bed config lives under Plants → Beds & Allocation)
           {
             path: 'settings',

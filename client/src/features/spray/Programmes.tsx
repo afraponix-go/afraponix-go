@@ -14,6 +14,7 @@ export function Programmes() {
   const [edit, setEdit] = useState<{ programme?: Programme } | null>(null)
   const [record, setRecord] = useState<RecordPrefill | null>(null)
   const [confirmDel, setConfirmDel] = useState<Programme | null>(null)
+  const [newMenu, setNewMenu] = useState(false)
 
   const { data: programmes = [], isLoading } = useQuery({ queryKey: ['spray-programmes', activeId], queryFn: () => fetchProgrammes(activeId as string), enabled: !!activeId })
   const { data: dueData } = useQuery({ queryKey: ['spray-due', activeId], queryFn: () => fetchDue(activeId as string), enabled: !!activeId })
@@ -31,7 +32,7 @@ export function Programmes() {
     },
   })
 
-  if (!activeId) return <div className="empty">Select a system to manage spray programmes.</div>
+  if (!activeId) return <div className="empty">Select a system to manage programmes.</div>
 
   const due = dueData?.due ?? []
   const pending = due.filter((d) => !d.done)
@@ -39,10 +40,28 @@ export function Programmes() {
   return (
     <div>
       <div className="feed-head">
-        <h2 className="section-title" style={{ margin: 0 }}>Spray programmes</h2>
-        <button className="btn feed-btn" onClick={() => setEdit({})}>+ New programme</button>
+        <h2 className="section-title" style={{ margin: 0 }}>Programmes</h2>
+        <div className="np-new">
+          <button className="btn feed-btn" aria-haspopup="menu" aria-expanded={newMenu} onClick={() => setNewMenu((v) => !v)}>+ New programme ▾</button>
+          {newMenu && (
+            <>
+              <div className="np-backdrop" onClick={() => setNewMenu(false)} />
+              <div className="np-menu" role="menu">
+                <button role="menuitem" className="np-item" onClick={() => { setNewMenu(false); setEdit({}) }}>
+                  <span className="np-dot spray" /> Spray programme
+                </button>
+                <button role="menuitem" className="np-item" disabled>
+                  <span className="np-dot dosing" /> Dosing programme <span className="np-soon">Soon</span>
+                </button>
+                <button role="menuitem" className="np-item" disabled>
+                  <span className="np-dot operating" /> Operating programme <span className="np-soon">Soon</span>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
-      <p className="spray-lead">Plan your pest, disease and foliar‑feed sprays. Products are flagged for fish safety — never let a fish‑toxic spray reach the system water.</p>
+      <p className="spray-lead">Recurring work for this system. Today that's spray programmes — dosing and operating programmes are coming. Spray products are flagged for fish safety; never let a fish‑toxic spray reach the system water.</p>
 
       {holds.length > 0 && (
         <div className="spray-hold">
