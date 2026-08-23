@@ -392,3 +392,13 @@
 .nd-fert-row .nd-prod-name { font-weight: 600; color: var(--ink); }
 .nd-fert-row .nd-prod-comp { font-size: 12px; color: var(--ink-faint); text-align: right; }
 .nd-fert-none { color: var(--danger); }
+
+/* pH correction */
+.nd-ph { display: flex; flex-direction: column; gap: 8px; }
+.nd-ph-row { display: grid; grid-template-columns: auto 1fr; align-items: end; gap: 14px; }
+.nd-ph-cur { display: flex; flex-direction: column; gap: 3px; }
+.nd-ph-cur .hint { font-size: 11px; }
+.nd-ph-cur b { font-size: 20px; font-weight: 700; color: var(--ink); line-height: 1; }
+.nd-ph-tgt { margin: 0; }
+.nd-ph-tgt input { max-width: 120px; }
+.nd-ph-step { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); font-size: 13px; color: var(--ink); }

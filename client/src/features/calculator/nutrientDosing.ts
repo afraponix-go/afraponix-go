@@ -21,7 +21,7 @@ export const NUTRIENTS: { key: NutrientKey; label: string; readKey: string }[] =
   { key: 'fe', label: 'Iron (Fe)', readKey: 'iron' },
 ]
 
-export type Product = { name: string } & Levels
+export type Product = { name: string; ph_direction?: 'up' | 'down' | null; ph_strength?: number | null; rate_unit?: string | null } & Levels
 
 // Fertiliser products and their element composition (%). Users can edit/extend.
 export const DEFAULT_PRODUCTS: Product[] = [

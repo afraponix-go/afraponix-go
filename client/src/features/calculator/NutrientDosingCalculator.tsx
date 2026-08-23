@@ -39,6 +39,9 @@ export function NutrientDosingCalculator() {
   const [targetTouched, setTargetTouched] = useState(false)
   const [saveProg, setSaveProg] = useState(false)
   const [caps, setCaps] = useState<Levels>({ ...MAX_WEEKLY_PPM })
+  const [targetPh, setTargetPh] = useState('6.5')
+  const [selectedBuffer, setSelectedBuffer] = useState('')
+  const [bufAmtOverride, setBufAmtOverride] = useState('')
   const [current, setCurrent] = useState<Levels>(emptyLevels)
   const [currentTouched, setCurrentTouched] = useState(false)
 
@@ -47,9 +50,13 @@ export function NutrientDosingCalculator() {
   // (so new catalogue fertilisers are used by default).
   const productsQ = useQuery({ queryKey: ['dosing-products'], queryFn: fetchUserProducts })
   const catalogue = useMemo<Product[]>(() => productsQ.data ?? DEFAULT_PRODUCTS, [productsQ.data])
+  // Split the catalogue: fertilisers are dosed for nutrients; pH buffers/acids
+  // are used only in the pH section below (never ticked as a nutrient dose).
+  const fertCatalogue = useMemo(() => catalogue.filter((p) => !p.ph_direction), [catalogue])
+  const bufferCatalogue = useMemo(() => catalogue.filter((p) => !!p.ph_direction), [catalogue])
   const [deselected, setDeselected] = useState<Set<string>>(new Set())
   const toggleFert = (name: string) => setDeselected((s) => { const n = new Set(s); n.has(name) ? n.delete(name) : n.add(name); return n })
-  const products = useMemo(() => catalogue.filter((p) => !deselected.has(p.name)), [catalogue, deselected])
+  const products = useMemo(() => fertCatalogue.filter((p) => !deselected.has(p.name)), [fertCatalogue, deselected])
 
   // Crops come from the user's own list; the ones planted in this system are
   // flagged so the picker can offer them first.
@@ -125,7 +132,40 @@ export function NutrientDosingCalculator() {
   }, [systemVolume, volumeTouched])
 
   const volumeL = Number(volume) > 0 ? Number(volume) : 0
-  const result = useMemo(() => computeDose(volumeL, current, target, products), [volumeL, current, target, products])
+
+  // --- pH correction ---------------------------------------------------------
+  // The chosen buffer/acid nudges pH toward the target and, for most of them,
+  // also adds a nutrient (nitric→N, KOH→K, …). We estimate the amount from the
+  // buffer's strength (unit per 1000 L per pH point), then credit whatever it
+  // adds to "current" before working out the fertiliser dose.
+  const currentPh = latestQ.data?.ph ?? null
+  const targetPhNum = Number(targetPh) > 0 ? Number(targetPh) : null
+  const phGap = currentPh != null && targetPhNum != null ? currentPh - targetPhNum : 0
+  const phDir = phGap > 0.05 ? 'down' : phGap < -0.05 ? 'up' : null
+  const dirBuffers = useMemo(() => bufferCatalogue.filter((p) => p.ph_direction === phDir), [bufferCatalogue, phDir])
+  const bufferObj = useMemo(() => bufferCatalogue.find((p) => p.name === selectedBuffer && p.ph_direction === phDir) ?? null, [bufferCatalogue, selectedBuffer, phDir])
+  const recBufAmt = bufferObj?.ph_strength != null && volumeL > 0 && phDir
+    ? Math.round(Number(bufferObj.ph_strength) * Math.abs(phGap) * (volumeL / 1000) * 10) / 10
+    : null
+  const bufAmt = bufAmtOverride.trim() !== '' ? Number(bufAmtOverride) : recBufAmt
+  const bufferCredit = useMemo<Levels>(() => {
+    const out = emptyLevels()
+    if (bufferObj && bufAmt && bufAmt > 0 && volumeL > 0) {
+      for (const k of KEYS) {
+        const pct = (bufferObj as unknown as Record<string, number>)[k] || 0
+        if (pct > 0) out[k] = Math.round((bufAmt * (pct / 100) * 1000 / volumeL) * 10) / 10
+      }
+    }
+    return out
+  }, [bufferObj, bufAmt, volumeL])
+  const effectiveCurrent = useMemo<Levels>(() => {
+    const out = emptyLevels()
+    for (const k of KEYS) out[k] = (current[k] || 0) + (bufferCredit[k] || 0)
+    return out
+  }, [current, bufferCredit])
+  const bufferUnit = bufferObj?.rate_unit ?? 'ml'
+
+  const result = useMemo(() => computeDose(volumeL, effectiveCurrent, target, products), [volumeL, effectiveCurrent, target, products])
   const targetsEmpty = KEYS.every((k) => !(target[k] > 0))
   // EC is a poor proxy for nutrition in aquaponics and is not derived from the
   // targets — show the crop's hydroponic-derived EC guide band for reference.
@@ -139,7 +179,7 @@ export function NutrientDosingCalculator() {
   const mixes = useMemo(() => mixSchedule(result.doses, products), [result.doses, products])
   // Spread the correction over enough weeks that no nutrient rises faster than
   // its safe weekly cap. The per-week dose is the total ÷ weeks.
-  const weeks = useMemo(() => weeksToReach(target, current, caps), [target, current, caps])
+  const weeks = useMemo(() => weeksToReach(target, effectiveCurrent, caps), [target, effectiveCurrent, caps])
   const setCap = (k: NutrientKey, v: string) => setCaps((c) => ({ ...c, [k]: numOr0(v) }))
 
   const cropName = selectedCrop ? `${selectedCrop.name}${isFruiting ? ` (${stage})` : ''}` : 'this crop'
@@ -241,13 +281,59 @@ export function NutrientDosingCalculator() {
           </div>
 
           <hr className="calc-divider" />
+          <div className="calc-sub">pH</div>
+          <div className="nd-ph">
+            <div className="nd-ph-row">
+              <div className="nd-ph-cur">
+                <span className="hint">Current pH</span>
+                <b>{currentPh != null ? currentPh : '—'}</b>
+              </div>
+              <div className="field nd-ph-tgt">
+                <label htmlFor="nd-ph">Target pH</label>
+                <input id="nd-ph" type="number" min="0" max="14" step="0.1" inputMode="decimal" value={targetPh} onChange={(e) => setTargetPh(e.target.value)} />
+              </div>
+            </div>
+            {currentPh == null ? (
+              <p className="calc-result-hint" style={{ marginTop: 0 }}>No pH reading yet — log one in Data Capture to get a buffer recommendation.</p>
+            ) : phDir == null ? (
+              <p className="calc-result-hint" style={{ marginTop: 0 }}>pH is on target — no buffer needed.</p>
+            ) : (
+              <>
+                <p className="calc-result-hint" style={{ marginTop: 0 }}>
+                  pH is {Math.abs(phGap).toFixed(1)} {phDir === 'down' ? 'above' : 'below'} target — {phDir === 'down' ? 'add acid to lower it' : 'add a base to raise it'}.
+                </p>
+                <div className="io-row">
+                  <div className="field">
+                    <label htmlFor="nd-buf">Buffer</label>
+                    <select id="nd-buf" value={selectedBuffer} onChange={(e) => { setSelectedBuffer(e.target.value); setBufAmtOverride('') }}>
+                      <option value="">Select {phDir === 'down' ? 'an acid' : 'a base'}…</option>
+                      {dirBuffers.map((b) => <option key={b.name} value={b.name}>{b.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="nd-buf-amt">Amount <span className="hint">({bufferUnit})</span></label>
+                    <input id="nd-buf-amt" type="number" min="0" step="any" inputMode="decimal" value={bufAmtOverride !== '' ? bufAmtOverride : (recBufAmt ?? '')} onChange={(e) => setBufAmtOverride(e.target.value)} placeholder={recBufAmt != null ? String(recBufAmt) : '—'} disabled={!bufferObj} />
+                  </div>
+                </div>
+                {dirBuffers.length === 0 && <p className="calc-result-hint nd-fert-none">No {phDir === 'down' ? 'acids' : 'bases'} in your catalogue — add one in Operations → Catalogue → Fertilisers.</p>}
+                {bufferObj && KEYS.some((k) => bufferCredit[k] > 0) && (
+                  <p className="calc-result-hint" style={{ marginTop: 6 }}>
+                    Adds {KEYS.filter((k) => bufferCredit[k] > 0).map((k) => `${k.toUpperCase()} +${bufferCredit[k]} ppm`).join(' · ')} — credited to the dose below.
+                  </p>
+                )}
+                <p className="calc-result-hint" style={{ marginTop: 6 }}>Strength is an estimate — your water's alkalinity affects how much buffer it takes, so re-test after dosing.</p>
+              </>
+            )}
+          </div>
+
+          <hr className="calc-divider" />
           <div className="calc-sub nd-fert-head">
             Fertilisers
             <Link className="nd-fert-manage" to="/operations/catalog">Manage in Catalogue ›</Link>
           </div>
           <p className="calc-result-hint" style={{ marginTop: 0 }}>Tick the fertilisers to dose with. Add or edit them in Operations → Catalogue → Fertilisers.</p>
           <div className="nd-prod-list">
-            {catalogue.map((p) => {
+            {fertCatalogue.map((p) => {
               const on = !deselected.has(p.name)
               return (
                 <label className={`nd-fert-row ${on ? 'on' : ''}`} key={p.name}>
@@ -275,6 +361,11 @@ export function NutrientDosingCalculator() {
               <p className="calc-result-hint">
                 To reach the {cropName} targets in {volumeL.toLocaleString()} L. Spread over <b>{weeks} week{weeks === 1 ? '' : 's'}</b> so no nutrient rises faster than its safe weekly limit — dose the weekly amount each week, re-testing as you go.
               </p>
+              {bufferObj && bufAmt != null && bufAmt > 0 && phDir && (
+                <div className="nd-ph-step">
+                  <b>First, pH:</b> add <b>{fmt(bufAmt)} {bufferUnit}</b> {bufferObj.name} to {phDir === 'down' ? 'lower' : 'raise'} pH from {currentPh} to {targetPh}, then re-test before dosing nutrients.
+                </div>
+              )}
               <details className="nd-caps">
                 <summary>Safe weekly rise (ppm)</summary>
                 <div className="nd-caps-grid">
@@ -339,7 +430,7 @@ export function NutrientDosingCalculator() {
         </div>
       </div>
       {saveProg && activeId && (
-        <SaveAsDosingProgrammeModal systemId={activeId} cropName={selectedCrop?.name ?? 'Crop'} target={target} current={current} volumeL={volumeL} caps={caps} products={products} onClose={() => setSaveProg(false)} />
+        <SaveAsDosingProgrammeModal systemId={activeId} cropName={selectedCrop?.name ?? 'Crop'} target={target} current={effectiveCurrent} volumeL={volumeL} caps={caps} products={products} onClose={() => setSaveProg(false)} />
       )}
     </div>
   )
