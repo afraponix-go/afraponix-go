@@ -14,15 +14,19 @@ export type Fertiliser = {
   ph_direction?: PhDirection | null
   ph_strength?: number | null
 }
-// Starter pH buffers/acids (rough, editable estimates). Nutrient % and strength
-// (amount per 1000 L per pH unit) are approximations the user tunes to their
-// products and water.
+// Starter pH buffers/acids (rough, editable estimates). Strength is amount per
+// 1000 L per pH unit; these defaults assume the CONCENTRATED product (muriatic
+// ~31% HCl, ~60% nitric, 85% phosphoric; solid KOH / hydrated lime) and MODERATE
+// carbonate hardness (~KH 4). Real demand is dominated by the water's alkalinity,
+// so these are only a ballpark — the user must re-test and calibrate per system.
+// (A flat slope like this ignores buffering; the alkalinity-aware calc supersedes
+// it where a KH reading is available.)
 export const DEFAULT_BUFFERS: (AddFertiliserInput & { ph_direction: PhDirection })[] = [
-  { name: 'Nitric Acid', ph_direction: 'down', n: 12, rate_unit: 'ml', ph_strength: 2 },
-  { name: 'Phosphoric Acid', ph_direction: 'down', p: 25, rate_unit: 'ml', ph_strength: 1.5 },
-  { name: 'Hydrochloric Acid', ph_direction: 'down', rate_unit: 'ml', ph_strength: 2 },
-  { name: 'Potassium Hydroxide', ph_direction: 'up', k: 55, rate_unit: 'g', ph_strength: 1.5 },
-  { name: 'Calcium Hydroxide', ph_direction: 'up', ca: 54, rate_unit: 'g', ph_strength: 2 },
+  { name: 'Nitric Acid', ph_direction: 'down', n: 12, rate_unit: 'ml', ph_strength: 55 },
+  { name: 'Phosphoric Acid', ph_direction: 'down', p: 25, rate_unit: 'ml', ph_strength: 50 },
+  { name: 'Hydrochloric Acid', ph_direction: 'down', rate_unit: 'ml', ph_strength: 65 },
+  { name: 'Potassium Hydroxide', ph_direction: 'up', k: 55, rate_unit: 'g', ph_strength: 35 },
+  { name: 'Calcium Hydroxide', ph_direction: 'up', ca: 54, rate_unit: 'g', ph_strength: 25 },
 ]
 export async function fetchFertilisers(): Promise<Fertiliser[]> {
   const d = await api<{ products: Fertiliser[] | null }>('/dosing/products')
