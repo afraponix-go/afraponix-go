@@ -70,9 +70,13 @@ export function NutrientDosingCalculator() {
   const isFruiting = !!targetsQ.data?.stages?.includes('fruiting')
   const targetSource = targetsQ.data?.source
   const eff = targetsQ.data?.effective ?? null
-  const resolvedTargets: Levels | null = eff
-    ? { n: eff.n ?? 0, p: eff.p ?? 0, k: eff.k ?? 0, ca: eff.ca ?? 0, mg: eff.mg ?? 0, fe: eff.fe ?? 0 }
-    : null
+  // Memoized so the reference is stable across renders — otherwise the
+  // target-prefill effect below (which depends on it) re-fires every render and
+  // loops "Maximum update depth exceeded", freezing the whole app.
+  const resolvedTargets = useMemo<Levels | null>(
+    () => (eff ? { n: eff.n ?? 0, p: eff.p ?? 0, k: eff.k ?? 0, ca: eff.ca ?? 0, mg: eff.mg ?? 0, fe: eff.fe ?? 0 } : null),
+    [eff],
+  )
   const targetsLoading = !!cropCode && targetsQ.isLoading
   const noSavedTargets = !!selectedCrop && !targetsQ.isLoading && targetSource === 'none'
 
