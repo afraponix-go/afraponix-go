@@ -4,7 +4,7 @@ import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
 import { fetchFishInventory } from '../fish/api'
 import { fetchGrowBedConfigs } from '../growbeds/api'
-import { DEFAULT_PRODUCTS, mixGroupOf, MIX_LABEL, groupsClash, recommendDose, type MixGroup } from '../calculator/nutrientDosing'
+import { DEFAULT_PRODUCTS, mixGroupOf, MIX_LABEL, groupsClash, recommendWeekly, MAX_WEEKLY_PPM, type MixGroup } from '../calculator/nutrientDosing'
 import {
   fetchFertilisers,
   fetchLatestReadings,
@@ -74,12 +74,21 @@ export function DosingProgrammeModal({ systemId, programme, onClose }: { systemI
     }
     setGroupDays(g)
   }, [editing, productList, programme, byName])
+  // Recommended per-week dose (large corrections spread over weeks to stay within
+  // the nutrient's safe weekly rise).
   const recommendedFor = (r: Row): number | null => {
     const p = byName.get(r.product)
     if (!p) return null
     const pct = (p as unknown as Record<string, number>)[r.nutrient] || 0
     const cur = latest?.[NUTRIENT_READKEY[r.nutrient]] ?? 0
-    return recommendDose(Number(r.target_value) || 0, cur, volumeL, pct)
+    return recommendWeekly(Number(r.target_value) || 0, cur, volumeL, pct, MAX_WEEKLY_PPM[r.nutrient]).weekly
+  }
+  const weeksFor = (r: Row): number => {
+    const p = byName.get(r.product)
+    if (!p) return 0
+    const pct = (p as unknown as Record<string, number>)[r.nutrient] || 0
+    const cur = latest?.[NUTRIENT_READKEY[r.nutrient]] ?? 0
+    return recommendWeekly(Number(r.target_value) || 0, cur, volumeL, pct, MAX_WEEKLY_PPM[r.nutrient]).weeks
   }
   const doseValue = (i: number, r: Row): string => (amtOverride[i] !== undefined ? amtOverride[i] : (recommendedFor(r) != null ? String(recommendedFor(r)) : ''))
 
@@ -145,6 +154,7 @@ export function DosingProgrammeModal({ systemId, programme, onClose }: { systemI
           {rows.map((r, i) => {
             const g = groupOf(r.product)
             const rec = recommendedFor(r)
+            const wk = weeksFor(r)
             return (
               <div className="dp-tcard" key={i}>
                 <div className="dp-trow">
@@ -160,11 +170,12 @@ export function DosingProgrammeModal({ systemId, programme, onClose }: { systemI
                   <button type="button" className="dz-x" onClick={() => removeRow(i)} disabled={rows.length === 1} aria-label="Remove">×</button>
                 </div>
                 <div className="dp-tdose">
-                  <span className="dp-dose-lbl">Dose</span>
+                  <span className="dp-dose-lbl">Dose <span className="unit-hint">/week</span></span>
                   <input className="dp-dose-amt" type="number" min="0" step="any" inputMode="decimal" placeholder={rec != null ? String(rec) : 'amount'} value={doseValue(i, r)} onChange={(e) => setAmtOverride((o) => ({ ...o, [i]: e.target.value }))} />
                   <select className="dp-dose-unit" value={r.unit} onChange={(e) => setRow(i, { unit: e.target.value })} aria-label="Dose unit">
                     {DOSE_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
                   </select>
+                  {wk > 1 && <span className="dp-dose-weeks">~{wk} wks to target</span>}
                   {rec != null && amtOverride[i] !== undefined && Number(amtOverride[i]) !== rec && <span className="dp-dose-rec">rec {rec} g</span>}
                   {g && <span className={`dp-mix mix-${g}`}>{MIX_LABEL[g]}</span>}
                 </div>

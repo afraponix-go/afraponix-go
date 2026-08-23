@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
-import { KEYS, mixGroupOf, MIX_LABEL, groupsClash, recommendDose, type Levels, type Product, type MixGroup } from '../calculator/nutrientDosing'
+import { KEYS, mixGroupOf, MIX_LABEL, groupsClash, recommendWeekly, MAX_WEEKLY_PPM, type Levels, type Product, type MixGroup } from '../calculator/nutrientDosing'
 import { createDosingProgramme, nutrientShort, WEEKDAYS, WEEKDAY_LABEL } from './api'
 import '../spray/spray.css'
 import './dosing.css'
@@ -13,27 +13,29 @@ const DEFAULT_GROUP_DAYS: Record<MixGroup, string[]> = { A: ['mon'], B: ['thu'],
 // target per nutrient (target>0), each auto-assigned the fertiliser richest in
 // that nutrient, with the recommended dose amount and clash-aware days (calcium
 // and phosphate mixes on different days). The user reviews and confirms.
-export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current, volumeL, products, onClose }: {
+export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current, volumeL, caps, products, onClose }: {
   systemId: string
   cropName: string
   target: Levels
   current: Levels
   volumeL: number
+  caps?: Levels
   products: Product[]
   onClose: () => void
 }) {
   const qc = useQueryClient()
   const [name, setName] = useState(`${cropName} maintenance`)
   const [error, setError] = useState<string | null>(null)
+  const capOf = (k: keyof Levels) => (caps ?? MAX_WEEKLY_PPM)[k]
 
   const rows = useMemo(() =>
     KEYS.filter((k) => target[k] > 0).map((k) => {
       const best = products.reduce<Product | null>((b, p) => (p[k] > (b?.[k] ?? 0) ? p : b), null)
       const pct = best ? best[k] : 0
-      const amount = best && pct > 0 ? recommendDose(target[k], current[k] ?? 0, volumeL, pct) : null
+      const rec = best && pct > 0 ? recommendWeekly(target[k], current[k] ?? 0, volumeL, pct, capOf(k)) : { weekly: null, weeks: 0 }
       const group: MixGroup = best ? mixGroupOf(best) : 'C'
-      return { nutrient: k, target_value: Math.round(target[k] * 10) / 10, product: best && pct > 0 ? best.name : null, amount, group }
-    }), [target, current, volumeL, products])
+      return { nutrient: k, target_value: Math.round(target[k] * 10) / 10, product: best && pct > 0 ? best.name : null, amount: rec.weekly, weeks: rec.weeks, group }
+    }), [target, current, volumeL, products, caps])
 
   const usedGroups = useMemo(() => (['A', 'B', 'C'] as MixGroup[]).filter((g) => rows.some((r) => r.group === g && r.product)), [rows])
   const [groupDays, setGroupDays] = useState<Record<MixGroup, string[]>>({ ...DEFAULT_GROUP_DAYS })
@@ -78,7 +80,7 @@ export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current
               <div className="dp-tdose" style={{ paddingLeft: 0 }}>
                 <span className="dp-cp-target">{nutrientShort(r.nutrient)} → {r.target_value} ppm</span>
                 <span className="dp-cp-fert">{r.product ?? 'no fertiliser'}</span>
-                {r.amount != null && <span className="dp-dose-lbl">dose <b style={{ color: 'var(--ink)' }}>{r.amount} g</b></span>}
+                {r.amount != null && <span className="dp-dose-lbl">dose <b style={{ color: 'var(--ink)' }}>{r.amount} g/week</b>{r.weeks > 1 ? ` · ~${r.weeks} wks to target` : ''}</span>}
                 {r.product && <span className={`dp-mix mix-${r.group}`}>{MIX_LABEL[r.group]}</span>}
               </div>
             </div>

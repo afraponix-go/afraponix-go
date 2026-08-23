@@ -136,3 +136,5 @@
 }
 
 .dp-cp-dose { font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+.dp-dose-weeks { font-size: 11px; color: var(--ink-faint); }

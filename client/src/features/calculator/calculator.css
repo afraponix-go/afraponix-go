@@ -369,3 +369,16 @@
   background: var(--accent);
   color: var(--accent-ink);
 }
+
+/* Safe weekly rise caps editor (dose split over weeks) */
+.nd-caps { margin: 6px 0 12px; }
+.nd-caps > summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--accent); list-style: none; display: inline-flex; align-items: center; gap: 6px; }
+.nd-caps > summary::-webkit-details-marker { display: none; }
+.nd-caps > summary::before { content: '▸'; font-size: 10px; transition: transform .15s; }
+.nd-caps[open] > summary::before { transform: rotate(90deg); }
+.nd-caps-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 8px; }
+.nd-cap-cell { display: flex; flex-direction: column; gap: 3px; }
+.nd-cap-cell span { font-size: 10px; font-weight: 700; letter-spacing: .03em; color: var(--ink-faint); }
+.nd-cap-cell input { font: inherit; font-size: 13px; width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.nd-cap-cell input:focus-visible { border-color: var(--accent); }
+@media (max-width: 480px) { .nd-caps-grid { grid-template-columns: repeat(3, 1fr); } }

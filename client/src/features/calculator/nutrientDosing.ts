@@ -129,6 +129,31 @@ export function recommendDose(targetPpm: number, currentPpm: number, volumeL: nu
   return Math.round(((gap * volumeL) / 1000 / (pct / 100)) * 10) / 10 // grams, 0.1 g
 }
 
+// Safe maximum increase per nutrient per week (ppm) — large corrections are
+// ramped up gradually rather than dosed all at once (which shocks the system).
+export const MAX_WEEKLY_PPM: Levels = { n: 30, p: 10, k: 25, ca: 25, mg: 10, fe: 1 }
+
+// Weeks needed to close the biggest gap without exceeding any nutrient's weekly cap.
+export function weeksToReach(target: Levels, current: Levels, caps: Levels): number {
+  let weeks = 1
+  for (const k of KEYS) {
+    const gap = (target[k] || 0) - (current[k] || 0)
+    const cap = caps[k] || 0
+    if (gap > 0 && cap > 0) weeks = Math.max(weeks, Math.ceil(gap / cap))
+  }
+  return weeks
+}
+
+// Per-nutrient weekly recommendation: total grams to close the gap, the weeks it
+// safely takes (gap ÷ cap), and the per-week grams.
+export function recommendWeekly(targetPpm: number, currentPpm: number, volumeL: number, pct: number, capPpm: number): { total: number | null; weekly: number | null; weeks: number } {
+  const gap = (targetPpm || 0) - (currentPpm || 0)
+  if (!(gap > 0) || !(volumeL > 0) || !(pct > 0)) return { total: null, weekly: null, weeks: 0 }
+  const total = (gap * volumeL) / 1000 / (pct / 100)
+  const weeks = capPpm > 0 ? Math.max(1, Math.ceil(gap / capPpm)) : 1
+  return { total: Math.round(total * 10) / 10, weekly: Math.round((total / weeks) * 10) / 10, weeks }
+}
+
 // The signed-in user's saved fertiliser list (null = not customised → defaults).
 export async function fetchUserProducts(): Promise<Product[] | null> {
   const data = await api<{ products: Product[] | null }>(`/dosing/products`)

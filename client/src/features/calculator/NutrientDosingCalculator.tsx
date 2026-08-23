@@ -13,6 +13,8 @@ import {
   fetchUserProducts,
   saveUserProducts,
   mixSchedule,
+  MAX_WEEKLY_PPM,
+  weeksToReach,
   type Levels,
   type NutrientKey,
   type Product,
@@ -36,6 +38,7 @@ export function NutrientDosingCalculator() {
   const [target, setTarget] = useState<Levels>(emptyLevels)
   const [targetTouched, setTargetTouched] = useState(false)
   const [saveProg, setSaveProg] = useState(false)
+  const [caps, setCaps] = useState<Levels>({ ...MAX_WEEKLY_PPM })
   const [current, setCurrent] = useState<Levels>(emptyLevels)
   const [currentTouched, setCurrentTouched] = useState(false)
   const [newProd, setNewProd] = useState<{ name: string } & Record<NutrientKey, string>>({ name: '', n: '', p: '', k: '', ca: '', mg: '', fe: '' })
@@ -145,6 +148,10 @@ export function NutrientDosingCalculator() {
     setNewProd({ name: '', n: '', p: '', k: '', ca: '', mg: '', fe: '' })
   }
   const mixes = useMemo(() => mixSchedule(result.doses, products), [result.doses, products])
+  // Spread the correction over enough weeks that no nutrient rises faster than
+  // its safe weekly cap. The per-week dose is the total ÷ weeks.
+  const weeks = useMemo(() => weeksToReach(target, current, caps), [target, current, caps])
+  const setCap = (k: NutrientKey, v: string) => setCaps((c) => ({ ...c, [k]: numOr0(v) }))
 
   const cropName = selectedCrop ? `${selectedCrop.name}${isFruiting ? ` (${stage})` : ''}` : 'this crop'
 
@@ -285,14 +292,25 @@ export function NutrientDosingCalculator() {
           ) : (
             <>
               <p className="calc-result-hint">
-                Add these to {volumeL.toLocaleString()} L to reach the {cropName} targets.
+                To reach the {cropName} targets in {volumeL.toLocaleString()} L. Spread over <b>{weeks} week{weeks === 1 ? '' : 's'}</b> so no nutrient rises faster than its safe weekly limit — dose the weekly amount each week, re-testing as you go.
               </p>
+              <details className="nd-caps">
+                <summary>Safe weekly rise (ppm)</summary>
+                <div className="nd-caps-grid">
+                  {NUTRIENTS.map((n) => (
+                    <label key={n.key} className="nd-cap-cell">
+                      <span>{n.key.toUpperCase()}</span>
+                      <input type="number" min="0" step="any" inputMode="decimal" value={caps[n.key] || 0} onChange={(e) => setCap(n.key, e.target.value)} />
+                    </label>
+                  ))}
+                </div>
+              </details>
               <div className="nd-table-wrap">
                 <table className="nd-table">
-                  <thead><tr><th>Fertiliser</th><th className="r">Amount</th></tr></thead>
+                  <thead><tr><th>Fertiliser</th><th className="r">Per week</th><th className="r">Total ({weeks}w)</th></tr></thead>
                   <tbody>
                     {result.doses.map((d) => (
-                      <tr key={d.name}><td><b>{d.name}</b></td><td className="r">{d.grams.toFixed(1)} g</td></tr>
+                      <tr key={d.name}><td><b>{d.name}</b></td><td className="r">{(d.grams / weeks).toFixed(1)} g</td><td className="r">{d.grams.toFixed(1)} g</td></tr>
                     ))}
                   </tbody>
                 </table>
@@ -300,8 +318,8 @@ export function NutrientDosingCalculator() {
 
               {(mixes.A.length > 0 || mixes.B.length > 0 || mixes.C.length > 0) && (
                 <>
-                  <div className="calc-sub" style={{ marginTop: 22 }}>Mixing schedule</div>
-                  <p className="calc-result-hint" style={{ marginTop: 0 }}>Dissolve each mix in its own water before adding to the reservoir — never combine calcium with the phosphate/sulphate mix in one concentrate (it precipitates).</p>
+                  <div className="calc-sub" style={{ marginTop: 22 }}>Mixing schedule <span className="hint">· per week</span></div>
+                  <p className="calc-result-hint" style={{ marginTop: 0 }}>Dissolve each mix in its own water before adding to the reservoir — never combine calcium with the phosphate/sulphate mix in one concentrate (it precipitates). Amounts are per weekly dose.</p>
                   <div className="nd-mixes">
                     {([
                       { key: 'A', title: 'Mix A · Calcium', rows: mixes.A },
@@ -311,26 +329,13 @@ export function NutrientDosingCalculator() {
                       <div className="nd-mix" key={m.key}>
                         <div className="nd-mix-title">{m.title}</div>
                         {m.rows.map((d) => (
-                          <div className="nd-mix-row" key={d.name}><span>{d.name}</span><b>{d.grams.toFixed(1)} g</b></div>
+                          <div className="nd-mix-row" key={d.name}><span>{d.name}</span><b>{(d.grams / weeks).toFixed(1)} g</b></div>
                         ))}
                       </div>
                     ))}
                   </div>
                 </>
               )}
-
-              <div className="calc-sub" style={{ marginTop: 22 }}>Maintenance schedule</div>
-              <p className="calc-result-hint" style={{ marginTop: 0 }}>Top-ups to hold the level: about a quarter weekly, or the full amount monthly.</p>
-              <div className="nd-table-wrap">
-                <table className="nd-table">
-                  <thead><tr><th>Fertiliser</th><th className="r">Weekly (25%)</th><th className="r">Monthly (100%)</th></tr></thead>
-                  <tbody>
-                    {result.doses.map((d) => (
-                      <tr key={d.name}><td><b>{d.name}</b></td><td className="r">{(d.grams * 0.25).toFixed(1)} g</td><td className="r">{d.grams.toFixed(1)} g</td></tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
 
               <div className="calc-sub" style={{ marginTop: 22 }}>Projected result</div>
               <div className="nd-table-wrap" style={{ marginTop: 14 }}>
@@ -353,7 +358,7 @@ export function NutrientDosingCalculator() {
         </div>
       </div>
       {saveProg && activeId && (
-        <SaveAsDosingProgrammeModal systemId={activeId} cropName={selectedCrop?.name ?? 'Crop'} target={target} current={current} volumeL={volumeL} products={products} onClose={() => setSaveProg(false)} />
+        <SaveAsDosingProgrammeModal systemId={activeId} cropName={selectedCrop?.name ?? 'Crop'} target={target} current={current} volumeL={volumeL} caps={caps} products={products} onClose={() => setSaveProg(false)} />
       )}
     </div>
   )
