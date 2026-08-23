@@ -99,6 +99,7 @@ const STEPS = [
   { type: 'sql', file: 'database/migrations/2026-08-programme-log-dosing-nutrient.sql', label: 'Dosing: target_nutrient on programme_log' },
   { type: 'sql', file: 'database/migrations/2026-08-dosing-target-amount.sql', label: 'Dosing: dose amount on programme targets' },
   { type: 'sql', file: 'database/migrations/2026-08-dosing-ph-buffers.sql', label: 'Dosing: pH buffer columns on the catalogue' },
+  { type: 'node', file: 'database/migrations/2026-08-dosing-buffer-strength-refresh.js', label: 'Dosing: bump pH-buffer strengths off old seed defaults' },
   { type: 'sql', file: 'database/migrations/2026-08-seedlings.sql', label: 'Seedling (nursery) batches + crop germ/transplant days' },
   { type: 'sql', file: 'database/migrations/2026-08-seedling-tray-groups.sql', label: 'Seedling mixed tray sizes (tray_groups)' },
   { type: 'node', file: 'database/migrations/2026-07-backfill-nutrient-readings.js', label: 'Backfill nutrient readings' },
