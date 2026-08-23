@@ -43,47 +43,68 @@ export function ecFromLevels(levels: Levels): number {
 
 export type DoseResult = { name: string; grams: number }
 
-// Greedy per-element solver (the aquaponics.africa algorithm).
+// Least-overshoot solver. The old greedy "dose each element with the single
+// richest product" badly overshot co-nutrients (e.g. using a 2-1-2 blend to fix
+// nitrogen dumped huge amounts of P and K). Instead we solve for the product
+// amounts that best FIT the gaps: minimise the weighted squared error between
+// what the mix delivers and each nutrient's remaining gap, with amounts ≥ 0.
+//
+// Errors are weighted by 1/target so every nutrient counts on a relative scale
+// (otherwise nitrogen's big numbers would drown out a tenfold iron overshoot).
+// Nutrients already at/above target get a gap of 0, so adding more is penalised —
+// the solver avoids overshooting them where it can. Solved with non-negative
+// multiplicative updates (Lee–Seung), which suit this all-non-negative system.
 export function computeDose(
   volumeL: number,
   current: Levels,
   target: Levels,
   products: Product[],
 ): { doses: DoseResult[]; achieved: Levels; finalLevels: Levels } {
-  const neededGrams = emptyLevels()
-  const achieved = emptyLevels()
-  for (const k of KEYS) {
-    const needed = Math.max(0, (target[k] || 0) - (current[k] || 0))
-    neededGrams[k] = (volumeL * needed) / 1000 // ppm × L ÷ 1000 = grams of element
-  }
+  const n = products.length
+  if (n === 0 || volumeL <= 0) return { doses: [], achieved: emptyLevels(), finalLevels: { ...current } }
 
-  const amounts = new Array(products.length).fill(0)
-  for (const key of KEYS) {
-    if ((target[key] || 0) > 0 && achieved[key] < neededGrams[key]) {
-      let bestIndex = -1
-      let bestPct = -1
-      products.forEach((p, i) => {
-        const pct = p[key] || 0
-        if (pct > bestPct) {
-          bestPct = pct
-          bestIndex = i
-        }
-      })
-      if (bestIndex >= 0 && bestPct > 0) {
-        const amount = (neededGrams[key] - achieved[key]) / (bestPct / 100)
-        amounts[bestIndex] += amount
-        for (const k of KEYS) achieved[k] += amount * ((products[bestIndex][k] || 0) / 100)
-      }
+  // Weighted per-gram contribution matrix A[k][i] (ppm of k per gram of product i)
+  // and gap vector b[k], both divided by the nutrient's scale for relative error.
+  const scale: Levels = emptyLevels()
+  const b: number[] = []
+  const A: number[][] = []
+  KEYS.forEach((k, ki) => {
+    scale[k] = Math.max(target[k] || 0, 1)
+    b[ki] = Math.max(0, (target[k] || 0) - (current[k] || 0)) / scale[k]
+    A[ki] = products.map((p) => ((p[k] || 0) * 10) / volumeL / scale[k]) // (pct/100)*1000/V, weighted
+  })
+
+  // AᵀB (constant) for the multiplicative update.
+  const AtB = new Array(n).fill(0)
+  for (let i = 0; i < n; i++) for (let ki = 0; ki < KEYS.length; ki++) AtB[i] += A[ki][i] * b[ki]
+
+  // Minimise ||A x − b||² over x ≥ 0: x_i ← x_i · (AᵀB)_i / (AᵀA x)_i.
+  const x = new Array(n).fill(1)
+  for (let iter = 0; iter < 500; iter++) {
+    const Ax = KEYS.map((_, ki) => {
+      let s = 0
+      for (let i = 0; i < n; i++) s += A[ki][i] * x[i]
+      return s
+    })
+    for (let i = 0; i < n; i++) {
+      let denom = 0
+      for (let ki = 0; ki < KEYS.length; ki++) denom += A[ki][i] * Ax[ki]
+      if (AtB[i] <= 0) { x[i] = 0; continue } // product supplies nothing wanted
+      x[i] = (x[i] * AtB[i]) / (denom + 1e-12)
     }
   }
 
-  // Projected levels after dosing (ppm): current + added element ÷ volume.
-  const finalLevels = emptyLevels()
-  for (const k of KEYS) {
-    finalLevels[k] = (current[k] || 0) + (volumeL > 0 ? (achieved[k] * 1000) / volumeL : 0)
-  }
+  // Drop numerical dust (products that ended up contributing negligibly).
+  const maxG = Math.max(0, ...x)
+  const cutoff = Math.max(0.05, maxG * 0.005)
+  for (let i = 0; i < n; i++) if (x[i] < cutoff) x[i] = 0
 
-  const doses = products.map((p, i) => ({ name: p.name, grams: amounts[i] })).filter((d) => d.grams > 0)
+  const achieved = emptyLevels()
+  for (const k of KEYS) for (let i = 0; i < n; i++) achieved[k] += x[i] * ((products[i][k] || 0) / 100)
+  const finalLevels = emptyLevels()
+  for (const k of KEYS) finalLevels[k] = (current[k] || 0) + (achieved[k] * 1000) / volumeL
+
+  const doses = products.map((p, i) => ({ name: p.name, grams: x[i] })).filter((d) => d.grams > 0)
   return { doses, achieved, finalLevels }
 }
 

@@ -196,6 +196,22 @@ export function NutrientDosingCalculator() {
   // Enough to produce a dose: a volume, targets, and at least one fertiliser.
   const canCalculate = volumeL > 0 && !targetsEmpty && products.length > 0
 
+  // Flag nutrients the fitted dose can't hit cleanly: an overshoot (carried in by
+  // a fertiliser added for another nutrient) or a shortfall (no ticked fertiliser
+  // can supply more without overshooting something — a different product is needed).
+  const doseWarnings = useMemo(() => {
+    if (volumeL <= 0 || targetsEmpty) return [] as { key: NutrientKey; label: string; type: 'over' | 'under'; proj: number; target: number }[]
+    const out: { key: NutrientKey; label: string; type: 'over' | 'under'; proj: number; target: number }[] = []
+    for (const nn of NUTRIENTS) {
+      const t = target[nn.key] || 0
+      if (t <= 0) continue
+      const proj = result.finalLevels[nn.key] || 0
+      if (proj > t * 1.12) out.push({ key: nn.key, label: nn.label, type: 'over', proj, target: t })
+      else if (proj < t * 0.9 && (current[nn.key] || 0) < t) out.push({ key: nn.key, label: nn.label, type: 'under', proj, target: t })
+    }
+    return out
+  }, [result, target, current, targetsEmpty, volumeL])
+
   // Download the plan as CSV (pH step + weekly/total fertiliser doses + the
   // projected levels) so it can be saved or shared outside the app.
   const exportCsv = () => {
@@ -465,18 +481,34 @@ export function NutrientDosingCalculator() {
                 </table>
               </div>
 
+              {doseWarnings.length > 0 && (
+                <div className="nd-warn">
+                  {doseWarnings.map((w) => (
+                    <div key={w.key} className={`nd-warn-row ${w.type}`}>
+                      {w.type === 'over' ? (
+                        <><b>{w.label}</b> overshoots — reaches <b>{fmt(w.proj)}</b> vs target {fmt(w.target)}, carried in by a fertiliser added for another nutrient. Consider a purer source.</>
+                      ) : (
+                        <><b>{w.label}</b> falls short — reaches only <b>{fmt(w.proj)}</b> of {fmt(w.target)}. The ticked fertilisers can't add more without overshooting another nutrient — add a dedicated {w.label.replace(/\s*\(.*\)/, '')} source.</>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {(mixes.A.length > 0 || mixes.B.length > 0 || mixes.C.length > 0) && (
                 <>
                   <div className="calc-sub" style={{ marginTop: 22 }}>Mixing schedule <span className="hint">· per week</span></div>
-                  <p className="calc-result-hint" style={{ marginTop: 0 }}>Dissolve each mix in its own water before adding to the reservoir — never combine calcium with the phosphate/sulphate mix in one concentrate (it precipitates). Amounts are per weekly dose.</p>
+                  <p className="calc-result-hint" style={{ marginTop: 0 }}>
+                    <b>Add each mix on a separate day</b> — never dose calcium (Mix A) together with the phosphate/sulphate mix (Mix B) or they precipitate out. Dissolve each in its own water first, and re-test as you go. Amounts are per weekly dose.
+                  </p>
                   <div className="nd-mixes">
                     {([
-                      { key: 'A', title: 'Mix A · Calcium', rows: mixes.A },
-                      { key: 'B', title: 'Mix B · Potassium / Phosphorus', rows: mixes.B },
-                      { key: 'C', title: 'Mix C · Micronutrients', rows: mixes.C },
+                      { key: 'A', title: 'Mix A · Calcium', day: 'Day 1', rows: mixes.A },
+                      { key: 'B', title: 'Mix B · Potassium / Phosphorus', day: 'Day 3', rows: mixes.B },
+                      { key: 'C', title: 'Mix C · Micronutrients', day: 'Day 5', rows: mixes.C },
                     ] as const).filter((m) => m.rows.length > 0).map((m) => (
                       <div className="nd-mix" key={m.key}>
-                        <div className="nd-mix-title">{m.title}</div>
+                        <div className="nd-mix-title">{m.title}<span className="nd-mix-day">{m.day}</span></div>
                         {m.rows.map((d) => (
                           <div className="nd-mix-row" key={d.name}><span>{d.name}</span><b>{(d.grams / weeks).toFixed(1)} g</b></div>
                         ))}
@@ -491,14 +523,19 @@ export function NutrientDosingCalculator() {
                 <table className="nd-table">
                   <thead><tr><th>Element</th><th className="r">Current</th><th className="r">Projected</th><th className="r">Target</th></tr></thead>
                   <tbody>
-                    {NUTRIENTS.map((n) => (
-                      <tr key={n.key}>
-                        <td><b>{n.label}</b></td>
-                        <td className="r">{fmt(current[n.key] || 0)}</td>
-                        <td className="r">{fmt(result.finalLevels[n.key] || 0)}</td>
-                        <td className="r">{fmt(target[n.key] || 0)}</td>
-                      </tr>
-                    ))}
+                    {NUTRIENTS.map((n) => {
+                      const t = target[n.key] || 0
+                      const proj = result.finalLevels[n.key] || 0
+                      const state = t > 0 && proj > t * 1.12 ? 'over' : t > 0 && proj < t * 0.9 && (current[n.key] || 0) < t ? 'under' : ''
+                      return (
+                        <tr key={n.key}>
+                          <td><b>{n.label}</b></td>
+                          <td className="r">{fmt(current[n.key] || 0)}</td>
+                          <td className={`r nd-proj ${state}`}>{fmt(proj)}</td>
+                          <td className="r">{fmt(t)}</td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

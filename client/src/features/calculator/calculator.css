@@ -415,6 +415,20 @@
 .calc-back:hover { text-decoration: underline; }
 .calc-results { max-width: 780px; }
 
+/* Dose warnings (overshoot / shortfall) */
+.nd-warn { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.nd-warn-row { font-size: 13px; line-height: 1.45; padding: 10px 12px 10px 34px; border-radius: 8px; position: relative; }
+.nd-warn-row::before { content: '!'; position: absolute; left: 12px; top: 10px; width: 15px; height: 15px; border-radius: 50%; font-size: 11px; font-weight: 800; line-height: 15px; text-align: center; color: #fff; }
+.nd-warn-row.over { background: color-mix(in srgb, var(--warn, #d98324) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn, #d98324) 30%, var(--line)); }
+.nd-warn-row.over::before { background: var(--warn, #d98324); }
+.nd-warn-row.under { background: color-mix(in srgb, var(--danger) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--line)); }
+.nd-warn-row.under::before { background: var(--danger); }
+/* Projected cell state */
+.nd-proj.over { color: var(--warn, #d98324); font-weight: 700; }
+.nd-proj.under { color: var(--danger); font-weight: 700; }
+/* Mix "separate day" chip */
+.nd-mix-day { float: right; font-size: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 5px; padding: 2px 7px; }
+
 /* pH correction */
 .nd-ph { display: flex; flex-direction: column; gap: 8px; }
 .nd-ph-row { display: grid; grid-template-columns: auto 1fr; align-items: end; gap: 14px; }
