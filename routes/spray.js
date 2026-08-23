@@ -8,6 +8,18 @@ router.use(authenticateToken);
 
 const slug = (s) => String(s || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
 const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const RATE_UNITS = ['ml', 'g', 'L', 'kg'];
+const numN = (v) => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Number(v));
+
+// Format a structured rate (amount + unit per volume-in-L) into the display
+// string that default_rate holds, e.g. "100 ml / 10 L".
+function formatRate(amount, unit, per) {
+    const a = numN(amount);
+    if (a == null) return null;
+    const u = RATE_UNITS.includes(unit) ? unit : 'ml';
+    const p = numN(per);
+    return p != null ? `${a} ${u} / ${p} L` : `${a} ${u}`;
+}
 
 async function ownsSystem(pool, systemId, userId) {
     const [rows] = await pool.execute('SELECT 1 FROM systems WHERE id = ? AND user_id = ?', [systemId, userId]);
@@ -108,11 +120,15 @@ router.post('/products', async (req, res) => {
             code = `${base}_${n}`;
         }
         const fish = ['safe', 'caution', 'toxic'].includes(b.fish_safety) ? b.fish_safety : 'caution';
+        const rAmount = numN(b.rate_amount);
+        const rUnit = RATE_UNITS.includes(b.rate_unit) ? b.rate_unit : null;
+        const rPer = numN(b.rate_per_volume);
+        const defaultRate = rAmount != null ? formatRate(rAmount, rUnit, rPer) : (b.default_rate || null);
         const [result] = await pool.execute(
-            `INSERT INTO spray_products (code, user_id, category, product_name, active_ingredient, target, default_rate, interval_days, fish_safety, fish_note, compatibility_notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO spray_products (code, user_id, category, product_name, active_ingredient, target, default_rate, rate_amount, rate_unit, rate_per_volume, interval_days, phi_days, resistance_group, fish_safety, fish_note, compatibility_notes)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [code, req.user.userId, String(b.category).slice(0, 40), String(b.product_name).slice(0, 255), b.active_ingredient || null, b.target || null,
-             b.default_rate || null, b.interval_days ? Number(b.interval_days) : null, fish, b.fish_note || null, b.compatibility_notes || null]
+             defaultRate, rAmount, rUnit, rPer, numN(b.interval_days), numN(b.phi_days), (b.resistance_group || null), fish, b.fish_note || null, b.compatibility_notes || null]
         );
         res.json({ success: true, id: result.insertId });
     } catch (error) {
@@ -129,10 +145,14 @@ router.put('/products/:id', async (req, res) => {
         if (rows[0].user_id !== req.user.userId) return res.status(403).json({ error: 'Only your own products can be edited' });
         const b = req.body || {};
         const fish = ['safe', 'caution', 'toxic'].includes(b.fish_safety) ? b.fish_safety : 'caution';
+        const rAmount = numN(b.rate_amount);
+        const rUnit = RATE_UNITS.includes(b.rate_unit) ? b.rate_unit : null;
+        const rPer = numN(b.rate_per_volume);
+        const defaultRate = rAmount != null ? formatRate(rAmount, rUnit, rPer) : (b.default_rate || null);
         await pool.execute(
-            `UPDATE spray_products SET category=?, product_name=?, active_ingredient=?, target=?, default_rate=?, interval_days=?, fish_safety=?, fish_note=?, compatibility_notes=? WHERE id=?`,
+            `UPDATE spray_products SET category=?, product_name=?, active_ingredient=?, target=?, default_rate=?, rate_amount=?, rate_unit=?, rate_per_volume=?, interval_days=?, phi_days=?, resistance_group=?, fish_safety=?, fish_note=?, compatibility_notes=? WHERE id=?`,
             [String(b.category || '').slice(0, 40), String(b.product_name || '').slice(0, 255), b.active_ingredient || null, b.target || null,
-             b.default_rate || null, b.interval_days ? Number(b.interval_days) : null, fish, b.fish_note || null, b.compatibility_notes || null, req.params.id]
+             defaultRate, rAmount, rUnit, rPer, numN(b.interval_days), numN(b.phi_days), (b.resistance_group || null), fish, b.fish_note || null, b.compatibility_notes || null, req.params.id]
         );
         res.json({ success: true });
     } catch (error) {

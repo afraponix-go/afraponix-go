@@ -13,6 +13,7 @@ import {
   type ProductInput,
 } from './api'
 import { CATEGORY_LABEL, FishBadge } from './shared'
+import { RateInput, type Rate } from '../../components/RateInput'
 import './spray.css'
 
 const FISH_OPTS: FishSafety[] = ['safe', 'caution', 'toxic']
@@ -27,13 +28,17 @@ function ProductModal({ product, onClose }: { product?: SprayProduct; onClose: (
     product_name: product?.product_name ?? '',
     active_ingredient: product?.active_ingredient ?? '',
     target: product?.target ?? '',
-    default_rate: product?.default_rate ?? '',
     interval_days: product?.interval_days != null ? String(product.interval_days) : '',
     phi_days: product?.phi_days != null ? String(product.phi_days) : '',
     resistance_group: product?.resistance_group ?? '',
     fish_safety: (product?.fish_safety ?? 'caution') as FishSafety,
     fish_note: product?.fish_note ?? '',
     compatibility_notes: product?.compatibility_notes ?? '',
+  })
+  const [rate, setRate] = useState<Rate>({
+    amount: product?.rate_amount != null ? String(product.rate_amount) : '',
+    unit: product?.rate_unit ?? 'ml',
+    per: product?.rate_per_volume != null ? String(product.rate_per_volume) : '10',
   })
   const [error, setError] = useState<string | null>(null)
   const set = (k: keyof typeof f, v: string) => setF((s) => ({ ...s, [k]: v }))
@@ -45,7 +50,9 @@ function ProductModal({ product, onClose }: { product?: SprayProduct; onClose: (
         product_name: f.product_name.trim(),
         active_ingredient: f.active_ingredient.trim() || null,
         target: f.target.trim() || null,
-        default_rate: f.default_rate.trim() || null,
+        rate_amount: rate.amount.trim() === '' ? null : Number(rate.amount),
+        rate_unit: rate.unit,
+        rate_per_volume: rate.per.trim() === '' ? null : Number(rate.per),
         interval_days: f.interval_days ? Number(f.interval_days) : null,
         phi_days: f.phi_days ? Number(f.phi_days) : null,
         resistance_group: f.resistance_group.trim() || null,
@@ -93,7 +100,7 @@ function ProductModal({ product, onClose }: { product?: SprayProduct; onClose: (
         <div className="field-row">
           <div className="field">
             <label htmlFor="pr-rate">Default rate</label>
-            <input id="pr-rate" type="text" value={f.default_rate} onChange={(e) => set('default_rate', e.target.value)} placeholder="e.g. 100 ml / 10L" />
+            <RateInput id="pr-rate" value={rate} onChange={setRate} />
           </div>
           <div className="field">
             <label htmlFor="pr-int">Interval (days)</label>
@@ -161,7 +168,7 @@ export function SprayCatalog() {
         <h2 className="section-title" style={{ margin: 0 }}>Product catalogue</h2>
         <button className="btn feed-btn" onClick={() => setModal({})}>+ Add product</button>
       </div>
-      <p className="spray-lead">Reference products from the BCF plan, plus any you add. The fish‑safety flag is guidance for a stocked system — always avoid overspray and runoff into the water.</p>
+      <p className="spray-lead">Reference products from the Afraponix plan, plus any you add. The fish‑safety flag is guidance for a stocked system — always avoid overspray and runoff into the water.</p>
       <input className="crop-search" type="search" placeholder="Search products…" value={filter} onChange={(e) => setFilter(e.target.value)} />
 
       {isLoading ? <div className="empty">Loading…</div> : (

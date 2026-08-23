@@ -1,0 +1,25 @@
+.rate-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rate-input input,
+.rate-input select {
+  font: inherit;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius, 10px);
+  background: var(--surface);
+  color: var(--ink);
+}
+.rate-input input:focus-visible,
+.rate-input select:focus-visible {
+  border-color: var(--accent);
+}
+.rate-input .rate-amt { flex: 1 1 0; }
+.rate-input .rate-vol { flex: 1 1 0; }
+.rate-input .rate-unit-sel { flex: 0 0 auto; width: auto; }
+.rate-input .rate-per { color: var(--ink-faint); font-size: 13px; flex: none; }
+.rate-input .rate-l { color: var(--ink-soft); font-weight: 600; flex: none; }

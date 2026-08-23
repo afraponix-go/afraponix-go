@@ -11,6 +11,9 @@ export type SprayProduct = {
   active_ingredient: string | null
   target: string | null
   default_rate: string | null
+  rate_amount: number | null
+  rate_unit: string | null
+  rate_per_volume: number | null
   interval_days: number | null
   fish_safety: FishSafety
   fish_note: string | null
@@ -104,7 +107,7 @@ export async function fetchProducts(): Promise<SprayProduct[]> {
   return d.products
 }
 
-export type ProductInput = Partial<Pick<SprayProduct, 'category' | 'product_name' | 'active_ingredient' | 'target' | 'default_rate' | 'interval_days' | 'fish_safety' | 'fish_note' | 'compatibility_notes' | 'phi_days' | 'resistance_group'>>
+export type ProductInput = Partial<Pick<SprayProduct, 'category' | 'product_name' | 'active_ingredient' | 'target' | 'default_rate' | 'interval_days' | 'fish_safety' | 'fish_note' | 'compatibility_notes' | 'phi_days' | 'resistance_group'>> & { rate_amount?: number | null; rate_unit?: string | null; rate_per_volume?: number | null }
 export const addProduct = (input: ProductInput) => api('/spray/products', { method: 'POST', body: input })
 export const updateProduct = (id: number, input: ProductInput) => api(`/spray/products/${id}`, { method: 'PUT', body: input })
 export const deleteProduct = (id: number) => api(`/spray/products/${id}`, { method: 'DELETE' })
