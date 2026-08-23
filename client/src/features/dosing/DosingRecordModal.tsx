@@ -38,11 +38,13 @@ export function DosingRecordModal({ systemId, programme, initialItemId, initialD
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  // Prefill before-reading + product whenever the chosen target changes.
+  // Prefill product, before-reading and the scheduled dose whenever the target changes.
   useEffect(() => {
     const t = programme.targets[idx]
     if (!t) return
     setProduct(t.product ?? '')
+    if (t.dose_amount != null) setQty(String(t.dose_amount))
+    if (t.dose_unit) setQtyUnit(t.dose_unit)
     const rk = NUTRIENT_READKEY[t.nutrient]
     const v = latest?.[rk]
     setBefore(v != null ? String(v) : '')

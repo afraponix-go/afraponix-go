@@ -71,8 +71,8 @@ const PLANTS_TABS = [
   { to: '/plants/crops', label: 'Crops' },
 ]
 const OPERATIONS_TABS = [
-  { to: '/operations', label: 'Programmes', end: true },
-  { to: '/operations/calendar', label: 'Calendar' },
+  { to: '/operations', label: 'Calendar', end: true },
+  { to: '/operations/programmes', label: 'Programmes' },
   { to: '/operations/log', label: 'Log' },
   { to: '/operations/catalog', label: 'Catalogue' },
 ]
@@ -151,15 +151,16 @@ export const router = createBrowserRouter([
             path: 'operations',
             element: <SubTabLayout items={OPERATIONS_TABS} />,
             children: [
-              { index: true, element: <Programmes /> },
-              { path: 'calendar', element: <SprayCalendar /> },
+              { index: true, element: <SprayCalendar /> },
+              { path: 'programmes', element: <Programmes /> },
+              { path: 'calendar', element: <Navigate to="/operations" replace /> },
               { path: 'log', element: <SprayLog /> },
               { path: 'catalog', element: <SprayCatalog /> },
             ],
           },
           // Keep old /spray links working (bookmarks, back button).
-          { path: 'spray', element: <Navigate to="/operations" replace /> },
-          { path: 'spray/calendar', element: <Navigate to="/operations/calendar" replace /> },
+          { path: 'spray', element: <Navigate to="/operations/programmes" replace /> },
+          { path: 'spray/calendar', element: <Navigate to="/operations" replace /> },
           { path: 'spray/log', element: <Navigate to="/operations/log" replace /> },
           { path: 'spray/catalog', element: <Navigate to="/operations/catalog" replace /> },
           // Settings (grow-bed config lives under Plants → Beds & Allocation)

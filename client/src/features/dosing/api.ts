@@ -24,7 +24,7 @@ export const addFertiliser = (input: AddFertiliserInput) =>
   api<{ product: Fertiliser | null }>('/dosing/products', { method: 'POST', body: input })
 
 // --- Dosing programmes (target-band maintenance) ---
-export type DosingTarget = { id?: number; nutrient: NutrientKey; target_value: number | null; product: string | null; days: string[] }
+export type DosingTarget = { id?: number; nutrient: NutrientKey; target_value: number | null; product: string | null; dose_amount: number | null; dose_unit: string | null; days: string[] }
 export type DosingProgramme = { id: number; name: string; notes: string | null; status: 'active' | 'paused'; targets: DosingTarget[] }
 
 export async function fetchDosingProgrammes(systemId: string): Promise<DosingProgramme[]> {
@@ -35,7 +35,7 @@ export type DosingProgrammeInput = {
   name: string
   notes?: string | null
   status?: 'active' | 'paused'
-  targets: { nutrient: string; target_value: number | null; product: string | null; days: string[] }[]
+  targets: { nutrient: string; target_value: number | null; product: string | null; dose_amount?: number | null; dose_unit?: string | null; days: string[] }[]
 }
 export const createDosingProgramme = (systemId: string, input: DosingProgrammeInput) =>
   api(`/dosing/programmes/${systemId}`, { method: 'POST', body: input })

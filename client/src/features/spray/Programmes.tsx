@@ -171,6 +171,7 @@ export function Programmes() {
                       <div key={t.id} className="dp-cp">
                         <span className="dp-cp-target">{nutrientShort(t.nutrient)} → {t.target_value != null ? Number(t.target_value) : '—'} ppm</span>
                         {t.product && <span className="dp-cp-fert">{t.product}</span>}
+                        {t.dose_amount != null && <span className="dp-cp-dose">{Number(t.dose_amount)} {t.dose_unit ?? 'g'}</span>}
                         <span className="dp-cp-days">{t.days.length ? t.days.map((d) => DOSE_WEEKDAY_LABEL[d]).join(' · ') : 'no days set'}</span>
                       </div>
                     ))}

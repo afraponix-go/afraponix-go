@@ -474,12 +474,12 @@ async function ownedDosingProgramme(pool, id, userId) {
 
 async function dosingTargets(pool, programmeId) {
     const [rows] = await pool.execute(
-        `SELECT id, target_nutrient AS nutrient, target_value, label AS product, weekdays
+        `SELECT id, target_nutrient AS nutrient, target_value, label AS product, dose_amount, dose_unit, weekdays
          FROM programme_items WHERE programme_id = ? AND target_nutrient IS NOT NULL
          ORDER BY sort_order, id`,
         [programmeId]
     );
-    return rows.map((r) => ({ id: r.id, nutrient: r.nutrient, target_value: r.target_value, product: r.product, days: r.weekdays ? r.weekdays.split(',').filter(Boolean) : [] }));
+    return rows.map((r) => ({ id: r.id, nutrient: r.nutrient, target_value: r.target_value, product: r.product, dose_amount: r.dose_amount, dose_unit: r.dose_unit, days: r.weekdays ? r.weekdays.split(',').filter(Boolean) : [] }));
 }
 
 async function replaceDosingTargets(pool, programmeId, targets) {
@@ -489,8 +489,8 @@ async function replaceDosingTargets(pool, programmeId, targets) {
         if (!t || !KEYS.includes(t.nutrient)) continue;
         const days = Array.isArray(t.days) ? t.days.filter((d) => WEEKDAYS_LIST.includes(d)).join(',') : '';
         await pool.execute(
-            "INSERT INTO programme_items (programme_id, target_nutrient, target_value, label, schedule_kind, weekdays, sort_order) VALUES (?, ?, ?, ?, 'weekdays', ?, ?)",
-            [programmeId, t.nutrient, numOrNull(t.target_value), (String(t.product || '').slice(0, 120)) || null, days, order++]
+            "INSERT INTO programme_items (programme_id, target_nutrient, target_value, label, dose_amount, dose_unit, schedule_kind, weekdays, sort_order) VALUES (?, ?, ?, ?, ?, ?, 'weekdays', ?, ?)",
+            [programmeId, t.nutrient, numOrNull(t.target_value), (String(t.product || '').slice(0, 120)) || null, numOrNull(t.dose_amount), (t.dose_unit || null), days, order++]
         );
     }
 }

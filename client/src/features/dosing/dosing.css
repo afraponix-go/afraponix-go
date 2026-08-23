@@ -108,3 +108,31 @@
 .dl-recovery.mid  { background: var(--warn-wash); color: var(--warn); }
 .dl-recovery.low  { background: var(--danger-wash); color: var(--danger); }
 .dl-recovery.pending { background: var(--surface-2); color: var(--ink-faint); }
+
+/* Dosing programme builder v2 — target cards + amount + mix groups + schedule */
+.dp-tcards { display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px 12px; margin-bottom: 14px; }
+.dp-tcard { border: 1px solid var(--line-soft, var(--line)); border-radius: 8px; padding: 8px 10px; background: var(--surface-2); display: flex; flex-direction: column; gap: 8px; }
+.dp-trow { display: grid; grid-template-columns: 72px 1fr 1.5fr 32px; gap: 8px; align-items: center; }
+.dp-trow select, .dp-trow input { font: inherit; font-size: 14px; min-width: 0; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.dp-trow select:focus-visible, .dp-trow input:focus-visible { border-color: var(--accent); }
+.dp-tdose { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-left: 2px; }
+.dp-dose-lbl { font-size: 12px; font-weight: 600; color: var(--ink-faint); }
+.dp-dose-amt { width: 110px; font: inherit; font-size: 14px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); box-sizing: border-box; }
+.dp-dose-unit { width: auto; font: inherit; font-size: 14px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.dp-dose-rec { font-size: 11.5px; color: var(--ink-faint); }
+.dp-dose-rec::before { content: '↺ '; }
+.dp-mix { font-size: 10.5px; font-weight: 700; letter-spacing: .02em; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.dp-mix.mix-A { background: color-mix(in srgb, #b5893a 16%, transparent); color: #8a6520; }
+.dp-mix.mix-B { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+.dp-mix.mix-C { background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--line); }
+:root[data-theme='dark'] .dp-mix.mix-A { color: #e0b055; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .dp-mix.mix-A { color: #e0b055; } }
+.dp-schedule { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 10px; }
+.dp-sched-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dp-sched-row .pm-days { flex: 1 1 auto; }
+@media (max-width: 480px) {
+  .dp-trow { grid-template-columns: 60px 1fr 32px; }
+  .dp-trow > select:nth-child(3) { grid-column: 1 / -1; }
+}
+
+.dp-cp-dose { font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }

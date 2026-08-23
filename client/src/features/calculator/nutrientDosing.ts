@@ -106,6 +106,29 @@ export function mixSchedule(doses: DoseResult[], products: Product[]): MixGroups
   return { A, B, C }
 }
 
+// Fertiliser incompatibility (mirrors mixSchedule): calcium-led products (A)
+// must not be dosed the same day as phosphate/potassium products (B) — they
+// precipitate. Micros/other (C) are neutral and compatible with either.
+export type MixGroup = 'A' | 'B' | 'C'
+export const MIX_LABEL: Record<MixGroup, string> = { A: 'Calcium mix', B: 'Phosphate / potassium mix', C: 'Micros / other' }
+export function mixGroupOf(p: { ca?: number; k?: number; p?: number }): MixGroup {
+  const ca = p.ca || 0, k = p.k || 0, ph = p.p || 0
+  if (ca > 0 && ca >= k) return 'A'
+  if (k > 0 || ph > 0) return 'B'
+  return 'C'
+}
+// Two mix groups clash iff one is A (calcium) and the other is B (phosphate/K).
+export const groupsClash = (a: MixGroup, b: MixGroup) => (a === 'A' && b === 'B') || (a === 'B' && b === 'A')
+
+// Recommended grams of a fertiliser to raise a nutrient from current to target
+// over a reservoir volume, given the fertiliser's % of that nutrient. Null when
+// it can't be computed (no gap, or the product doesn't supply the nutrient).
+export function recommendDose(targetPpm: number, currentPpm: number, volumeL: number, pct: number): number | null {
+  const gap = (targetPpm || 0) - (currentPpm || 0)
+  if (!(gap > 0) || !(volumeL > 0) || !(pct > 0)) return null
+  return Math.round(((gap * volumeL) / 1000 / (pct / 100)) * 10) / 10 // grams, 0.1 g
+}
+
 // The signed-in user's saved fertiliser list (null = not customised → defaults).
 export async function fetchUserProducts(): Promise<Product[] | null> {
   const data = await api<{ products: Product[] | null }>(`/dosing/products`)

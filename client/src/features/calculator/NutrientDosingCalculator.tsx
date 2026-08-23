@@ -353,7 +353,7 @@ export function NutrientDosingCalculator() {
         </div>
       </div>
       {saveProg && activeId && (
-        <SaveAsDosingProgrammeModal systemId={activeId} cropName={selectedCrop?.name ?? 'Crop'} target={target} products={products} onClose={() => setSaveProg(false)} />
+        <SaveAsDosingProgrammeModal systemId={activeId} cropName={selectedCrop?.name ?? 'Crop'} target={target} current={current} volumeL={volumeL} products={products} onClose={() => setSaveProg(false)} />
       )}
     </div>
   )
