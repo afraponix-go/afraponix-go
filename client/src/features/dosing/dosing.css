@@ -1,0 +1,97 @@
+/* Dosing programme builder + fertiliser add */
+.dz-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin: 4px 0 8px;
+}
+.dz-label .unit-hint { color: var(--ink-faint); font-weight: 400; }
+
+/* Target rows: nutrient · target · fertiliser · remove */
+.dp-targets {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px 12px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dp-target {
+  display: grid;
+  grid-template-columns: 78px 1fr 1.4fr 32px;
+  gap: 8px;
+  align-items: center;
+}
+.dp-target select,
+.dp-target input {
+  font: inherit;
+  font-size: 14px;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.dp-target select:focus-visible,
+.dp-target input:focus-visible { border-color: var(--accent); }
+.dz-x {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  border-radius: 8px;
+  width: 32px;
+  height: 34px;
+  cursor: pointer;
+  font-size: 16px;
+}
+.dz-x:disabled { opacity: .35; cursor: default; }
+
+/* Fertiliser nutrient-content grid (add modal) */
+.fz-npk {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.fz-npk-cell { display: flex; flex-direction: column; gap: 4px; }
+.fz-npk-cell span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.fz-npk-cell input {
+  font: inherit;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.fz-npk-cell input:focus-visible { border-color: var(--accent); }
+
+/* Dosing programme cards (in the Programmes list) */
+.dp-card-targets { display: flex; flex-direction: column; gap: 6px; }
+.dp-cp {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.dp-cp-target { font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.dp-cp-fert { color: var(--ink-soft); }
+.dp-cp-days { color: var(--ink-faint); margin-left: auto; }
+
+@media (max-width: 480px) {
+  .dp-target { grid-template-columns: 64px 1fr 32px; grid-auto-rows: auto; }
+  .dp-target > select:nth-child(3) { grid-column: 1 / -1; }
+}

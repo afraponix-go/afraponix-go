@@ -6,6 +6,8 @@ import { fetchProgrammes, fetchDue, fetchHarvestHolds, deleteProgramme, setProgr
 import { CATEGORY_LABEL, FishBadge } from './shared'
 import { ProgrammeModal } from './ProgrammeModal'
 import { RecordModal, type RecordPrefill } from './RecordModal'
+import { DosingProgrammeModal } from '../dosing/DosingProgrammeModal'
+import { fetchDosingProgrammes, deleteDosingProgramme, setDosingProgrammeStatus, nutrientShort, WEEKDAY_LABEL as DOSE_WEEKDAY_LABEL, type DosingProgramme } from '../dosing/api'
 import './spray.css'
 
 export function Programmes() {
@@ -15,6 +17,8 @@ export function Programmes() {
   const [record, setRecord] = useState<RecordPrefill | null>(null)
   const [confirmDel, setConfirmDel] = useState<Programme | null>(null)
   const [newMenu, setNewMenu] = useState(false)
+  const [dosingEdit, setDosingEdit] = useState<{ programme?: DosingProgramme } | null>(null)
+  const [confirmDelDosing, setConfirmDelDosing] = useState<DosingProgramme | null>(null)
 
   const { data: programmes = [], isLoading } = useQuery({ queryKey: ['spray-programmes', activeId], queryFn: () => fetchProgrammes(activeId as string), enabled: !!activeId })
   const { data: dueData } = useQuery({ queryKey: ['spray-due', activeId], queryFn: () => fetchDue(activeId as string), enabled: !!activeId })
@@ -30,6 +34,16 @@ export function Programmes() {
       qc.invalidateQueries({ queryKey: ['spray-due'] })
       qc.invalidateQueries({ queryKey: ['spray-calendar'] })
     },
+  })
+
+  const { data: dosingProgrammes = [] } = useQuery({ queryKey: ['dosing-programmes', activeId], queryFn: () => fetchDosingProgrammes(activeId as string), enabled: !!activeId })
+  const dosingDel = useMutation({
+    mutationFn: (p: DosingProgramme) => deleteDosingProgramme(p.id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['dosing-programmes'] }); setConfirmDelDosing(null) },
+  })
+  const dosingStatusMut = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: 'active' | 'paused' }) => setDosingProgrammeStatus(id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['dosing-programmes'] }),
   })
 
   if (!activeId) return <div className="empty">Select a system to manage programmes.</div>
@@ -50,8 +64,8 @@ export function Programmes() {
                 <button role="menuitem" className="np-item" onClick={() => { setNewMenu(false); setEdit({}) }}>
                   <span className="np-dot spray" /> Spray programme
                 </button>
-                <button role="menuitem" className="np-item" disabled>
-                  <span className="np-dot dosing" /> Dosing programme <span className="np-soon">Soon</span>
+                <button role="menuitem" className="np-item" onClick={() => { setNewMenu(false); setDosingEdit({}) }}>
+                  <span className="np-dot dosing" /> Dosing programme
                 </button>
                 <button role="menuitem" className="np-item" disabled>
                   <span className="np-dot operating" /> Operating programme <span className="np-soon">Soon</span>
@@ -61,7 +75,7 @@ export function Programmes() {
           )}
         </div>
       </div>
-      <p className="spray-lead">Recurring work for this system. Today that's spray programmes — dosing and operating programmes are coming. Spray products are flagged for fish safety; never let a fish‑toxic spray reach the system water.</p>
+      <p className="spray-lead">Recurring work for this system — spray and dosing programmes now, operating programmes coming. Spray products are flagged for fish safety; never let a fish‑toxic spray reach the system water.</p>
 
       {holds.length > 0 && (
         <div className="spray-hold">
@@ -100,9 +114,9 @@ export function Programmes() {
 
       {isLoading ? (
         <div className="empty">Loading…</div>
-      ) : programmes.length === 0 ? (
-        <div className="empty">No programmes yet. Create one to schedule your sprays.</div>
-      ) : (
+      ) : programmes.length === 0 && dosingProgrammes.length === 0 ? (
+        <div className="empty">No programmes yet. Add a spray or dosing programme to get started.</div>
+      ) : programmes.length === 0 ? null : (
         <div className="spray-cards">
           {programmes.map((p) => (
             <div key={p.id} className={`spray-card ${p.status !== 'active' ? 'inactive' : ''}`}>
@@ -133,7 +147,51 @@ export function Programmes() {
         </div>
       )}
 
+      {dosingProgrammes.length > 0 && (
+        <div className="dp-section">
+          <div className="feed-head"><h3 className="section-title" style={{ margin: '18px 0 0', fontSize: 15 }}>Dosing programmes</h3></div>
+          <div className="spray-cards">
+            {dosingProgrammes.map((p) => (
+              <div key={p.id} className={`spray-card ${p.status !== 'active' ? 'inactive' : ''}`}>
+                <div className="spray-card-head">
+                  <span className="spray-card-name">{p.name}{p.status !== 'active' && <span className="spray-inactive-tag">paused</span>}</span>
+                  <span className="crop-card-actions">
+                    <button className="link-btn" disabled={dosingStatusMut.isPending} onClick={() => dosingStatusMut.mutate({ id: p.id, status: p.status === 'active' ? 'paused' : 'active' })}>{p.status === 'active' ? 'Pause' : 'Resume'}</button>
+                    <button className="link-btn" onClick={() => setDosingEdit({ programme: p })}>Edit</button>
+                    <button className="link-btn danger" onClick={() => setConfirmDelDosing(p)}>Delete</button>
+                  </span>
+                </div>
+                {p.targets.length === 0 ? (
+                  <div className="spray-card-empty">No targets — edit to add some.</div>
+                ) : (
+                  <div className="dp-card-targets">
+                    {p.targets.map((t) => (
+                      <div key={t.id} className="dp-cp">
+                        <span className="dp-cp-target">{nutrientShort(t.nutrient)} → {t.target_value != null ? Number(t.target_value) : '—'} ppm</span>
+                        {t.product && <span className="dp-cp-fert">{t.product}</span>}
+                        <span className="dp-cp-days">{t.days.length ? t.days.map((d) => DOSE_WEEKDAY_LABEL[d]).join(' · ') : 'no days set'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {p.notes && <div className="spray-card-notes">{p.notes}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {edit && activeId && <ProgrammeModal systemId={activeId} programme={edit.programme} onClose={() => setEdit(null)} />}
+      {dosingEdit && activeId && <DosingProgrammeModal systemId={activeId} programme={dosingEdit.programme} onClose={() => setDosingEdit(null)} />}
+      {confirmDelDosing && (
+        <Modal title="Delete dosing programme" onClose={() => setConfirmDelDosing(null)}>
+          <p style={{ marginTop: 0, color: 'var(--ink-soft)' }}>Delete <b>{confirmDelDosing.name}</b>? Its targets are removed; any dosing you've logged is kept.</p>
+          <div className="mform-actions">
+            <button type="button" className="ghost" onClick={() => setConfirmDelDosing(null)}>Cancel</button>
+            <button type="button" className="btn btn-danger" disabled={dosingDel.isPending} onClick={() => dosingDel.mutate(confirmDelDosing)}>{dosingDel.isPending ? 'Deleting…' : 'Delete'}</button>
+          </div>
+        </Modal>
+      )}
       {record && activeId && <RecordModal systemId={activeId} prefill={record} onClose={() => setRecord(null)} />}
       {confirmDel && (
         <Modal title="Delete programme" onClose={() => setConfirmDel(null)}>
