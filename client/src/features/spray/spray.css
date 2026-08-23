@@ -184,3 +184,5 @@
 .cal-day { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 12px; }
 .cal-day .cal-items { gap: 6px; }
 .cal-day .cal-item { font-size: 13px; padding: 8px 10px; }
+
+.cat-toggle { margin-bottom: 18px; }

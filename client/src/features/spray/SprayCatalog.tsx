@@ -14,6 +14,7 @@ import {
 } from './api'
 import { CATEGORY_LABEL, FishBadge } from './shared'
 import { RateInput, type Rate } from '../../components/RateInput'
+import { FertiliserCatalog } from '../dosing/FertiliserCatalog'
 import './spray.css'
 
 const FISH_OPTS: FishSafety[] = ['safe', 'caution', 'toxic']
@@ -148,6 +149,7 @@ export function SprayCatalog() {
   const [modal, setModal] = useState<{ product?: SprayProduct } | null>(null)
   const [confirmDel, setConfirmDel] = useState<SprayProduct | null>(null)
   const [filter, setFilter] = useState('')
+  const [catTab, setCatTab] = useState<'spray' | 'fert'>('spray')
   const del = useMutation({
     mutationFn: (p: SprayProduct) => deleteProduct(p.id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['spray-products'] }); setConfirmDel(null) },
@@ -164,6 +166,13 @@ export function SprayCatalog() {
 
   return (
     <div>
+      <div className="seg cal-viewseg cat-toggle" role="tablist" aria-label="Catalogue">
+        <button type="button" role="tab" aria-selected={catTab === 'spray'} className={`seg-btn${catTab === 'spray' ? ' active' : ''}`} onClick={() => setCatTab('spray')}>Spray products</button>
+        <button type="button" role="tab" aria-selected={catTab === 'fert'} className={`seg-btn${catTab === 'fert' ? ' active' : ''}`} onClick={() => setCatTab('fert')}>Fertilisers</button>
+      </div>
+
+      {catTab === 'fert' ? <FertiliserCatalog /> : (
+      <>
       <div className="feed-head">
         <h2 className="section-title" style={{ margin: 0 }}>Product catalogue</h2>
         <button className="btn feed-btn" onClick={() => setModal({})}>+ Add product</button>
@@ -205,6 +214,8 @@ export function SprayCatalog() {
             </div>
           ))}
         </div>
+      )}
+      </>
       )}
 
       {modal && <ProductModal product={modal.product} onClose={() => setModal(null)} />}

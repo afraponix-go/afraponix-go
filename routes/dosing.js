@@ -100,6 +100,39 @@ router.post('/products', authenticateToken, async (req, res) => {
     }
 });
 
+// Edit a single fertiliser (catalogue management).
+router.put('/products/:id', authenticateToken, async (req, res) => {
+    try {
+        const b = req.body || {};
+        const name = String(b.name || '').trim().slice(0, 120);
+        if (!name) return res.status(400).json({ error: 'name is required' });
+        const pool = getDatabase();
+        const [own] = await pool.execute('SELECT id FROM dosing_products WHERE id = ? AND user_id = ?', [req.params.id, req.user.userId]);
+        if (own.length === 0) return res.status(404).json({ error: 'Not found or access denied' });
+        const rUnit = RATE_UNIT_SET.includes(b.rate_unit) ? b.rate_unit : null;
+        await pool.execute(
+            `UPDATE dosing_products SET name=?, n=?, p=?, k=?, ca=?, mg=?, fe=?, rate_amount=?, rate_unit=?, rate_per_volume=? WHERE id=?`,
+            [name, numOrNull(b.n), numOrNull(b.p), numOrNull(b.k), numOrNull(b.ca), numOrNull(b.mg), numOrNull(b.fe), numOrNull(b.rate_amount), rUnit, numOrNull(b.rate_per_volume), req.params.id]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        if (error && error.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'You already have a fertiliser with that name' });
+        console.error('Failed to update dosing product:', error);
+        res.status(500).json({ error: 'Failed to update fertiliser' });
+    }
+});
+
+router.delete('/products/:id', authenticateToken, async (req, res) => {
+    try {
+        const pool = getDatabase();
+        await pool.execute('DELETE FROM dosing_products WHERE id = ? AND user_id = ?', [req.params.id, req.user.userId]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Failed to delete dosing product:', error);
+        res.status(500).json({ error: 'Failed to delete fertiliser' });
+    }
+});
+
 // ------------------------------------------------------------------ helpers
 
 // Recommended targets straight from the ratio model (null if the crop/stage is

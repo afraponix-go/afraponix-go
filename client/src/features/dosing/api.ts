@@ -22,6 +22,10 @@ export type AddFertiliserInput = {
 }
 export const addFertiliser = (input: AddFertiliserInput) =>
   api<{ product: Fertiliser | null }>('/dosing/products', { method: 'POST', body: input })
+export const updateFertiliser = (id: number, input: AddFertiliserInput) =>
+  api(`/dosing/products/${id}`, { method: 'PUT', body: input })
+export const deleteFertiliser = (id: number) =>
+  api(`/dosing/products/${id}`, { method: 'DELETE' })
 
 // --- Dosing programmes (target-band maintenance) ---
 export type DosingTarget = { id?: number; nutrient: NutrientKey; target_value: number | null; product: string | null; dose_amount: number | null; dose_unit: string | null; days: string[] }
