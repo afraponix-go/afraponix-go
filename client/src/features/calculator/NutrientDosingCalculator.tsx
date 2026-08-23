@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { useSystems } from '../systems/SystemContext'
 import { fetchFishInventory } from '../fish/api'
 import { fetchGrowBedConfigs } from '../growbeds/api'
@@ -11,7 +12,6 @@ import {
   emptyLevels,
   fetchLatestLevels,
   fetchUserProducts,
-  saveUserProducts,
   mixSchedule,
   MAX_WEEKLY_PPM,
   weeksToReach,
@@ -41,20 +41,15 @@ export function NutrientDosingCalculator() {
   const [caps, setCaps] = useState<Levels>({ ...MAX_WEEKLY_PPM })
   const [current, setCurrent] = useState<Levels>(emptyLevels)
   const [currentTouched, setCurrentTouched] = useState(false)
-  const [newProd, setNewProd] = useState<{ name: string } & Record<NutrientKey, string>>({ name: '', n: '', p: '', k: '', ca: '', mg: '', fe: '' })
 
-  // Fertiliser list is saved per user account. Load it (null = use defaults),
-  // then every add/remove/reset persists the whole list.
-  const [products, setProducts] = useState<Product[]>(DEFAULT_PRODUCTS)
-  const [productsInit, setProductsInit] = useState(false)
+  // Fertilisers come from the catalogue (Operations → Catalogue). Here the user
+  // just ticks which of them to dose with; `deselected` tracks the unticked ones
+  // (so new catalogue fertilisers are used by default).
   const productsQ = useQuery({ queryKey: ['dosing-products'], queryFn: fetchUserProducts })
-  const saveProductsMut = useMutation({ mutationFn: (list: Product[]) => saveUserProducts(list) })
-  useEffect(() => {
-    if (productsInit || productsQ.isLoading) return
-    setProducts(productsQ.data ?? DEFAULT_PRODUCTS)
-    setProductsInit(true)
-  }, [productsQ.data, productsQ.isLoading, productsInit])
-  const updateProducts = (next: Product[]) => { setProducts(next); saveProductsMut.mutate(next) }
+  const catalogue = useMemo<Product[]>(() => productsQ.data ?? DEFAULT_PRODUCTS, [productsQ.data])
+  const [deselected, setDeselected] = useState<Set<string>>(new Set())
+  const toggleFert = (name: string) => setDeselected((s) => { const n = new Set(s); n.has(name) ? n.delete(name) : n.add(name); return n })
+  const products = useMemo(() => catalogue.filter((p) => !deselected.has(p.name)), [catalogue, deselected])
 
   // Crops come from the user's own list; the ones planted in this system are
   // flagged so the picker can offer them first.
@@ -141,12 +136,6 @@ export function NutrientDosingCalculator() {
   const setCur = (k: NutrientKey, v: string) => { setCurrent((c) => ({ ...c, [k]: numOr0(v) })); setCurrentTouched(true) }
   const setTgt = (k: NutrientKey, v: string) => { setTarget((t) => ({ ...t, [k]: numOr0(v) })); setTargetTouched(true) }
 
-  function addProduct() {
-    const name = newProd.name.trim()
-    if (!name) return
-    updateProducts([...products, { name, n: numOr0(newProd.n), p: numOr0(newProd.p), k: numOr0(newProd.k), ca: numOr0(newProd.ca), mg: numOr0(newProd.mg), fe: numOr0(newProd.fe) }])
-    setNewProd({ name: '', n: '', p: '', k: '', ca: '', mg: '', fe: '' })
-  }
   const mixes = useMemo(() => mixSchedule(result.doses, products), [result.doses, products])
   // Spread the correction over enough weeks that no nutrient rises faster than
   // its safe weekly cap. The per-week dose is the total ÷ weeks.
@@ -254,30 +243,22 @@ export function NutrientDosingCalculator() {
           <hr className="calc-divider" />
           <div className="calc-sub nd-fert-head">
             Fertilisers
-            {JSON.stringify(products) !== JSON.stringify(DEFAULT_PRODUCTS) && (
-              <button type="button" className="nd-vol-reset" onClick={() => updateProducts(DEFAULT_PRODUCTS)}>↺ Reset to defaults</button>
-            )}
+            <Link className="nd-fert-manage" to="/operations/catalog">Manage in Catalogue ›</Link>
           </div>
-          <p className="calc-result-hint" style={{ marginTop: 0 }}>Products the calculator can dose with — saved to your account. Add or remove to match what you have.</p>
+          <p className="calc-result-hint" style={{ marginTop: 0 }}>Tick the fertilisers to dose with. Add or edit them in Operations → Catalogue → Fertilisers.</p>
           <div className="nd-prod-list">
-            {products.map((p, i) => (
-              <div className="nd-prod" key={i}>
-                <span className="nd-prod-name">{p.name}</span>
-                <span className="nd-prod-comp">{KEYS.filter((k) => p[k] > 0).map((k) => `${k.toUpperCase()} ${p[k]}%`).join(' · ') || '—'}</span>
-                <button type="button" className="nd-prod-x" title="Remove" onClick={() => updateProducts(products.filter((_, j) => j !== i))}>×</button>
-              </div>
-            ))}
+            {catalogue.map((p) => {
+              const on = !deselected.has(p.name)
+              return (
+                <label className={`nd-fert-row ${on ? 'on' : ''}`} key={p.name}>
+                  <input type="checkbox" checked={on} onChange={() => toggleFert(p.name)} />
+                  <span className="nd-prod-name">{p.name}</span>
+                  <span className="nd-prod-comp">{KEYS.filter((k) => p[k] > 0).map((k) => `${k.toUpperCase()} ${p[k]}%`).join(' · ') || '—'}</span>
+                </label>
+              )
+            })}
           </div>
-          <details className="nd-add">
-            <summary>+ Add a fertiliser</summary>
-            <input className="nd-add-name" type="text" placeholder="Name" value={newProd.name} onChange={(e) => setNewProd((p) => ({ ...p, name: e.target.value }))} />
-            <div className="nd-add-grid">
-              {KEYS.map((k) => (
-                <input key={k} type="number" min="0" step="0.1" inputMode="decimal" placeholder={`${k.toUpperCase()}%`} value={newProd[k]} onChange={(e) => setNewProd((p) => ({ ...p, [k]: e.target.value }))} />
-              ))}
-            </div>
-            <button type="button" className="io-btn primary" onClick={addProduct}>Add</button>
-          </details>
+          {products.length === 0 && <p className="calc-result-hint nd-fert-none">Tick at least one fertiliser to calculate a dose.</p>}
         </form>
 
         <div>
