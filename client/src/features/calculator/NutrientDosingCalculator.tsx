@@ -245,6 +245,10 @@ export function NutrientDosingCalculator() {
       {step === 'define' ? (
         <div className="calc-step-panel">
         <form className="calc-form wide" onSubmit={(e) => e.preventDefault()}>
+          <div className="calc-def-cols">
+          <div className="calc-def-col">
+          <div className="calc-def-sec">
+          <div className="calc-sub">System</div>
           <div className="field">
             <label htmlFor="nd-vol">Reservoir volume <span className="hint">(litres)</span></label>
             <input id="nd-vol" type="number" min="0" step="10" inputMode="decimal" value={volume} onChange={(e) => { setVolume(e.target.value); setVolumeTouched(true) }} placeholder="e.g. 2000" />
@@ -305,7 +309,8 @@ export function NutrientDosingCalculator() {
           </div>
           <p className="calc-result-hint" style={{ marginTop: 0 }}>EC is a rough guide only in aquaponics — dose to the nutrient targets below, not to EC.</p>
 
-          <hr className="calc-divider" />
+          </div>
+          <div className="calc-def-sec">
           <div className="calc-sub">Levels (ppm)</div>
           <p className="calc-result-hint" style={{ marginTop: 0 }}>
             {targetsLoading
@@ -327,7 +332,10 @@ export function NutrientDosingCalculator() {
             ))}
           </div>
 
-          <hr className="calc-divider" />
+          </div>
+          </div>
+          <div className="calc-def-col">
+          <div className="calc-def-sec">
           <div className="calc-sub">pH</div>
           <div className="nd-ph">
             <div className="nd-ph-row">
@@ -377,7 +385,8 @@ export function NutrientDosingCalculator() {
             )}
           </div>
 
-          <hr className="calc-divider" />
+          </div>
+          <div className="calc-def-sec">
           <div className="calc-sub nd-fert-head">
             Fertilisers
             <Link className="nd-fert-manage" to="/operations/catalog">Manage in Catalogue ›</Link>
@@ -396,6 +405,9 @@ export function NutrientDosingCalculator() {
             })}
           </div>
           {products.length === 0 && <p className="calc-result-hint nd-fert-none">Tick at least one fertiliser to calculate a dose.</p>}
+          </div>
+          </div>
+          </div>
         </form>
         <div className="calc-step-actions">
           <button type="button" className="io-btn primary lg" disabled={!canCalculate} onClick={() => setStep('results')}>Calculate dose →</button>

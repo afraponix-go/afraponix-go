@@ -401,7 +401,12 @@
 .calc-step-n { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink-faint); font-size: 12px; font-weight: 700; }
 .calc-step.active .calc-step-n { background: var(--accent); color: var(--accent-ink); }
 .calc-step-sep { color: var(--ink-faint); }
-.calc-form.wide { max-width: 640px; }
+.calc-form.wide { max-width: 880px; }
+.calc-def-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
+@media (max-width: 720px) { .calc-def-cols { grid-template-columns: 1fr; gap: 24px; } }
+.calc-def-col { display: flex; flex-direction: column; gap: 26px; min-width: 0; }
+.calc-def-sec { min-width: 0; }
+.calc-def-sec .field:last-child { margin-bottom: 0; }
 .calc-step-actions { display: flex; align-items: center; gap: 14px; margin-top: 22px; max-width: 640px; flex-wrap: wrap; }
 .io-btn.lg { padding: 12px 22px; font-size: 15px; }
 .calc-results-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; flex-wrap: wrap; }
