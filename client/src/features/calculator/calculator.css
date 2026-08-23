@@ -429,6 +429,18 @@
 /* Mix "separate day" chip */
 .nd-mix-day { float: right; font-size: 10px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 5px; padding: 2px 7px; }
 
+/* Sequenced result plan */
+.nd-step { margin-top: 22px; }
+.nd-step-h { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+.nd-step-n { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; flex: none; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 13px; font-weight: 800; }
+.nd-step-sub { margin: 0 0 12px; max-width: 62ch; }
+.nd-mix-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.nd-mix-name { min-width: 0; }
+.nd-mix-amt { display: inline-flex; flex-direction: column; align-items: flex-end; line-height: 1.25; white-space: nowrap; }
+.nd-mix-amt em { font-style: normal; font-size: 11px; color: var(--ink-faint); }
+.nd-caps-toggle { font: inherit; font-size: inherit; font-weight: 600; color: var(--accent); background: none; border: none; padding: 0; cursor: pointer; text-decoration: underline; }
+.nd-caps-open { margin-top: 10px; }
+
 /* pH correction */
 .nd-ph { display: flex; flex-direction: column; gap: 8px; }
 .nd-ph-row { display: grid; grid-template-columns: auto 1fr; align-items: end; gap: 14px; }

@@ -27,6 +27,8 @@ import './calculator.css'
 
 const numOr0 = (v: string) => (v === '' ? 0 : Number(v) || 0)
 const fmt = (n: number, d = 1) => (n >= 100 ? Math.round(n).toLocaleString() : n.toFixed(d))
+// Readable dose weight: kg once it's ≥ 1 kg, otherwise grams.
+const gfmt = (g: number) => (g >= 1000 ? `${(g / 1000).toFixed(2)} kg` : `${g.toFixed(g < 10 ? 1 : 0)} g`)
 // The carbonate alkalinity the default buffer strengths assume (KH 4 dKH ≈ 71 ppm
 // as CaCO₃). Measured KH (recorded in dKH) scales the acid/base dose against this
 // reference — a unit-agnostic ratio, so reference and reading share the dKH unit.
@@ -43,6 +45,7 @@ export function NutrientDosingCalculator() {
   const [targetTouched, setTargetTouched] = useState(false)
   const [saveProg, setSaveProg] = useState(false)
   const [step, setStep] = useState<'define' | 'results'>('define')
+  const [showCaps, setShowCaps] = useState(false)
   const [caps, setCaps] = useState<Levels>({ ...MAX_WEEKLY_PPM })
   const [targetPh, setTargetPh] = useState('6.5')
   const [selectedBuffer, setSelectedBuffer] = useState('')
@@ -195,6 +198,7 @@ export function NutrientDosingCalculator() {
   const cropName = selectedCrop ? `${selectedCrop.name}${isFruiting ? ` (${stage})` : ''}` : 'this crop'
   // Enough to produce a dose: a volume, targets, and at least one fertiliser.
   const canCalculate = volumeL > 0 && !targetsEmpty && products.length > 0
+  const phStepShown = !!(bufferObj && bufAmt != null && bufAmt > 0 && phDir)
 
   // Flag nutrients the fitted dose can't hit cleanly: an overshoot (carried in by
   // a fertiliser added for another nutrient) or a shortfall (no ticked fertiliser
@@ -451,17 +455,13 @@ export function NutrientDosingCalculator() {
             <div className="empty">Nothing to add — current levels already meet the targets.</div>
           ) : (
             <>
-              <p className="calc-result-hint">
-                To reach the {cropName} targets in {volumeL.toLocaleString()} L. Spread over <b>{weeks} week{weeks === 1 ? '' : 's'}</b> so no nutrient rises faster than its safe weekly limit — dose the weekly amount each week, re-testing as you go.
+              <p className="calc-result-hint" style={{ marginTop: 0 }}>
+                Dose <b>weekly for {weeks} week{weeks === 1 ? '' : 's'}</b>, re-testing between doses so nothing rises faster than its safe limit. Amounts are <b>per weekly dose</b>{weeks > 1 ? ', with the full total alongside' : ''}.
+                {' '}
+                <button type="button" className="nd-caps-toggle" onClick={() => setShowCaps((s) => !s)}>{showCaps ? 'Hide' : 'Adjust'} safe weekly rise</button>
               </p>
-              {bufferObj && bufAmt != null && bufAmt > 0 && phDir && (
-                <div className="nd-ph-step">
-                  <b>First, pH:</b> add <b>{fmt(bufAmt)} {bufferUnit}</b> {bufferObj.name} to {phDir === 'down' ? 'lower' : 'raise'} pH from {currentPh} to {targetPh}, then re-test before dosing nutrients.
-                </div>
-              )}
-              <details className="nd-caps">
-                <summary>Safe weekly rise (ppm)</summary>
-                <div className="nd-caps-grid">
+              {showCaps && (
+                <div className="nd-caps-grid nd-caps-open">
                   {NUTRIENTS.map((n) => (
                     <label key={n.key} className="nd-cap-cell">
                       <span>{n.key.toUpperCase()}</span>
@@ -469,16 +469,37 @@ export function NutrientDosingCalculator() {
                     </label>
                   ))}
                 </div>
-              </details>
-              <div className="nd-table-wrap">
-                <table className="nd-table">
-                  <thead><tr><th>Fertiliser</th><th className="r">Per week</th><th className="r">Total ({weeks}w)</th></tr></thead>
-                  <tbody>
-                    {result.doses.map((d) => (
-                      <tr key={d.name}><td><b>{d.name}</b></td><td className="r">{(d.grams / weeks).toFixed(1)} g</td><td className="r">{d.grams.toFixed(1)} g</td></tr>
-                    ))}
-                  </tbody>
-                </table>
+              )}
+
+              {phStepShown && (
+                <div className="nd-step">
+                  <div className="nd-step-h"><span className="nd-step-n">1</span> Correct pH first</div>
+                  <div className="nd-ph-step">
+                    Add <b>{fmt(bufAmt as number)} {bufferUnit}</b> of {bufferObj!.name} to {phDir === 'down' ? 'lower' : 'raise'} pH from {currentPh} to {targetPh}, then re-test before dosing nutrients.
+                  </div>
+                </div>
+              )}
+
+              <div className="nd-step">
+                <div className="nd-step-h"><span className="nd-step-n">{phStepShown ? 2 : 1}</span> Dose nutrients — one mix per day</div>
+                <p className="hint nd-step-sub">Add each mix on a <b>separate day</b>; never combine Mix A (calcium) with Mix B (phosphate/sulphate) — they precipitate. Dissolve each in its own water and re-test as you go.</p>
+                <div className="nd-mixes">
+                  {([
+                    { key: 'A', title: 'Calcium', day: 'Day 1', rows: mixes.A },
+                    { key: 'B', title: 'Potassium / Phosphorus', day: 'Day 3', rows: mixes.B },
+                    { key: 'C', title: 'Micronutrients', day: 'Day 5', rows: mixes.C },
+                  ] as const).filter((m) => m.rows.length > 0).map((m) => (
+                    <div className="nd-mix" key={m.key}>
+                      <div className="nd-mix-title">Mix {m.key} · {m.title}<span className="nd-mix-day">{m.day}</span></div>
+                      {m.rows.map((d) => (
+                        <div className="nd-mix-row" key={d.name}>
+                          <span className="nd-mix-name">{d.name}</span>
+                          <span className="nd-mix-amt"><b>{gfmt(d.grams / weeks)}</b>{weeks > 1 && <em>{gfmt(d.grams)} total</em>}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {doseWarnings.length > 0 && (
@@ -495,33 +516,10 @@ export function NutrientDosingCalculator() {
                 </div>
               )}
 
-              {(mixes.A.length > 0 || mixes.B.length > 0 || mixes.C.length > 0) && (
-                <>
-                  <div className="calc-sub" style={{ marginTop: 22 }}>Mixing schedule <span className="hint">· per week</span></div>
-                  <p className="calc-result-hint" style={{ marginTop: 0 }}>
-                    <b>Add each mix on a separate day</b> — never dose calcium (Mix A) together with the phosphate/sulphate mix (Mix B) or they precipitate out. Dissolve each in its own water first, and re-test as you go. Amounts are per weekly dose.
-                  </p>
-                  <div className="nd-mixes">
-                    {([
-                      { key: 'A', title: 'Mix A · Calcium', day: 'Day 1', rows: mixes.A },
-                      { key: 'B', title: 'Mix B · Potassium / Phosphorus', day: 'Day 3', rows: mixes.B },
-                      { key: 'C', title: 'Mix C · Micronutrients', day: 'Day 5', rows: mixes.C },
-                    ] as const).filter((m) => m.rows.length > 0).map((m) => (
-                      <div className="nd-mix" key={m.key}>
-                        <div className="nd-mix-title">{m.title}<span className="nd-mix-day">{m.day}</span></div>
-                        {m.rows.map((d) => (
-                          <div className="nd-mix-row" key={d.name}><span>{d.name}</span><b>{(d.grams / weeks).toFixed(1)} g</b></div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              <div className="calc-sub" style={{ marginTop: 22 }}>Projected result</div>
-              <div className="nd-table-wrap" style={{ marginTop: 14 }}>
+              <div className="calc-sub" style={{ marginTop: 24 }}>You'll reach these levels</div>
+              <div className="nd-table-wrap" style={{ marginTop: 12 }}>
                 <table className="nd-table">
-                  <thead><tr><th>Element</th><th className="r">Current</th><th className="r">Projected</th><th className="r">Target</th></tr></thead>
+                  <thead><tr><th>Element</th><th className="r">Now</th><th className="r">After</th><th className="r">Target</th></tr></thead>
                   <tbody>
                     {NUTRIENTS.map((n) => {
                       const t = target[n.key] || 0
