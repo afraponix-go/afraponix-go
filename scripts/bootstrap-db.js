@@ -75,6 +75,7 @@ const STEPS = [
   { type: 'node', file: 'database/migrations/2026-08-crop-target-cherry-tomatoes.js', label: 'Cherry tomatoes crop targets (tomato anchors)' },
   { type: 'sql', file: 'database/migrations/2026-08-system-crop-targets.sql', label: 'Per-system crop target overrides table' },
   { type: 'node', file: 'database/migrations/2026-08-cherry-tomatoes-crop.js', label: 'Ensure cherry_tomatoes crop + targets' },
+  { type: 'node', file: 'database/migrations/2026-08-crop-target-floors-refresh.js', label: 'Crop targets: re-derive after Ca/Mg floor update' },
   { type: 'sql', file: 'database/migrations/2026-08-system-target-crop.sql', label: 'Per-system dashboard reference crop table' },
   { type: 'sql', file: 'database/migrations/2026-08-spray-tables.sql', label: 'Spray programmes v2 tables (catalog, plans, log)' },
   { type: 'node', file: 'database/migrations/2026-08-spray-catalog-seed.js', label: 'Spray product catalog (BCF, fish-safety)' },
