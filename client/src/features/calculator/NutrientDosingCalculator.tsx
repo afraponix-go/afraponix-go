@@ -19,6 +19,7 @@ import {
 } from './nutrientDosing'
 import { fetchDosingCrops } from './cropData'
 import { fetchCropTargets, type Stage } from '../plants/cropTargets'
+import { SaveAsDosingProgrammeModal } from '../dosing/SaveAsDosingProgrammeModal'
 import '../dashboard/dashboard.css'
 import './calculator.css'
 
@@ -34,6 +35,7 @@ export function NutrientDosingCalculator() {
 
   const [target, setTarget] = useState<Levels>(emptyLevels)
   const [targetTouched, setTargetTouched] = useState(false)
+  const [saveProg, setSaveProg] = useState(false)
   const [current, setCurrent] = useState<Levels>(emptyLevels)
   const [currentTouched, setCurrentTouched] = useState(false)
   const [newProd, setNewProd] = useState<{ name: string } & Record<NutrientKey, string>>({ name: '', n: '', p: '', k: '', ca: '', mg: '', fe: '' })
@@ -149,8 +151,13 @@ export function NutrientDosingCalculator() {
   return (
     <div>
       <div className="dash-head">
-        <h1 style={{ marginTop: 0 }}>Nutrient Dosing</h1>
-        <span className="dash-sub">Dose your reservoir to a crop's target levels</span>
+        <div>
+          <h1 style={{ margin: 0 }}>Nutrient Dosing</h1>
+          <div className="dash-sub">Dose your reservoir to a crop's target levels</div>
+        </div>
+        {activeId && !targetsEmpty && (
+          <button type="button" className="io-btn primary" onClick={() => setSaveProg(true)}>Save as dosing programme</button>
+        )}
       </div>
 
       <div className="calc-layout">
@@ -345,6 +352,9 @@ export function NutrientDosingCalculator() {
           )}
         </div>
       </div>
+      {saveProg && activeId && (
+        <SaveAsDosingProgrammeModal systemId={activeId} cropName={selectedCrop?.name ?? 'Crop'} target={target} products={products} onClose={() => setSaveProg(false)} />
+      )}
     </div>
   )
 }

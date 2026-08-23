@@ -172,3 +172,15 @@
   background: var(--surface-2); border: 1px solid var(--line);
   border-radius: 999px; padding: 1px 7px;
 }
+
+/* Calendar view toggle + day/week views + dosing occurrence colour */
+.cal-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cal-viewseg { display: inline-flex; gap: 2px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.cal-viewseg .seg-btn { appearance: none; border: 0; background: transparent; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-soft); padding: 5px 12px; border-radius: 999px; cursor: pointer; }
+.cal-viewseg .seg-btn:hover { color: var(--ink); }
+.cal-viewseg .seg-btn.active { background: var(--surface); color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.cal-item.dosing { color: var(--accent); background: color-mix(in srgb, var(--accent) 13%, transparent); }
+.cal-cell-week { min-height: 120px; }
+.cal-day { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 12px; }
+.cal-day .cal-items { gap: 6px; }
+.cal-day .cal-item { font-size: 13px; padding: 8px 10px; }

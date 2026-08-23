@@ -19,14 +19,15 @@ const QTY_UNITS = ['g', 'kg', 'ml', 'L']
 
 // Record a dose against a dosing programme's target. The after-reading + recovery
 // are filled later, on re-test (from the log).
-export function DosingRecordModal({ systemId, programme, onClose }: { systemId: string; programme: DosingProgramme; onClose: () => void }) {
+export function DosingRecordModal({ systemId, programme, initialItemId, initialDate, onClose }: { systemId: string; programme: DosingProgramme; initialItemId?: number; initialDate?: string; onClose: () => void }) {
   const qc = useQueryClient()
   const { data: latest } = useQuery({ queryKey: ['nutrients-latest', systemId], queryFn: () => fetchLatestReadings(systemId) })
   const { data: operators = [] } = useQuery({ queryKey: ['spray-operators'], queryFn: fetchOperators })
 
-  const [idx, setIdx] = useState(0)
+  const initialIdx = Math.max(0, programme.targets.findIndex((t) => t.id === initialItemId))
+  const [idx, setIdx] = useState(initialIdx)
   const target = programme.targets[idx]
-  const [date, setDate] = useState(todayISO())
+  const [date, setDate] = useState(initialDate ?? todayISO())
   const [before, setBefore] = useState('')
   const [product, setProduct] = useState(target?.product ?? '')
   const [qty, setQty] = useState('')
