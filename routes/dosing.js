@@ -18,7 +18,10 @@ const dpRow = (r) => ({
     n: Number(r.n) || 0, p: Number(r.p) || 0, k: Number(r.k) || 0,
     ca: Number(r.ca) || 0, mg: Number(r.mg) || 0, fe: Number(r.fe) || 0,
     rate_amount: r.rate_amount, rate_unit: r.rate_unit, rate_per_volume: r.rate_per_volume,
+    ph_direction: r.ph_direction, ph_strength: r.ph_strength,
 });
+const PH_DIRS = ['up', 'down'];
+const DP_COLS = 'id, name, n, p, k, ca, mg, fe, rate_amount, rate_unit, rate_per_volume, ph_direction, ph_strength';
 
 // The signed-in user's fertiliser catalogue (null if they have none, so the
 // calculator falls back to its built-in defaults). Rows now, from dosing_products.
@@ -26,7 +29,7 @@ router.get('/products', authenticateToken, async (req, res) => {
     try {
         const pool = getDatabase();
         const [rows] = await pool.execute(
-            'SELECT id, name, n, p, k, ca, mg, fe, rate_amount, rate_unit, rate_per_volume FROM dosing_products WHERE user_id = ? ORDER BY name',
+            `SELECT ${DP_COLS} FROM dosing_products WHERE user_id = ? ORDER BY name`,
             [req.user.userId]
         );
         res.json({ products: rows.length ? rows.map(dpRow) : null });
@@ -80,17 +83,19 @@ router.post('/products', authenticateToken, async (req, res) => {
         const name = String(b.name || '').trim().slice(0, 120);
         if (!name) return res.status(400).json({ error: 'name is required' });
         const rUnit = RATE_UNIT_SET.includes(b.rate_unit) ? b.rate_unit : null;
+        const phDir = PH_DIRS.includes(b.ph_direction) ? b.ph_direction : null;
         const pool = getDatabase();
         await pool.execute(
-            `INSERT INTO dosing_products (user_id, name, n, p, k, ca, mg, fe, rate_amount, rate_unit, rate_per_volume)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `INSERT INTO dosing_products (user_id, name, n, p, k, ca, mg, fe, rate_amount, rate_unit, rate_per_volume, ph_direction, ph_strength)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
              ON DUPLICATE KEY UPDATE n=VALUES(n), p=VALUES(p), k=VALUES(k), ca=VALUES(ca), mg=VALUES(mg), fe=VALUES(fe),
-               rate_amount=VALUES(rate_amount), rate_unit=VALUES(rate_unit), rate_per_volume=VALUES(rate_per_volume)`,
+               rate_amount=VALUES(rate_amount), rate_unit=VALUES(rate_unit), rate_per_volume=VALUES(rate_per_volume),
+               ph_direction=VALUES(ph_direction), ph_strength=VALUES(ph_strength)`,
             [req.user.userId, name, numOrNull(b.n), numOrNull(b.p), numOrNull(b.k), numOrNull(b.ca), numOrNull(b.mg), numOrNull(b.fe),
-             numOrNull(b.rate_amount), rUnit, numOrNull(b.rate_per_volume)]
+             numOrNull(b.rate_amount), rUnit, numOrNull(b.rate_per_volume), phDir, numOrNull(b.ph_strength)]
         );
         const [rows] = await pool.execute(
-            'SELECT id, name, n, p, k, ca, mg, fe, rate_amount, rate_unit, rate_per_volume FROM dosing_products WHERE user_id = ? AND name = ?',
+            `SELECT ${DP_COLS} FROM dosing_products WHERE user_id = ? AND name = ?`,
             [req.user.userId, name]
         );
         res.json({ success: true, product: rows.length ? dpRow(rows[0]) : null });
@@ -110,9 +115,10 @@ router.put('/products/:id', authenticateToken, async (req, res) => {
         const [own] = await pool.execute('SELECT id FROM dosing_products WHERE id = ? AND user_id = ?', [req.params.id, req.user.userId]);
         if (own.length === 0) return res.status(404).json({ error: 'Not found or access denied' });
         const rUnit = RATE_UNIT_SET.includes(b.rate_unit) ? b.rate_unit : null;
+        const phDir = PH_DIRS.includes(b.ph_direction) ? b.ph_direction : null;
         await pool.execute(
-            `UPDATE dosing_products SET name=?, n=?, p=?, k=?, ca=?, mg=?, fe=?, rate_amount=?, rate_unit=?, rate_per_volume=? WHERE id=?`,
-            [name, numOrNull(b.n), numOrNull(b.p), numOrNull(b.k), numOrNull(b.ca), numOrNull(b.mg), numOrNull(b.fe), numOrNull(b.rate_amount), rUnit, numOrNull(b.rate_per_volume), req.params.id]
+            `UPDATE dosing_products SET name=?, n=?, p=?, k=?, ca=?, mg=?, fe=?, rate_amount=?, rate_unit=?, rate_per_volume=?, ph_direction=?, ph_strength=? WHERE id=?`,
+            [name, numOrNull(b.n), numOrNull(b.p), numOrNull(b.k), numOrNull(b.ca), numOrNull(b.mg), numOrNull(b.fe), numOrNull(b.rate_amount), rUnit, numOrNull(b.rate_per_volume), phDir, numOrNull(b.ph_strength), req.params.id]
         );
         res.json({ success: true });
     } catch (error) {

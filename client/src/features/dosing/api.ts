@@ -3,6 +3,7 @@ import { api } from '../../lib/apiClient'
 export type NutrientKey = 'n' | 'p' | 'k' | 'ca' | 'mg' | 'fe'
 
 // --- Fertiliser catalogue (dosing_products) ---
+export type PhDirection = 'up' | 'down'
 export type Fertiliser = {
   id?: number
   name: string
@@ -10,7 +11,19 @@ export type Fertiliser = {
   rate_amount?: number | null
   rate_unit?: string | null
   rate_per_volume?: number | null
+  ph_direction?: PhDirection | null
+  ph_strength?: number | null
 }
+// Starter pH buffers/acids (rough, editable estimates). Nutrient % and strength
+// (amount per 1000 L per pH unit) are approximations the user tunes to their
+// products and water.
+export const DEFAULT_BUFFERS: (AddFertiliserInput & { ph_direction: PhDirection })[] = [
+  { name: 'Nitric Acid', ph_direction: 'down', n: 12, rate_unit: 'ml', ph_strength: 2 },
+  { name: 'Phosphoric Acid', ph_direction: 'down', p: 25, rate_unit: 'ml', ph_strength: 1.5 },
+  { name: 'Hydrochloric Acid', ph_direction: 'down', rate_unit: 'ml', ph_strength: 2 },
+  { name: 'Potassium Hydroxide', ph_direction: 'up', k: 55, rate_unit: 'g', ph_strength: 1.5 },
+  { name: 'Calcium Hydroxide', ph_direction: 'up', ca: 54, rate_unit: 'g', ph_strength: 2 },
+]
 export async function fetchFertilisers(): Promise<Fertiliser[]> {
   const d = await api<{ products: Fertiliser[] | null }>('/dosing/products')
   return d.products ?? []
@@ -19,6 +32,7 @@ export type AddFertiliserInput = {
   name: string
   n?: number | null; p?: number | null; k?: number | null; ca?: number | null; mg?: number | null; fe?: number | null
   rate_amount?: number | null; rate_unit?: string | null; rate_per_volume?: number | null
+  ph_direction?: PhDirection | null; ph_strength?: number | null
 }
 export const addFertiliser = (input: AddFertiliserInput) =>
   api<{ product: Fertiliser | null }>('/dosing/products', { method: 'POST', body: input })

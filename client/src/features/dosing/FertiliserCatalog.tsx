@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
-import { fetchFertilisers, deleteFertiliser, NUTRIENT_OPTS, type Fertiliser } from './api'
+import { fetchFertilisers, deleteFertiliser, addFertiliser, DEFAULT_BUFFERS, NUTRIENT_OPTS, type Fertiliser } from './api'
 import { AddFertiliserModal } from './AddFertiliserModal'
 import { DEFAULT_PRODUCTS, saveUserProducts } from '../calculator/nutrientDosing'
 import '../spray/spray.css'
@@ -16,6 +16,9 @@ const composition = (f: Fertiliser) =>
 const doseText = (f: Fertiliser) =>
   f.rate_amount != null ? `${Number(f.rate_amount)} ${f.rate_unit ?? 'g'}${f.rate_per_volume != null ? ` / ${Number(f.rate_per_volume)} L` : ''}` : null
 
+const phText = (f: Fertiliser) =>
+  f.ph_direction ? `${f.ph_direction === 'down' ? 'Lowers pH' : 'Raises pH'}${f.ph_strength != null ? ` · ${Number(f.ph_strength)} ${f.rate_unit ?? 'ml'}/1000 L/pH` : ''}` : null
+
 // The dosing fertiliser catalogue (dosing_products): nutrient content + dose.
 export function FertiliserCatalog() {
   const qc = useQueryClient()
@@ -27,10 +30,9 @@ export function FertiliserCatalog() {
     mutationFn: (f: Fertiliser) => deleteFertiliser(f.id as number),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['dosing-fertilisers'] }); qc.invalidateQueries({ queryKey: ['dosing-products'] }); setConfirmDel(null) },
   })
-  const loadDefaults = useMutation({
-    mutationFn: () => saveUserProducts(DEFAULT_PRODUCTS),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['dosing-fertilisers'] }); qc.invalidateQueries({ queryKey: ['dosing-products'] }) },
-  })
+  const invalidate = () => { qc.invalidateQueries({ queryKey: ['dosing-fertilisers'] }); qc.invalidateQueries({ queryKey: ['dosing-products'] }) }
+  const loadDefaults = useMutation({ mutationFn: () => saveUserProducts(DEFAULT_PRODUCTS), onSuccess: invalidate })
+  const loadBuffers = useMutation({ mutationFn: async () => { for (const b of DEFAULT_BUFFERS) await addFertiliser(b) }, onSuccess: invalidate })
 
   const shown = useMemo(() => ferts.filter((f) => !filter || f.name.toLowerCase().includes(filter.toLowerCase())), [ferts, filter])
 
@@ -42,6 +44,11 @@ export function FertiliserCatalog() {
       </div>
       <p className="spray-lead">Your dosing fertilisers — nutrient content and a dose rate. These feed the Nutrient Dosing calculator and dosing programmes.</p>
       <input className="crop-search" type="search" placeholder="Search fertilisers…" value={filter} onChange={(e) => setFilter(e.target.value)} />
+      {ferts.length > 0 && !ferts.some((f) => f.ph_direction) && (
+        <button type="button" className="link-btn" style={{ marginTop: 8 }} disabled={loadBuffers.isPending} onClick={() => loadBuffers.mutate()}>
+          {loadBuffers.isPending ? 'Loading…' : '+ Load default pH buffers (Nitric, Phosphoric, KOH, Ca(OH)₂…)'}
+        </button>
+      )}
 
       {isLoading ? <div className="empty">Loading…</div> : shown.length === 0 ? (
         filter ? <div className="empty">No fertilisers match.</div> : (
@@ -58,14 +65,16 @@ export function FertiliserCatalog() {
             <div key={f.id} className="cat-item">
               <div className="cat-item-head">
                 <span className="cat-item-name">{f.name}</span>
+                {f.ph_direction && <span className={`dp-mix ${f.ph_direction === 'down' ? 'mix-B' : 'mix-A'}`}>{f.ph_direction === 'down' ? 'pH ↓' : 'pH ↑'}</span>}
                 <span className="crop-card-actions">
                   <button className="link-btn" onClick={() => setModal({ fertiliser: f })}>Edit</button>
                   <button className="link-btn danger" onClick={() => setConfirmDel(f)}>Delete</button>
                 </span>
               </div>
               <div className="cat-item-meta">
-                <span>{composition(f) || 'no nutrient content set'}</span>
-                {doseText(f) && <span>· dose {doseText(f)}</span>}
+                {f.ph_direction
+                  ? <><span>{phText(f)}</span>{composition(f) && <span>· adds {composition(f)}</span>}</>
+                  : <><span>{composition(f) || 'no nutrient content set'}</span>{doseText(f) && <span>· dose {doseText(f)}</span>}</>}
               </div>
             </div>
           ))}
