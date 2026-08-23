@@ -83,6 +83,10 @@ const STEPS = [
   { type: 'sql', file: 'database/migrations/2026-08-spray-log-phi.sql', label: 'Spray log: PHI snapshot column' },
   { type: 'node', file: 'database/migrations/2026-08-spray-catalog-compliance.js', label: 'Spray catalogue: PHI + resistance group backfill' },
   { type: 'sql', file: 'database/migrations/2026-08-spray-operators.sql', label: 'Per-user spray operators' },
+  // Operations module Phase 1a: unified programme core + fold spray in (must run
+  // after every spray table exists; behaviour-neutral until Phase 1b).
+  { type: 'sql', file: 'database/migrations/2026-08-programme-core.sql', label: 'Operations: unified programme core tables' },
+  { type: 'node', file: 'database/migrations/2026-08-programme-backfill-spray.js', label: 'Operations: fold spray programmes into the unified core' },
   { type: 'sql', file: 'database/migrations/2026-08-seedlings.sql', label: 'Seedling (nursery) batches + crop germ/transplant days' },
   { type: 'sql', file: 'database/migrations/2026-08-seedling-tray-groups.sql', label: 'Seedling mixed tray sizes (tray_groups)' },
   { type: 'node', file: 'database/migrations/2026-07-backfill-nutrient-readings.js', label: 'Backfill nutrient readings' },
