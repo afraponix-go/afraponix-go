@@ -5,6 +5,7 @@ import { api } from '../../lib/apiClient'
 // of truth). Field defs are shared by the form and the history table.
 export const WATER_FIELDS = [
   { key: 'ph', label: 'pH', unit: '', step: '0.1', range: '6.0 - 8.5' },
+  { key: 'kh', label: 'KH / Alkalinity', unit: 'ppm', step: '1', range: '40 - 140' },
   { key: 'ec', label: 'EC / TDS', unit: 'ppm', step: '10', range: '400 - 1200' },
   { key: 'dissolved_oxygen', label: 'Dissolved O₂', unit: 'mg/L', step: '0.1', range: '5.0 - 8.0' },
   { key: 'temperature', label: 'Water Temp', unit: '°C', step: '0.1', range: '18 - 30' },

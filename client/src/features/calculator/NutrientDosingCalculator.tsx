@@ -27,6 +27,9 @@ import './calculator.css'
 
 const numOr0 = (v: string) => (v === '' ? 0 : Number(v) || 0)
 const fmt = (n: number, d = 1) => (n >= 100 ? Math.round(n).toLocaleString() : n.toFixed(d))
+// The carbonate alkalinity the default buffer strengths assume (~KH 4 dKH, as
+// CaCO₃). Measured KH scales the acid/base dose against this reference.
+const KH_REF_PPM = 71.4
 
 export function NutrientDosingCalculator() {
   const { activeId } = useSystems()
@@ -144,8 +147,13 @@ export function NutrientDosingCalculator() {
   const phDir = phGap > 0.05 ? 'down' : phGap < -0.05 ? 'up' : null
   const dirBuffers = useMemo(() => bufferCatalogue.filter((p) => p.ph_direction === phDir), [bufferCatalogue, phDir])
   const bufferObj = useMemo(() => bufferCatalogue.find((p) => p.name === selectedBuffer && p.ph_direction === phDir) ?? null, [bufferCatalogue, selectedBuffer, phDir])
+  // Acid/base demand is proportional to the water's carbonate alkalinity (KH).
+  // Scale the buffer's per-pH strength (which assumes ~KH 4 ≈ 71 ppm as CaCO₃) by
+  // the measured KH; with no KH reading, fall back to that reference assumption.
+  const currentKh = latestQ.data?.kh ?? null
+  const khFactor = currentKh != null && currentKh > 0 ? currentKh / KH_REF_PPM : 1
   const recBufAmt = bufferObj?.ph_strength != null && volumeL > 0 && phDir
-    ? Math.round(Number(bufferObj.ph_strength) * Math.abs(phGap) * (volumeL / 1000) * 10) / 10
+    ? Math.round(Number(bufferObj.ph_strength) * Math.abs(phGap) * (volumeL / 1000) * khFactor * 10) / 10
     : null
   const bufAmt = bufAmtOverride.trim() !== '' ? Number(bufAmtOverride) : recBufAmt
   const bufferCredit = useMemo<Levels>(() => {
@@ -321,7 +329,11 @@ export function NutrientDosingCalculator() {
                     Adds {KEYS.filter((k) => bufferCredit[k] > 0).map((k) => `${k.toUpperCase()} +${bufferCredit[k]} ppm`).join(' · ')} — credited to the dose below.
                   </p>
                 )}
-                <p className="calc-result-hint" style={{ marginTop: 6 }}>Strength is an estimate — your water's alkalinity affects how much buffer it takes, so re-test after dosing.</p>
+                <p className="calc-result-hint" style={{ marginTop: 6 }}>
+                  {currentKh != null
+                    ? `Scaled to your measured KH of ${fmt(currentKh)} ppm. Re-test after dosing — alkalinity varies.`
+                    : 'No KH reading yet — assuming a moderate alkalinity (~4 dKH / 71 ppm). Record KH in Data Capture for a system-specific estimate, and re-test after dosing.'}
+                </p>
               </>
             )}
           </div>
