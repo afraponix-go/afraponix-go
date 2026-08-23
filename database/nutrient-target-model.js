@@ -13,11 +13,11 @@
 const STAGE_RULES = {
   vegetative: {
     ratio: { phosphorus: 0.2, potassium: 0.8, calcium: 0.8, magnesium: 0.2 },
-    floor: { phosphorus: 12, potassium: 50, calcium: 50, magnesium: 25, iron: 2.0 },
+    floor: { phosphorus: 12, potassium: 50, calcium: 45, magnesium: 20, iron: 2.0 },
   },
   fruiting: {
     ratio: { phosphorus: 0.2, potassium: 1.3, calcium: 1.2, magnesium: 0.2 },
-    floor: { phosphorus: 18, potassium: 70, calcium: 70, magnesium: 25, iron: 2.5 },
+    floor: { phosphorus: 18, potassium: 70, calcium: 60, magnesium: 20, iron: 2.5 },
   },
 };
 
