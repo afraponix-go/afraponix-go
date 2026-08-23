@@ -95,3 +95,16 @@
   .dp-target { grid-template-columns: 64px 1fr 32px; grid-auto-rows: auto; }
   .dp-target > select:nth-child(3) { grid-column: 1 / -1; }
 }
+
+/* Dosing record modal */
+.dr-qty { display: flex; gap: 8px; }
+.dr-qty input { flex: 1 1 0; min-width: 0; box-sizing: border-box; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius, 10px); background: var(--surface); color: var(--ink); }
+.dr-qty select { flex: 0 0 auto; font: inherit; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius, 10px); background: var(--surface); color: var(--ink); }
+.dz-hint { font-size: 12.5px; color: var(--ink-faint); margin: 2px 0 0; }
+
+/* Dosing log rows */
+.dl-recovery { font-weight: 700; font-variant-numeric: tabular-nums; padding: 2px 9px; border-radius: 999px; font-size: 12px; white-space: nowrap; }
+.dl-recovery.good { background: var(--ok-wash); color: var(--ok); }
+.dl-recovery.mid  { background: var(--warn-wash); color: var(--warn); }
+.dl-recovery.low  { background: var(--danger-wash); color: var(--danger); }
+.dl-recovery.pending { background: var(--surface-2); color: var(--ink-faint); }

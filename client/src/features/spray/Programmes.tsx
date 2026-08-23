@@ -7,6 +7,7 @@ import { CATEGORY_LABEL, FishBadge } from './shared'
 import { ProgrammeModal } from './ProgrammeModal'
 import { RecordModal, type RecordPrefill } from './RecordModal'
 import { DosingProgrammeModal } from '../dosing/DosingProgrammeModal'
+import { DosingRecordModal } from '../dosing/DosingRecordModal'
 import { fetchDosingProgrammes, deleteDosingProgramme, setDosingProgrammeStatus, nutrientShort, WEEKDAY_LABEL as DOSE_WEEKDAY_LABEL, type DosingProgramme } from '../dosing/api'
 import './spray.css'
 
@@ -19,6 +20,7 @@ export function Programmes() {
   const [newMenu, setNewMenu] = useState(false)
   const [dosingEdit, setDosingEdit] = useState<{ programme?: DosingProgramme } | null>(null)
   const [confirmDelDosing, setConfirmDelDosing] = useState<DosingProgramme | null>(null)
+  const [dosingRecord, setDosingRecord] = useState<DosingProgramme | null>(null)
 
   const { data: programmes = [], isLoading } = useQuery({ queryKey: ['spray-programmes', activeId], queryFn: () => fetchProgrammes(activeId as string), enabled: !!activeId })
   const { data: dueData } = useQuery({ queryKey: ['spray-due', activeId], queryFn: () => fetchDue(activeId as string), enabled: !!activeId })
@@ -175,6 +177,11 @@ export function Programmes() {
                   </div>
                 )}
                 {p.notes && <div className="spray-card-notes">{p.notes}</div>}
+                {p.status === 'active' && p.targets.length > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <button className="row-btn" onClick={() => setDosingRecord(p)}>Record dose</button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -183,6 +190,7 @@ export function Programmes() {
 
       {edit && activeId && <ProgrammeModal systemId={activeId} programme={edit.programme} onClose={() => setEdit(null)} />}
       {dosingEdit && activeId && <DosingProgrammeModal systemId={activeId} programme={dosingEdit.programme} onClose={() => setDosingEdit(null)} />}
+      {dosingRecord && activeId && <DosingRecordModal systemId={activeId} programme={dosingRecord} onClose={() => setDosingRecord(null)} />}
       {confirmDelDosing && (
         <Modal title="Delete dosing programme" onClose={() => setConfirmDelDosing(null)}>
           <p style={{ marginTop: 0, color: 'var(--ink-soft)' }}>Delete <b>{confirmDelDosing.name}</b>? Its targets are removed; any dosing you've logged is kept.</p>

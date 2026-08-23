@@ -94,6 +94,8 @@ const STEPS = [
   // Phase 2 Slice B: normalise the fertiliser catalogue + fold the JSON in.
   { type: 'sql', file: 'database/migrations/2026-08-dosing-products.sql', label: 'Dosing: fertiliser catalogue table' },
   { type: 'node', file: 'database/migrations/2026-08-dosing-products-backfill.js', label: 'Dosing: fold fertiliser JSON into the catalogue' },
+  // Phase 2 Slice D: dosing log — the nutrient a dose targeted.
+  { type: 'sql', file: 'database/migrations/2026-08-programme-log-dosing-nutrient.sql', label: 'Dosing: target_nutrient on programme_log' },
   { type: 'sql', file: 'database/migrations/2026-08-seedlings.sql', label: 'Seedling (nursery) batches + crop germ/transplant days' },
   { type: 'sql', file: 'database/migrations/2026-08-seedling-tray-groups.sql', label: 'Seedling mixed tray sizes (tray_groups)' },
   { type: 'node', file: 'database/migrations/2026-07-backfill-nutrient-readings.js', label: 'Backfill nutrient readings' },

@@ -561,4 +561,99 @@ router.delete('/programmes/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// ---------------------------------------------------- dosing log (efficacy)
+
+// Verify the caller owns the system a dosing-log row belongs to.
+async function ownedDosingLog(pool, id, userId) {
+    const [rows] = await pool.execute(
+        "SELECT l.id FROM programme_log l JOIN systems s ON s.id = l.system_id WHERE l.id = ? AND l.type = 'dosing' AND s.user_id = ?",
+        [id, userId]
+    );
+    return rows.length ? rows[0] : null;
+}
+
+// The dosing logbook with derived observed Δ + recovery % (recovery = observed /
+// expected × 100, once the after-reading is filled on re-test).
+router.get('/log/:systemId', authenticateToken, async (req, res) => {
+    try {
+        const pool = getDatabase();
+        if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        const limit = Math.min(500, Number(req.query.limit) || 200);
+        const [rows] = await pool.query(
+            `SELECT l.id, l.programme_id, l.item_id, l.target_nutrient,
+                    DATE_FORMAT(l.event_date, '%Y-%m-%d') AS event_date,
+                    l.product_name, l.quantity, l.quantity_unit,
+                    l.reading_before, l.reading_after, l.expected_delta,
+                    DATE_FORMAT(l.retest_date, '%Y-%m-%d') AS retest_date, l.ph_at_dosing,
+                    l.operator_name AS operator, l.notes, l.created_at,
+                    (l.reading_after - l.reading_before) AS observed_delta,
+                    CASE WHEN l.expected_delta IS NOT NULL AND l.expected_delta <> 0 AND l.reading_after IS NOT NULL
+                         THEN ROUND((l.reading_after - l.reading_before) / l.expected_delta * 100)
+                         ELSE NULL END AS recovery_pct,
+                    pr.name AS programme_name
+             FROM programme_log l LEFT JOIN programmes pr ON pr.id = l.programme_id
+             WHERE l.system_id = ? AND l.type = 'dosing'
+             ORDER BY l.event_date DESC, l.id DESC LIMIT ?`,
+            [req.params.systemId, limit]
+        );
+        res.json({ log: rows });
+    } catch (error) {
+        console.error('Failed to load dosing log:', error);
+        res.status(500).json({ error: 'Failed to load dosing log' });
+    }
+});
+
+// Record a dose. The after-reading + recovery come later, on re-test (PUT).
+router.post('/log', authenticateToken, async (req, res) => {
+    try {
+        const b = req.body || {};
+        const pool = getDatabase();
+        if (!b.system_id || !b.event_date) return res.status(400).json({ error: 'system_id and event_date are required' });
+        if (!(await ownsSystem(pool, b.system_id, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        const nutrient = KEYS.includes(b.target_nutrient) ? b.target_nutrient : null;
+        const [result] = await pool.execute(
+            `INSERT INTO programme_log
+               (system_id, programme_id, item_id, type, event_date, target_nutrient, product_name,
+                quantity, quantity_unit, reading_before, expected_delta, ph_at_dosing, operator_name, notes)
+             VALUES (?, ?, ?, 'dosing', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [b.system_id, numOrNull(b.programme_id), numOrNull(b.item_id), b.event_date, nutrient, (b.product_name || null),
+             numOrNull(b.quantity), (b.quantity_unit || null), numOrNull(b.reading_before), numOrNull(b.expected_delta),
+             numOrNull(b.ph_at_dosing), ((b.operator || '').trim() || null), (b.notes || null)]
+        );
+        res.json({ success: true, id: result.insertId });
+    } catch (error) {
+        console.error('Failed to record dose:', error);
+        res.status(500).json({ error: 'Failed to record dose' });
+    }
+});
+
+// Record the re-test: the after-reading + its date (drives observed Δ + recovery).
+router.put('/log/:id', authenticateToken, async (req, res) => {
+    try {
+        const pool = getDatabase();
+        if (!(await ownedDosingLog(pool, req.params.id, req.user.userId))) return res.status(404).json({ error: 'Not found or access denied' });
+        const b = req.body || {};
+        await pool.execute(
+            'UPDATE programme_log SET reading_after = ?, retest_date = ? WHERE id = ?',
+            [numOrNull(b.reading_after), (b.retest_date || null), req.params.id]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Failed to update dosing log:', error);
+        res.status(500).json({ error: 'Failed to update dosing log' });
+    }
+});
+
+router.delete('/log/:id', authenticateToken, async (req, res) => {
+    try {
+        const pool = getDatabase();
+        if (!(await ownedDosingLog(pool, req.params.id, req.user.userId))) return res.status(404).json({ error: 'Not found or access denied' });
+        await pool.execute('DELETE FROM programme_log WHERE id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Failed to delete dosing log entry:', error);
+        res.status(500).json({ error: 'Failed to delete dosing log entry' });
+    }
+});
+
 module.exports = router;
