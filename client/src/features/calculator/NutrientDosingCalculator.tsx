@@ -42,6 +42,7 @@ export function NutrientDosingCalculator() {
   const [target, setTarget] = useState<Levels>(emptyLevels)
   const [targetTouched, setTargetTouched] = useState(false)
   const [saveProg, setSaveProg] = useState(false)
+  const [step, setStep] = useState<'define' | 'results'>('define')
   const [caps, setCaps] = useState<Levels>({ ...MAX_WEEKLY_PPM })
   const [targetPh, setTargetPh] = useState('6.5')
   const [selectedBuffer, setSelectedBuffer] = useState('')
@@ -97,7 +98,7 @@ export function NutrientDosingCalculator() {
 
   // Reset the crop selection when the active system changes; the effect below
   // then defaults to the first crop of the new system.
-  useEffect(() => { setCropCode(''); setTargetTouched(false) }, [activeId])
+  useEffect(() => { setCropCode(''); setTargetTouched(false); setStep('define') }, [activeId])
   useEffect(() => {
     if (!cropCode && crops.length) setCropCode(crops[0].code)
   }, [crops, cropCode])
@@ -192,6 +193,35 @@ export function NutrientDosingCalculator() {
   const setCap = (k: NutrientKey, v: string) => setCaps((c) => ({ ...c, [k]: numOr0(v) }))
 
   const cropName = selectedCrop ? `${selectedCrop.name}${isFruiting ? ` (${stage})` : ''}` : 'this crop'
+  // Enough to produce a dose: a volume, targets, and at least one fertiliser.
+  const canCalculate = volumeL > 0 && !targetsEmpty && products.length > 0
+
+  // Download the plan as CSV (pH step + weekly/total fertiliser doses + the
+  // projected levels) so it can be saved or shared outside the app.
+  const exportCsv = () => {
+    const esc = (s: string | number) => `"${String(s).replace(/"/g, '""')}"`
+    const row = (...cells: (string | number)[]) => cells.map(esc).join(',')
+    const lines: string[] = ['Nutrient Dosing plan']
+    lines.push(row('Crop', cropName), row('Reservoir volume (L)', volumeL), row('Weeks', weeks))
+    if (currentKh != null) lines.push(row('KH (dKH)', currentKh))
+    if (bufferObj && bufAmt != null && bufAmt > 0 && phDir) {
+      lines.push('', 'pH step', row('Buffer', 'Amount', 'Unit', 'From pH', 'To pH'))
+      lines.push(row(bufferObj.name, bufAmt, bufferUnit, currentPh ?? '', targetPh))
+    }
+    lines.push('', 'Fertiliser doses', row('Fertiliser', 'Per week (g)', `Total ${weeks}w (g)`))
+    for (const d of result.doses) lines.push(row(d.name, (d.grams / weeks).toFixed(1), d.grams.toFixed(1)))
+    lines.push('', 'Projected result (ppm)', row('Element', 'Current', 'Projected', 'Target'))
+    for (const n of NUTRIENTS) lines.push(row(n.label, current[n.key] || 0, (result.finalLevels[n.key] || 0).toFixed(1), target[n.key] || 0))
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `nutrient-dosing-${selectedCrop?.code ?? 'crop'}-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <div>
@@ -200,13 +230,21 @@ export function NutrientDosingCalculator() {
           <h1 style={{ margin: 0 }}>Nutrient Dosing</h1>
           <div className="dash-sub">Dose your reservoir to a crop's target levels</div>
         </div>
-        {activeId && !targetsEmpty && (
-          <button type="button" className="io-btn primary" onClick={() => setSaveProg(true)}>Save as dosing programme</button>
-        )}
       </div>
 
-      <div className="calc-layout">
-        <form className="calc-form" onSubmit={(e) => e.preventDefault()}>
+      <div className="calc-steps" role="tablist" aria-label="Dosing steps">
+        <button type="button" role="tab" aria-selected={step === 'define'} className={`calc-step ${step === 'define' ? 'active' : ''}`} onClick={() => setStep('define')}>
+          <span className="calc-step-n">1</span> Define
+        </button>
+        <span className="calc-step-sep" aria-hidden>→</span>
+        <button type="button" role="tab" aria-selected={step === 'results'} className={`calc-step ${step === 'results' ? 'active' : ''}`} disabled={!canCalculate} onClick={() => canCalculate && setStep('results')}>
+          <span className="calc-step-n">2</span> Results
+        </button>
+      </div>
+
+      {step === 'define' ? (
+        <div className="calc-step-panel">
+        <form className="calc-form wide" onSubmit={(e) => e.preventDefault()}>
           <div className="field">
             <label htmlFor="nd-vol">Reservoir volume <span className="hint">(litres)</span></label>
             <input id="nd-vol" type="number" min="0" step="10" inputMode="decimal" value={volume} onChange={(e) => { setVolume(e.target.value); setVolumeTouched(true) }} placeholder="e.g. 2000" />
@@ -359,8 +397,22 @@ export function NutrientDosingCalculator() {
           </div>
           {products.length === 0 && <p className="calc-result-hint nd-fert-none">Tick at least one fertiliser to calculate a dose.</p>}
         </form>
-
-        <div>
+        <div className="calc-step-actions">
+          <button type="button" className="io-btn primary lg" disabled={!canCalculate} onClick={() => setStep('results')}>Calculate dose →</button>
+          {!canCalculate && <span className="hint">{volumeL <= 0 ? 'Enter your reservoir volume' : targetsEmpty ? 'Set target levels' : 'Tick at least one fertiliser'} to continue.</span>}
+        </div>
+        </div>
+      ) : (
+        <div className="calc-step-panel">
+          <div className="calc-results-bar">
+            <button type="button" className="calc-back" onClick={() => setStep('define')}>← Edit inputs</button>
+            <div className="calc-results-actions">
+              <button type="button" className="io-btn" disabled={result.doses.length === 0} onClick={exportCsv}>Export CSV</button>
+              {activeId && !targetsEmpty && <button type="button" className="io-btn primary" onClick={() => setSaveProg(true)}>Save to schedule</button>}
+            </div>
+          </div>
+          <p className="calc-result-hint" style={{ marginTop: 0 }}>{cropName} · {volumeL.toLocaleString()} L{weeks > 1 ? ` · over ${weeks} weeks` : ''}</p>
+        <div className="calc-results">
           {volumeL <= 0 ? (
             <div className="empty">Enter your reservoir volume to see the dose.</div>
           ) : noSavedTargets && targetsEmpty ? (
@@ -441,7 +493,8 @@ export function NutrientDosingCalculator() {
             </>
           )}
         </div>
-      </div>
+        </div>
+      )}
       {saveProg && activeId && (
         <SaveAsDosingProgrammeModal systemId={activeId} cropName={selectedCrop?.name ?? 'Crop'} target={target} current={effectiveCurrent} volumeL={volumeL} caps={caps} products={products} onClose={() => setSaveProg(false)} />
       )}

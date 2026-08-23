@@ -393,6 +393,23 @@
 .nd-fert-row .nd-prod-comp { font-size: 12px; color: var(--ink-faint); text-align: right; }
 .nd-fert-none { color: var(--danger); }
 
+/* Two-step flow: Define → Results */
+.calc-steps { display: flex; align-items: center; gap: 12px; margin: 4px 0 22px; }
+.calc-step { font: inherit; font-weight: 600; font-size: 14px; color: var(--ink-faint); background: none; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; padding: 6px 2px; border-bottom: 2px solid transparent; }
+.calc-step.active { color: var(--ink); border-bottom-color: var(--accent); }
+.calc-step:disabled { cursor: not-allowed; opacity: .45; }
+.calc-step-n { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink-faint); font-size: 12px; font-weight: 700; }
+.calc-step.active .calc-step-n { background: var(--accent); color: var(--accent-ink); }
+.calc-step-sep { color: var(--ink-faint); }
+.calc-form.wide { max-width: 640px; }
+.calc-step-actions { display: flex; align-items: center; gap: 14px; margin-top: 22px; max-width: 640px; flex-wrap: wrap; }
+.io-btn.lg { padding: 12px 22px; font-size: 15px; }
+.calc-results-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; flex-wrap: wrap; }
+.calc-results-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.calc-back { font: inherit; font-weight: 600; font-size: 14px; color: var(--accent); background: none; border: none; cursor: pointer; padding: 6px 0; }
+.calc-back:hover { text-decoration: underline; }
+.calc-results { max-width: 780px; }
+
 /* pH correction */
 .nd-ph { display: flex; flex-direction: column; gap: 8px; }
 .nd-ph-row { display: grid; grid-template-columns: auto 1fr; align-items: end; gap: 14px; }
