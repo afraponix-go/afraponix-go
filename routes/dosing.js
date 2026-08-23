@@ -12,40 +12,91 @@ const KEY_BY_NUTRIENT = { nitrogen: 'n', phosphorus: 'p', potassium: 'k', calciu
 
 // ------------------------------------------------------------------ products
 
-// The signed-in user's saved fertiliser list (null if they haven't customised).
+const RATE_UNIT_SET = ['ml', 'g', 'L', 'kg'];
+const dpRow = (r) => ({
+    id: r.id, name: r.name,
+    n: Number(r.n) || 0, p: Number(r.p) || 0, k: Number(r.k) || 0,
+    ca: Number(r.ca) || 0, mg: Number(r.mg) || 0, fe: Number(r.fe) || 0,
+    rate_amount: r.rate_amount, rate_unit: r.rate_unit, rate_per_volume: r.rate_per_volume,
+});
+
+// The signed-in user's fertiliser catalogue (null if they have none, so the
+// calculator falls back to its built-in defaults). Rows now, from dosing_products.
 router.get('/products', authenticateToken, async (req, res) => {
     try {
         const pool = getDatabase();
-        const [rows] = await pool.execute('SELECT products FROM user_dosing_products WHERE user_id = ?', [req.user.userId]);
-        if (rows.length === 0) return res.json({ products: null });
-        let products = null;
-        try { products = JSON.parse(rows[0].products); } catch { products = null; }
-        res.json({ products });
+        const [rows] = await pool.execute(
+            'SELECT id, name, n, p, k, ca, mg, fe, rate_amount, rate_unit, rate_per_volume FROM dosing_products WHERE user_id = ? ORDER BY name',
+            [req.user.userId]
+        );
+        res.json({ products: rows.length ? rows.map(dpRow) : null });
     } catch (error) {
         console.error('Failed to load dosing products:', error);
         res.status(500).json({ error: 'Failed to load fertilisers' });
     }
 });
 
-// Replace the user's saved fertiliser list.
+// Replace the user's fertiliser list (the calculator sends the whole list on any
+// change). Upsert by name so an existing fertiliser's structured dose — which the
+// calculator doesn't send — is PRESERVED; rows dropped from the list are removed.
 router.put('/products', authenticateToken, async (req, res) => {
     try {
         const { products } = req.body;
         if (!Array.isArray(products)) return res.status(400).json({ error: 'products must be an array' });
-        const clean = products.slice(0, 100).map((p) => ({
-            name: String(p.name || '').slice(0, 120),
-            n: Number(p.n) || 0, p: Number(p.p) || 0, k: Number(p.k) || 0,
-            ca: Number(p.ca) || 0, mg: Number(p.mg) || 0, fe: Number(p.fe) || 0,
-        })).filter((p) => p.name);
+        const clean = products.slice(0, 100).map((pr) => ({
+            name: String(pr.name || '').slice(0, 120),
+            n: Number(pr.n) || 0, p: Number(pr.p) || 0, k: Number(pr.k) || 0,
+            ca: Number(pr.ca) || 0, mg: Number(pr.mg) || 0, fe: Number(pr.fe) || 0,
+        })).filter((pr) => pr.name);
         const pool = getDatabase();
-        await pool.execute(
-            'INSERT INTO user_dosing_products (user_id, products) VALUES (?, ?) ON DUPLICATE KEY UPDATE products = VALUES(products)',
-            [req.user.userId, JSON.stringify(clean)]
-        );
+        for (const pr of clean) {
+            await pool.execute(
+                `INSERT INTO dosing_products (user_id, name, n, p, k, ca, mg, fe) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE n=VALUES(n), p=VALUES(p), k=VALUES(k), ca=VALUES(ca), mg=VALUES(mg), fe=VALUES(fe)`,
+                [req.user.userId, pr.name, pr.n, pr.p, pr.k, pr.ca, pr.mg, pr.fe]
+            );
+        }
+        const names = clean.map((pr) => pr.name);
+        if (names.length) {
+            await pool.query(
+                `DELETE FROM dosing_products WHERE user_id = ? AND name NOT IN (${names.map(() => '?').join(',')})`,
+                [req.user.userId, ...names]
+            );
+        } else {
+            await pool.execute('DELETE FROM dosing_products WHERE user_id = ?', [req.user.userId]);
+        }
         res.json({ success: true, products: clean });
     } catch (error) {
         console.error('Failed to save dosing products:', error);
         res.status(500).json({ error: 'Failed to save fertilisers' });
+    }
+});
+
+// Add (or update) a single fertiliser, WITH its structured dose + nutrient
+// content — used by the "add new fertiliser" flow in the dosing programme builder.
+router.post('/products', authenticateToken, async (req, res) => {
+    try {
+        const b = req.body || {};
+        const name = String(b.name || '').trim().slice(0, 120);
+        if (!name) return res.status(400).json({ error: 'name is required' });
+        const rUnit = RATE_UNIT_SET.includes(b.rate_unit) ? b.rate_unit : null;
+        const pool = getDatabase();
+        await pool.execute(
+            `INSERT INTO dosing_products (user_id, name, n, p, k, ca, mg, fe, rate_amount, rate_unit, rate_per_volume)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE n=VALUES(n), p=VALUES(p), k=VALUES(k), ca=VALUES(ca), mg=VALUES(mg), fe=VALUES(fe),
+               rate_amount=VALUES(rate_amount), rate_unit=VALUES(rate_unit), rate_per_volume=VALUES(rate_per_volume)`,
+            [req.user.userId, name, numOrNull(b.n), numOrNull(b.p), numOrNull(b.k), numOrNull(b.ca), numOrNull(b.mg), numOrNull(b.fe),
+             numOrNull(b.rate_amount), rUnit, numOrNull(b.rate_per_volume)]
+        );
+        const [rows] = await pool.execute(
+            'SELECT id, name, n, p, k, ca, mg, fe, rate_amount, rate_unit, rate_per_volume FROM dosing_products WHERE user_id = ? AND name = ?',
+            [req.user.userId, name]
+        );
+        res.json({ success: true, product: rows.length ? dpRow(rows[0]) : null });
+    } catch (error) {
+        console.error('Failed to add dosing product:', error);
+        res.status(500).json({ error: 'Failed to add fertiliser' });
     }
 });
 
@@ -402,6 +453,111 @@ router.put('/system-nutrient-targets/:systemId', authenticateToken, async (req, 
     } catch (error) {
         console.error('Failed to set system reference crop:', error);
         res.status(500).json({ error: 'Failed to set reference crop' });
+    }
+});
+
+// ---------------------------------------------------- dosing programmes
+
+// A dosing programme is target-band maintenance: one or more nutrient targets to
+// hold, on a test cadence (weekdays). It lives in the unified `programmes` /
+// `programme_items` tables as type='dosing'; each target is an item carrying the
+// nutrient + target value + preferred fertiliser name + the test weekdays.
+const WEEKDAYS_LIST = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+async function ownedDosingProgramme(pool, id, userId) {
+    const [rows] = await pool.execute(
+        "SELECT p.* FROM programmes p JOIN systems s ON s.id = p.system_id WHERE p.id = ? AND p.type = 'dosing' AND s.user_id = ?",
+        [id, userId]
+    );
+    return rows.length ? rows[0] : null;
+}
+
+async function dosingTargets(pool, programmeId) {
+    const [rows] = await pool.execute(
+        `SELECT id, target_nutrient AS nutrient, target_value, label AS product, weekdays
+         FROM programme_items WHERE programme_id = ? AND target_nutrient IS NOT NULL
+         ORDER BY sort_order, id`,
+        [programmeId]
+    );
+    return rows.map((r) => ({ id: r.id, nutrient: r.nutrient, target_value: r.target_value, product: r.product, days: r.weekdays ? r.weekdays.split(',').filter(Boolean) : [] }));
+}
+
+async function replaceDosingTargets(pool, programmeId, targets) {
+    await pool.execute('DELETE FROM programme_items WHERE programme_id = ? AND target_nutrient IS NOT NULL', [programmeId]);
+    let order = 0;
+    for (const t of targets || []) {
+        if (!t || !KEYS.includes(t.nutrient)) continue;
+        const days = Array.isArray(t.days) ? t.days.filter((d) => WEEKDAYS_LIST.includes(d)).join(',') : '';
+        await pool.execute(
+            "INSERT INTO programme_items (programme_id, target_nutrient, target_value, label, schedule_kind, weekdays, sort_order) VALUES (?, ?, ?, ?, 'weekdays', ?, ?)",
+            [programmeId, t.nutrient, numOrNull(t.target_value), (String(t.product || '').slice(0, 120)) || null, days, order++]
+        );
+    }
+}
+
+router.get('/programmes/:systemId', authenticateToken, async (req, res) => {
+    try {
+        const pool = getDatabase();
+        if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        const [progs] = await pool.execute(
+            "SELECT id, system_id, name, notes, status, created_at FROM programmes WHERE system_id = ? AND type = 'dosing' ORDER BY status, created_at DESC",
+            [req.params.systemId]
+        );
+        const out = [];
+        for (const p of progs) out.push({ ...p, targets: await dosingTargets(pool, p.id) });
+        res.json({ programmes: out });
+    } catch (error) {
+        console.error('Failed to load dosing programmes:', error);
+        res.status(500).json({ error: 'Failed to load dosing programmes' });
+    }
+});
+
+router.post('/programmes/:systemId', authenticateToken, async (req, res) => {
+    try {
+        const pool = getDatabase();
+        if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        const b = req.body || {};
+        if (!b.name) return res.status(400).json({ error: 'name is required' });
+        const [result] = await pool.execute(
+            "INSERT INTO programmes (system_id, type, name, notes, status) VALUES (?, 'dosing', ?, ?, ?)",
+            [req.params.systemId, String(b.name).slice(0, 255), b.notes || null, b.status === 'paused' ? 'paused' : 'active']
+        );
+        await replaceDosingTargets(pool, result.insertId, b.targets);
+        res.json({ success: true, id: result.insertId });
+    } catch (error) {
+        console.error('Failed to create dosing programme:', error);
+        res.status(500).json({ error: 'Failed to create dosing programme' });
+    }
+});
+
+router.put('/programmes/:id', authenticateToken, async (req, res) => {
+    try {
+        const pool = getDatabase();
+        const prog = await ownedDosingProgramme(pool, req.params.id, req.user.userId);
+        if (!prog) return res.status(404).json({ error: 'Programme not found or access denied' });
+        const b = req.body || {};
+        await pool.execute(
+            'UPDATE programmes SET name=?, notes=?, status=? WHERE id=?',
+            [String(b.name ?? prog.name).slice(0, 255), b.notes ?? prog.notes, b.status === 'paused' ? 'paused' : 'active', req.params.id]
+        );
+        if (Array.isArray(b.targets)) await replaceDosingTargets(pool, Number(req.params.id), b.targets);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Failed to update dosing programme:', error);
+        res.status(500).json({ error: 'Failed to update dosing programme' });
+    }
+});
+
+router.delete('/programmes/:id', authenticateToken, async (req, res) => {
+    try {
+        const pool = getDatabase();
+        const prog = await ownedDosingProgramme(pool, req.params.id, req.user.userId);
+        if (!prog) return res.status(404).json({ error: 'Programme not found or access denied' });
+        await pool.execute('DELETE FROM programmes WHERE id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Failed to delete dosing programme:', error);
+        res.status(500).json({ error: 'Failed to delete dosing programme' });
     }
 });
 

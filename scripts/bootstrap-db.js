@@ -91,6 +91,9 @@ const STEPS = [
   { type: 'sql', file: 'database/migrations/2026-08-programme-log-spray-cols.sql', label: 'Operations: spray columns on programme_log' },
   // Phase 2 Slice A: structured product rate (amount + unit per volume).
   { type: 'sql', file: 'database/migrations/2026-08-product-structured-rate.sql', label: 'Products: structured rate columns' },
+  // Phase 2 Slice B: normalise the fertiliser catalogue + fold the JSON in.
+  { type: 'sql', file: 'database/migrations/2026-08-dosing-products.sql', label: 'Dosing: fertiliser catalogue table' },
+  { type: 'node', file: 'database/migrations/2026-08-dosing-products-backfill.js', label: 'Dosing: fold fertiliser JSON into the catalogue' },
   { type: 'sql', file: 'database/migrations/2026-08-seedlings.sql', label: 'Seedling (nursery) batches + crop germ/transplant days' },
   { type: 'sql', file: 'database/migrations/2026-08-seedling-tray-groups.sql', label: 'Seedling mixed tray sizes (tray_groups)' },
   { type: 'node', file: 'database/migrations/2026-07-backfill-nutrient-readings.js', label: 'Backfill nutrient readings' },
