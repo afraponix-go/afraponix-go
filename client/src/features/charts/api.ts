@@ -7,6 +7,7 @@ export type Chartable = { key: string; label: string; unit: string; min?: number
 export const CHARTABLE: Chartable[] = [
   { key: 'temperature', label: 'Water Temp', unit: '°C', min: 18, max: 30 },
   { key: 'ph', label: 'pH', unit: '', min: 6, max: 7.6 },
+  { key: 'kh', label: 'KH / Alkalinity', unit: 'dKH', min: 4, max: 8 },
   { key: 'dissolved_oxygen', label: 'Dissolved O₂', unit: 'mg/L', min: 5 },
   { key: 'ammonia', label: 'Ammonia', unit: 'ppm', max: 1 },
   { key: 'nitrite', label: 'Nitrite', unit: 'ppm', max: 1 },
