@@ -37,6 +37,8 @@ export function NewPlantingModal({ initialBedId, onClose }: { initialBedId?: num
 
   const cropDef = useMemo(() => crops.find((c) => c.value === crop), [crops, crop])
   const cropVarieties = useMemo(() => allVarieties.filter((v) => v.crop_type === crop), [allVarieties, crop])
+  const selectedBed = useMemo(() => beds.find((b) => String(b.id) === bed), [beds, bed])
+  const bedArea = selectedBed?.equivalent_m2 ?? null
 
   // Planting density: defaults from the crop's spacing, but editable per planting.
   const densityNum = Number(density) > 0 ? Number(density) : (plantsPerM2FromSpacing(cropDef?.plant_spacing_cm) ?? DEFAULT_PLANTS_PER_M2)
@@ -126,15 +128,22 @@ export function NewPlantingModal({ initialBedId, onClose }: { initialBedId?: num
 
         <div className="field">
           <label htmlFor="np-bed">Grow bed</label>
-          <select id="np-bed" value={bed} onChange={(e) => setBed(e.target.value)}>
+          <select id="np-bed" value={bed} onChange={(e) => setBed(e.target.value)} title={bedArea != null ? `${bedArea} m² growing area` : undefined}>
             <option value="">Select a bed…</option>
             {beds.map((b) => (
-              <option key={b.id} value={b.id}>
+              <option key={b.id} value={b.id} title={b.equivalent_m2 != null ? `${b.equivalent_m2} m² growing area` : undefined}>
                 {b.bed_name ?? `Bed ${b.id}`}
                 {b.bed_type ? ` · ${b.bed_type}` : ''}
+                {b.equivalent_m2 != null && b.equivalent_m2 > 0 ? ` · ${b.equivalent_m2} m²` : ''}
               </option>
             ))}
           </select>
+          {selectedBed && bedArea != null && (
+            <p className="field-hint">
+              {selectedBed.bed_name ?? `Bed ${selectedBed.id}`} · {bedArea} m² growing area
+              {areaUsed > 0 ? ` · this planting uses ~${areaUsed.toFixed(2)} m²` : ''}
+            </p>
+          )}
         </div>
 
         <div className="field-row">
