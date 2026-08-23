@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { fetchFertilisers, deleteFertiliser, NUTRIENT_OPTS, type Fertiliser } from './api'
 import { AddFertiliserModal } from './AddFertiliserModal'
+import { DEFAULT_PRODUCTS, saveUserProducts } from '../calculator/nutrientDosing'
 import '../spray/spray.css'
 import './dosing.css'
 
@@ -26,6 +27,10 @@ export function FertiliserCatalog() {
     mutationFn: (f: Fertiliser) => deleteFertiliser(f.id as number),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['dosing-fertilisers'] }); qc.invalidateQueries({ queryKey: ['dosing-products'] }); setConfirmDel(null) },
   })
+  const loadDefaults = useMutation({
+    mutationFn: () => saveUserProducts(DEFAULT_PRODUCTS),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['dosing-fertilisers'] }); qc.invalidateQueries({ queryKey: ['dosing-products'] }) },
+  })
 
   const shown = useMemo(() => ferts.filter((f) => !filter || f.name.toLowerCase().includes(filter.toLowerCase())), [ferts, filter])
 
@@ -39,7 +44,14 @@ export function FertiliserCatalog() {
       <input className="crop-search" type="search" placeholder="Search fertilisers…" value={filter} onChange={(e) => setFilter(e.target.value)} />
 
       {isLoading ? <div className="empty">Loading…</div> : shown.length === 0 ? (
-        <div className="empty">{filter ? 'No fertilisers match.' : 'No custom fertilisers yet — the calculator uses its built-in defaults until you add some.'}</div>
+        filter ? <div className="empty">No fertilisers match.</div> : (
+          <div className="empty">
+            <p style={{ margin: '0 0 14px' }}>No fertilisers yet — the calculator is using its built-in defaults. Load them here to view and edit them, or add your own.</p>
+            <button type="button" className="btn" style={{ width: 'auto' }} disabled={loadDefaults.isPending} onClick={() => loadDefaults.mutate()}>
+              {loadDefaults.isPending ? 'Loading…' : 'Load default fertilisers'}
+            </button>
+          </div>
+        )
       ) : (
         <div className="cat-list" style={{ marginTop: 12 }}>
           {shown.map((f) => (
