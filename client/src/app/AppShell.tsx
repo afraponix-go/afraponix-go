@@ -25,7 +25,7 @@ const OVERFLOW = TABS.slice(PRIMARY_COUNT)
 
 export function AppShell() {
   const { user, signOut } = useAuth()
-  const { systems, activeId, activeSystem, setActiveId } = useSystems()
+  const { systems, activeId, activeSystem, setActiveId, farms, activeFarmId, setActiveFarmId } = useSystems()
   const activeShared = activeSystem != null && !isOwnedSystem(activeSystem)
   const [showAdd, setShowAdd] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
@@ -44,6 +44,16 @@ export function AppShell() {
       <header className="topbar">
         <Brand />
         <div className="account">
+          {farms.length > 1 && (
+            <label className="farm-switch" title="Active farm">
+              <span className="farm-ico" aria-hidden>⌂</span>
+              <select className="farm-select" value={activeFarmId ?? ''} onChange={(e) => setActiveFarmId(e.target.value)} aria-label="Active farm">
+                {farms.map((f) => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
           {systems.length > 0 && (
             <label className="sys-switch">
               <span className="sys-dot" aria-hidden />

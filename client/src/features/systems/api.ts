@@ -14,6 +14,9 @@ export const systemSchema = z.object({
   // systems; is_owner is 1/0.
   shared_permission: z.string().nullable().optional(),
   is_owner: z.coerce.number().nullable().optional(),
+  // The farm this system belongs to (an owned system's farm is one of the user's
+  // own farms; a shared system carries its owner's farm id).
+  farm_id: z.string().nullable().optional(),
   // JSON array of metric keys this system tracks; null = track everything.
   tracked_metrics: z.string().nullable().optional(),
 })
@@ -42,6 +45,7 @@ export async function fetchSystems(): Promise<System[]> {
 // than chosen here. Defaults are filled in server-side for anything omitted.
 export async function createSystem(input: {
   system_name: string
+  farm_id?: string
   system_type?: string
   fish_type?: string
   fish_tank_count?: number

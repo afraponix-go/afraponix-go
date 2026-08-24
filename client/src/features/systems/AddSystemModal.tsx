@@ -37,7 +37,7 @@ const STEPS = ['Setup', 'Basics', 'Fish tanks', 'Grow beds']
 
 export function AddSystemModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient()
-  const { setActiveId } = useSystems()
+  const { setActiveId, activeFarm, activeFarmId } = useSystems()
   const [step, setStep] = useState(1)
   const [method, setMethod] = useState<'custom' | 'demo'>('custom')
   const [name, setName] = useState('')
@@ -71,6 +71,9 @@ export function AddSystemModal({ onClose }: { onClose: () => void }) {
       // whatever it returns.
       const id = await createSystem({
         system_name: name, system_type: 'aquaponics',
+        // Land in the active farm when it's one of the user's own; otherwise the
+        // backend assigns their default farm (e.g. while viewing "Shared with me").
+        farm_id: activeFarm?.kind === 'own' ? activeFarmId ?? undefined : undefined,
         fish_type: tanks[0]?.fish_type || 'tilapia',
         fish_tank_count: tankCount, grow_bed_count: bedCount,
         total_grow_area: Math.round(totalArea * 100) / 100,
@@ -96,6 +99,7 @@ export function AddSystemModal({ onClose }: { onClose: () => void }) {
     },
     onSuccess: async (newId) => {
       await qc.invalidateQueries({ queryKey: ['systems'] })
+      qc.invalidateQueries({ queryKey: ['farms'] })
       if (newId) setActiveId(newId)
       onClose()
     },

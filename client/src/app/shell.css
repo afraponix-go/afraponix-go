@@ -79,6 +79,33 @@
   box-shadow: none;
 }
 
+/* Farm switcher — mirrors the system switcher, shown only with >1 farm */
+.farm-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px 0 11px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  transition: border-color 0.15s;
+}
+.farm-switch:hover { border-color: var(--line-strong); }
+.farm-ico { font-size: 14px; line-height: 1; color: var(--ink-faint); flex: none; }
+.farm-select {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  max-width: 180px;
+  cursor: pointer;
+  padding-right: 2px;
+}
+.farm-select:focus-visible { box-shadow: none; }
+
 /* Add-system button next to the switcher */
 .sys-add {
   height: 36px;
