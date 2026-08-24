@@ -15,6 +15,7 @@ const SERVE_CLIENT = fs.existsSync(path.join(CLIENT_DIST, 'index.html'));
 
 const authRoutes = require('./routes/auth');
 const systemRoutes = require('./routes/systems');
+const farmRoutes = require('./routes/farms');
 const dataRoutes = require('./routes/data');
 const growBedRoutes = require('./routes/grow-beds');
 const plantsRoutes = require('./routes/plants');
@@ -186,6 +187,7 @@ app.use(express.static(path.join(__dirname)));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/systems', systemRoutes);
+app.use('/api/farms', farmRoutes);
 app.use('/api/data', dataRoutes);
 app.use('/api/data-entries', dataRoutes); // Mount same routes for frontend compatibility
 app.use('/api/grow-beds', growBedRoutes);

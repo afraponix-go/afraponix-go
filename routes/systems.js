@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { getDatabase, getDatabaseConnection } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
 const { canAccessSystem } = require('../utils/systemAccess');
+const { ensureUserFarm } = require('../utils/farms');
 
 const router = express.Router();
 
@@ -91,11 +92,20 @@ router.post('/', async (req, res) => {
     try {
         const pool = getDatabase();
 
-        const [result] = await pool.execute(`INSERT INTO systems 
-            (id, user_id, system_name, system_type, fish_type, fish_tank_count, total_fish_volume, grow_bed_count, total_grow_volume, total_grow_area) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
-            [id, req.user.userId, system_name, system_type || 'media-bed', fish_type || 'tilapia',
-             fish_tank_count || 1, total_fish_volume || 1000, 
+        // Every system belongs to a farm. Use the caller-supplied farm_id when it's
+        // one of their own farms, otherwise their default farm (created if needed).
+        let farmId = null;
+        if (req.body.farm_id) {
+            const [f] = await pool.execute('SELECT id FROM farms WHERE id = ? AND owner_id = ?', [req.body.farm_id, req.user.userId]);
+            if (f.length) farmId = f[0].id;
+        }
+        if (!farmId) farmId = await ensureUserFarm(pool, req.user.userId);
+
+        const [result] = await pool.execute(`INSERT INTO systems
+            (id, user_id, farm_id, system_name, system_type, fish_type, fish_tank_count, total_fish_volume, grow_bed_count, total_grow_volume, total_grow_area)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [id, req.user.userId, farmId, system_name, system_type || 'media-bed', fish_type || 'tilapia',
+             fish_tank_count || 1, total_fish_volume || 1000,
              grow_bed_count || 4, total_grow_volume || 800, total_grow_area || 2.0]
         );
 
@@ -288,7 +298,17 @@ router.post('/create-demo', async (req, res) => {
             
             // Commit transaction
             await connection.execute('COMMIT');
-            
+
+            // Assign the demo system to the user's default farm (non-fatal — the
+            // deploy backfill catches it if this ever fails).
+            try {
+                const pool = getDatabase();
+                const farmId = await ensureUserFarm(pool, targetUserId);
+                await pool.execute('UPDATE systems SET farm_id = ? WHERE id = ? AND farm_id IS NULL', [farmId, newSystemId]);
+            } catch (e) {
+                console.error('Demo system farm assignment failed (non-fatal):', e.message);
+            }
+
             // Query for the created system
             const [createdSystemRows] = await connection.execute(
                 'SELECT * FROM systems WHERE id = ? AND user_id = ?', 

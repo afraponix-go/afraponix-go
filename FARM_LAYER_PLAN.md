@@ -93,7 +93,7 @@ farms). Planned 2026-08-24; **not yet built**. Decisions below are LOCKED.
   for sensitive integration config, and it remains correct for owners through Phases 1–3 (a system's
   `user_id` doesn't change under farm re-parenting within the same owner). Revisit when farm-level staff
   land (Phase 4). `custom-crops.js`/`seed-varieties.js` are PER-USER resources, not system-scoped — no change.
-- **Phase 1 — farm entity, invisible:** tables + migration + farm-aware `getSystemAccess` + farms CRUD API.
+- **Phase 1 — farm entity, invisible: ✅ DONE (2026-08-24).** `farms` table + `systems.farm_id` (migration `2026-08-farms.sql`, no FK on farm_id — loose-ref style, idempotent) + idempotent backfill `2026-08-farms-backfill.js` (one farm per owner "<first>'s Farm", assigns their systems; reuses existing farm so re-runs are no-ops). `utils/farms.js` `ensureUserFarm` shared by backfill + system creation. `getSystemAccess` grants owner via `s.user_id OR farms.owner_id` (LEFT JOIN farms) + shares. New `routes/farms.js` (GET/POST/PUT/DELETE, owner-only, delete refused while systems attached) at `/api/farms`. `POST /systems` + `create-demo` assign farm_id. Verified on dev: 22 systems→6 owners, 0 NULL farm_id, idempotent; CRUD + new-system farm_id + owner access + sharing all correct; dashboard unchanged.
 - **Phase 2 — farm in the UI:** FarmContext, switcher, create-farm onboarding, AddSystemModal wiring, rename Layout.
 - **Phase 3 — move stock:** `stock_transfers` + fish cross-system move + plant batch transfer + destination pickers.
 - **Phase 4 (later):** farm-level sharing/members (staff on a whole farm) + farm rollup dashboards.

@@ -7,9 +7,15 @@ const WRITE_LEVELS = new Set(['collaborator', 'admin']);
 // Returns { level } — 'owner' for the owner, otherwise the accepted share's
 // permission_level ('view' | 'collaborator' | 'admin') — or null for no access.
 async function getSystemAccess(systemId, userId, pool = getDatabase()) {
+    // Owner: either the system's own user_id (legacy/creator) OR the owner of the
+    // farm the system belongs to. Today these coincide (each user's farm holds
+    // exactly their systems), but keying access off the farm decouples ownership
+    // from systems.user_id for the future (farm staff, systems moved between farms).
     const [owned] = await pool.execute(
-        'SELECT 1 FROM systems WHERE id = ? AND user_id = ?',
-        [systemId, userId]
+        `SELECT 1 FROM systems s
+         LEFT JOIN farms f ON f.id = s.farm_id
+         WHERE s.id = ? AND (s.user_id = ? OR f.owner_id = ?)`,
+        [systemId, userId, userId]
     );
     if (owned.length) return { level: 'owner' };
 

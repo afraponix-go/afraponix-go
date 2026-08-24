@@ -106,6 +106,10 @@ const STEPS = [
   // One-time cleanup of NULL-user seed variety rows that accumulated when the
   // reference-data step re-ran on every deploy (before migration tracking).
   { type: 'sql', file: 'database/migrations/2026-08-dedupe-seed-variety-template.sql', label: 'Dedupe seed variety template' },
+  // Farm layer (Phase 1): farms table + systems.farm_id, then one default farm
+  // per owner with their systems assigned.
+  { type: 'sql', file: 'database/migrations/2026-08-farms.sql', label: 'Farms table + systems.farm_id' },
+  { type: 'node', file: 'database/migrations/2026-08-farms-backfill.js', label: 'Backfill: one farm per owner, assign systems' },
 ];
 
 function dbConfig() {
