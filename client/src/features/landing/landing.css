@@ -118,9 +118,14 @@
   flex-direction: column;
 }
 .lp-stats b {
-  font-size: 22px;
-  font-family: var(--mono, inherit);
+  font-size: 17px;
+  font-weight: 700;
   letter-spacing: -0.01em;
+  background: var(--grad-word);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  width: fit-content;
 }
 .lp-stats span {
   font-size: 13px;

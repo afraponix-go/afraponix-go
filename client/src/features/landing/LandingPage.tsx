@@ -104,9 +104,9 @@ export function LandingPage() {
               <Link className="lp-btn ghost lg" to="/login">Sign in</Link>
             </div>
             <ul className="lp-stats">
-              <li><b>7</b><span>Water parameters tracked</span></li>
-              <li><b>3</b><span>Programme types, one calendar</span></li>
-              <li><b>5 min</b><span>To your first system</span></li>
+              <li><b>All-in-one</b><span>Fish · plants · water</span></li>
+              <li><b>Research-based</b><span>Per-crop nutrient targets</span></li>
+              <li><b>Real-time</b><span>Readings → next action</span></li>
             </ul>
           </div>
 
