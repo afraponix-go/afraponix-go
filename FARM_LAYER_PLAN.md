@@ -107,7 +107,7 @@ farms). Planned 2026-08-24; **not yet built**. Decisions below are LOCKED.
   Verified on dev: fish move (100→70/0→30, per-system events, audit row), plant transfer (source 50→30 w/o
   harvest pollution, dest batch age carried), non-owner denied on both; plant transfer done end-to-end through
   the real UI; fish selector rendered. **PHASE 3 COMPLETE — the farm layer's four phases are all shipped.**
-- **Phase 4 (later):** farm-level sharing/members (staff on a whole farm) + farm rollup dashboards.
+- **Phase 4 — farm rollup dashboard: ✅ DONE (commit 5f37002).** `GET /farms/:id/summary` (owner-only) aggregates a farm's systems — fish count+biomass, plants growing/ready, latest pH+temp, per-system rows + farm totals + needs-attention (pH outside 6.0–7.6). New "Farm" sub-tab under Dashboard (`FarmDashboardPage`): Stat tiles + clickable per-system table (row → that system's dashboard). Prod-verified (Justin's Farm: 1558 fish / 90.4 kg across 2 systems). **Remaining: farm-scoped EXPORT (deferred) + farm-level sharing/members/staff (not started).**
 
 Related memory: [[per-user-vs-per-system-data]] (reference/settings are per-user; logs/programmes per-system),
 [[prod-update-discipline]] (idempotent migrations, straight-to-prod), [[jwt-role-staleness]] (live DB lookups
