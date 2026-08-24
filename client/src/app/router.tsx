@@ -44,8 +44,8 @@ import { AdminSettings } from '../features/settings/AdminSettings'
 import { DangerZone } from '../features/settings/DangerZone'
 
 const DASHBOARD_TABS = [
-  { to: '/', label: 'Overview', end: true },
-  { to: '/farm', label: 'Farm' },
+  { to: '/', label: 'Farm', end: true },
+  { to: '/overview', label: 'Overview' },
   { to: '/charts', label: 'Charts' },
   { to: '/layout', label: 'Layout' },
 ]
@@ -99,8 +99,8 @@ export const router = createBrowserRouter([
             path: '/',
             element: <SubTabLayout items={DASHBOARD_TABS} />,
             children: [
-              { index: true, element: <DashboardPage /> },
-              { path: 'farm', element: <FarmDashboardPage /> },
+              { index: true, element: <FarmDashboardPage /> },
+              { path: 'overview', element: <DashboardPage /> },
               { path: 'charts', element: <ChartsPage /> },
               { path: 'layout', element: <FarmLayout /> },
             ],

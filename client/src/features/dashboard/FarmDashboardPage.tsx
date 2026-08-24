@@ -44,7 +44,12 @@ export function FarmDashboardPage() {
   })
 
   if (!own) {
-    return <div className="empty">The farm overview is for your own farms. Pick one of your farms from the switcher in the header.</div>
+    return (
+      <div className="empty">
+        The farm overview is for your own farms. Pick one of your farms from the switcher, or{' '}
+        <button type="button" className="link-btn" onClick={() => navigate('/overview')}>open the current system</button>.
+      </div>
+    )
   }
 
   const t = data?.totals
@@ -53,7 +58,7 @@ export function FarmDashboardPage() {
   // A metric only counts (band / attention) when the system actually tracks it —
   // i.e. the key is present in its metrics map.
   const attentionCount = (data?.systems ?? []).filter((s) => cols.some((k) => k in s.metrics && bandState(k, s.metrics[k]) === 'warn')).length
-  const openSystem = (id: string) => { setActiveId(id); navigate('/') }
+  const openSystem = (id: string) => { setActiveId(id); navigate('/overview') }
   const toggle = (key: string) => {
     const next = selected.has(key) ? cols.filter((k) => k !== key) : [...cols, key]
     setMetrics.mutate(next)
