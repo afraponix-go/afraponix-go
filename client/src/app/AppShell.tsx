@@ -13,7 +13,7 @@ import './shell.css'
 // the rest collapse into a "More" sheet on small screens (all show on desktop).
 const TABS = [
   { to: '/', label: 'Dashboard', Icon: DashboardIcon, end: true },
-  { to: '/data', label: 'Data Capture', Icon: DataCaptureIcon },
+  { to: '/data', label: 'Log', Icon: DataCaptureIcon },
   { to: '/fish', label: 'Fish', Icon: FishIcon },
   { to: '/plants', label: 'Plants', Icon: PlantIcon },
   { to: '/operations', label: 'Operations', Icon: SprayIcon },
