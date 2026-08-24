@@ -2,19 +2,19 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
+const { canReadSystem, canWriteSystem } = require('../utils/systemAccess');
 
 router.use(authenticateToken);
 
-async function ownsSystem(pool, systemId, userId) {
-    const [rows] = await pool.execute('SELECT user_id FROM systems WHERE id = ? AND user_id = ?', [systemId, userId]);
-    return rows.length > 0;
-}
-async function ownedSeedling(pool, id, userId) {
-    const [rows] = await pool.execute(
-        'SELECT sb.* FROM seedling_batches sb JOIN systems s ON s.id = sb.system_id WHERE sb.id = ? AND s.user_id = ?',
-        [id, userId]
-    );
-    return rows.length ? rows[0] : null;
+// Fetch a seedling batch the caller may access (owner or accepted share). Pass
+// write=true to require modify permission; returns the row or null.
+async function accessibleSeedling(pool, id, userId, write = true) {
+    const [rows] = await pool.execute('SELECT * FROM seedling_batches WHERE id = ?', [id]);
+    if (!rows.length) return null;
+    const ok = write
+        ? await canWriteSystem(rows[0].system_id, userId, pool)
+        : await canReadSystem(rows[0].system_id, userId, pool);
+    return ok ? rows[0] : null;
 }
 const numOrNull = (v) => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Number(v));
 const intOrNull = (v) => (v === '' || v == null || !Number.isFinite(Number(v)) ? null : Math.round(Number(v)));
@@ -55,7 +55,7 @@ const SELECT_COLS = `
 router.get('/:systemId', async (req, res) => {
     try {
         const pool = getDatabase();
-        if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canReadSystem(req.params.systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
         const [rows] = await pool.execute(
             `SELECT ${SELECT_COLS} FROM seedling_batches WHERE system_id = ? ORDER BY (status = 'transplanted'), sow_date DESC, id DESC`,
             [req.params.systemId]
@@ -71,7 +71,7 @@ router.get('/:systemId', async (req, res) => {
 router.post('/:systemId', async (req, res) => {
     try {
         const pool = getDatabase();
-        if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canWriteSystem(req.params.systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
         const b = req.body || {};
         if (!b.sow_date) return res.status(400).json({ error: 'sow_date is required' });
         const tf = trayFieldsFrom(b.tray_groups, b.trays, b.cells_per_tray);
@@ -94,7 +94,7 @@ router.post('/:systemId', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         const pool = getDatabase();
-        const sb = await ownedSeedling(pool, req.params.id, req.user.userId);
+        const sb = await accessibleSeedling(pool, req.params.id, req.user.userId, true);
         if (!sb) return res.status(404).json({ error: 'Not found or access denied' });
         const b = req.body || {};
         const val = (key, fallback) => (b[key] !== undefined ? b[key] : fallback);
@@ -125,7 +125,7 @@ router.put('/:id', async (req, res) => {
 router.post('/:id/transplant', async (req, res) => {
     try {
         const pool = getDatabase();
-        const sb = await ownedSeedling(pool, req.params.id, req.user.userId);
+        const sb = await accessibleSeedling(pool, req.params.id, req.user.userId, true);
         if (!sb) return res.status(404).json({ error: 'Not found or access denied' });
         const b = req.body || {};
         const bedId = intOrNull(b.grow_bed_id);
@@ -166,7 +166,7 @@ router.post('/:id/transplant', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     try {
         const pool = getDatabase();
-        const sb = await ownedSeedling(pool, req.params.id, req.user.userId);
+        const sb = await accessibleSeedling(pool, req.params.id, req.user.userId, true);
         if (!sb) return res.status(404).json({ error: 'Not found or access denied' });
         await pool.execute('DELETE FROM seedling_batches WHERE id = ?', [req.params.id]);
         res.json({ success: true });

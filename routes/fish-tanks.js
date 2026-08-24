@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
+const { canReadSystem, canWriteSystem } = require('../utils/systemAccess');
 
 const router = express.Router();
 
@@ -45,9 +46,8 @@ router.post('/', async (req, res) => {
         const pool = getDatabase();
         
         // First verify the system exists and belongs to the user
-        const [systemRows] = await pool.execute('SELECT * FROM systems WHERE id = ? AND user_id = ?', 
-            [system_id, req.user.userId]);
-        const system = systemRows[0];
+        const [systemRows] = await pool.execute('SELECT * FROM systems WHERE id = ?', [system_id]);
+        const system = (await canWriteSystem(system_id, req.user.userId, pool)) ? systemRows[0] : null;
 
         if (!system) {
             return res.status(404).json({ error: 'System not found or access denied' });
@@ -115,9 +115,8 @@ router.get('/system/:systemId', async (req, res) => {
         const pool = getDatabase();
         
         // First verify the system exists and belongs to the user
-        const [systemRows] = await pool.execute('SELECT * FROM systems WHERE id = ? AND user_id = ?', 
-            [systemId, req.user.userId]);
-        const system = systemRows[0];
+        const [systemRows] = await pool.execute('SELECT * FROM systems WHERE id = ?', [systemId]);
+        const system = (await canReadSystem(systemId, req.user.userId, pool)) ? systemRows[0] : null;
 
         if (!system) {            return res.status(404).json({ error: 'System not found or access denied' });
         }
@@ -154,9 +153,8 @@ router.delete('/system/:systemId/tank/:tankNumber', async (req, res) => {
         const pool = getDatabase();
         
         // First verify the system exists and belongs to the user
-        const [systemRows] = await pool.execute('SELECT * FROM systems WHERE id = ? AND user_id = ?', 
-            [systemId, req.user.userId]);
-        const system = systemRows[0];
+        const [systemRows] = await pool.execute('SELECT * FROM systems WHERE id = ?', [systemId]);
+        const system = (await canWriteSystem(systemId, req.user.userId, pool)) ? systemRows[0] : null;
 
         if (!system) {            return res.status(404).json({ error: 'System not found or access denied' });
         }
@@ -209,9 +207,8 @@ router.get('/system/:systemId/tank/:tankNumber', async (req, res) => {
         const pool = getDatabase();
         
         // First verify the system exists and belongs to the user
-        const [systemRows] = await pool.execute('SELECT * FROM systems WHERE id = ? AND user_id = ?', 
-            [systemId, req.user.userId]);
-        const system = systemRows[0];
+        const [systemRows] = await pool.execute('SELECT * FROM systems WHERE id = ?', [systemId]);
+        const system = (await canReadSystem(systemId, req.user.userId, pool)) ? systemRows[0] : null;
 
         if (!system) {            return res.status(404).json({ error: 'System not found or access denied' });
         }

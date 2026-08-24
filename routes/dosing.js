@@ -3,6 +3,7 @@ const router = express.Router();
 const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/admin-auth');
+const { canReadSystem, canWriteSystem } = require('../utils/systemAccess');
 const { CROP_ANCHORS, computeTargets } = require('../database/nutrient-target-model');
 
 // nutrient key <-> nutrients.code
@@ -215,11 +216,6 @@ async function cropStages(pool, cropCode) {
     return rows.length ? ['vegetative', 'fruiting'] : ['vegetative'];
 }
 
-async function ownsSystem(pool, systemId, userId) {
-    const [rows] = await pool.execute('SELECT 1 FROM systems WHERE id = ? AND user_id = ?', [systemId, userId]);
-    return rows.length > 0;
-}
-
 function sanitizeTargets(body) {
     const t = (body && body.targets) || {};
     const out = {};
@@ -242,7 +238,7 @@ router.get('/targets/:systemId/:cropCode', authenticateToken, async (req, res) =
         const { systemId, cropCode } = req.params;
         const stage = validStage(req.query.stage) ? req.query.stage : 'vegetative';
         const pool = getDatabase();
-        if (!(await ownsSystem(pool, systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canReadSystem(systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
 
         let def = await defaultTargets(pool, cropCode, stage);
         if (!def && stage === 'vegetative') def = await customCropTargets(pool, req.user.userId, cropCode);
@@ -270,7 +266,7 @@ router.put('/targets/:systemId/:cropCode', authenticateToken, async (req, res) =
         const { systemId, cropCode } = req.params;
         const stage = validStage(req.body && req.body.stage) ? req.body.stage : 'vegetative';
         const pool = getDatabase();
-        if (!(await ownsSystem(pool, systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canWriteSystem(systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
 
         const t = sanitizeTargets(req.body);
         await pool.execute(
@@ -293,7 +289,7 @@ router.delete('/targets/:systemId/:cropCode', authenticateToken, async (req, res
         const { systemId, cropCode } = req.params;
         const stage = validStage(req.query.stage) ? req.query.stage : 'vegetative';
         const pool = getDatabase();
-        if (!(await ownsSystem(pool, systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canWriteSystem(systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
         await pool.execute('DELETE FROM system_crop_targets WHERE system_id = ? AND crop_code = ? AND stage = ?', [systemId, cropCode, stage]);
         res.json({ success: true });
     } catch (error) {
@@ -419,7 +415,7 @@ router.get('/system-nutrient-targets/:systemId', authenticateToken, async (req, 
     try {
         const { systemId } = req.params;
         const pool = getDatabase();
-        if (!(await ownsSystem(pool, systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canReadSystem(systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
 
         // Selectable crops = the ones planted in this system (with stage info).
         const inSystem = await inSystemCropTypes(pool, systemId);
@@ -476,7 +472,7 @@ router.put('/system-nutrient-targets/:systemId', authenticateToken, async (req, 
     try {
         const { systemId } = req.params;
         const pool = getDatabase();
-        if (!(await ownsSystem(pool, systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canWriteSystem(systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
 
         const crop = req.body && req.body.crop ? String(req.body.crop).slice(0, 50) : null;
         if (!crop) {
@@ -503,12 +499,14 @@ router.put('/system-nutrient-targets/:systemId', authenticateToken, async (req, 
 // nutrient + target value + preferred fertiliser name + the test weekdays.
 const WEEKDAYS_LIST = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
+// A dosing programme the caller may modify (owner or write-level share), or null.
 async function ownedDosingProgramme(pool, id, userId) {
     const [rows] = await pool.execute(
-        "SELECT p.* FROM programmes p JOIN systems s ON s.id = p.system_id WHERE p.id = ? AND p.type = 'dosing' AND s.user_id = ?",
-        [id, userId]
+        "SELECT p.* FROM programmes p WHERE p.id = ? AND p.type = 'dosing'",
+        [id]
     );
-    return rows.length ? rows[0] : null;
+    if (!rows.length) return null;
+    return (await canWriteSystem(rows[0].system_id, userId, pool)) ? rows[0] : null;
 }
 
 async function dosingTargets(pool, programmeId) {
@@ -537,7 +535,7 @@ async function replaceDosingTargets(pool, programmeId, targets) {
 router.get('/programmes/:systemId', authenticateToken, async (req, res) => {
     try {
         const pool = getDatabase();
-        if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canReadSystem(req.params.systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
         const [progs] = await pool.execute(
             "SELECT id, system_id, name, notes, status, created_at FROM programmes WHERE system_id = ? AND type = 'dosing' ORDER BY status, created_at DESC",
             [req.params.systemId]
@@ -554,7 +552,7 @@ router.get('/programmes/:systemId', authenticateToken, async (req, res) => {
 router.post('/programmes/:systemId', authenticateToken, async (req, res) => {
     try {
         const pool = getDatabase();
-        if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canWriteSystem(req.params.systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
         const b = req.body || {};
         if (!b.name) return res.status(400).json({ error: 'name is required' });
         const [result] = await pool.execute(
@@ -605,10 +603,11 @@ router.delete('/programmes/:id', authenticateToken, async (req, res) => {
 // Verify the caller owns the system a dosing-log row belongs to.
 async function ownedDosingLog(pool, id, userId) {
     const [rows] = await pool.execute(
-        "SELECT l.id FROM programme_log l JOIN systems s ON s.id = l.system_id WHERE l.id = ? AND l.type = 'dosing' AND s.user_id = ?",
-        [id, userId]
+        "SELECT id, system_id FROM programme_log WHERE id = ? AND type = 'dosing'",
+        [id]
     );
-    return rows.length ? rows[0] : null;
+    if (!rows.length) return null;
+    return (await canWriteSystem(rows[0].system_id, userId, pool)) ? rows[0] : null;
 }
 
 // The dosing logbook with derived observed Δ + recovery % (recovery = observed /
@@ -616,7 +615,7 @@ async function ownedDosingLog(pool, id, userId) {
 router.get('/log/:systemId', authenticateToken, async (req, res) => {
     try {
         const pool = getDatabase();
-        if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canReadSystem(req.params.systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
         const limit = Math.min(500, Number(req.query.limit) || 200);
         const [rows] = await pool.query(
             `SELECT l.id, l.programme_id, l.item_id, l.target_nutrient,
@@ -648,7 +647,7 @@ router.post('/log', authenticateToken, async (req, res) => {
         const b = req.body || {};
         const pool = getDatabase();
         if (!b.system_id || !b.event_date) return res.status(400).json({ error: 'system_id and event_date are required' });
-        if (!(await ownsSystem(pool, b.system_id, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canWriteSystem(b.system_id, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
         const nutrient = KEYS.includes(b.target_nutrient) ? b.target_nutrient : null;
         const [result] = await pool.execute(
             `INSERT INTO programme_log

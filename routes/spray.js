@@ -3,6 +3,7 @@ const router = express.Router();
 const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
 const { CATEGORY_DEFAULT_DAYS, SPRAY_CATEGORIES } = require('../database/spray-catalog');
+const { canReadSystem, canWriteSystem } = require('../utils/systemAccess');
 
 router.use(authenticateToken);
 
@@ -21,19 +22,15 @@ function formatRate(amount, unit, per) {
     return p != null ? `${a} ${u} / ${p} L` : `${a} ${u}`;
 }
 
-async function ownsSystem(pool, systemId, userId) {
-    const [rows] = await pool.execute('SELECT 1 FROM systems WHERE id = ? AND user_id = ?', [systemId, userId]);
-    return rows.length > 0;
-}
-
-// Verify the caller owns the system a programme belongs to; returns its row or null.
-// (Reads the unified `programmes` table — spray is one programme type.)
+// Fetch a spray programme the caller may modify (owner or write-level share);
+// returns its row or null. (Reads the unified `programmes` table.)
 async function ownedPlan(pool, planId, userId) {
     const [rows] = await pool.execute(
-        "SELECT p.* FROM programmes p JOIN systems s ON s.id = p.system_id WHERE p.id = ? AND p.type = 'spray' AND s.user_id = ?",
-        [planId, userId]
+        "SELECT p.* FROM programmes p WHERE p.id = ? AND p.type = 'spray'",
+        [planId]
     );
-    return rows.length ? rows[0] : null;
+    if (!rows.length) return null;
+    return (await canWriteSystem(rows[0].system_id, userId, pool)) ? rows[0] : null;
 }
 
 // The spray products scheduled in a programme, in the shape the UI expects
@@ -193,7 +190,7 @@ async function replacePlanProducts(pool, planId, products) {
 router.get('/programmes/:systemId', async (req, res) => {
     try {
         const pool = getDatabase();
-        if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canReadSystem(req.params.systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
         const [plans] = await pool.execute(
             `SELECT id, system_id, name, notes, DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date,
                     DATE_FORMAT(end_date, '%Y-%m-%d') AS end_date, status, created_at
@@ -212,7 +209,7 @@ router.get('/programmes/:systemId', async (req, res) => {
 router.post('/programmes/:systemId', async (req, res) => {
     try {
         const pool = getDatabase();
-        if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canWriteSystem(req.params.systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
         const b = req.body || {};
         if (!b.name) return res.status(400).json({ error: 'name is required' });
         const [result] = await pool.execute(
@@ -266,7 +263,7 @@ router.delete('/programmes/:id', async (req, res) => {
 router.get('/log/:systemId', async (req, res) => {
     try {
         const pool = getDatabase();
-        if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canReadSystem(req.params.systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
         const limit = Math.min(500, Number(req.query.limit) || 200);
         const [rows] = await pool.query(
             `SELECT l.id, l.system_id, l.programme_id AS plan_id, l.spray_product_id AS product_id, l.product_name, l.grow_bed_id, l.bed_name, l.scope,
@@ -301,7 +298,7 @@ router.post('/log', async (req, res) => {
         const b = req.body || {};
         const pool = getDatabase();
         if (!b.system_id || !b.application_date) return res.status(400).json({ error: 'system_id and application_date are required' });
-        if (!(await ownsSystem(pool, b.system_id, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canWriteSystem(b.system_id, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
         // Snapshot the product name + PHI so history and the harvest-safe date
         // survive later product changes.
         let productName = b.product_name || null;
@@ -388,11 +385,8 @@ router.post('/log', async (req, res) => {
 router.put('/log/:id', async (req, res) => {
     try {
         const pool = getDatabase();
-        const [rows] = await pool.execute(
-            'SELECT l.id FROM programme_log l JOIN systems s ON s.id = l.system_id WHERE l.id = ? AND s.user_id = ?',
-            [req.params.id, req.user.userId]
-        );
-        if (rows.length === 0) return res.status(404).json({ error: 'Not found or access denied' });
+        const [rows] = await pool.execute('SELECT system_id FROM programme_log WHERE id = ?', [req.params.id]);
+        if (rows.length === 0 || !(await canWriteSystem(rows[0].system_id, req.user.userId, pool))) return res.status(404).json({ error: 'Not found or access denied' });
         const b = req.body || {};
         const eff = b.effectiveness == null || b.effectiveness === '' ? null : Math.max(1, Math.min(5, Number(b.effectiveness)));
         await pool.execute('UPDATE programme_log SET effectiveness = ? WHERE id = ?', [eff, req.params.id]);
@@ -406,11 +400,8 @@ router.put('/log/:id', async (req, res) => {
 router.delete('/log/:id', async (req, res) => {
     try {
         const pool = getDatabase();
-        const [rows] = await pool.execute(
-            'SELECT l.id FROM programme_log l JOIN systems s ON s.id = l.system_id WHERE l.id = ? AND s.user_id = ?',
-            [req.params.id, req.user.userId]
-        );
-        if (rows.length === 0) return res.status(404).json({ error: 'Not found or access denied' });
+        const [rows] = await pool.execute('SELECT system_id FROM programme_log WHERE id = ?', [req.params.id]);
+        if (rows.length === 0 || !(await canWriteSystem(rows[0].system_id, req.user.userId, pool))) return res.status(404).json({ error: 'Not found or access denied' });
         // programme_log_targets cascade on delete.
         await pool.execute('DELETE FROM programme_log WHERE id = ?', [req.params.id]);
         res.json({ success: true });
@@ -427,7 +418,7 @@ router.delete('/log/:id', async (req, res) => {
 router.get('/due/:systemId', async (req, res) => {
     try {
         const pool = getDatabase();
-        if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canReadSystem(req.params.systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
         const today = (req.query.date && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date)) ? req.query.date : new Date().toISOString().slice(0, 10);
         const todayDow = WEEKDAYS[new Date(today + 'T00:00:00').getDay()];
 
@@ -459,7 +450,7 @@ router.get('/due/:systemId', async (req, res) => {
 router.get('/calendar/:systemId', async (req, res) => {
     try {
         const pool = getDatabase();
-        if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canReadSystem(req.params.systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
         const now = new Date();
         const year = Number(req.query.year) || now.getFullYear();
         const month = Number(req.query.month) || (now.getMonth() + 1); // 1-12
@@ -502,7 +493,7 @@ router.get('/calendar/:systemId', async (req, res) => {
 router.get('/harvest-holds/:systemId', async (req, res) => {
     try {
         const pool = getDatabase();
-        if (!(await ownsSystem(pool, req.params.systemId, req.user.userId))) return res.status(404).json({ error: 'System not found or access denied' });
+        if (!(await canReadSystem(req.params.systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
         const [rows] = await pool.query(
             `SELECT t.batch_id, t.crop_type, t.bed_name, t.grow_bed_id, l.product_name,
                     DATE_FORMAT(l.event_date, '%Y-%m-%d') AS application_date, l.phi_days,
