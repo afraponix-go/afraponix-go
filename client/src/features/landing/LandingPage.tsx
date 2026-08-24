@@ -90,7 +90,7 @@ export function LandingPage() {
       <main>
         <section className="lp-hero">
           <div className="lp-hero-text">
-            <span className="lp-eyebrow">Aquaponics management</span>
+            <span className="lp-eyebrow">Built by farmers, for farmers</span>
             <h1>
               Run your farm on
               <span className="accent"> real numbers</span>
@@ -247,6 +247,14 @@ export function LandingPage() {
               </div>
             ))}
           </div>
+        </section>
+
+        <section className="lp-provenance">
+          <span className="lp-eyebrow">Built by farmers, for farmers</span>
+          <p>
+            Afraponix runs real aquaponics systems. Every screen here came from the daily work of keeping fish
+            and plants healthy — so the tool fits how the job actually gets done, not how it looks on a whiteboard.
+          </p>
         </section>
 
         <section className="lp-final">

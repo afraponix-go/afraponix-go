@@ -286,6 +286,22 @@
   color: var(--ink-faint);
 }
 
+/* Provenance / trust band */
+.lp-provenance {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 60px 24px 8px;
+  text-align: center;
+}
+.lp-provenance .lp-eyebrow { margin-bottom: 16px; }
+.lp-provenance p {
+  margin: 0;
+  font-size: clamp(18px, 2.4vw, 22px);
+  line-height: 1.6;
+  color: var(--ink-soft);
+  letter-spacing: -0.01em;
+}
+
 /* Final CTA */
 .lp-final {
   padding: 72px 24px 80px;
