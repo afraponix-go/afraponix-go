@@ -1,12 +1,59 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
+import { ApiError } from '../../lib/apiClient'
 import { useSystems } from '../systems/SystemContext'
-import { fetchFarmSummary, updateFarm } from '../systems/farmApi'
+import { fetchFarmSummary, updateFarm, createFarm } from '../systems/farmApi'
 import { Stat, fmt } from '../fish/fishShared'
 import { WATER_FIELDS } from '../water/api'
 import { CHARTABLE } from '../charts/api'
 import './dashboard.css'
+
+// First-run: a user with no farm of their own creates one before anything else.
+function FarmOnboarding({ onCreated }: { onCreated: (id: string) => void }) {
+  const { user } = useAuth()
+  const qc = useQueryClient()
+  const [name, setName] = useState(user?.firstName ? `${user.firstName}'s Farm` : 'My Farm')
+  const [location, setLocation] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const mut = useMutation({
+    mutationFn: () => createFarm({ name: name.trim(), location: location.trim() || null }),
+    onSuccess: (farm) => {
+      qc.invalidateQueries({ queryKey: ['farms'] })
+      qc.invalidateQueries({ queryKey: ['systems'] })
+      onCreated(farm.id)
+    },
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'Could not create the farm.'),
+  })
+  function onSubmit(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (!name.trim()) return setError('Give your farm a name.')
+    mut.mutate()
+  }
+  return (
+    <div className="farm-onboard">
+      <div className="farm-onboard-card">
+        <span className="lp-eyebrow" style={{ marginBottom: 14 }}>Welcome to Afraponix Go</span>
+        <h1>Set up your farm</h1>
+        <p>A farm is home to your aquaponics systems. Create it first — then you can add systems to it, and set up more farms later if you run more than one site.</p>
+        <form className="mform" onSubmit={onSubmit}>
+          {error && <div className="wq-error">{error}</div>}
+          <div className="field">
+            <label htmlFor="ob-name">Farm name</label>
+            <input id="ob-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Riverside Farm" autoFocus />
+          </div>
+          <div className="field">
+            <label htmlFor="ob-loc">Location <span className="unit-hint">(optional)</span></label>
+            <input id="ob-loc" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Cape Town" />
+          </div>
+          <button type="submit" className="btn farm-onboard-btn" disabled={mut.isPending}>{mut.isPending ? 'Creating…' : 'Create farm'}</button>
+        </form>
+      </div>
+    </div>
+  )
+}
 
 // Metric label + unit (from the water form) and healthy band (from the chart
 // defs) for the selectable per-system columns.
@@ -26,9 +73,10 @@ function bandState(key: string, value: number | null | undefined): 'ok' | 'warn'
 }
 
 export function FarmDashboardPage() {
-  const { activeFarm, activeFarmId, setActiveId } = useSystems()
+  const { activeFarm, activeFarmId, setActiveId, setActiveFarmId, farms, isLoading: systemsLoading } = useSystems()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const ownFarms = farms.filter((f) => f.kind === 'own')
   const own = activeFarm?.kind === 'own'
   const [customizing, setCustomizing] = useState(false)
 
@@ -42,6 +90,11 @@ export function FarmDashboardPage() {
     mutationFn: (keys: string[]) => updateFarm(activeFarmId as string, { display_metrics: keys }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['farm-summary', activeFarmId] }),
   })
+
+  // Brand-new user (no farm of their own yet): set one up before anything else.
+  if (!systemsLoading && ownFarms.length === 0) {
+    return <FarmOnboarding onCreated={(id) => setActiveFarmId(id)} />
+  }
 
   if (!own) {
     return (

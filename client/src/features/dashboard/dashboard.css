@@ -208,3 +208,10 @@
 
 /* Farm overview: a metric the system doesn't track */
 .metric-off { font-size: 11px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--ink-faint); opacity: .65; }
+
+/* First-run: create-your-farm onboarding */
+.farm-onboard { display: flex; justify-content: center; padding: 24px 16px 48px; }
+.farm-onboard-card { width: 100%; max-width: 440px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg, 16px); box-shadow: var(--shadow, 0 16px 40px rgba(16,24,37,.12)); padding: 28px 26px; margin-top: 24px; }
+.farm-onboard-card h1 { margin: 0 0 8px; font-size: clamp(24px, 4vw, 30px); letter-spacing: -0.02em; }
+.farm-onboard-card > p { margin: 0 0 20px; color: var(--ink-soft); font-size: 15px; line-height: 1.6; }
+.farm-onboard-btn { width: 100%; padding: 12px; font-size: 15px; margin-top: 6px; }
