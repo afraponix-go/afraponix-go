@@ -193,3 +193,15 @@
 .farm-cust-item { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 8px; font-size: 13.5px; color: var(--ink); cursor: pointer; }
 .farm-cust-item:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
 .farm-cust-item input { width: 15px; height: 15px; accent-color: var(--accent); }
+
+/* Farm overview: on narrow screens the wide table becomes one card per system */
+@media (max-width: 640px) {
+  .farm-tablewrap { overflow-x: visible; border: none; background: transparent; }
+  .farm-table thead { display: none; }
+  .farm-table, .farm-table tbody, .farm-table tr, .farm-table td { display: block; width: auto; }
+  .farm-table tr.farm-row { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-sm, 0 2px 8px rgba(16,24,37,.05)); margin-bottom: 12px; padding: 6px 4px; }
+  .farm-table td { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 14px; border: none; text-align: right; }
+  .farm-table td::before { content: attr(data-label); font-weight: 600; font-size: 12px; color: var(--ink-faint); text-align: left; }
+  .farm-table td.farm-td-sys { justify-content: flex-start; flex-wrap: wrap; gap: 8px; padding: 12px 14px 8px; border-bottom: 1px solid var(--line); font-size: 15px; }
+  .farm-table td.farm-td-sys::before { content: none; }
+}

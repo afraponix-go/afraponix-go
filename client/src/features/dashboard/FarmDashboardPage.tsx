@@ -115,19 +115,19 @@ export function FarmDashboardPage() {
                   const attn = cols.some((k) => bandState(k, s.metrics[k]) === 'warn')
                   return (
                     <tr key={s.id} className="farm-row" onClick={() => openSystem(s.id)} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') openSystem(s.id) }}>
-                      <td>
+                      <td className="farm-td-sys">
                         <b>{s.system_name}</b>
                         {attn && <span className="farm-attn" title="A reading is out of range">Needs attention</span>}
                       </td>
-                      <td className="r">{fmt(s.fish_count)}</td>
-                      <td className="r">{fmt(s.biomass_kg, 1)} kg</td>
-                      <td className="r">{fmt(s.plants_growing)}</td>
-                      <td className="r">{s.plants_ready > 0 ? <b className="farm-ready">{fmt(s.plants_ready)}</b> : '—'}</td>
+                      <td className="r" data-label="Fish">{fmt(s.fish_count)}</td>
+                      <td className="r" data-label="Biomass">{fmt(s.biomass_kg, 1)} kg</td>
+                      <td className="r" data-label="Growing">{fmt(s.plants_growing)}</td>
+                      <td className="r" data-label="Ready">{s.plants_ready > 0 ? <b className="farm-ready">{fmt(s.plants_ready)}</b> : '—'}</td>
                       {cols.map((k) => {
                         const v = s.metrics[k]
                         const state = bandState(k, v)
                         return (
-                          <td key={k} className="r">
+                          <td key={k} className="r" data-label={METRIC_META[k]?.label ?? k}>
                             {v == null ? <span className="ph-none">—</span> : state === 'none' ? fmt(v, 1) : <span className={`ph-pill ${state}`}>{fmt(v, 1)}</span>}
                           </td>
                         )
