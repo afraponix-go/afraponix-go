@@ -10,6 +10,7 @@ import { ProtectedRoute } from './ProtectedRoute'
 import { AppShell } from './AppShell'
 import { SubTabLayout } from './SubTabLayout'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
+import { FarmDashboardPage } from '../features/dashboard/FarmDashboardPage'
 import { ChartsPage } from '../features/charts/ChartsPage'
 import { FarmLayout } from '../features/farm/FarmLayout'
 import { WaterQualityPage } from '../features/water/WaterQualityPage'
@@ -44,6 +45,7 @@ import { DangerZone } from '../features/settings/DangerZone'
 
 const DASHBOARD_TABS = [
   { to: '/', label: 'Overview', end: true },
+  { to: '/farm', label: 'Farm' },
   { to: '/charts', label: 'Charts' },
   { to: '/layout', label: 'Layout' },
 ]
@@ -98,6 +100,7 @@ export const router = createBrowserRouter([
             element: <SubTabLayout items={DASHBOARD_TABS} />,
             children: [
               { index: true, element: <DashboardPage /> },
+              { path: 'farm', element: <FarmDashboardPage /> },
               { path: 'charts', element: <ChartsPage /> },
               { path: 'layout', element: <FarmLayout /> },
             ],

@@ -29,3 +29,26 @@ export async function updateFarm(id: string, input: { name?: string; location?: 
 export async function deleteFarm(id: string) {
   return api(`/farms/${id}`, { method: 'DELETE' })
 }
+
+// --- Farm rollup (all systems in a farm) ---
+export type FarmSystemRow = {
+  id: string
+  system_name: string
+  fish_count: number
+  biomass_kg: number
+  plants_growing: number
+  plants_ready: number
+  ph: number | null
+  water_temp: number | null
+  ph_ok: boolean | null
+  needs_attention: boolean
+}
+export type FarmSummary = {
+  farm: { id: string; name: string }
+  system_count: number
+  totals: { fish_count: number; biomass_kg: number; plants_growing: number; plants_ready: number; needs_attention: number }
+  systems: FarmSystemRow[]
+}
+export async function fetchFarmSummary(farmId: string): Promise<FarmSummary> {
+  return api<FarmSummary>(`/farms/${farmId}/summary`)
+}

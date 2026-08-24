@@ -166,3 +166,19 @@
   background: var(--surface);
   color: var(--ink);
 }
+
+/* Farm overview rollup table */
+.farm-tablewrap { overflow-x: auto; margin-top: 14px; border: 1px solid var(--line); border-radius: var(--radius-lg, 14px); background: var(--surface); }
+.farm-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.farm-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-faint); font-weight: 700; padding: 12px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.farm-table th.r, .farm-table td.r { text-align: right; }
+.farm-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.farm-table tbody tr:last-child td { border-bottom: none; }
+.farm-row { cursor: pointer; transition: background .12s; }
+.farm-row:hover, .farm-row:focus-visible { background: color-mix(in srgb, var(--accent) 6%, transparent); outline: none; }
+.farm-attn { display: inline-block; margin-left: 8px; font-size: 10.5px; font-weight: 700; color: var(--warn, #d98324); background: color-mix(in srgb, var(--warn, #d98324) 14%, transparent); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.farm-ready { color: var(--accent); }
+.ph-pill { font-weight: 700; border-radius: 999px; padding: 2px 9px; font-size: 12.5px; }
+.ph-pill.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.ph-pill.warn { color: var(--warn, #d98324); background: color-mix(in srgb, var(--warn, #d98324) 14%, transparent); }
+.ph-none { color: var(--ink-faint); }
