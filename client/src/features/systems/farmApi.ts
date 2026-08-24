@@ -22,7 +22,7 @@ export async function createFarm(input: { name: string; location?: string | null
   return farmSchema.parse((data as { farm: unknown }).farm)
 }
 
-export async function updateFarm(id: string, input: { name?: string; location?: string | null }) {
+export async function updateFarm(id: string, input: { name?: string; location?: string | null; display_metrics?: string[] }) {
   return api(`/farms/${id}`, { method: 'PUT', body: input })
 }
 
@@ -38,15 +38,14 @@ export type FarmSystemRow = {
   biomass_kg: number
   plants_growing: number
   plants_ready: number
-  ph: number | null
-  water_temp: number | null
-  ph_ok: boolean | null
-  needs_attention: boolean
+  // Latest value per selected metric key (e.g. { ph: 7.3, ec: 800 }).
+  metrics: Record<string, number>
 }
 export type FarmSummary = {
   farm: { id: string; name: string }
+  display_metrics: string[]
   system_count: number
-  totals: { fish_count: number; biomass_kg: number; plants_growing: number; plants_ready: number; needs_attention: number }
+  totals: { fish_count: number; biomass_kg: number; plants_growing: number; plants_ready: number }
   systems: FarmSystemRow[]
 }
 export async function fetchFarmSummary(farmId: string): Promise<FarmSummary> {

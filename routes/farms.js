@@ -6,6 +6,22 @@ const { generateFarmId } = require('../utils/farms');
 
 router.use(authenticateToken);
 
+// Water/nutrient reading keys the farm overview can show as per-system columns.
+const ALLOWED_METRICS = ['ph', 'kh', 'ec', 'dissolved_oxygen', 'temperature', 'humidity', 'salinity', 'ammonia', 'nitrite', 'nitrate', 'iron', 'potassium', 'calcium', 'phosphorus', 'magnesium'];
+const DEFAULT_METRICS = ['ph'];
+// Parse a stored display_metrics JSON array into a clean, allowed key list.
+function parseMetrics(raw) {
+    if (raw == null) return [...DEFAULT_METRICS];
+    try {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) {
+            const clean = arr.filter((k) => ALLOWED_METRICS.includes(k));
+            return clean.length ? clean : [...DEFAULT_METRICS];
+        }
+    } catch { /* fall through */ }
+    return [...DEFAULT_METRICS];
+}
+
 // List the user's farms with a system count.
 router.get('/', async (req, res) => {
     try {
@@ -31,14 +47,15 @@ router.get('/', async (req, res) => {
 router.get('/:id/summary', async (req, res) => {
     try {
         const pool = getDatabase();
-        const [own] = await pool.execute('SELECT id, name FROM farms WHERE id = ? AND owner_id = ?', [req.params.id, req.user.userId]);
+        const [own] = await pool.execute('SELECT id, name, display_metrics FROM farms WHERE id = ? AND owner_id = ?', [req.params.id, req.user.userId]);
         if (!own.length) return res.status(404).json({ error: 'Farm not found or access denied' });
+        const displayMetrics = parseMetrics(own[0].display_metrics);
 
         const [sysRows] = await pool.execute('SELECT id, system_name FROM systems WHERE farm_id = ? ORDER BY created_at ASC', [req.params.id]);
         const systems = sysRows.map((s) => ({
             id: s.id, system_name: s.system_name,
             fish_count: 0, biomass_kg: 0, plants_growing: 0, plants_ready: 0,
-            ph: null, water_temp: null, ph_ok: null, needs_attention: false,
+            metrics: {},
         }));
         const byId = Object.fromEntries(systems.map((s) => [s.id, s]));
         const ids = sysRows.map((s) => s.id);
@@ -68,20 +85,19 @@ router.get('/:id/summary', async (req, res) => {
                 ) b GROUP BY system_id`, ids);
             for (const r of plants) if (byId[r.system_id]) { byId[r.system_id].plants_growing = Number(r.growing) || 0; byId[r.system_id].plants_ready = Number(r.ready) || 0; }
 
-            // Latest pH + water temperature per system.
-            const [wq] = await pool.execute(`
-                SELECT nr.system_id, nr.nutrient_type, nr.value FROM nutrient_readings nr
-                JOIN (SELECT system_id, nutrient_type, MAX(reading_date) md FROM nutrient_readings
-                      WHERE system_id IN (${ph}) AND nutrient_type IN ('ph','temperature') GROUP BY system_id, nutrient_type) x
-                  ON x.system_id = nr.system_id AND x.nutrient_type = nr.nutrient_type AND x.md = nr.reading_date`, ids);
-            for (const r of wq) {
-                const s = byId[r.system_id]; if (!s) continue;
-                if (r.nutrient_type === 'ph') s.ph = Number(r.value);
-                if (r.nutrient_type === 'temperature') s.water_temp = Number(r.value);
-            }
-            for (const s of systems) {
-                s.ph_ok = s.ph == null ? null : (s.ph >= 6.0 && s.ph <= 7.6);
-                s.needs_attention = s.ph_ok === false;
+            // Latest value per selected metric per system.
+            if (displayMetrics.length) {
+                const mph = displayMetrics.map(() => '?').join(',');
+                const [wq] = await pool.execute(`
+                    SELECT nr.system_id, nr.nutrient_type, nr.value FROM nutrient_readings nr
+                    JOIN (SELECT system_id, nutrient_type, MAX(reading_date) md FROM nutrient_readings
+                          WHERE system_id IN (${ph}) AND nutrient_type IN (${mph}) GROUP BY system_id, nutrient_type) x
+                      ON x.system_id = nr.system_id AND x.nutrient_type = nr.nutrient_type AND x.md = nr.reading_date`,
+                    [...ids, ...displayMetrics]);
+                for (const r of wq) {
+                    const s = byId[r.system_id]; if (!s) continue;
+                    s.metrics[r.nutrient_type] = Number(r.value);
+                }
             }
         }
 
@@ -90,10 +106,9 @@ router.get('/:id/summary', async (req, res) => {
             biomass_kg: Math.round((t.biomass_kg + s.biomass_kg) * 10) / 10,
             plants_growing: t.plants_growing + s.plants_growing,
             plants_ready: t.plants_ready + s.plants_ready,
-            needs_attention: t.needs_attention + (s.needs_attention ? 1 : 0),
-        }), { fish_count: 0, biomass_kg: 0, plants_growing: 0, plants_ready: 0, needs_attention: 0 });
+        }), { fish_count: 0, biomass_kg: 0, plants_growing: 0, plants_ready: 0 });
 
-        res.json({ farm: { id: own[0].id, name: own[0].name }, system_count: systems.length, totals, systems });
+        res.json({ farm: { id: own[0].id, name: own[0].name }, display_metrics: displayMetrics, system_count: systems.length, totals, systems });
     } catch (error) {
         console.error('Failed to build farm summary:', error);
         res.status(500).json({ error: 'Failed to build farm summary' });
@@ -132,6 +147,10 @@ router.put('/:id', async (req, res) => {
         }
         if (b.location !== undefined) {
             sets.push('location = ?'); vals.push(b.location ? String(b.location).trim().slice(0, 255) : null);
+        }
+        if (b.display_metrics !== undefined) {
+            const keys = Array.isArray(b.display_metrics) ? b.display_metrics.filter((k) => ALLOWED_METRICS.includes(k)) : [];
+            sets.push('display_metrics = ?'); vals.push(JSON.stringify(keys));
         }
         if (sets.length) { vals.push(req.params.id); await pool.execute(`UPDATE farms SET ${sets.join(', ')} WHERE id = ?`, vals); }
         res.json({ success: true });

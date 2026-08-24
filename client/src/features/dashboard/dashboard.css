@@ -182,3 +182,14 @@
 .ph-pill.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
 .ph-pill.warn { color: var(--warn, #d98324); background: color-mix(in srgb, var(--warn, #d98324) 14%, transparent); }
 .ph-none { color: var(--ink-faint); }
+
+/* Farm overview: customize columns control */
+.farm-sys-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; margin-bottom: 2px; }
+.farm-customize { position: relative; }
+.farm-cust-btn { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong, var(--line)); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.farm-cust-btn:hover { border-color: var(--ink-faint); color: var(--ink); }
+.farm-cust-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; width: 220px; max-height: 340px; overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow, 0 12px 32px rgba(16,24,37,.14)); padding: 8px; }
+.farm-cust-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-faint); padding: 4px 8px 6px; }
+.farm-cust-item { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 8px; font-size: 13.5px; color: var(--ink); cursor: pointer; }
+.farm-cust-item:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.farm-cust-item input { width: 15px; height: 15px; accent-color: var(--accent); }
