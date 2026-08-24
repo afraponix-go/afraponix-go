@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
 import { addFish, recordMortality, updateWeight, moveFish, harvestFish, MORTALITY_CAUSES } from './actions'
-import type { FishTank } from './api'
+import { fetchFishInventory, type FishTank } from './api'
+import { useSystems } from '../systems/SystemContext'
+import { canWriteSystem, isOwnedSystem } from '../systems/api'
 
 export type TankAction = 'add' | 'mortality' | 'weight' | 'move' | 'harvest'
 
@@ -31,16 +33,22 @@ export function TankActionModal({
   onClose: () => void
 }) {
   const qc = useQueryClient()
+  const { allSystems } = useSystems()
   const [count, setCount] = useState('')
   const [weight, setWeight] = useState(action === 'weight' && tank.average_weight != null ? String(tank.average_weight) : '')
   const [totalWeight, setTotalWeight] = useState('')
   const [cause, setCause] = useState('')
+  const [destSys, setDestSys] = useState(systemId)
   const [dest, setDest] = useState('')
   const [date, setDate] = useState(today())
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const others = tanks.filter((t) => t.fish_tank_id !== tank.fish_tank_id).sort((a, b) => a.tank_number - b.tank_number)
+  const writable = allSystems.filter((s) => canWriteSystem(s))
+  const crossSystem = destSys !== systemId
+  // Destination tanks: this system's (minus the source) or another system's.
+  const { data: destTanks = [] } = useQuery({ queryKey: ['fish-inventory', destSys], queryFn: () => fetchFishInventory(destSys), enabled: crossSystem })
+  const others = (crossSystem ? destTanks : tanks.filter((t) => t.fish_tank_id !== tank.fish_tank_id)).slice().sort((a, b) => a.tank_number - b.tank_number)
   const removes = action === 'mortality' || action === 'move' || action === 'harvest'
   const available = tank.current_count ?? 0
 
@@ -48,7 +56,7 @@ export function TankActionModal({
     mutationFn: () => {
       if (action === 'add') return addFish(systemId, tank.fish_tank_id, { count: Number(count), average_weight: weight ? Number(weight) : undefined, notes: notes || undefined })
       if (action === 'mortality') return recordMortality(systemId, tank.fish_tank_id, { count: Number(count), cause: cause || undefined, notes: notes || undefined })
-      if (action === 'move') return moveFish(systemId, tank.fish_tank_id, { to_tank_id: Number(dest), count: Number(count), notes: notes || undefined })
+      if (action === 'move') return moveFish(systemId, tank.fish_tank_id, { to_tank_id: Number(dest), count: Number(count), notes: notes || undefined, to_system_id: crossSystem ? destSys : undefined })
       if (action === 'harvest') return harvestFish(systemId, tank.fish_tank_id, { count: Number(count), total_weight_kg: totalWeight ? Number(totalWeight) : undefined, notes: notes || undefined })
       return updateWeight(systemId, tank.fish_tank_id, { average_weight: Number(weight), date: date || undefined, notes: notes || undefined })
     },
@@ -85,6 +93,19 @@ export function TankActionModal({
               Number of fish{action === 'mortality' ? ' lost' : action === 'move' ? ' to move' : action === 'harvest' ? ' harvested' : ''}
             </label>
             <input id="count" type="number" min="1" step="1" inputMode="numeric" autoFocus value={count} onChange={(e) => setCount(e.target.value)} placeholder={removes ? `up to ${available}` : 'e.g. 100'} />
+          </div>
+        )}
+
+        {action === 'move' && writable.length > 1 && (
+          <div className="field">
+            <label htmlFor="dest-sys">Destination system</label>
+            <select id="dest-sys" value={destSys} onChange={(e) => { setDestSys(e.target.value); setDest('') }}>
+              {writable.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.system_name}{s.id === systemId ? ' (this system)' : isOwnedSystem(s) ? '' : ' (shared)'}
+                </option>
+              ))}
+            </select>
           </div>
         )}
 

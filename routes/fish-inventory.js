@@ -331,11 +331,15 @@ router.post('/update-weight', async (req, res) => {
 // Move fish between two tanks in the same system
 router.post('/move-fish', async (req, res) => {
     const { system_id, from_tank_id, to_tank_id, count, notes } = req.body;
+    // Optional destination system — omitted (or same) means a within-system move
+    // between tanks; a different one moves stock to another system/farm.
+    const toSystemId = req.body.to_system_id || system_id;
+    const crossSystem = String(toSystemId) !== String(system_id);
 
     if (!system_id || !from_tank_id || !to_tank_id || !count || count <= 0) {
         return res.status(400).json({ error: 'System ID, source tank, destination tank, and positive count are required' });
     }
-    if (String(from_tank_id) === String(to_tank_id)) {
+    if (!crossSystem && String(from_tank_id) === String(to_tank_id)) {
         return res.status(400).json({ error: 'Source and destination tanks must be different' });
     }
 
@@ -346,21 +350,22 @@ router.post('/move-fish', async (req, res) => {
         await executeQuery(pool, 'START TRANSACTION');
 
         try {
-            // Verify system ownership
-            const systemRows = ((await canAccessSystem(system_id, req.user.userId, { write: true }, pool)) ? [1] : []);
-            if (!systemRows || systemRows.length === 0) {
+            // Write access on both the source and the destination system.
+            const canSource = await canAccessSystem(system_id, req.user.userId, { write: true }, pool);
+            const canDest = crossSystem ? await canAccessSystem(toSystemId, req.user.userId, { write: true }, pool) : canSource;
+            if (!canSource || !canDest) {
                 await executeQuery(pool, 'ROLLBACK');
                 return res.status(404).json({ error: 'System not found or access denied' });
             }
 
-            // Map both tanks (accept tank id or tank_number)
+            // Map both tanks (accept tank id or tank_number), each in its own system.
             const fromRows = await executeQuery(pool,
                 'SELECT id, current_fish_count FROM fish_tanks WHERE system_id = ? AND (id = ? OR tank_number = ?)',
                 [system_id, from_tank_id, from_tank_id]
             );
             const toRows = await executeQuery(pool,
                 'SELECT id FROM fish_tanks WHERE system_id = ? AND (id = ? OR tank_number = ?)',
-                [system_id, to_tank_id, to_tank_id]
+                [toSystemId, to_tank_id, to_tank_id]
             );
             if (!fromRows || fromRows.length === 0 || !toRows || toRows.length === 0) {
                 await executeQuery(pool, 'ROLLBACK');
@@ -371,7 +376,7 @@ router.post('/move-fish', async (req, res) => {
             const toId = toRows[0].id;
             const fromCount = fromRows[0].current_fish_count;
 
-            if (fromId === toId) {
+            if (!crossSystem && fromId === toId) {
                 await executeQuery(pool, 'ROLLBACK');
                 return res.status(400).json({ error: 'Source and destination tanks must be different' });
             }
@@ -391,9 +396,9 @@ router.post('/move-fish', async (req, res) => {
             const carryWeight = weightRows.length > 0 ? weightRows[0].weight : null;
 
             const eventDate = new Date();
-            const moveNotes = `Moved ${count} fish. ${safeNotes || ''}`.trim();
+            const moveNotes = `${crossSystem ? 'Transferred' : 'Moved'} ${count} fish. ${safeNotes || ''}`.trim();
 
-            // Decrement source, increment destination
+            // Decrement source (in its system), increment destination (in its system).
             await executeQuery(pool, `
                 UPDATE fish_tanks SET current_fish_count = GREATEST(0, current_fish_count - ?)
                 WHERE id = ? AND system_id = ?
@@ -401,9 +406,9 @@ router.post('/move-fish', async (req, res) => {
             await executeQuery(pool, `
                 UPDATE fish_tanks SET current_fish_count = current_fish_count + ?
                 WHERE id = ? AND system_id = ?
-            `, [count, toId, system_id]);
+            `, [count, toId, toSystemId]);
 
-            // Log both sides of the move
+            // Log both sides of the move, each stamped with its own system.
             await executeQuery(pool, `
                 INSERT INTO fish_events (system_id, fish_tank_id, event_type, count_change, weight, notes, event_date, user_id)
                 VALUES (?, ?, 'move_out', ?, ?, ?, ?, ?)
@@ -411,11 +416,18 @@ router.post('/move-fish', async (req, res) => {
             await executeQuery(pool, `
                 INSERT INTO fish_events (system_id, fish_tank_id, event_type, count_change, weight, notes, event_date, user_id)
                 VALUES (?, ?, 'move_in', ?, ?, ?, ?, ?)
-            `, [system_id, toId, count, carryWeight, moveNotes, eventDate, req.user.userId]);
+            `, [toSystemId, toId, count, carryWeight, moveNotes, eventDate, req.user.userId]);
+
+            if (crossSystem) {
+                await executeQuery(pool, `
+                    INSERT INTO stock_transfers (kind, from_system_id, to_system_id, from_ref, to_ref, count, notes, moved_by)
+                    VALUES ('fish', ?, ?, ?, ?, ?, ?, ?)
+                `, [system_id, toSystemId, String(fromId), String(toId), count, safeNotes, req.user.userId]);
+            }
 
             await executeQuery(pool, 'COMMIT');
             res.json({
-                message: 'Fish moved successfully',
+                message: crossSystem ? 'Fish transferred successfully' : 'Fish moved successfully',
                 moved_count: count,
                 from_tank_id: fromId,
                 to_tank_id: toId

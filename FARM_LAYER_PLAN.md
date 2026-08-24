@@ -95,7 +95,18 @@ farms). Planned 2026-08-24; **not yet built**. Decisions below are LOCKED.
   land (Phase 4). `custom-crops.js`/`seed-varieties.js` are PER-USER resources, not system-scoped — no change.
 - **Phase 1 — farm entity, invisible: ✅ DONE (2026-08-24).** `farms` table + `systems.farm_id` (migration `2026-08-farms.sql`, no FK on farm_id — loose-ref style, idempotent) + idempotent backfill `2026-08-farms-backfill.js` (one farm per owner "<first>'s Farm", assigns their systems; reuses existing farm so re-runs are no-ops). `utils/farms.js` `ensureUserFarm` shared by backfill + system creation. `getSystemAccess` grants owner via `s.user_id OR farms.owner_id` (LEFT JOIN farms) + shares. New `routes/farms.js` (GET/POST/PUT/DELETE, owner-only, delete refused while systems attached) at `/api/farms`. `POST /systems` + `create-demo` assign farm_id. Verified on dev: 22 systems→6 owners, 0 NULL farm_id, idempotent; CRUD + new-system farm_id + owner access + sharing all correct; dashboard unchanged.
 - **Phase 2 — farm in the UI: ✅ DONE (2026-08-24).** `SystemContext` now also loads farms (`farmApi.ts`), tracks `activeFarmId` (localStorage `afraponix_active_farm`), and scopes `systems` to the active farm; exposes `farms` (own farms + synthetic "Shared with me" group when shared systems exist), `activeFarm`, `setActiveFarmId`, plus `allSystems`. Header farm switcher in `AppShell` (shown only at >1 farm option; `.farm-switch`). `AddSystemModal` passes `farm_id` (active own farm, else backend default). Farm settings tab (`FarmsSettings.tsx` at `/settings/farms`) — create/rename/delete (delete refused while systems attached)/switch. Renamed the "Farm Layout" sub-tab → "Layout". **Reconcile bug fixed:** the effects must gate on `authed` too — before auth resolves, the disabled queries report `isLoading:false` with empty data, which otherwise reset a valid persisted farm selection. Verified on dev: single-farm (no switcher), multi-farm switch scopes systems + persists across reload, empty farm graceful, CRUD. The 58 activeId-scoped queries were untouched.
-- **Phase 3 — move stock:** `stock_transfers` + fish cross-system move + plant batch transfer + destination pickers.
+- **Phase 3 — move stock: ✅ DONE (2026-08-24).** `stock_transfers` audit table (`2026-08-stock-transfers.sql`).
+  **Fish:** `POST /fish-inventory/move-fish` gained optional `to_system_id` — cross-system decrements/increments
+  each tank in its own system, logs `move_out`/`move_in` stamped per-system, writes a stock_transfers row;
+  write access required on both. **Plants:** new `POST /plants/transfer` — event-based (a negative-`new_seedlings`
+  `transfer_out` row reduces the source batch's remaining without counting as a harvest; a NEW linked batch opens
+  in the destination carrying the original planting date; stock_transfers row). Dedicated connection for the txn.
+  **Client:** `MoveBatchModal` gains a destination-**system** selector (writable systems) + count → `transferBatch`
+  when cross-system, else the in-place bed move; `TankActionModal` move gains a destination-system selector +
+  that system's tanks (`moveFish` passes `to_system_id`). Both selectors show only at >1 writable system.
+  Verified on dev: fish move (100→70/0→30, per-system events, audit row), plant transfer (source 50→30 w/o
+  harvest pollution, dest batch age carried), non-owner denied on both; plant transfer done end-to-end through
+  the real UI; fish selector rendered. **PHASE 3 COMPLETE — the farm layer's four phases are all shipped.**
 - **Phase 4 (later):** farm-level sharing/members (staff on a whole farm) + farm rollup dashboards.
 
 Related memory: [[per-user-vs-per-system-data]] (reference/settings are per-user; logs/programmes per-system),

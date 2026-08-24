@@ -110,6 +110,7 @@ const STEPS = [
   // per owner with their systems assigned.
   { type: 'sql', file: 'database/migrations/2026-08-farms.sql', label: 'Farms table + systems.farm_id' },
   { type: 'node', file: 'database/migrations/2026-08-farms-backfill.js', label: 'Backfill: one farm per owner, assign systems' },
+  { type: 'sql', file: 'database/migrations/2026-08-stock-transfers.sql', label: 'Stock transfers audit (move fish/plants between systems)' },
 ];
 
 function dbConfig() {

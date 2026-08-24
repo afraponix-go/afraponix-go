@@ -46,12 +46,26 @@ export function recordPlanting(
   })
 }
 
-// Move an entire batch to a different grow bed (bulk-updates its rows).
+// Move an entire batch to a different grow bed in the SAME system (bulk-updates
+// its rows in place).
 export function moveBatch(systemId: string, batchId: string, newGrowBedId: number) {
   return api(`/data/batch/${systemId}/${encodeURIComponent(batchId)}/grow-bed`, {
     method: 'PUT',
     body: { newGrowBedId },
   })
+}
+
+// Transfer some/all of a batch to a bed in ANOTHER system (event-based: closes
+// that many plants out of the source batch and opens a linked batch in the
+// destination). Returns the new batch id.
+export function transferBatch(input: {
+  from_system_id: string
+  batch_id: string
+  to_system_id: string
+  to_bed_id: number
+  count?: number
+}): Promise<{ new_batch_id: string; count: number }> {
+  return api('/plants/transfer', { method: 'POST', body: input })
 }
 
 // Record a harvest against a batch: one plant_growth row with plants_harvested

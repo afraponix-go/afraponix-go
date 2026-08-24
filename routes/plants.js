@@ -1,5 +1,6 @@
 const express = require('express');
-const { getDatabase } = require('../database/init-mariadb');
+const crypto = require('crypto');
+const { getDatabase, getDatabaseConnection } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
 const { canAccessSystem } = require('../utils/systemAccess');
 
@@ -117,6 +118,79 @@ router.get('/batches/:systemId', async (req, res) => {
     } catch (error) {
         console.error('Error building plant batches:', error);
         res.status(500).json({ error: 'Failed to build plant batches' });
+    }
+});
+
+// Transfer some/all of a plant batch to a bed in another system (or another bed
+// via the same flow). Event-based, preserving history: the source batch gets a
+// negative-count "transfer_out" event (reducing its remaining without counting as
+// a harvest), and a NEW linked batch is opened in the destination — carrying the
+// original planting date so age/days-to-harvest stay true. Both systems require
+// write access. A stock_transfers row ties the two batches together.
+router.post('/transfer', async (req, res) => {
+    const { from_system_id, batch_id, to_system_id, to_bed_id } = req.body || {};
+    const notes = req.body && req.body.notes ? String(req.body.notes).slice(0, 500) : null;
+    if (!from_system_id || !batch_id || !to_system_id || !to_bed_id) {
+        return res.status(400).json({ error: 'from_system_id, batch_id, to_system_id and to_bed_id are required' });
+    }
+    const pool = getDatabase();
+    let conn;
+    try {
+        if (!(await verifyOwnership(pool, from_system_id, req.user.userId, true)) ||
+            !(await verifyOwnership(pool, to_system_id, req.user.userId, true))) {
+            return res.status(404).json({ error: 'System not found or access denied' });
+        }
+        const [srcRows] = await pool.execute(`
+            SELECT MAX(crop_type) crop_type, MAX(seed_variety) seed_variety, MAX(days_to_harvest) days_to_harvest,
+                   MAX(plants_per_m2) plants_per_m2, COALESCE(MIN(batch_created_date), MIN(date)) planted_date,
+                   MAX(grow_bed_id) grow_bed_id,
+                   COALESCE(SUM(CASE WHEN COALESCE(plants_harvested,0) > 0 THEN 0 ELSE COALESCE(NULLIF(new_seedlings,0), count, 0) END),0) planted,
+                   COALESCE(SUM(plants_harvested),0) harvested
+            FROM plant_growth WHERE system_id = ? AND batch_id = ?
+        `, [from_system_id, batch_id]);
+        const src = srcRows[0];
+        if (!src || !src.crop_type) return res.status(404).json({ error: 'Batch not found' });
+        const remaining = Math.max(0, Number(src.planted) - Number(src.harvested));
+        let count = (req.body.count != null && req.body.count !== '') ? Math.round(Number(req.body.count)) : remaining;
+        if (!(count > 0)) return res.status(400).json({ error: 'Nothing to transfer' });
+        if (count > remaining) count = remaining;
+
+        const [bedRows] = await pool.execute('SELECT id FROM grow_beds WHERE id = ? AND system_id = ?', [to_bed_id, to_system_id]);
+        if (bedRows.length === 0) return res.status(400).json({ error: 'Destination bed not found in that system' });
+
+        const newBatchId = `tr_${Date.now().toString(36)}_${crypto.randomBytes(3).toString('hex')}`.slice(0, 100);
+        const plantedDate = src.planted_date ? String(src.planted_date).slice(0, 10) : null;
+        const dth = src.days_to_harvest != null ? src.days_to_harvest : null;
+
+        conn = await getDatabaseConnection();
+        await conn.query('START TRANSACTION');
+        try {
+            await conn.execute(
+                `INSERT INTO plant_growth (system_id, grow_bed_id, date, crop_type, count, plants_per_m2, new_seedlings, growth_stage, batch_id, seed_variety, batch_created_date, days_to_harvest, notes)
+                 VALUES (?, ?, CURDATE(), ?, 0, ?, ?, 'transfer_out', ?, ?, ?, ?, ?)`,
+                [from_system_id, src.grow_bed_id, src.crop_type, src.plants_per_m2, -count, batch_id, src.seed_variety, plantedDate, dth, `Transferred ${count} plant(s) out.${notes ? ' ' + notes : ''}`]
+            );
+            await conn.execute(
+                `INSERT INTO plant_growth (system_id, grow_bed_id, date, crop_type, count, plants_per_m2, new_seedlings, growth_stage, batch_id, seed_variety, batch_created_date, days_to_harvest, notes)
+                 VALUES (?, ?, CURDATE(), ?, 0, ?, ?, 'transfer_in', ?, ?, ?, ?, ?)`,
+                [to_system_id, to_bed_id, src.crop_type, src.plants_per_m2, count, newBatchId, src.seed_variety, plantedDate, dth, `Transferred ${count} plant(s) in.${notes ? ' ' + notes : ''}`]
+            );
+            await conn.execute(
+                `INSERT INTO stock_transfers (kind, from_system_id, to_system_id, from_ref, to_ref, from_bed_id, to_bed_id, label, count, notes, moved_by)
+                 VALUES ('plant', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [from_system_id, to_system_id, batch_id, newBatchId, src.grow_bed_id, to_bed_id, src.crop_type, count, notes, req.user.userId]
+            );
+            await conn.query('COMMIT');
+        } catch (e) {
+            await conn.query('ROLLBACK').catch(() => {});
+            throw e;
+        }
+        res.json({ success: true, new_batch_id: newBatchId, count });
+    } catch (error) {
+        console.error('Failed to transfer plant batch:', error);
+        res.status(500).json({ error: 'Failed to transfer batch' });
+    } finally {
+        if (conn) await conn.end().catch(() => {});
     }
 });
 

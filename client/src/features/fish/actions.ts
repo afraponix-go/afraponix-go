@@ -23,8 +23,9 @@ export function updateWeight(systemId: string, tankId: number, input: { average_
   })
 }
 
-// Move fish from one tank to another within the same system.
-export function moveFish(systemId: string, fromTankId: number, input: { to_tank_id: number; count: number; notes?: string }) {
+// Move fish between tanks — same system, or (with to_system_id) to another
+// system/farm.
+export function moveFish(systemId: string, fromTankId: number, input: { to_tank_id: number; count: number; notes?: string; to_system_id?: string }) {
   return api('/fish-inventory/move-fish', {
     method: 'POST',
     body: { system_id: systemId, from_tank_id: fromTankId, ...input },
