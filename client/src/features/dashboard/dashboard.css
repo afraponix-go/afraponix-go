@@ -205,3 +205,6 @@
   .farm-table td.farm-td-sys { justify-content: flex-start; flex-wrap: wrap; gap: 8px; padding: 12px 14px 8px; border-bottom: 1px solid var(--line); font-size: 15px; }
   .farm-table td.farm-td-sys::before { content: none; }
 }
+
+/* Farm overview: a metric the system doesn't track */
+.metric-off { font-size: 11px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--ink-faint); opacity: .65; }

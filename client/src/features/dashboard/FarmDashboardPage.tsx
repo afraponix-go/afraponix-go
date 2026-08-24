@@ -50,7 +50,9 @@ export function FarmDashboardPage() {
   const t = data?.totals
   const cols = data?.display_metrics ?? []
   const selected = new Set(cols)
-  const attentionCount = (data?.systems ?? []).filter((s) => cols.some((k) => bandState(k, s.metrics[k]) === 'warn')).length
+  // A metric only counts (band / attention) when the system actually tracks it —
+  // i.e. the key is present in its metrics map.
+  const attentionCount = (data?.systems ?? []).filter((s) => cols.some((k) => k in s.metrics && bandState(k, s.metrics[k]) === 'warn')).length
   const openSystem = (id: string) => { setActiveId(id); navigate('/') }
   const toggle = (key: string) => {
     const next = selected.has(key) ? cols.filter((k) => k !== key) : [...cols, key]
@@ -112,7 +114,7 @@ export function FarmDashboardPage() {
               </thead>
               <tbody>
                 {(data?.systems ?? []).map((s) => {
-                  const attn = cols.some((k) => bandState(k, s.metrics[k]) === 'warn')
+                  const attn = cols.some((k) => k in s.metrics && bandState(k, s.metrics[k]) === 'warn')
                   return (
                     <tr key={s.id} className="farm-row" onClick={() => openSystem(s.id)} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') openSystem(s.id) }}>
                       <td className="farm-td-sys">
@@ -124,11 +126,15 @@ export function FarmDashboardPage() {
                       <td className="r" data-label="Growing">{fmt(s.plants_growing)}</td>
                       <td className="r" data-label="Ready">{s.plants_ready > 0 ? <b className="farm-ready">{fmt(s.plants_ready)}</b> : '—'}</td>
                       {cols.map((k) => {
+                        const tracked = k in s.metrics
                         const v = s.metrics[k]
-                        const state = bandState(k, v)
+                        const state = tracked ? bandState(k, v) : 'none'
                         return (
                           <td key={k} className="r" data-label={METRIC_META[k]?.label ?? k}>
-                            {v == null ? <span className="ph-none">—</span> : state === 'none' ? fmt(v, 1) : <span className={`ph-pill ${state}`}>{fmt(v, 1)}</span>}
+                            {!tracked ? <span className="metric-off" title="Not tracked by this system">off</span>
+                              : v == null ? <span className="ph-none">—</span>
+                              : state === 'none' ? fmt(v, 1)
+                              : <span className={`ph-pill ${state}`}>{fmt(v, 1)}</span>}
                           </td>
                         )
                       })}

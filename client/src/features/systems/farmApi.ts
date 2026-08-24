@@ -38,8 +38,9 @@ export type FarmSystemRow = {
   biomass_kg: number
   plants_growing: number
   plants_ready: number
-  // Latest value per selected metric key (e.g. { ph: 7.3, ec: 800 }).
-  metrics: Record<string, number>
+  // Per selected metric key: a number (latest reading), null (tracked but no
+  // reading yet), or absent (the system doesn't track that metric).
+  metrics: Record<string, number | null>
 }
 export type FarmSummary = {
   farm: { id: string; name: string }

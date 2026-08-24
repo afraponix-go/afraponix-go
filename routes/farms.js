@@ -9,6 +9,12 @@ router.use(authenticateToken);
 // Water/nutrient reading keys the farm overview can show as per-system columns.
 const ALLOWED_METRICS = ['ph', 'kh', 'ec', 'dissolved_oxygen', 'temperature', 'humidity', 'salinity', 'ammonia', 'nitrite', 'nitrate', 'iron', 'potassium', 'calcium', 'phosphorus', 'magnesium'];
 const DEFAULT_METRICS = ['ph'];
+// A system's tracked metrics (systems.tracked_metrics JSON). null = tracks all.
+function parseTracked(raw) {
+    if (raw == null) return null;
+    try { const arr = JSON.parse(raw); if (Array.isArray(arr)) return new Set(arr.filter((k) => typeof k === 'string')); } catch { /* fall through */ }
+    return null;
+}
 // Parse a stored display_metrics JSON array into a clean, allowed key list.
 function parseMetrics(raw) {
     if (raw == null) return [...DEFAULT_METRICS];
@@ -51,12 +57,16 @@ router.get('/:id/summary', async (req, res) => {
         if (!own.length) return res.status(404).json({ error: 'Farm not found or access denied' });
         const displayMetrics = parseMetrics(own[0].display_metrics);
 
-        const [sysRows] = await pool.execute('SELECT id, system_name FROM systems WHERE farm_id = ? ORDER BY created_at ASC', [req.params.id]);
-        const systems = sysRows.map((s) => ({
-            id: s.id, system_name: s.system_name,
-            fish_count: 0, biomass_kg: 0, plants_growing: 0, plants_ready: 0,
-            metrics: {},
-        }));
+        const [sysRows] = await pool.execute('SELECT id, system_name, tracked_metrics FROM systems WHERE farm_id = ? ORDER BY created_at ASC', [req.params.id]);
+        const systems = sysRows.map((s) => {
+            // Seed only the display metrics this system actually tracks (value null
+            // until a reading fills it). Untracked metrics are omitted entirely, so
+            // they never show a value or flag attention.
+            const tracked = parseTracked(s.tracked_metrics);
+            const metrics = {};
+            for (const k of displayMetrics) if (tracked === null || tracked.has(k)) metrics[k] = null;
+            return { id: s.id, system_name: s.system_name, fish_count: 0, biomass_kg: 0, plants_growing: 0, plants_ready: 0, metrics };
+        });
         const byId = Object.fromEntries(systems.map((s) => [s.id, s]));
         const ids = sysRows.map((s) => s.id);
 
@@ -96,7 +106,9 @@ router.get('/:id/summary', async (req, res) => {
                     [...ids, ...displayMetrics]);
                 for (const r of wq) {
                     const s = byId[r.system_id]; if (!s) continue;
-                    s.metrics[r.nutrient_type] = Number(r.value);
+                    // Only fill metrics the system tracks (seeded above); ignore
+                    // stale readings for a metric it has since switched off.
+                    if (r.nutrient_type in s.metrics) s.metrics[r.nutrient_type] = Number(r.value);
                 }
             }
         }
