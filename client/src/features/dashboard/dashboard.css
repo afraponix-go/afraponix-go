@@ -181,6 +181,7 @@
 .ph-pill { font-weight: 700; border-radius: 999px; padding: 2px 9px; font-size: 12.5px; }
 .ph-pill.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
 .ph-pill.warn { color: var(--warn, #d98324); background: color-mix(in srgb, var(--warn, #d98324) 14%, transparent); }
+.ph-pill.danger { color: var(--danger, #ce3341); background: color-mix(in srgb, var(--danger, #ce3341) 15%, transparent); }
 .ph-none { color: var(--ink-faint); }
 
 /* Farm overview: customize columns control */

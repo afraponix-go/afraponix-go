@@ -7,7 +7,7 @@ import { useSystems } from '../systems/SystemContext'
 import { fetchFarmSummary, updateFarm, createFarm } from '../systems/farmApi'
 import { Stat, fmt } from '../fish/fishShared'
 import { WATER_FIELDS } from '../water/api'
-import { CHARTABLE } from '../charts/api'
+import { bandState } from '../water/bands'
 import './dashboard.css'
 
 // First-run: a user with no farm of their own creates one before anything else.
@@ -55,22 +55,11 @@ function FarmOnboarding({ onCreated }: { onCreated: (id: string) => void }) {
   )
 }
 
-// Metric label + unit (from the water form) and healthy band (from the chart
-// defs) for the selectable per-system columns.
-const METRIC_META: Record<string, { label: string; unit: string; min?: number; max?: number }> = Object.fromEntries(
-  WATER_FIELDS.map((f) => {
-    const c = CHARTABLE.find((x) => x.key === f.key)
-    return [f.key, { label: f.label, unit: f.unit, min: c?.min, max: c?.max }]
-  }),
+// Metric label + unit (from the water form) for the selectable per-system
+// columns. Health colouring comes from the shared 3-tier bands (bandState).
+const METRIC_META: Record<string, { label: string; unit: string }> = Object.fromEntries(
+  WATER_FIELDS.map((f) => [f.key, { label: f.label, unit: f.unit }]),
 )
-
-function bandState(key: string, value: number | null | undefined): 'ok' | 'warn' | 'none' {
-  const m = METRIC_META[key]
-  if (value == null || !m || (m.min == null && m.max == null)) return 'none'
-  if (m.min != null && value < m.min) return 'warn'
-  if (m.max != null && value > m.max) return 'warn'
-  return 'ok'
-}
 
 export function FarmDashboardPage() {
   const { activeFarm, activeFarmId, setActiveId, setActiveFarmId, farms, isLoading: systemsLoading } = useSystems()
@@ -109,8 +98,12 @@ export function FarmDashboardPage() {
   const cols = data?.display_metrics ?? []
   const selected = new Set(cols)
   // A metric only counts (band / attention) when the system actually tracks it —
-  // i.e. the key is present in its metrics map.
-  const attentionCount = (data?.systems ?? []).filter((s) => cols.some((k) => k in s.metrics && bandState(k, s.metrics[k]) === 'warn')).length
+  // i.e. the key is present in its metrics map. Amber or red both draw attention.
+  const isFlagged = (k: string, v: number | null | undefined) => {
+    const st = bandState(k, v)
+    return st === 'warn' || st === 'danger'
+  }
+  const attentionCount = (data?.systems ?? []).filter((s) => cols.some((k) => k in s.metrics && isFlagged(k, s.metrics[k]))).length
   const openSystem = (id: string) => { setActiveId(id); navigate('/overview') }
   const toggle = (key: string) => {
     const next = selected.has(key) ? cols.filter((k) => k !== key) : [...cols, key]
@@ -172,7 +165,7 @@ export function FarmDashboardPage() {
               </thead>
               <tbody>
                 {(data?.systems ?? []).map((s) => {
-                  const attn = cols.some((k) => k in s.metrics && bandState(k, s.metrics[k]) === 'warn')
+                  const attn = cols.some((k) => k in s.metrics && isFlagged(k, s.metrics[k]))
                   return (
                     <tr key={s.id} className="farm-row" onClick={() => openSystem(s.id)} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') openSystem(s.id) }}>
                       <td className="farm-td-sys">
