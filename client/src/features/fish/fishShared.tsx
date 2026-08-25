@@ -7,7 +7,9 @@ export function sum(tanks: FishTank[], key: keyof FishTank) {
 }
 
 export function fmt(n: number | null | undefined, digits = 0) {
-  return n == null || !Number.isFinite(n) ? '—' : n.toFixed(digits)
+  return n == null || !Number.isFinite(n)
+    ? '—'
+    : n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })
 }
 
 export function timeAgo(ms: number): string {
