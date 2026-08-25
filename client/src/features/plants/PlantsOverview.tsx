@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
 import { fetchBatches, type Batch } from './batches'
+import { fetchPlantGrowth, isHarvestRow } from './plantGrowth'
 import { prettyCrop } from './api'
 import { fetchGrowBeds } from '../growbeds/api'
 import { Stat } from '../fish/fishShared'
@@ -31,6 +32,11 @@ export function PlantsOverview() {
     queryFn: () => fetchGrowBeds(activeId as string),
     enabled: !!activeId,
   })
+  const { data: rows = [] } = useQuery({
+    queryKey: ['plant-growth', activeId],
+    queryFn: () => fetchPlantGrowth(activeId as string),
+    enabled: !!activeId,
+  })
 
   if (!activeId) return <div className="empty">Select a system to see its plants.</div>
   if (isLoading) return <div className="empty">Loading plants…</div>
@@ -40,8 +46,12 @@ export function PlantsOverview() {
   const active = batches.filter((b) => b.status !== 'harvested' && b.remaining > 0)
   const ready = batches.filter((b) => b.status === 'ready')
   const plantsGrowing = active.reduce((n, b) => n + b.remaining, 0)
-  const totalHarvestKg = batches.reduce((n, b) => n + b.harvest_weight_g, 0) / 1000
-  const plantsHarvested = batches.reduce((n, b) => n + b.harvested, 0)
+  // Harvest recorded in the current calendar month (harvest_weight is grams).
+  const now = new Date()
+  const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const monthHarvest = rows.filter((r) => isHarvestRow(r) && (r.date ?? '').slice(0, 7) === ym)
+  const monthHarvestKg = monthHarvest.reduce((n, r) => n + (r.harvest_weight ?? 0), 0) / 1000
+  const monthHarvestPlants = monthHarvest.reduce((n, r) => n + (r.plants_harvested ?? 0), 0)
   const crops = new Set(active.map((b) => b.crop_type))
   const totalArea = beds.reduce((n, b) => n + (b.equivalent_m2 ?? 0), 0)
   const groups = cropBreakdown(active)
@@ -54,7 +64,7 @@ export function PlantsOverview() {
         <Stat label="Plants Growing" value={plantsGrowing.toLocaleString()} sub={`${crops.size} crop ${crops.size === 1 ? 'type' : 'types'}`} />
         <Stat label="Active Batches" value={String(active.length)} sub={`${batches.length} total`} />
         <Stat label="Ready to Harvest" value={String(ready.length)} sub={ready.length ? 'batches at maturity' : 'none yet'} />
-        <Stat label="Total Harvested" value={totalHarvestKg >= 1 ? totalHarvestKg.toFixed(1) : totalHarvestKg.toFixed(2)} unit="kg" sub={`${plantsHarvested.toLocaleString()} plants`} />
+        <Stat label="Harvested This Month" value={monthHarvestKg >= 1 ? monthHarvestKg.toFixed(1) : monthHarvestKg.toFixed(2)} unit="kg" sub={`${monthHarvestPlants.toLocaleString()} plants`} />
         <Stat label="Grow Beds" value={String(beds.length)} sub={`${totalArea.toFixed(0)} m² grow area`} />
         <Stat label="Crop Varieties" value={String(crops.size)} />
       </div>
