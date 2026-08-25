@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useSystems } from '../features/systems/SystemContext'
+import { FarmModeNotice } from '../features/systems/FarmScoped'
 
 export type SubTab = { to: string; label: string; end?: boolean }
 
@@ -7,9 +9,10 @@ export type SubTab = { to: string; label: string; end?: boolean }
 // sub-tab strip above its routed content. On narrow screens the strip scrolls
 // horizontally; we fade the overflowing edge(s) to signal that and keep the
 // active tab scrolled into view.
-export function SubTabLayout({ items }: { items: SubTab[] }) {
+export function SubTabLayout({ items, farmAware = false }: { items: SubTab[]; farmAware?: boolean }) {
   const navRef = useRef<HTMLElement>(null)
   const { pathname } = useLocation()
+  const { isFarmMode } = useSystems()
 
   // Toggle edge-fade affordances based on scroll position.
   const updateFade = () => {
@@ -38,7 +41,7 @@ export function SubTabLayout({ items }: { items: SubTab[] }) {
           </NavLink>
         ))}
       </nav>
-      <Outlet />
+      {isFarmMode && !farmAware ? <FarmModeNotice /> : <Outlet />}
     </div>
   )
 }

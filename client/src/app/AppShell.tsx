@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthContext'
-import { useSystems } from '../features/systems/SystemContext'
+import { useSystems, ALL_SYSTEMS_ID } from '../features/systems/SystemContext'
 import { isOwnedSystem } from '../features/systems/api'
 import { AddSystemModal } from '../features/systems/AddSystemModal'
 import { DashboardIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SprayIcon, SettingsIcon } from './icons'
@@ -58,6 +58,7 @@ export function AppShell() {
             <label className="sys-switch">
               <span className="sys-dot" aria-hidden />
               <select className="sys-select" value={activeId ?? ''} onChange={(e) => setActiveId(e.target.value)} aria-label="Active system">
+                {systems.length > 1 && <option value={ALL_SYSTEMS_ID}>◇ All systems</option>}
                 {systems.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.system_name}

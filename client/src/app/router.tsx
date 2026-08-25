@@ -9,6 +9,7 @@ import { LandingPage } from '../features/landing/LandingPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AppShell } from './AppShell'
 import { SubTabLayout } from './SubTabLayout'
+import { FarmScoped, SystemOnly } from '../features/systems/FarmScoped'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { FarmDashboardPage } from '../features/dashboard/FarmDashboardPage'
 import { ChartsPage } from '../features/charts/ChartsPage'
@@ -97,12 +98,12 @@ export const router = createBrowserRouter([
           // Dashboard (Overview · Charts)
           {
             path: '/',
-            element: <SubTabLayout items={DASHBOARD_TABS} />,
+            element: <SubTabLayout items={DASHBOARD_TABS} farmAware />,
             children: [
               { index: true, element: <FarmDashboardPage /> },
-              { path: 'overview', element: <DashboardPage /> },
-              { path: 'charts', element: <ChartsPage /> },
-              { path: 'layout', element: <FarmLayout /> },
+              { path: 'overview', element: <SystemOnly><DashboardPage /></SystemOnly> },
+              { path: 'charts', element: <SystemOnly><ChartsPage /></SystemOnly> },
+              { path: 'layout', element: <SystemOnly><FarmLayout /></SystemOnly> },
             ],
           },
           // Calculator (Fish Stocking · Nutrient Dosing)
@@ -128,25 +129,25 @@ export const router = createBrowserRouter([
           // Fish (Overview · Density · Tank Information · Fish Health)
           {
             path: 'fish',
-            element: <SubTabLayout items={FISH_TABS} />,
+            element: <SubTabLayout items={FISH_TABS} farmAware />,
             children: [
-              { index: true, element: <FishOverview /> },
-              { path: 'density', element: <FishDensity /> },
-              { path: 'tanks', element: <TankInformation /> },
-              { path: 'health', element: <FishHealth /> },
+              { index: true, element: <FarmScoped kind="fish"><FishOverview /></FarmScoped> },
+              { path: 'density', element: <FarmScoped kind="fish"><FishDensity /></FarmScoped> },
+              { path: 'tanks', element: <FarmScoped kind="fish"><TankInformation /></FarmScoped> },
+              { path: 'health', element: <FarmScoped kind="fish"><FishHealth /></FarmScoped> },
             ],
           },
           // Plants (Overview · Plantings · Harvest · Beds & Allocation · Crops)
           {
             path: 'plants',
-            element: <SubTabLayout items={PLANTS_TABS} />,
+            element: <SubTabLayout items={PLANTS_TABS} farmAware />,
             children: [
-              { index: true, element: <PlantsOverview /> },
-              { path: 'seedlings', element: <Seedlings /> },
-              { path: 'plantings', element: <Plantings /> },
-              { path: 'harvest', element: <Harvest /> },
-              { path: 'beds', element: <BedsAllocation /> },
-              { path: 'crops', element: <Crops /> },
+              { index: true, element: <FarmScoped kind="plants"><PlantsOverview /></FarmScoped> },
+              { path: 'seedlings', element: <FarmScoped kind="plants"><Seedlings /></FarmScoped> },
+              { path: 'plantings', element: <FarmScoped kind="plants"><Plantings /></FarmScoped> },
+              { path: 'harvest', element: <FarmScoped kind="plants"><Harvest /></FarmScoped> },
+              { path: 'beds', element: <SystemOnly><BedsAllocation /></SystemOnly> },
+              { path: 'crops', element: <SystemOnly><Crops /></SystemOnly> },
             ],
           },
           // Operations (Programmes · Calendar · Log · Catalogue). Spray is the

@@ -9,6 +9,10 @@ const ACTIVE_FARM_KEY = 'afraponix_active_farm'
 // Synthetic farm holding systems shared with the user (they live in another
 // owner's real farm, so they can't sit under one of the user's own farms).
 export const SHARED_FARM_ID = '__shared__'
+// Sentinel "active system" that means "the whole farm" — the app's farm mode.
+// Farm-aware tabs (Fish, Plants) render every system in the active farm,
+// separated by system; other tabs prompt to pick a single system.
+export const ALL_SYSTEMS_ID = '__all__'
 
 export type FarmOption = { id: string; name: string; kind: 'own' | 'shared'; systemCount: number }
 
@@ -17,6 +21,7 @@ type SystemState = {
   allSystems: System[]     // every system the user can see, across farms
   activeId: string | null
   activeSystem: System | null
+  isFarmMode: boolean       // active "system" is the ALL sentinel (whole farm)
   farms: FarmOption[]
   activeFarmId: string | null
   activeFarm: FarmOption | null
@@ -73,6 +78,16 @@ export function SystemProvider({ children }: { children: ReactNode }) {
   // pull the farm to match rather than dropping the selection.
   useEffect(() => {
     if (!authed || isLoading) return
+    // Farm mode is a valid selection as long as the active farm has systems.
+    if (activeId === ALL_SYSTEMS_ID) {
+      if (systems.length === 0) {
+        const next = systemsInFarm(activeFarmId)[0]?.id ?? null
+        setActiveIdState(next)
+        if (next) localStorage.setItem(ACTIVE_KEY, next)
+        else localStorage.removeItem(ACTIVE_KEY)
+      }
+      return
+    }
     if (activeId != null && systems.some((s) => s.id === activeId)) return
     if (activeId != null) {
       const sys = allSystems.find((s) => s.id === activeId)
@@ -98,8 +113,10 @@ export function SystemProvider({ children }: { children: ReactNode }) {
   function setActiveFarmId(id: string) {
     setActiveFarmIdState(id)
     localStorage.setItem(ACTIVE_FARM_KEY, id)
-    // Jump to the first system of the newly selected farm so the app never shows
-    // a system from a different farm.
+    // Stay in farm mode across a farm switch if that's where the user was.
+    if (activeId === ALL_SYSTEMS_ID) return
+    // Otherwise jump to the first system of the newly selected farm so the app
+    // never shows a system from a different farm.
     const next = systemsInFarm(id)[0]?.id ?? null
     setActiveIdState(next)
     if (next) localStorage.setItem(ACTIVE_KEY, next)
@@ -112,6 +129,7 @@ export function SystemProvider({ children }: { children: ReactNode }) {
       allSystems,
       activeId,
       activeSystem: systems.find((s) => s.id === activeId) ?? null,
+      isFarmMode: activeId === ALL_SYSTEMS_ID,
       farms,
       activeFarmId,
       activeFarm: farms.find((f) => f.id === activeFarmId) ?? null,
@@ -129,4 +147,16 @@ export function useSystems() {
   const ctx = useContext(SystemCtx)
   if (!ctx) throw new Error('useSystems must be used within SystemProvider')
   return ctx
+}
+
+// Pin the active system for a subtree. Farm mode renders one of these per system
+// around an otherwise-unchanged tab, so every `useSystems().activeId` inside it
+// resolves to that system (and isFarmMode is false, so it won't recurse).
+export function SystemScope({ systemId, children }: { systemId: string; children: ReactNode }) {
+  const base = useSystems()
+  const value = useMemo<SystemState>(() => {
+    const sys = base.allSystems.find((s) => s.id === systemId) ?? null
+    return { ...base, activeId: systemId, activeSystem: sys, isFarmMode: false }
+  }, [base, systemId])
+  return <SystemCtx.Provider value={value}>{children}</SystemCtx.Provider>
 }

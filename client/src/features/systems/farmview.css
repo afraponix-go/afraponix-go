@@ -1,0 +1,139 @@
+/* Farm mode — the "All systems" view shared by farm-aware tabs (Fish, Plants).
+   Leans on the brand tokens: the soft brand gradient for the summary strip,
+   the gradient-word treatment for the headline totals, and the eyebrow. */
+
+.fm { display: block; }
+
+/* Sticky farm-summary strip */
+.fm-bar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 26px;
+  background: var(--grad-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-sm);
+}
+.fm-bar-title { display: flex; flex-direction: column; gap: 2px; margin-right: 6px; }
+.fm-bar-title b { color: var(--ink); font-size: 1rem; letter-spacing: -0.02em; }
+.fm-eyebrow {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.fm-eyebrow::before {
+  content: '';
+  width: 22px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--grad-brand);
+}
+.fm-stat { display: flex; flex-direction: column; line-height: 1.15; }
+.fm-stat b {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  background: var(--grad-word);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.fm-stat span {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+.fm-loading { color: var(--ink-faint); font-size: 0.85rem; }
+
+/* Per-system collapsible section */
+.fm-sys {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  margin-bottom: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.fm-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+.fm-head:hover { background: var(--surface-2); }
+.fm-head:focus-visible { outline: none; box-shadow: var(--ring); }
+.fm-chev {
+  color: var(--ink-faint);
+  font-size: 0.8rem;
+  width: 14px;
+  transition: transform 0.25s var(--ease);
+}
+.fm-sys.open .fm-chev { transform: rotate(90deg); }
+.fm-name {
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.fm-zoom {
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-wash);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  padding: 2px 9px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.fm-head:hover .fm-zoom,
+.fm-zoom:focus-visible { opacity: 1; }
+.fm-sum {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: flex-end;
+}
+.fm-m { font-size: 0.82rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.fm-m b { color: var(--ink); font-weight: 700; }
+.fm-m.warn b { color: var(--warn); }
+.fm-empty-badge {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--ink-faint);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: 2px 9px;
+}
+.fm-body {
+  padding: 4px 16px 18px;
+  border-top: 1px solid var(--line);
+}
+.fm-hint { text-align: center; font-size: 0.78rem; color: var(--ink-faint); margin: 12px 0 0; }
+
+@media (max-width: 560px) {
+  .fm-sum { width: 100%; justify-content: flex-start; margin-left: 26px; }
+  .fm-head { flex-wrap: wrap; }
+}
