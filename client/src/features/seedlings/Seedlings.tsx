@@ -6,6 +6,8 @@ import { fetchSeedlings, deleteSeedling, germPct, type Seedling } from './api'
 import { SowModal } from './SowModal'
 import { GerminationModal } from './GerminationModal'
 import { TransplantModal } from './TransplantModal'
+import { ViewToggle, useViewMode } from '../../components/ViewToggle'
+import '../water/water.css'
 import './seedlings.css'
 
 const STATUS_LABEL: Record<string, string> = { sown: 'Sown', germinated: 'Germinated', transplanted: 'Transplanted' }
@@ -19,6 +21,7 @@ function readiness(s: Seedling): { text: string; cls: string } | null {
 
 export function Seedlings() {
   const { activeId } = useSystems()
+  const [view] = useViewMode()
   const qc = useQueryClient()
   const [sow, setSow] = useState<{ seedling?: Seedling } | null>(null)
   const [germ, setGerm] = useState<Seedling | null>(null)
@@ -100,11 +103,60 @@ export function Seedlings() {
     )
   }
 
+  const listTable = (items: Seedling[]) => (
+    <div className="wq-table-wrap">
+      <table className="wq-table op-table">
+        <thead>
+          <tr>
+            <th>Crop</th>
+            <th>Variety</th>
+            <th>Status</th>
+            <th>Sown</th>
+            <th>Total</th>
+            <th>Germ.</th>
+            <th>Transplant</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((s) => {
+            const pct = germPct(s)
+            const rd = readiness(s)
+            return (
+              <tr key={s.id}>
+                <td className="op-text">{s.crop_name ?? 'Crop'}</td>
+                <td className="op-text">{s.seed_variety ?? '—'}</td>
+                <td><span className={`seedling-badge st-${s.status}`}>{STATUS_LABEL[s.status] ?? s.status}</span></td>
+                <td className="op-text">{s.sow_date}</td>
+                <td>{s.total_sown.toLocaleString()}</td>
+                <td>{pct != null ? `${pct}%` : '—'}</td>
+                <td className="op-text">
+                  {s.status === 'transplanted'
+                    ? `${(s.transplanted_count ?? 0).toLocaleString()} on ${s.transplant_date}`
+                    : rd ? rd.text : s.predicted_transplant_date ? `by ${s.predicted_transplant_date}` : '—'}
+                </td>
+                <td className="row-actions">
+                  {s.status !== 'transplanted' && <button className="link-btn" onClick={() => setGerm(s)}>Germ.</button>}
+                  {s.status !== 'transplanted' && <button className="link-btn" onClick={() => setTransplant(s)}>Transplant</button>}
+                  <button className="link-btn" onClick={() => setSow({ seedling: s })}>Edit</button>
+                  <button className="link-btn danger" onClick={() => setConfirmDel(s)}>Delete</button>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+
   return (
     <div>
       <div className="feed-head">
         <h2 className="section-title" style={{ margin: 0 }}>Seedlings</h2>
-        <button className="btn feed-btn" onClick={() => setSow({})}>+ New sowing</button>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <ViewToggle />
+          <button className="btn feed-btn" onClick={() => setSow({})}>+ New sowing</button>
+        </div>
       </div>
       <p className="seedling-lead">Track nursery batches from sowing to transplant — germination %, days to germinate, and time to transplant.</p>
 
@@ -140,14 +192,14 @@ export function Seedlings() {
           {(filter === 'all' || filter === 'ready') && ready.length > 0 && (
             <section className="seedling-section">
               {filter === 'all' && <div className="seedling-section-head ready"><h3>Ready to transplant</h3><span className="seedling-section-count">{ready.length}</span></div>}
-              <div className="seedling-cards">{ready.map(card)}</div>
+              {view === 'list' ? listTable(ready) : <div className="seedling-cards">{ready.map(card)}</div>}
             </section>
           )}
 
           {(filter === 'all' || filter === 'nursery') && nursery.length > 0 && (
             <section className="seedling-section">
               {filter === 'all' && <div className="seedling-section-head"><h3>In nursery</h3><span className="seedling-section-count">{nursery.length}</span></div>}
-              <div className="seedling-cards">{nursery.map(card)}</div>
+              {view === 'list' ? listTable(nursery) : <div className="seedling-cards">{nursery.map(card)}</div>}
             </section>
           )}
 
@@ -159,7 +211,7 @@ export function Seedlings() {
                   Transplanted <span className="seedling-section-count">{transplanted.length}</span>
                 </button>
               ) : null}
-              {(filter === 'transplanted' || showDone) && <div className="seedling-done-list">{transplanted.map(doneRow)}</div>}
+              {(filter === 'transplanted' || showDone) && (view === 'list' ? listTable(transplanted) : <div className="seedling-done-list">{transplanted.map(doneRow)}</div>)}
             </section>
           )}
 

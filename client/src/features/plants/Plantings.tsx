@@ -6,8 +6,10 @@ import { prettyCrop } from './api'
 import { NewPlantingModal } from './NewPlantingModal'
 import { MoveBatchModal } from './MoveBatchModal'
 import { HarvestModal } from './HarvestModal'
+import { ViewToggle, useViewMode } from '../../components/ViewToggle'
 import '../dashboard/dashboard.css'
 import '../fish/fish.css'
+import '../water/water.css'
 import './plants.css'
 
 const STATUS: Record<BatchStatus, { label: string; cls: string }> = {
@@ -40,6 +42,7 @@ function maturity(b: Batch): number {
 
 export function Plantings() {
   const { activeId } = useSystems()
+  const [view] = useViewMode()
   const [showAll, setShowAll] = useState(false)
   const [showNew, setShowNew] = useState(false)
   const [moving, setMoving] = useState<Batch | null>(null)
@@ -61,17 +64,58 @@ export function Plantings() {
     <div>
       <div className="feed-head">
         <h2 className="section-title" style={{ margin: 0 }}>Plantings</h2>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <div className="seg">
             <button className={`seg-btn ${!showAll ? 'active' : ''}`} onClick={() => setShowAll(false)}>Active</button>
             <button className={`seg-btn ${showAll ? 'active' : ''}`} onClick={() => setShowAll(true)}>All</button>
           </div>
+          <ViewToggle />
           <button className="btn feed-btn" onClick={() => setShowNew(true)}>+ New planting</button>
         </div>
       </div>
 
       {groups.length === 0 ? (
         <div className="empty">{showAll ? 'No plantings recorded yet.' : 'No active plantings. Record a new planting to get started.'}</div>
+      ) : view === 'list' ? (
+        <div className="wq-table-wrap">
+          <table className="wq-table op-table">
+            <thead>
+              <tr>
+                <th>Bed</th>
+                <th>Crop</th>
+                <th>Variety</th>
+                <th>Status</th>
+                <th>Remaining</th>
+                <th>Planted</th>
+                <th>Age</th>
+                <th>Maturity</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {groups.flatMap((g) => g.items).map((b) => {
+                const s = STATUS[b.status] ?? STATUS.growing
+                const pct = maturity(b)
+                return (
+                  <tr key={b.batch_id}>
+                    <td className="op-text">{b.bed_name ?? `Bed ${b.bed_number ?? '—'}`}</td>
+                    <td className="op-text">{prettyCrop(b.crop_type)}</td>
+                    <td className="op-text">{b.seed_variety ?? '—'}</td>
+                    <td><span className={`batch-badge ${s.cls}`}>{s.label}</span></td>
+                    <td>{b.remaining.toLocaleString()}</td>
+                    <td>{b.planted.toLocaleString()}</td>
+                    <td>{b.age_days ?? '—'} d</td>
+                    <td>{pct.toFixed(0)}%</td>
+                    <td className="row-actions">
+                      <button className="link-btn" onClick={() => setHarvesting(b)} disabled={b.remaining <= 0}>Harvest</button>
+                      <button className="link-btn" onClick={() => setMoving(b)} disabled={b.remaining <= 0}>Move</button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       ) : (
         groups.map((g) => (
           <div key={g.crop} className="crop-section">

@@ -9,8 +9,11 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        // Defaults to the local Express API; set VITE_API_TARGET to point a
+        // local preview at another backend (e.g. prod) for verification.
+        target: process.env.VITE_API_TARGET || 'http://localhost:8000',
         changeOrigin: true,
+        secure: false,
       },
     },
   },
