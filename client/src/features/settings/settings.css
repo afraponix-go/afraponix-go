@@ -296,27 +296,96 @@
   font-weight: 400;
 }
 
-/* Grouped settings page: sticky sidebar nav + content, like a real settings UI. */
-.settings-h1 { margin: 0 0 18px; font-size: 22px; letter-spacing: -0.02em; }
-.settings-shell {
-  display: grid;
-  grid-template-columns: 224px minmax(0, 1fr);
-  gap: 30px;
-  align-items: start;
+/* Settings page: a Cloudflare-style hamburger + slide-in nav drawer, so the
+   content always gets the full width. */
+.settings-topline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
 }
-.settings-nav {
-  position: sticky;
-  top: 12px;
+.settings-h1 { margin: 0; font-size: 22px; letter-spacing: -0.02em; }
+.settings-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.settings-menu-btn:hover { border-color: var(--line-strong); background: var(--surface-2); }
+.settings-crumb {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 55vw;
+}
+
+.settings-content { min-width: 0; }
+
+/* The nav drawer — fixed, slides in from the left over a dimmed backdrop. */
+.settings-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+  z-index: 59;
+  animation: settings-fade 0.15s ease;
+}
+@keyframes settings-fade { from { opacity: 0; } to { opacity: 1; } }
+.settings-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(86vw, 300px);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
+  padding: 16px 14px 24px;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  box-shadow: var(--shadow-lg, 0 24px 60px rgba(0, 0, 0, 0.25));
+  z-index: 60;
+  overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform 0.22s ease;
 }
+.settings-drawer.open { transform: translateX(0); }
+.settings-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  padding: 2px 6px 6px;
+  border-bottom: 1px solid var(--line);
+}
+.settings-drawer-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.settings-drawer-close:hover { background: var(--surface-2); color: var(--ink); }
 .settings-group { display: flex; flex-direction: column; gap: 2px; }
 .settings-group-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -324,20 +393,8 @@
   color: var(--ink-faint);
   padding: 0 10px 5px;
 }
-.settings-group-hint {
-  text-transform: none;
-  letter-spacing: 0;
-  font-weight: 500;
-  font-size: 11.5px;
-  color: var(--ink-faint);
-  opacity: 0.75;
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .settings-navlink {
-  padding: 8px 11px;
+  padding: 9px 11px;
   border-radius: 9px;
   font-size: 14px;
   font-weight: 500;
@@ -347,12 +404,10 @@
 }
 .settings-navlink:hover { background: var(--surface-2); color: var(--ink); }
 .settings-navlink.active { background: var(--accent-wash); color: var(--accent); font-weight: 600; }
-.settings-content { min-width: 0; }
 
-@media (max-width: 767px) {
-  .settings-shell { grid-template-columns: 1fr; gap: 20px; }
-  .settings-nav { position: static; top: auto; }
-  .settings-group-hint { max-width: 45vw; }
+@media (prefers-reduced-motion: reduce) {
+  .settings-drawer { transition: none; }
+  .settings-drawer-backdrop { animation: none; }
 }
 
 /* System information summary (read-only make-up of the system). */
