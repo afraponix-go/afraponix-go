@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useSystems } from '../systems/SystemContext'
+import { useSettingsSystem } from './settingsSystem'
 import { deleteSystem, isOwnedSystem } from '../systems/api'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
@@ -9,7 +9,7 @@ import '../dashboard/dashboard.css'
 import './settings.css'
 
 export function DangerZone() {
-  const { activeId, activeSystem } = useSystems()
+  const { systemId: activeId, system: activeSystem } = useSettingsSystem()
   const qc = useQueryClient()
   const [confirming, setConfirming] = useState(false)
   const [typed, setTyped] = useState('')

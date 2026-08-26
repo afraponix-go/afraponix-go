@@ -354,3 +354,18 @@
   .settings-nav { position: static; top: auto; }
   .settings-group-hint { max-width: 45vw; }
 }
+
+/* System picker in the settings sidebar (choose which system to configure). */
+.settings-system-picker {
+  width: 100%;
+  margin: 0 0 4px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useSystems } from '../systems/SystemContext'
+import { useSettingsSystem } from './settingsSystem'
 import { updateTrackedMetrics, isOwnedSystem } from '../systems/api'
 import { WATER_FIELDS, parseTrackedMetrics } from '../water/api'
 import { ApiError } from '../../lib/apiClient'
@@ -9,7 +9,7 @@ import '../dashboard/dashboard.css'
 import './settings.css'
 
 export function MetricsSettings() {
-  const { activeId, activeSystem } = useSystems()
+  const { systemId: activeId, system: activeSystem } = useSettingsSystem()
   const qc = useQueryClient()
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [saved, setSaved] = useState(false)
@@ -41,7 +41,7 @@ export function MetricsSettings() {
     })
   }
 
-  if (!activeId) return <div className="empty">Select a system to choose its metrics.</div>
+  if (!activeId) return <div className="empty">No systems in this farm yet.</div>
 
   const allOn = selected.size === WATER_FIELDS.length
   const setAll = (on: boolean) => setSelected(on ? new Set(WATER_FIELDS.map((f) => f.key)) : new Set())

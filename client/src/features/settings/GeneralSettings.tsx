@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useSystems } from '../systems/SystemContext'
+import { useSettingsSystem } from './settingsSystem'
 import { updateSystem, isOwnedSystem } from '../systems/api'
 import { ApiError } from '../../lib/apiClient'
 import '../fish/fish.css'
@@ -16,7 +16,7 @@ const SYSTEM_TYPES = [
 ]
 
 export function GeneralSettings() {
-  const { activeId, activeSystem } = useSystems()
+  const { systemId: activeId, system: activeSystem } = useSettingsSystem()
   const qc = useQueryClient()
   const [name, setName] = useState('')
   const [type, setType] = useState('aquaponics')
@@ -47,7 +47,7 @@ export function GeneralSettings() {
     mutation.mutate()
   }
 
-  if (!activeId) return <div className="empty">Select a system to edit its settings.</div>
+  if (!activeId) return <div className="empty">No systems in this farm yet. Add one from the “+” in the header.</div>
 
   const owner = isOwnedSystem(activeSystem)
 
