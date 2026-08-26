@@ -25,6 +25,8 @@ export type Product = { name: string; ph_direction?: 'up' | 'down' | null; ph_st
 
 // Fertiliser products and their element composition (%). Users can edit/extend.
 export const DEFAULT_PRODUCTS: Product[] = [
+  // Shiman Hydroponic (K7952) — N 64, P 43, K 238, Mg 26, Fe 1.68 g/kg → %.
+  { name: 'Shiman Hydroponic', n: 6.4, p: 4.3, k: 23.8, ca: 0, mg: 2.6, fe: 0.168 },
   { name: 'General Hydroponics Shiman 2-1-2', n: 18.9, p: 8.4, k: 17.1, ca: 0, mg: 0, fe: 0 },
   { name: 'Calcium Nitrate', n: 15.5, p: 0, k: 0, ca: 19, mg: 0, fe: 0 },
   { name: 'Iron Micromix (7%)', n: 0, p: 0, k: 0, ca: 0, mg: 0, fe: 7 },

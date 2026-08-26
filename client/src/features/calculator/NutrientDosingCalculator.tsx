@@ -196,6 +196,13 @@ export function NutrientDosingCalculator() {
   const weeks = useMemo(() => weeksToReach(target, effectiveCurrent, caps), [target, effectiveCurrent, caps])
   const setCap = (k: NutrientKey, v: string) => setCaps((c) => ({ ...c, [k]: numOr0(v) }))
 
+  // Salinity impact: the dissolved fertiliser salts raise TDS. As a rule of
+  // thumb 1 g/L of dissolved salt ≈ 1 ppt, so the whole correction adds
+  // (total grams ÷ litres) ppt, building up as the doses go in.
+  const totalDoseG = useMemo(() => result.doses.reduce((s, d) => s + d.grams, 0), [result.doses])
+  const saltPpt = volumeL > 0 ? Math.round((totalDoseG / volumeL) * 100) / 100 : 0
+  const currentSalinity = latestQ.data?.salinity ?? null
+
   const cropName = selectedCrop ? `${selectedCrop.name}${isFruiting ? ` (${stage})` : ''}` : 'this crop'
   // Enough to produce a dose: a volume, targets, and at least one fertiliser.
   const canCalculate = volumeL > 0 && !targetsEmpty && products.length > 0
@@ -503,12 +510,14 @@ export function NutrientDosingCalculator() {
                 <p className="hint nd-step-sub">Add each mix on a <b>separate day</b>; never combine Mix A (calcium) with Mix B (phosphate/sulphate) — they precipitate. Dissolve each in its own water and re-test as you go.</p>
                 <div className="nd-mixes">
                   {([
-                    { key: 'A', title: 'Calcium', day: 'Day 1', rows: mixes.A },
-                    { key: 'B', title: 'Potassium / Phosphorus', day: 'Day 3', rows: mixes.B },
-                    { key: 'C', title: 'Micronutrients', day: 'Day 5', rows: mixes.C },
+                    { key: 'A', title: 'Calcium', dayNum: 1, rows: mixes.A },
+                    { key: 'B', title: 'Potassium / Phosphorus', dayNum: 3, rows: mixes.B },
+                    { key: 'C', title: 'Micronutrients', dayNum: 5, rows: mixes.C },
                   ] as const).filter((m) => m.rows.length > 0).map((m) => (
                     <div className="nd-mix" key={m.key}>
-                      <div className="nd-mix-title">Mix {m.key} · {m.title}<span className="nd-mix-day">{m.day}</span></div>
+                      <div className="nd-mix-title">Mix {m.key} · {m.title}
+                        <span className="nd-mix-day">{Array.from({ length: weeks }, (_, i) => `Day ${m.dayNum + i * 7}`).join(' · ')}</span>
+                      </div>
                       {m.rows.map((d) => (
                         <div className="nd-mix-row" key={d.name}>
                           <span className="nd-mix-name">{d.name}</span>
@@ -519,6 +528,18 @@ export function NutrientDosingCalculator() {
                   ))}
                 </div>
               </div>
+
+              {saltPpt > 0 && (
+                <div className={`nd-salinity ${currentSalinity != null && currentSalinity + saltPpt > 2 ? 'high' : ''}`}>
+                  <span className="nd-salinity-ic" aria-hidden>🧂</span>
+                  <span>
+                    These salts raise <b>salinity by about {saltPpt} ppt</b> once the full correction is in
+                    {weeks > 1 ? <> (~{(saltPpt / weeks).toFixed(2)} ppt per weekly dose)</> : null}
+                    {currentSalinity != null ? <> — from <b>{currentSalinity} ppt</b> now to roughly <b>{(currentSalinity + saltPpt).toFixed(2)} ppt</b></> : null}.
+                    {' '}Leafy greens do best under ~1–2 ppt, so re-test salinity as you dose and hold back if it climbs.
+                  </span>
+                </div>
+              )}
 
               {doseWarnings.length > 0 && (
                 <div className="nd-warn">

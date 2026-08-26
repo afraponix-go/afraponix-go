@@ -467,3 +467,16 @@
 }
 .nd-slow b { color: var(--ink); }
 .nd-slow-ic { font-size: 20px; line-height: 1.2; flex: none; }
+
+/* Salinity impact flag on the results step. */
+.nd-salinity {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: color-mix(in srgb, var(--warn, #c98a12) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--warn, #c98a12) 30%, var(--line));
+  border-radius: var(--radius-lg); padding: 12px 15px; margin: 14px 0 0;
+  font-size: 13.5px; line-height: 1.55; color: var(--ink-soft);
+}
+.nd-salinity.high { background: color-mix(in srgb, var(--danger, #ce3341) 8%, var(--surface)); border-color: color-mix(in srgb, var(--danger, #ce3341) 32%, var(--line)); }
+.nd-salinity b { color: var(--ink); }
+.nd-salinity-ic { font-size: 18px; flex: none; }
+.nd-mix-day { white-space: normal; }
