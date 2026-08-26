@@ -22,6 +22,7 @@ import {
 import { fetchDosingCrops } from './cropData'
 import { fetchCropTargets, type Stage } from '../plants/cropTargets'
 import { SaveAsDosingProgrammeModal } from '../dosing/SaveAsDosingProgrammeModal'
+import { MAX_PH_STEP } from '../dosing/api'
 import '../dashboard/dashboard.css'
 import './calculator.css'
 
@@ -199,6 +200,10 @@ export function NutrientDosingCalculator() {
   // Enough to produce a dose: a volume, targets, and at least one fertiliser.
   const canCalculate = volumeL > 0 && !targetsEmpty && products.length > 0
   const phStepShown = !!(bufferObj && bufAmt != null && bufAmt > 0 && phDir)
+  // pH is corrected slowly: never more than MAX_PH_STEP per dose, so a bigger
+  // gap is split into that many doses with the buffer amount divided across them.
+  const phSteps = phStepShown ? Math.max(1, Math.ceil(Math.abs(phGap) / MAX_PH_STEP)) : 1
+  const phPerStep = phStepShown && bufAmt ? Math.round((bufAmt / phSteps) * 10) / 10 : null
 
   // Flag nutrients the fitted dose can't hit cleanly: an overshoot (carried in by
   // a fertiliser added for another nutrient) or a shortfall (no ticked fertiliser
@@ -455,6 +460,12 @@ export function NutrientDosingCalculator() {
             <div className="empty">Nothing to add — current levels already meet the targets.</div>
           ) : (
             <>
+              <div className="nd-slow">
+                <span className="nd-slow-ic" aria-hidden>🐢</span>
+                <span>
+                  <b>Add slowly.</b> Big corrections are split into safe steps so nothing shocks your fish or plants — {phStepShown ? <>pH by no more than <b>{MAX_PH_STEP}</b> per dose{phSteps > 1 ? ` (about ${phSteps} doses)` : ''}, then </> : ''}nutrients spread over <b>{weeks} week{weeks === 1 ? '' : 's'}</b>. Re-test between every dose; never dump the full amount at once.
+                </span>
+              </div>
               <p className="calc-result-hint" style={{ marginTop: 0 }}>
                 Dose <b>weekly for {weeks} week{weeks === 1 ? '' : 's'}</b>, re-testing between doses so nothing rises faster than its safe limit. Amounts are <b>per weekly dose</b>{weeks > 1 ? ', with the full total alongside' : ''}.
                 {' '}
@@ -473,9 +484,16 @@ export function NutrientDosingCalculator() {
 
               {phStepShown && (
                 <div className="nd-step">
-                  <div className="nd-step-h"><span className="nd-step-n">1</span> Correct pH first</div>
+                  <div className="nd-step-h"><span className="nd-step-n">1</span> Correct pH first — slowly</div>
                   <div className="nd-ph-step">
-                    Add <b>{fmt(bufAmt as number)} {bufferUnit}</b> of {bufferObj!.name} to {phDir === 'down' ? 'lower' : 'raise'} pH from {currentPh} to {targetPh}, then re-test before dosing nutrients.
+                    {phSteps > 1 ? (
+                      <>
+                        {phDir === 'down' ? 'Lower' : 'Raise'} pH from {currentPh} to {targetPh} <b>gradually</b> — never move pH by more than <b>{MAX_PH_STEP}</b> at once (a sudden swing shocks fish and plants).
+                        Add about <b>{fmt(phPerStep as number)} {bufferUnit}</b> of {bufferObj!.name} per dose, <b>re-testing between each</b>, over roughly <b>{phSteps} doses</b> until you reach {targetPh}. Only then dose nutrients.
+                      </>
+                    ) : (
+                      <>Add <b>{fmt(bufAmt as number)} {bufferUnit}</b> of {bufferObj!.name} to {phDir === 'down' ? 'lower' : 'raise'} pH from {currentPh} to {targetPh} (within the safe {MAX_PH_STEP} step), then re-test before dosing nutrients.</>
+                    )}
                   </div>
                 </div>
               )}

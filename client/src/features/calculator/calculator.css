@@ -450,3 +450,20 @@
 .nd-ph-tgt { margin: 0; }
 .nd-ph-tgt input { max-width: 120px; }
 .nd-ph-step { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); font-size: 13px; color: var(--ink); }
+
+/* Slow-addition callout on the dosing results step. */
+.nd-slow {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--grad-soft, var(--surface-2));
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 13px 16px;
+  margin: 0 0 14px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.nd-slow b { color: var(--ink); }
+.nd-slow-ic { font-size: 20px; line-height: 1.2; flex: none; }
