@@ -21,10 +21,12 @@ const defaultDays = (cat?: string | null) => CAT_DEFAULTS[cat ?? ''] ?? { g: 4, 
 
 type Row = { trays: string; cells: string }
 
-export function SowModal({ systemId, seedling, onClose }: { systemId: string; seedling?: Seedling; onClose: () => void }) {
+// farmId: the nursery the batch is sown into. systemId: a representative system
+// in the farm, only used to load the (per-user) crop list.
+export function SowModal({ farmId, systemId, seedling, onClose }: { farmId: string; systemId?: string; seedling?: Seedling; onClose: () => void }) {
   const qc = useQueryClient()
   const editing = !!seedling
-  const { data: crops = [] } = useQuery({ queryKey: ['custom-crops', systemId], queryFn: () => fetchCustomCrops(systemId) })
+  const { data: crops = [] } = useQuery({ queryKey: ['custom-crops', systemId], queryFn: () => fetchCustomCrops(systemId as string), enabled: !!systemId })
   const { data: seeds = [] } = useQuery({ queryKey: ['seed-varieties'], queryFn: fetchSeedVarieties })
 
   const [cropCode, setCropCode] = useState(seedling?.crop_code ?? '')
@@ -75,7 +77,7 @@ export function SowModal({ systemId, seedling, onClose }: { systemId: string; se
         predicted_transplant_days: numOrU(transplantDays) ?? null,
         notes: notes.trim() || null,
       }
-      return editing ? updateSeedling(seedling!.id, input) : createSeedling(systemId, input)
+      return editing ? updateSeedling(seedling!.id, input) : createSeedling(farmId, input)
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['seedlings'] }); onClose() },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Something went wrong.'),

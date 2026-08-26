@@ -29,8 +29,9 @@ export type Seedling = {
   actual_transplant_days: number | null
 }
 
-export async function fetchSeedlings(systemId: string): Promise<Seedling[]> {
-  const d = await api<{ seedlings: Seedling[] }>(`/seedlings/${systemId}`)
+// Seedlings live in the farm's nursery (one bay per farm), keyed by farm id.
+export async function fetchSeedlings(farmId: string): Promise<Seedling[]> {
+  const d = await api<{ seedlings: Seedling[] }>(`/seedlings/${farmId}`)
   return d.seedlings
 }
 
@@ -44,12 +45,12 @@ export type SowInput = {
   predicted_transplant_days?: number | null
   notes?: string | null
 }
-export const createSeedling = (systemId: string, input: SowInput) => api(`/seedlings/${systemId}`, { method: 'POST', body: input })
+export const createSeedling = (farmId: string, input: SowInput) => api(`/seedlings/${farmId}`, { method: 'POST', body: input })
 export const updateSeedling = (id: number, input: Partial<SowInput> & { germination_date?: string | null; germinated_count?: number | null }) =>
   api(`/seedlings/${id}`, { method: 'PUT', body: input })
 export const deleteSeedling = (id: number) => api(`/seedlings/${id}`, { method: 'DELETE' })
 
-export type TransplantInput = { grow_bed_id: number; transplant_date: string; transplanted_count: number; plants_per_m2?: number | null; days_to_harvest?: number | null }
+export type TransplantInput = { system_id: string; grow_bed_id: number; transplant_date: string; transplanted_count: number; plants_per_m2?: number | null; days_to_harvest?: number | null }
 export const transplantSeedling = (id: number, input: TransplantInput) => api(`/seedlings/${id}/transplant`, { method: 'POST', body: input })
 
 // % germination from the counts.

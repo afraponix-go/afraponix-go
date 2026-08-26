@@ -143,7 +143,7 @@ export const router = createBrowserRouter([
             element: <SubTabLayout items={PLANTS_TABS} farmAware />,
             children: [
               { index: true, element: <FarmScoped kind="plants"><PlantsOverview /></FarmScoped> },
-              { path: 'seedlings', element: <FarmScoped kind="plants"><Seedlings /></FarmScoped> },
+              { path: 'seedlings', element: <Seedlings /> },
               { path: 'plantings', element: <FarmScoped kind="plants"><Plantings /></FarmScoped> },
               { path: 'harvest', element: <FarmScoped kind="plants"><Harvest /></FarmScoped> },
               { path: 'beds', element: <SystemOnly><BedsAllocation /></SystemOnly> },

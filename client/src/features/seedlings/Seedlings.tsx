@@ -20,7 +20,7 @@ function readiness(s: Seedling): { text: string; cls: string } | null {
 }
 
 export function Seedlings() {
-  const { activeId } = useSystems()
+  const { activeFarmId, systems } = useSystems()
   const [view] = useViewMode()
   const qc = useQueryClient()
   const [sow, setSow] = useState<{ seedling?: Seedling } | null>(null)
@@ -30,13 +30,13 @@ export function Seedlings() {
   const [showDone, setShowDone] = useState(false)
   const [filter, setFilter] = useState<'all' | 'ready' | 'nursery' | 'transplanted'>('all')
 
-  const { data: seedlings = [], isLoading } = useQuery({ queryKey: ['seedlings', activeId], queryFn: () => fetchSeedlings(activeId as string), enabled: !!activeId })
+  const { data: seedlings = [], isLoading } = useQuery({ queryKey: ['seedlings', activeFarmId], queryFn: () => fetchSeedlings(activeFarmId as string), enabled: !!activeFarmId })
   const del = useMutation({
     mutationFn: (s: Seedling) => deleteSeedling(s.id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['seedlings'] }); setConfirmDel(null) },
   })
 
-  if (!activeId) return <div className="empty">Select a system to track seedlings.</div>
+  if (!activeFarmId) return <div className="empty">Pick a farm to see its seedling bay.</div>
 
   const active = seedlings.filter((s) => s.status !== 'transplanted')
   const germRates = seedlings.map(germPct).filter((p): p is number => p != null)
@@ -220,9 +220,9 @@ export function Seedlings() {
         </>
       )}
 
-      {sow && activeId && <SowModal systemId={activeId} seedling={sow.seedling} onClose={() => setSow(null)} />}
+      {sow && activeFarmId && <SowModal farmId={activeFarmId} systemId={systems[0]?.id} seedling={sow.seedling} onClose={() => setSow(null)} />}
       {germ && <GerminationModal seedling={germ} onClose={() => setGerm(null)} />}
-      {transplant && activeId && <TransplantModal systemId={activeId} seedling={transplant} onClose={() => setTransplant(null)} />}
+      {transplant && <TransplantModal systems={systems} seedling={transplant} onClose={() => setTransplant(null)} />}
       {confirmDel && (
         <Modal title="Delete sowing" onClose={() => setConfirmDel(null)}>
           <p style={{ marginTop: 0, color: 'var(--ink-soft)' }}>Delete this {confirmDel.crop_name ?? 'seedling'} sowing? Any bed planting already created from it is kept.</p>

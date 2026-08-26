@@ -1,9 +1,10 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
 import { fetchGrowBeds } from '../growbeds/api'
 import { fetchCropOptions, plantsPerM2FromSpacing, spacingFromPlantsPerM2, DEFAULT_PLANTS_PER_M2 } from '../plants/crops'
+import { isOwnedSystem, type System } from '../systems/api'
 import { transplantSeedling, type Seedling } from './api'
 import './seedlings.css'
 
@@ -13,14 +14,18 @@ const areaText = (m2?: number | null) => (m2 != null && m2 > 0 ? `${m2} m²` : n
 
 // A transplant creates a bed planting, so it captures the same key detail a
 // planting does — the spacing (plants/m²). Crop + variety come from the sowing.
-export function TransplantModal({ systemId, seedling, onClose }: { systemId: string; seedling: Seedling; onClose: () => void }) {
+export function TransplantModal({ systems, seedling, onClose }: { systems: System[]; seedling: Seedling; onClose: () => void }) {
   const qc = useQueryClient()
-  const { data: beds = [] } = useQuery({ queryKey: ['grow-beds', systemId], queryFn: () => fetchGrowBeds(systemId) })
-  const { data: crops = [] } = useQuery({ queryKey: ['crop-options', systemId], queryFn: () => fetchCropOptions(systemId) })
+  // Transplant into any system in the farm — pick it, then a bed within it.
+  const [systemId, setSystemId] = useState(systems[0]?.id ?? '')
+  const { data: beds = [] } = useQuery({ queryKey: ['grow-beds', systemId], queryFn: () => fetchGrowBeds(systemId), enabled: !!systemId })
+  const { data: crops = [] } = useQuery({ queryKey: ['crop-options', systemId], queryFn: () => fetchCropOptions(systemId), enabled: !!systemId })
 
   const cropDef = useMemo(() => crops.find((c) => c.value === seedling.crop_code), [crops, seedling.crop_code])
 
   const [bedId, setBedId] = useState('')
+  // A bed belongs to a system, so clear the choice when the system changes.
+  useEffect(() => { setBedId('') }, [systemId])
   const [date, setDate] = useState(todayISO())
   const [count, setCount] = useState(String(seedling.germinated_count ?? seedling.total_sown))
   const [density, setDensity] = useState('')
@@ -35,6 +40,7 @@ export function TransplantModal({ systemId, seedling, onClose }: { systemId: str
 
   const mut = useMutation({
     mutationFn: () => transplantSeedling(seedling.id, {
+      system_id: systemId,
       grow_bed_id: Number(bedId),
       transplant_date: date,
       transplanted_count: Number(count),
@@ -53,6 +59,7 @@ export function TransplantModal({ systemId, seedling, onClose }: { systemId: str
   function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    if (!systemId) return setError('Choose a system.')
     if (!bedId) return setError('Choose a grow bed.')
     if (!date) return setError('Enter the transplant date.')
     if (!count || Number(count) <= 0) return setError('Enter how many were transplanted.')
@@ -63,7 +70,17 @@ export function TransplantModal({ systemId, seedling, onClose }: { systemId: str
     <Modal title={`Transplant · ${seedling.crop_name ?? 'seedlings'}${seedling.seed_variety ? ` (${seedling.seed_variety})` : ''}`} onClose={onClose}>
       <form className="mform" onSubmit={onSubmit}>
         {error && <div className="wq-error">{error}</div>}
-        <p className="seedling-hint">Creates a planting batch in the chosen bed and marks this sowing transplanted.</p>
+        <p className="seedling-hint">Creates a planting batch in the chosen system’s bed and marks this sowing transplanted.</p>
+
+        <div className="field">
+          <label htmlFor="t-system">System</label>
+          <select id="t-system" value={systemId} onChange={(e) => setSystemId(e.target.value)}>
+            {systems.length === 0 && <option value="">No systems in this farm</option>}
+            {systems.map((s) => (
+              <option key={s.id} value={s.id}>{s.system_name}{isOwnedSystem(s) ? '' : ' (shared)'}</option>
+            ))}
+          </select>
+        </div>
 
         <div className="field">
           <label htmlFor="t-bed">Grow bed</label>

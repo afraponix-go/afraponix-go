@@ -113,6 +113,7 @@ const STEPS = [
   { type: 'sql', file: 'database/migrations/2026-08-stock-transfers.sql', label: 'Stock transfers audit (move fish/plants between systems)' },
   { type: 'sql', file: 'database/migrations/2026-08-farm-display-metrics.sql', label: 'Farm overview: selectable display metrics' },
   { type: 'sql', file: 'database/migrations/2026-08-farm-shares.sql', label: 'Farm sharing (share a whole farm with a user)' },
+  { type: 'sql', file: 'database/migrations/2026-08-seedlings-farm.sql', label: 'Seedlings become farm-level (one nursery per farm)' },
 ];
 
 function dbConfig() {
