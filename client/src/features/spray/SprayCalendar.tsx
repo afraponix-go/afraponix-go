@@ -18,6 +18,14 @@ const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.get
 const mondayOf = (d: Date) => addDays(d, -((d.getDay() + 6) % 7))
 const parse = (s: string) => new Date(s + 'T00:00:00')
 
+// The recommended dose, compactly (g→kg / ml→L above 1000).
+const fmtDose = (amt: number | null | undefined, unit: string | null | undefined): string | null => {
+  if (amt == null) return null
+  const u = unit || 'g'
+  if ((u === 'g' || u === 'ml') && amt >= 1000) return `${(amt / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })} ${u === 'g' ? 'kg' : 'L'}`
+  return `${amt.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${u}`
+}
+
 type SprayItem = { plan_id: number; plan_name: string; product_id: number; product_name: string; category: string; fish_safety: string; rate: string | null; applied: boolean }
 
 export function SprayCalendar() {
@@ -86,13 +94,16 @@ export function SprayCalendar() {
           <span className="cal-dot" />{it.product_name}
         </button>
       ))}
-      {dosingFor(date).map((d, i) => (
-        <button key={`d${i}`} type="button" className={`cal-item dosing ${d.applied ? 'applied' : ''}`}
-          title={`${nutrientShort(d.target.nutrient)} → ${d.target.target_value ?? '—'} ppm · ${d.programme.name}${d.applied ? ' · dosed' : ' · click to record'}`}
-          onClick={() => setDose({ programme: d.programme, itemId: d.target.id, date })}>
-          <span className="cal-dot" />{nutrientShort(d.target.nutrient)} · {d.target.product ?? d.programme.name}
-        </button>
-      ))}
+      {dosingFor(date).map((d, i) => {
+        const dose = fmtDose(d.target.dose_amount, d.target.dose_unit)
+        return (
+          <button key={`d${i}`} type="button" className={`cal-item dosing ${d.applied ? 'applied' : ''}`}
+            title={`${nutrientShort(d.target.nutrient)} → ${d.target.target_value ?? '—'} ppm${dose ? ` · dose ${dose}` : ''}${d.target.product ? ` · ${d.target.product}` : ''} · ${d.programme.name}${d.applied ? ' · dosed' : ' · click to record'}`}
+            onClick={() => setDose({ programme: d.programme, itemId: d.target.id, date })}>
+            <span className="cal-dot" />{nutrientShort(d.target.nutrient)} · {dose ?? d.target.product ?? d.programme.name}
+          </button>
+        )
+      })}
     </>
   )
 
