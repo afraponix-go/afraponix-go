@@ -1,0 +1,52 @@
+/* App-wide system selector pills (shown above each section's sub-tabs). */
+.syspills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.syspill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 15px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+.syspill:hover {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+.syspill.active {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+/* The whole-farm pill reads as the "all" scope — a touch more prominent. */
+.syspill.all {
+  font-weight: 700;
+}
+.syspill.all.active {
+  border-color: var(--accent);
+}
+.syspill-ico {
+  font-size: 12px;
+  line-height: 1;
+}
+.syspill-shared {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--warn);
+  background: var(--warn-wash);
+  padding: 2px 6px;
+  border-radius: 999px;
+}

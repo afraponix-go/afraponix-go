@@ -22,7 +22,7 @@ export function FarmModeNotice() {
   const first = [...systems].sort((a, b) => a.system_name.localeCompare(b.system_name, undefined, { numeric: true }))[0]
   return (
     <div className="empty fm-notice">
-      This view works on one system at a time. Pick a system from the switcher
+      This view works on one system at a time. Pick a system from the pills above
       {first ? <> — or <button className="link-btn" onClick={() => setActiveId(first.id)}>open {first.system_name}</button></> : ''}.
     </div>
   )

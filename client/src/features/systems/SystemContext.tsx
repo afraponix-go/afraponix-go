@@ -69,6 +69,11 @@ export function SystemProvider({ children }: { children: ReactNode }) {
     farmId === SHARED_FARM_ID ? looseShared : allSystems.filter((s) => s.farm_id === farmId)
   const systems = useMemo(() => systemsInFarm(activeFarmId), [allSystems, looseShared, activeFarmId])
 
+  // The default active "system" for a farm: whole-farm mode when it has more
+  // than one system (the app opens on the farm overview, then you pick a system
+  // from the pills), otherwise the single system.
+  const defaultActive = (sys: System[]) => (sys.length > 1 ? ALL_SYSTEMS_ID : sys[0]?.id ?? null)
+
   // Keep the active farm valid (persisted one, else the first option). Wait for
   // real data: before auth resolves the queries are disabled and report empty
   // (not "loading"), which would otherwise reset a valid persisted selection.
@@ -108,7 +113,7 @@ export function SystemProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-    const next = systems[0]?.id ?? null
+    const next = defaultActive(systems)
     setActiveIdState(next)
     if (next) localStorage.setItem(ACTIVE_KEY, next)
     else localStorage.removeItem(ACTIVE_KEY)
@@ -121,11 +126,9 @@ export function SystemProvider({ children }: { children: ReactNode }) {
   function setActiveFarmId(id: string) {
     setActiveFarmIdState(id)
     localStorage.setItem(ACTIVE_FARM_KEY, id)
-    // Stay in farm mode across a farm switch if that's where the user was.
-    if (activeId === ALL_SYSTEMS_ID) return
-    // Otherwise jump to the first system of the newly selected farm so the app
-    // never shows a system from a different farm.
-    const next = systemsInFarm(id)[0]?.id ?? null
+    // Land on the new farm's default view (whole-farm when it has several
+    // systems), so the app never shows a system from a different farm.
+    const next = defaultActive(systemsInFarm(id))
     setActiveIdState(next)
     if (next) localStorage.setItem(ACTIVE_KEY, next)
     else localStorage.removeItem(ACTIVE_KEY)

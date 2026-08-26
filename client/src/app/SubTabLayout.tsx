@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useSystems } from '../features/systems/SystemContext'
 import { FarmModeNotice } from '../features/systems/FarmScoped'
+import { SystemPills } from '../features/systems/SystemPills'
 
 export type SubTab = { to: string; label: string; end?: boolean }
 
@@ -34,6 +35,7 @@ export function SubTabLayout({ items, farmAware = false }: { items: SubTab[]; fa
 
   return (
     <div>
+      <SystemPills />
       <nav ref={navRef} className="subtabs" aria-label="Section" onScroll={updateFade}>
         {items.map((t) => (
           <NavLink key={t.to} to={t.to} end={t.end} className={({ isActive }) => (isActive ? 'active' : '')}>

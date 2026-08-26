@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthContext'
-import { useSystems, ALL_SYSTEMS_ID } from '../features/systems/SystemContext'
-import { isOwnedSystem } from '../features/systems/api'
+import { useSystems } from '../features/systems/SystemContext'
 import { AddSystemModal } from '../features/systems/AddSystemModal'
 import { DashboardIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SprayIcon, SettingsIcon } from './icons'
 import { Brand } from '../components/Brand'
@@ -24,8 +23,7 @@ const OVERFLOW = TABS.slice(PRIMARY_COUNT)
 
 export function AppShell() {
   const { user, signOut } = useAuth()
-  const { systems, activeId, activeSystem, setActiveId, farms, activeFarmId, setActiveFarmId } = useSystems()
-  const activeShared = activeSystem != null && !isOwnedSystem(activeSystem)
+  const { systems, farms, activeFarmId, setActiveFarmId } = useSystems()
   const [showAdd, setShowAdd] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -53,27 +51,7 @@ export function AppShell() {
               </select>
             </label>
           )}
-          {systems.length > 0 && (
-            <label className="sys-switch">
-              <span className="sys-dot" aria-hidden />
-              <select className="sys-select" value={activeId ?? ''} onChange={(e) => setActiveId(e.target.value)} aria-label="Active system">
-                {systems.length > 1 && <option value={ALL_SYSTEMS_ID}>◇ All systems</option>}
-                {systems.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.system_name}
-                    {isOwnedSystem(s) ? '' : ' (shared)'}
-                  </option>
-                ))}
-              </select>
-              {activeShared && (
-                <span className="shared-badge" title={`Shared with you — ${activeSystem?.shared_permission} access`}>
-                  Shared
-                </span>
-              )}
-            </label>
-          )}
-
-          {/* Quick add-system (contextual to the system switcher) */}
+          {/* Quick add-system (contextual to the farm switcher) */}
           <button className="sys-add" onClick={() => setShowAdd(true)} title="Add system" aria-label="Add system">
             {systems.length > 0 ? '+' : '+ Add system'}
           </button>

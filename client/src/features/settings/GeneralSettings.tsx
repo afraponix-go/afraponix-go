@@ -98,7 +98,6 @@ function SystemInformation({ systemId }: { systemId: string }) {
 
   // Bed aggregates.
   const bedAreaM2 = beds.reduce((a, b) => a + (b.equivalent_m2 ?? b.area_m2 ?? 0), 0)
-  const bedCapacity = beds.reduce((a, b) => a + (b.plant_capacity ?? 0), 0)
   const bedTypes = uniqueLabels(beds.map((b) => b.bed_type))
 
   return (
@@ -118,7 +117,6 @@ function SystemInformation({ systemId }: { systemId: string }) {
             <Stat label="Stocking density" value={fmt(avgDensity, 1)} unit="kg/m³" />
             <Stat label="Grow beds" value={fmt(beds.length)} />
             <Stat label="Grow area" value={fmt(bedAreaM2, 1)} unit="m²" />
-            <Stat label="Plant capacity" value={fmt(bedCapacity)} unit="plants" />
           </div>
 
           <div className="sysinfo-meta">
@@ -174,7 +172,7 @@ function SystemInformation({ systemId }: { systemId: string }) {
                   <thead>
                     <tr>
                       <th>Bed</th><th>Type</th>
-                      <th className="num">Area</th><th className="num">Capacity</th>
+                      <th className="num">Area</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -183,7 +181,6 @@ function SystemInformation({ systemId }: { systemId: string }) {
                         <td>{b.bed_name || `Bed ${b.bed_number ?? ''}`.trim()}</td>
                         <td>{label(b.bed_type)}</td>
                         <td className="num">{fmt(b.equivalent_m2 ?? b.area_m2, 1)} m²</td>
-                        <td className="num">{b.plant_capacity != null ? `${fmt(b.plant_capacity)} plants` : '—'}</td>
                       </tr>
                     ))}
                   </tbody>

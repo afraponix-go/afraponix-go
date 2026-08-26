@@ -29,57 +29,7 @@
   gap: 10px;
 }
 
-/* System switcher — a pill with a live-status dot */
-.sys-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 10px 0 12px;
-  height: 36px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface);
-  transition: border-color 0.15s;
-}
-.sys-switch:hover {
-  border-color: var(--line-strong);
-}
-.sys-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--ok);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 20%, transparent);
-  flex: none;
-}
-.sys-select {
-  font: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  border: none;
-  background: transparent;
-  color: var(--ink);
-  max-width: 220px;
-  cursor: pointer;
-  padding-right: 2px;
-}
-.shared-badge {
-  flex: none;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--accent);
-  background: var(--accent-wash);
-  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
-  padding: 2px 8px;
-  border-radius: 999px;
-}
-.sys-select:focus-visible {
-  box-shadow: none;
-}
-
-/* Farm switcher — mirrors the system switcher, shown only with >1 farm */
+/* Farm switcher — a pill, shown only with >1 farm */
 .farm-switch {
   display: inline-flex;
   align-items: center;
@@ -246,9 +196,6 @@
 @media (max-width: 620px) {
   .who {
     display: none;
-  }
-  .sys-select {
-    max-width: 130px;
   }
   .saver-label {
     display: none;
@@ -421,8 +368,6 @@
   .topbar { gap: 10px; padding: 0 14px; }
   .topbar > .brand { flex: 0 0 auto; }
   .account { flex: 1; min-width: 0; justify-content: flex-end; }
-  .sys-switch { flex: 1; min-width: 0; }
-  .sys-select { max-width: none; width: 100%; min-width: 0; }
   /* Collapse the chip to just the avatar; keep the caret. */
   .user-chip { padding: 3px; }
   .user-chip .who { display: none; }
