@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
 import { KEYS, mixGroupOf, MIX_LABEL, groupsClash, recommendWeekly, MAX_WEEKLY_PPM, type Levels, type Product, type MixGroup } from '../calculator/nutrientDosing'
-import { createDosingProgramme, nutrientShort, WEEKDAYS, WEEKDAY_LABEL } from './api'
+import { createDosingProgramme, nutrientShort, WEEKDAYS, WEEKDAY_LABEL, MAX_PH_STEP } from './api'
 import '../spray/spray.css'
 import './dosing.css'
 
@@ -13,7 +13,9 @@ const DEFAULT_GROUP_DAYS: Record<MixGroup, string[]> = { A: ['mon'], B: ['thu'],
 // target per nutrient (target>0), each auto-assigned the fertiliser richest in
 // that nutrient, with the recommended dose amount and clash-aware days (calcium
 // and phosphate mixes on different days). The user reviews and confirms.
-export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current, volumeL, caps, products, onClose }: {
+export type PhBuffer = { product: string; unit: string; total_amount: number; current_ph: number; target_ph: number; direction: 'up' | 'down' }
+
+export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current, volumeL, caps, products, phBuffer, onClose }: {
   systemId: string
   cropName: string
   target: Levels
@@ -21,6 +23,7 @@ export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current
   volumeL: number
   caps?: Levels
   products: Product[]
+  phBuffer?: PhBuffer | null
   onClose: () => void
 }) {
   const qc = useQueryClient()
@@ -51,11 +54,27 @@ export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current
     return false
   }, [usedGroups, groupDays])
 
+  // pH is adjusted first and never by more than MAX_PH_STEP per dose — a bigger
+  // gap spreads over that many doses. It leads on the earliest day anything is dosed.
+  const phPlan = useMemo(() => {
+    if (!phBuffer) return null
+    const gap = Math.abs(phBuffer.current_ph - phBuffer.target_ph)
+    const doses = Math.max(1, Math.ceil(gap / MAX_PH_STEP))
+    return { doses, perDose: Math.round((phBuffer.total_amount / doses) * 10) / 10, gap: Math.round(gap * 100) / 100 }
+  }, [phBuffer])
+  const phDay = useMemo(() => { const used = new Set(usedGroups.flatMap((g) => groupDays[g])); return WEEKDAYS.find((d) => used.has(d)) ?? 'mon' }, [usedGroups, groupDays])
+
   const mut = useMutation({
     mutationFn: () => createDosingProgramme(systemId, {
       name: name.trim(),
       start_date: startDate || null,
-      targets: rows.filter((r) => r.product).map((r) => ({ nutrient: r.nutrient, target_value: r.target_value, product: r.product, dose_amount: r.amount, dose_unit: 'g', doses: finite ? Math.max(1, r.weeks || 1) : null, days: groupDays[r.group] })),
+      targets: [
+        // pH first, so the schedule leads with the pH adjustment.
+        ...(phBuffer && phPlan
+          ? [{ nutrient: 'ph', target_value: phBuffer.target_ph, product: phBuffer.product, dose_amount: phPlan.perDose, dose_unit: phBuffer.unit, doses: finite ? phPlan.doses : null, days: [phDay] }]
+          : []),
+        ...rows.filter((r) => r.product).map((r) => ({ nutrient: r.nutrient, target_value: r.target_value, product: r.product, dose_amount: r.amount, dose_unit: 'g', doses: finite ? Math.max(1, r.weeks || 1) : null, days: groupDays[r.group] })),
+      ],
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['dosing-programmes'] }); onClose() },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Could not create the programme.'),
@@ -65,7 +84,7 @@ export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current
     e.preventDefault()
     setError(null)
     if (!name.trim()) return setError('Give the programme a name.')
-    if (rows.filter((r) => r.product).length === 0) return setError('No positive targets to save.')
+    if (rows.filter((r) => r.product).length === 0 && !(phBuffer && phPlan)) return setError('No positive targets to save.')
     if (usedGroups.some((g) => groupDays[g].length === 0)) return setError('Give each mix its test/dose days.')
     if (clashDay) return setError('Calcium and phosphate mixes clash — give them different days.')
     mut.mutate()
@@ -88,6 +107,16 @@ export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current
 
         <div className="dz-label">Targets <span className="unit-hint">· recommended doses{volumeL > 0 ? ` for ${volumeL.toLocaleString()} L` : ''} — confirm below</span></div>
         <div className="dp-tcards">
+          {phBuffer && phPlan && (
+            <div className="dp-tcard dp-ph-first">
+              <div className="dp-tdose" style={{ paddingLeft: 0 }}>
+                <span className="dp-cp-target">pH → {phBuffer.target_ph} <span className="dp-ph-badge">do first</span></span>
+                <span className="dp-cp-fert">{phBuffer.product}</span>
+                <span className="dp-dose-lbl">dose <b style={{ color: 'var(--ink)' }}>{phPlan.perDose} {phBuffer.unit}</b>
+                  {phPlan.doses > 1 ? ` · over ${phPlan.doses} doses (≤${MAX_PH_STEP} pH each)` : ` · ${phBuffer.direction === 'up' ? 'raise' : 'lower'} pH`}</span>
+              </div>
+            </div>
+          )}
           {rows.map((r) => (
             <div key={r.nutrient} className="dp-tcard">
               <div className="dp-tdose" style={{ paddingLeft: 0 }}>
@@ -128,7 +157,7 @@ export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current
 
         <div className="mform-actions">
           <button type="button" className="ghost" onClick={onClose}>Cancel</button>
-          <button type="submit" className="btn" disabled={mut.isPending || rows.filter((r) => r.product).length === 0}>{mut.isPending ? 'Saving…' : 'Create programme'}</button>
+          <button type="submit" className="btn" disabled={mut.isPending || (rows.filter((r) => r.product).length === 0 && !(phBuffer && phPlan))}>{mut.isPending ? 'Saving…' : 'Create programme'}</button>
         </div>
       </form>
     </Modal>

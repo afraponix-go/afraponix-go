@@ -7,8 +7,8 @@ import {
   recordDose,
   fetchLatestReadings,
   NUTRIENT_READKEY,
-  NUTRIENT_OPTS,
   nutrientShort,
+  nutrientLabel,
   type DosingProgramme,
 } from './api'
 import './dosing.css'
@@ -79,7 +79,7 @@ export function DosingRecordModal({ systemId, programme, initialItemId, initialD
   }
 
   const targetLabel = (t: DosingProgramme['targets'][number]) =>
-    `${NUTRIENT_OPTS.find((o) => o.key === t.nutrient)?.label ?? t.nutrient} → ${t.target_value != null ? Number(t.target_value) : '—'} ppm${t.product ? ` · ${t.product}` : ''}`
+    `${nutrientLabel(t.nutrient)} → ${t.target_value != null ? Number(t.target_value) : '—'}${t.nutrient === 'ph' ? '' : ' ppm'}${t.product ? ` · ${t.product}` : ''}`
 
   return (
     <Modal title={`Record dose · ${programme.name}`} onClose={onClose}>
@@ -99,7 +99,7 @@ export function DosingRecordModal({ systemId, programme, initialItemId, initialD
             <input id="dr-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="dr-before">{target ? nutrientShort(target.nutrient) : 'N'} before <span className="unit-hint">(ppm)</span></label>
+            <label htmlFor="dr-before">{target ? nutrientShort(target.nutrient) : 'N'} before {target?.nutrient !== 'ph' && <span className="unit-hint">(ppm)</span>}</label>
             <input id="dr-before" type="number" step="any" inputMode="decimal" value={before} onChange={(e) => setBefore(e.target.value)} placeholder="latest reading" />
           </div>
         </div>

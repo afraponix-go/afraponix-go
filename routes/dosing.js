@@ -523,7 +523,7 @@ async function replaceDosingTargets(pool, programmeId, targets) {
     await pool.execute('DELETE FROM programme_items WHERE programme_id = ? AND target_nutrient IS NOT NULL', [programmeId]);
     let order = 0;
     for (const t of targets || []) {
-        if (!t || !KEYS.includes(t.nutrient)) continue;
+        if (!t || !(KEYS.includes(t.nutrient) || t.nutrient === 'ph')) continue;
         const days = Array.isArray(t.days) ? t.days.filter((d) => WEEKDAYS_LIST.includes(d)).join(',') : '';
         await pool.execute(
             "INSERT INTO programme_items (programme_id, target_nutrient, target_value, label, dose_amount, dose_unit, doses, schedule_kind, weekdays, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, 'weekdays', ?, ?)",
@@ -650,7 +650,7 @@ router.post('/log', authenticateToken, async (req, res) => {
         const pool = getDatabase();
         if (!b.system_id || !b.event_date) return res.status(400).json({ error: 'system_id and event_date are required' });
         if (!(await canWriteSystem(b.system_id, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
-        const nutrient = KEYS.includes(b.target_nutrient) ? b.target_nutrient : null;
+        const nutrient = (KEYS.includes(b.target_nutrient) || b.target_nutrient === 'ph') ? b.target_nutrient : null;
         const [result] = await pool.execute(
             `INSERT INTO programme_log
                (system_id, programme_id, item_id, type, event_date, target_nutrient, product_name,

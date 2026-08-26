@@ -47,7 +47,7 @@ export const deleteFertiliser = (id: number) =>
 
 // --- Dosing programmes (target-band maintenance) ---
 // doses = number of weekly doses to safely reach target (finite); null = repeats weekly forever.
-export type DosingTarget = { id?: number; nutrient: NutrientKey; target_value: number | null; product: string | null; dose_amount: number | null; dose_unit: string | null; doses?: number | null; days: string[] }
+export type DosingTarget = { id?: number; nutrient: NutrientKey | 'ph'; target_value: number | null; product: string | null; dose_amount: number | null; dose_unit: string | null; doses?: number | null; days: string[] }
 export type DosingProgramme = { id: number; name: string; notes: string | null; status: 'active' | 'paused'; start_date?: string | null; created_at?: string | null; targets: DosingTarget[] }
 
 export async function fetchDosingProgrammes(systemId: string): Promise<DosingProgramme[]> {
@@ -78,7 +78,8 @@ export const NUTRIENT_OPTS: { key: NutrientKey; label: string; short: string }[]
   { key: 'mg', label: 'Magnesium (Mg)', short: 'Mg' },
   { key: 'fe', label: 'Iron (Fe)', short: 'Fe' },
 ]
-export const nutrientShort = (k: string) => NUTRIENT_OPTS.find((o) => o.key === k)?.short ?? k.toUpperCase()
+export const nutrientShort = (k: string) => (k === 'ph' ? 'pH' : NUTRIENT_OPTS.find((o) => o.key === k)?.short ?? k.toUpperCase())
+export const nutrientLabel = (k: string) => (k === 'ph' ? 'pH' : NUTRIENT_OPTS.find((o) => o.key === k)?.label ?? k.toUpperCase())
 
 // --- Dosing log (efficacy: before → after → recovery %) ---
 export type DosingLogEntry = {
@@ -126,7 +127,10 @@ export const recordRetest = (id: number, reading_after: number | null, retest_da
 export const deleteDoseLog = (id: number) => api(`/dosing/log/${id}`, { method: 'DELETE' })
 
 // The nutrient's key in the latest-readings map (elemental N reads from nitrate).
-export const NUTRIENT_READKEY: Record<string, string> = { n: 'nitrate', p: 'phosphorus', k: 'potassium', ca: 'calcium', mg: 'magnesium', fe: 'iron' }
+export const NUTRIENT_READKEY: Record<string, string> = { n: 'nitrate', p: 'phosphorus', k: 'potassium', ca: 'calcium', mg: 'magnesium', fe: 'iron', ph: 'ph' }
+// pH is never adjusted by more than this per dose (safety); larger gaps spread
+// over multiple doses.
+export const MAX_PH_STEP = 0.5
 export async function fetchLatestReadings(systemId: string): Promise<Record<string, number>> {
   const data = await api<Record<string, unknown>>(`/data/nutrients/latest/${systemId}`)
   const map = (data && typeof data === 'object' && 'nutrients' in data ? (data as { nutrients: unknown }).nutrients : data) as Record<string, unknown> | undefined

@@ -118,7 +118,7 @@ export function SprayCalendar() {
       {dosingFor(date).map((d, i) => {
         const dose = fmtDose(d.target.dose_amount, d.target.dose_unit)
         return (
-          <button key={`d${i}`} type="button" className={`cal-item dosing ${d.applied ? 'applied' : ''}`}
+          <button key={`d${i}`} type="button" className={`cal-item dosing ${d.target.nutrient === 'ph' ? 'ph-first' : ''} ${d.applied ? 'applied' : ''}`}
             title={`${nutrientShort(d.target.nutrient)} → ${d.target.target_value ?? '—'} ppm${dose ? ` · dose ${dose}` : ''}${d.target.product ? ` · ${d.target.product}` : ''} · ${d.programme.name}${d.applied ? ' · dosed' : ' · click to record'}`}
             onClick={() => setDose({ programme: d.programme, itemId: d.target.id, date })}>
             <span className="cal-dot" />{nutrientShort(d.target.nutrient)} · {dose ?? d.target.product ?? d.programme.name}

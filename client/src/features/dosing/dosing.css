@@ -143,3 +143,8 @@
 .dp-finite { display: flex; gap: 10px; align-items: flex-start; margin: 14px 0 4px; cursor: pointer; }
 .dp-finite input { margin-top: 3px; flex: none; }
 .dp-finite b { font-size: 14px; color: var(--ink); }
+
+/* pH-first dosing card in the save modal + calendar. */
+.dp-ph-first { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
+.dp-ph-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); background: var(--accent-wash); border-radius: 999px; padding: 1px 7px; margin-left: 6px; }
+.cal-item.dosing.ph-first { border-left: 3px solid var(--accent); font-weight: 600; }

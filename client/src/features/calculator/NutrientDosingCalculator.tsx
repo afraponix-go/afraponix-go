@@ -543,7 +543,11 @@ export function NutrientDosingCalculator() {
         </div>
       )}
       {saveProg && activeId && (
-        <SaveAsDosingProgrammeModal systemId={activeId} cropName={selectedCrop?.name ?? 'Crop'} target={target} current={effectiveCurrent} volumeL={volumeL} caps={caps} products={products} onClose={() => setSaveProg(false)} />
+        <SaveAsDosingProgrammeModal systemId={activeId} cropName={selectedCrop?.name ?? 'Crop'} target={target} current={effectiveCurrent} volumeL={volumeL} caps={caps} products={products}
+          phBuffer={bufferObj && bufAmt != null && bufAmt > 0 && phDir && currentPh != null && targetPhNum != null
+            ? { product: bufferObj.name, unit: bufferUnit, total_amount: bufAmt, current_ph: currentPh, target_ph: targetPhNum, direction: phDir }
+            : null}
+          onClose={() => setSaveProg(false)} />
       )}
     </div>
   )

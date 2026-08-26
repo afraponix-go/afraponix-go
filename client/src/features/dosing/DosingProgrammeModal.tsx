@@ -46,14 +46,18 @@ export function DosingProgrammeModal({ systemId, programme, onClose }: { systemI
 
   const [name, setName] = useState(programme?.name ?? '')
   const [notes, setNotes] = useState(programme?.notes ?? '')
+  // The pH adjustment (if any) is managed by the calculator, not editable here —
+  // keep it aside and re-attach it on save so a manual edit doesn't drop it.
+  const phTarget = useMemo(() => (programme?.targets ?? []).find((t) => t.nutrient === 'ph') ?? null, [programme])
+  const nutrientTargets = useMemo(() => (programme?.targets ?? []).filter((t) => t.nutrient !== 'ph'), [programme])
   const [rows, setRows] = useState<Row[]>(
-    programme?.targets?.length
-      ? programme.targets.map((t) => ({ nutrient: t.nutrient, target_value: t.target_value != null ? String(t.target_value) : '', product: t.product ?? '', unit: t.dose_unit ?? 'g' }))
+    nutrientTargets.length
+      ? nutrientTargets.map((t) => ({ nutrient: t.nutrient as Row['nutrient'], target_value: t.target_value != null ? String(t.target_value) : '', product: t.product ?? '', unit: t.dose_unit ?? 'g' }))
       : [{ nutrient: 'n', target_value: '', product: '', unit: 'g' }],
   )
   // Per-row manual dose override (else the recommendation is shown).
   const [amtOverride, setAmtOverride] = useState<Record<number, string>>(
-    () => Object.fromEntries((programme?.targets ?? []).map((t, i) => [i, t.dose_amount != null ? String(t.dose_amount) : ''] as const).filter(([, v]) => v !== '')),
+    () => Object.fromEntries(nutrientTargets.map((t, i) => [i, t.dose_amount != null ? String(t.dose_amount) : ''] as const).filter(([, v]) => v !== '')),
   )
   const [groupDays, setGroupDays] = useState<Record<MixGroup, string[]>>({ ...DEFAULT_GROUP_DAYS })
   const [addingFert, setAddingFert] = useState<number | null>(null)
@@ -124,7 +128,10 @@ export function DosingProgrammeModal({ systemId, programme, onClose }: { systemI
         const doses = amt.trim() !== '' && Number(amt) > 0 ? Math.max(1, weeksFor(r)) : null
         return { nutrient: r.nutrient, target_value: Number(r.target_value), product: r.product, dose_amount: amt.trim() === '' ? null : Number(amt), dose_unit: r.unit, doses, days: groupDays[g] }
       })
-      const input = { name: name.trim(), notes: notes.trim() || null, targets }
+      const allTargets = phTarget
+        ? [{ nutrient: 'ph', target_value: phTarget.target_value, product: phTarget.product, dose_amount: phTarget.dose_amount, dose_unit: phTarget.dose_unit, doses: phTarget.doses, days: phTarget.days }, ...targets]
+        : targets
+      const input = { name: name.trim(), notes: notes.trim() || null, targets: allTargets }
       return editing ? updateDosingProgramme(programme!.id, input) : createDosingProgramme(systemId, input)
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['dosing-programmes'] }); onClose() },
