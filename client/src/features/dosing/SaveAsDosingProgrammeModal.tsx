@@ -15,7 +15,7 @@ const DEFAULT_GROUP_DAYS: Record<MixGroup, string[]> = { A: ['mon'], B: ['thu'],
 // and phosphate mixes on different days). The user reviews and confirms.
 export type PhBuffer = { product: string; unit: string; total_amount: number; current_ph: number; target_ph: number; direction: 'up' | 'down' }
 
-export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current, volumeL, caps, products, phBuffer, onClose }: {
+export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current, volumeL, caps, products, phBuffer, targeted, onClose }: {
   systemId: string
   cropName: string
   target: Levels
@@ -24,6 +24,7 @@ export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current
   caps?: Levels
   products: Product[]
   phBuffer?: PhBuffer | null
+  targeted?: Set<string>
   onClose: () => void
 }) {
   const qc = useQueryClient()
@@ -37,13 +38,13 @@ export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current
   const capOf = (k: keyof Levels) => (caps ?? MAX_WEEKLY_PPM)[k]
 
   const rows = useMemo(() =>
-    KEYS.filter((k) => target[k] > 0).map((k) => {
+    KEYS.filter((k) => (targeted ? targeted.has(k) : true) && target[k] > 0).map((k) => {
       const best = products.reduce<Product | null>((b, p) => (p[k] > (b?.[k] ?? 0) ? p : b), null)
       const pct = best ? best[k] : 0
       const rec = best && pct > 0 ? recommendWeekly(target[k], current[k] ?? 0, volumeL, pct, capOf(k)) : { weekly: null, weeks: 0 }
       const group: MixGroup = best ? mixGroupOf(best) : 'C'
       return { nutrient: k, target_value: Math.round(target[k] * 10) / 10, product: best && pct > 0 ? best.name : null, amount: rec.weekly, weeks: rec.weeks, group }
-    }), [target, current, volumeL, products, caps])
+    }), [target, current, volumeL, products, caps, targeted])
 
   const usedGroups = useMemo(() => (['A', 'B', 'C'] as MixGroup[]).filter((g) => rows.some((r) => r.group === g && r.product)), [rows])
   const maxWeeks = useMemo(() => Math.max(1, ...rows.filter((r) => r.product).map((r) => r.weeks || 1)), [rows])

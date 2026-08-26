@@ -15,9 +15,11 @@ export default class SystemsList {
     /**
      * Initialize the systems list component
      */
-    initialize() {
+    async initialize() {
         this.setupSystemsDropdown();
-        console.log('🏗️ Systems list component initialized');
+        // Don't load systems here - wait for authentication
+        // Systems will be loaded when systemManager calls updateSystemsDropdown()
+        console.log('🏗️ Systems list component initialized (waiting for auth)');
     }
 
     /**
@@ -53,7 +55,7 @@ export default class SystemsList {
         if (this.loadingState) return;
         
         this.loadingState = true;
-        console.log('🔄 Loading systems...');
+        console.log('🔄 SystemsList: Loading systems...');
 
         try {
             const response = await this.app.makeApiCall('/systems');
@@ -64,7 +66,8 @@ export default class SystemsList {
                     this.systems[system.id] = system;
                 });
                 
-                console.log(`✅ Loaded ${response.length} systems`);
+                console.log(`✅ SystemsList: Loaded ${response.length} systems:`, Object.keys(this.systems));
+                console.log('🔍 SystemsList: System details:', response);
                 this.updateSystemsDropdown();
                 
                 // Auto-select first system if none selected
@@ -88,14 +91,89 @@ export default class SystemsList {
      * Update the systems dropdown UI
      */
     updateSystemsDropdown() {
+        console.log('🔄 SystemsList.updateSystemsDropdown() called');
+        
+        // Support both new dropdown and legacy select element
         const dropdown = document.querySelector('#systems-dropdown .dropdown-menu');
         const toggle = document.querySelector('#systems-dropdown-toggle');
+        const legacySelect = document.getElementById('active-system');
         
-        if (!dropdown) {
-            console.warn('⚠️ Systems dropdown not found in DOM');
-            return;
+        console.log('🔍 Element search results:', {
+            dropdown: !!dropdown,
+            toggle: !!toggle,
+            legacySelect: !!legacySelect,
+            systemsCount: Object.keys(this.systems).length
+        });
+        
+        // Handle legacy select element (current HTML)
+        if (legacySelect) {
+            console.log('📝 Updating legacy select element');
+            this.updateLegacySystemSelect(legacySelect);
         }
+        
+        // Handle new dropdown component (if present)
+        if (dropdown) {
+            console.log('📝 Updating modern dropdown');
+            this.updateModernSystemDropdown(dropdown, toggle);
+        }
+        
+        if (!dropdown && !legacySelect) {
+            console.warn('⚠️ No systems dropdown found in DOM (neither #active-system nor #systems-dropdown)');
+        }
+    }
 
+    /**
+     * Update legacy select element
+     */
+    updateLegacySystemSelect(selectElement) {
+        // Clear existing options
+        selectElement.innerHTML = '';
+
+        // Add systems to select
+        const systemIds = Object.keys(this.systems);
+        
+        if (systemIds.length === 0) {
+            selectElement.innerHTML = '<option value="">No systems available</option>';
+            selectElement.style.display = 'none';
+        } else {
+            // Show the select element
+            selectElement.style.display = 'block';
+            console.log('✅ SystemsList: Select element made visible with', systemIds.length, 'systems');
+            
+            // Add default option
+            selectElement.innerHTML = '<option value="">Select a system...</option>';
+            
+            // Add system options
+            systemIds.forEach(systemId => {
+                const system = this.systems[systemId];
+                const option = document.createElement('option');
+                option.value = systemId;
+                option.textContent = system.system_name || `System ${systemId}`;
+                
+                // Mark as selected if this is the active system
+                if (systemId == this.app.activeSystemId) {
+                    option.selected = true;
+                }
+                
+                selectElement.appendChild(option);
+            });
+            
+            // Add change event listener if not already added
+            if (!selectElement.hasAttribute('data-listener-added')) {
+                selectElement.addEventListener('change', (e) => {
+                    if (e.target.value) {
+                        this.selectSystem(e.target.value);
+                    }
+                });
+                selectElement.setAttribute('data-listener-added', 'true');
+            }
+        }
+    }
+
+    /**
+     * Update modern dropdown component
+     */
+    updateModernSystemDropdown(dropdown, toggle) {
         // Clear existing items
         dropdown.innerHTML = '';
 

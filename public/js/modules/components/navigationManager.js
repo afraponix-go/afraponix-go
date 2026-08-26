@@ -390,17 +390,51 @@ export class NavigationManagerComponent {
         const settingsTabs = document.querySelectorAll('.settings-tab');
         const settingsContents = document.querySelectorAll('.settings-content');
 
+        // On initialization, ensure admin settings content is hidden unless admin tab is explicitly active
+        const adminSettingsContent = document.getElementById('admin-settings-content');
+        const adminSettingsTab = document.getElementById('admin-settings-tab');
+
+        // Function to hide admin content if it shouldn't be visible
+        const hideAdminContentIfNeeded = () => {
+            if (adminSettingsContent) {
+                const isAdminTabActive = adminSettingsTab && adminSettingsTab.classList.contains('active');
+                if (!isAdminTabActive) {
+                    // Force hide admin content when it shouldn't be visible
+                    adminSettingsContent.style.setProperty('display', 'none', 'important');
+                    adminSettingsContent.classList.remove('active');
+                }
+            }
+        };
+
+        // Hide immediately
+        hideAdminContentIfNeeded();
+
+        // Also hide after a short delay to catch any late initialization that might show it
+        setTimeout(hideAdminContentIfNeeded, 100);
+        setTimeout(hideAdminContentIfNeeded, 300);
+
         settingsTabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 const targetContent = tab.getAttribute('data-target');
                 
                 // Remove active class from all settings tabs and contents
                 settingsTabs.forEach(settingsTab => settingsTab.classList.remove('active'));
-                settingsContents.forEach(content => content.classList.remove('active'));
-                
+                settingsContents.forEach(content => {
+                    content.classList.remove('active');
+                    // Remove any inline styles that might override CSS
+                    content.style.removeProperty('display');
+                });
+
                 // Hide admin sub-tabs and sub-contents first (system-config-tabs will be handled by CSS)
                 const adminSubtabs = document.querySelectorAll('.admin-subtab');
                 const adminSubcontents = document.querySelectorAll('.admin-subcontent');
+                const adminSettingsContent = document.getElementById('admin-settings-content');
+
+                // Explicitly hide admin settings content when switching tabs
+                if (adminSettingsContent) {
+                    adminSettingsContent.style.setProperty('display', 'none', 'important');
+                }
+
                 adminSubtabs.forEach(subtab => subtab.style.setProperty('display', 'none', 'important'));
                 adminSubcontents.forEach(subcontent => {
                     subcontent.classList.remove('active');
@@ -428,6 +462,10 @@ export class NavigationManagerComponent {
                             firstSystemConfigSubcontent.classList.add('active');
                         }
                     } else if (targetContent === 'admin-settings-content') {
+                        // Show admin settings content
+                        if (adminSettingsContent) {
+                            adminSettingsContent.style.setProperty('display', 'block', 'important');
+                        }
                         // Show admin sub-tabs but keep subcontent hidden initially
                         adminSubtabs.forEach(subtab => subtab.style.setProperty('display', 'block', 'important'));
                         // Make sure all subcontent is available for showing (remove the blanket hide)
@@ -489,15 +527,28 @@ export class NavigationManagerComponent {
                             this.app.loadFishTankConfiguration();
                         }
                     } else if (targetContent === 'grow-beds-config-content') {
-                        // Generate grow beds configuration forms
-                        if (this.app.generateGrowBedConfiguration) {
-                            this.app.generateGrowBedConfiguration();
+                        console.log('🌱 Grow beds configuration tab activated');
+                        // First, load system config to form to ensure input fields have current values
+                        if (this.app.loadSystemConfigToForm) {
+                            console.log('🔄 Loading system config to form...');
+                            this.app.loadSystemConfigToForm();
                         }
-                        // Load existing grow bed data after forms are generated
+                        // Update display fields to show current system values
+                        if (this.app.updateSettingsDisplayFields) {
+                            console.log('🔄 Updating settings display fields...');
+                            this.app.updateSettingsDisplayFields();
+                        }
+                        // Load grow bed configuration (which will generate forms and populate data)
                         if (this.app.loadGrowBedConfiguration) {
                             setTimeout(async () => {
-                                await this.app.loadGrowBedConfiguration();
-                            }, 1000);
+                                console.log('🔄 setTimeout fired - calling loadGrowBedConfiguration...');
+                                try {
+                                    await this.app.loadGrowBedConfiguration();
+                                    console.log('✅ loadGrowBedConfiguration completed');
+                                } catch (error) {
+                                    console.error('❌ loadGrowBedConfiguration error:', error);
+                                }
+                            }, 100);
                         }
                     }
                 }

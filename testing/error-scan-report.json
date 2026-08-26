@@ -1,0 +1,45 @@
+{
+  "missingIcons": [
+    "Afraponix Go Icons_${iconName}.svg"
+  ],
+  "apiEndpoints": [
+    {
+      "endpoint": "/crop-knowledge/admin/ratio-rules",
+      "issue": "Missing /api prefix",
+      "suggestion": "/api/crop-knowledge/admin/ratio-rules"
+    },
+    {
+      "endpoint": "/crop-knowledge/admin/ratio-rules",
+      "issue": "Known 404 endpoint",
+      "suggestion": "Check server route implementation"
+    },
+    {
+      "endpoint": "/crop-knowledge/admin/environmental-adjustments",
+      "issue": "Missing /api prefix",
+      "suggestion": "/api/crop-knowledge/admin/environmental-adjustments"
+    },
+    {
+      "endpoint": "/crop-knowledge/admin/environmental-adjustments",
+      "issue": "Known 404 endpoint",
+      "suggestion": "Check server route implementation"
+    },
+    {
+      "endpoint": "/crop-knowledge/stages",
+      "issue": "Missing /api prefix",
+      "suggestion": "/api/crop-knowledge/stages"
+    },
+    {
+      "endpoint": "/crop-knowledge/stages",
+      "issue": "Known 404 endpoint",
+      "suggestion": "Check server route implementation"
+    },
+    {
+      "endpoint": "/crop-knowledge/crops",
+      "issue": "Missing /api prefix",
+      "suggestion": "/api/crop-knowledge/crops"
+    }
+  ],
+  "duplicateIds": [],
+  "missingFiles": [],
+  "brokenReferences": []
+}

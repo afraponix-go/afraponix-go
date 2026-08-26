@@ -44,6 +44,10 @@ export function NutrientDosingCalculator() {
 
   const [target, setTarget] = useState<Levels>(emptyLevels)
   const [targetTouched, setTargetTouched] = useState(false)
+  // Which nutrients to target — all on by default; the user can drop ones they
+  // don't want to manage, and the solver optimises only for what's left.
+  const [targeted, setTargeted] = useState<Set<NutrientKey>>(() => new Set(KEYS))
+  const toggleTargeted = (k: NutrientKey) => setTargeted((s) => { const n = new Set(s); n.has(k) ? n.delete(k) : n.add(k); return n })
   const [saveProg, setSaveProg] = useState(false)
   const [step, setStep] = useState<'define' | 'results'>('define')
   const [showCaps, setShowCaps] = useState(false)
@@ -179,8 +183,8 @@ export function NutrientDosingCalculator() {
   }, [current, bufferCredit])
   const bufferUnit = bufferObj?.rate_unit ?? 'ml'
 
-  const result = useMemo(() => computeDose(volumeL, effectiveCurrent, target, products), [volumeL, effectiveCurrent, target, products])
-  const targetsEmpty = KEYS.every((k) => !(target[k] > 0))
+  const result = useMemo(() => computeDose(volumeL, effectiveCurrent, target, products, targeted), [volumeL, effectiveCurrent, target, products, targeted])
+  const targetsEmpty = KEYS.every((k) => !(targeted.has(k) && target[k] > 0))
   // EC is a poor proxy for nutrition in aquaponics and is not derived from the
   // targets — show the crop's hydroponic-derived EC guide band for reference.
   const ecGuide = selectedCrop && selectedCrop.ecMin != null && selectedCrop.ecMax != null
@@ -193,7 +197,7 @@ export function NutrientDosingCalculator() {
   const mixes = useMemo(() => mixSchedule(result.doses, products), [result.doses, products])
   // Spread the correction over enough weeks that no nutrient rises faster than
   // its safe weekly cap. The per-week dose is the total ÷ weeks.
-  const weeks = useMemo(() => weeksToReach(target, effectiveCurrent, caps), [target, effectiveCurrent, caps])
+  const weeks = useMemo(() => weeksToReach(target, effectiveCurrent, caps, targeted), [target, effectiveCurrent, caps, targeted])
   const setCap = (k: NutrientKey, v: string) => setCaps((c) => ({ ...c, [k]: numOr0(v) }))
 
   // Salinity impact: the dissolved fertiliser salts raise TDS. As a rule of
@@ -219,6 +223,7 @@ export function NutrientDosingCalculator() {
     if (volumeL <= 0 || targetsEmpty) return [] as { key: NutrientKey; label: string; type: 'over' | 'under'; proj: number; target: number }[]
     const out: { key: NutrientKey; label: string; type: 'over' | 'under'; proj: number; target: number }[] = []
     for (const nn of NUTRIENTS) {
+      if (!targeted.has(nn.key)) continue
       const t = target[nn.key] || 0
       if (t <= 0) continue
       const proj = result.finalLevels[nn.key] || 0
@@ -226,7 +231,7 @@ export function NutrientDosingCalculator() {
       else if (proj < t * 0.9 && (current[nn.key] || 0) < t) out.push({ key: nn.key, label: nn.label, type: 'under', proj, target: t })
     }
     return out
-  }, [result, target, current, targetsEmpty, volumeL])
+  }, [result, target, current, targetsEmpty, volumeL, targeted])
 
   // Download the plan as CSV (pH step + weekly/total fertiliser doses + the
   // projected levels) so it can be saved or shared outside the app.
@@ -354,15 +359,22 @@ export function NutrientDosingCalculator() {
                   : 'Enter current levels; targets come from the selected crop.'}
           </p>
           <div className="nd-levels">
-            <div className="nd-lv-head"><span></span><span>Current</span><span>Target</span></div>
-            {NUTRIENTS.map((n) => (
-              <div className="nd-lv-row" key={n.key}>
-                <label>{n.label}</label>
-                <input type="number" min="0" step="0.1" inputMode="decimal" value={current[n.key] || ''} onChange={(e) => setCur(n.key, e.target.value)} placeholder="0" />
-                <input type="number" min="0" step="0.1" inputMode="decimal" value={target[n.key] || ''} onChange={(e) => setTgt(n.key, e.target.value)} placeholder="0" />
-              </div>
-            ))}
+            <div className="nd-lv-head"><span>Target?</span><span>Current</span><span>Target</span></div>
+            {NUTRIENTS.map((n) => {
+              const on = targeted.has(n.key)
+              return (
+                <div className={`nd-lv-row ${on ? '' : 'off'}`} key={n.key}>
+                  <label className="nd-lv-name">
+                    <input type="checkbox" checked={on} onChange={() => toggleTargeted(n.key)} aria-label={`Target ${n.label}`} />
+                    {n.label}
+                  </label>
+                  <input type="number" min="0" step="0.1" inputMode="decimal" value={current[n.key] || ''} onChange={(e) => setCur(n.key, e.target.value)} placeholder="0" />
+                  <input type="number" min="0" step="0.1" inputMode="decimal" value={target[n.key] || ''} onChange={(e) => setTgt(n.key, e.target.value)} placeholder="0" disabled={!on} title={on ? undefined : 'Not targeted'} />
+                </div>
+              )
+            })}
           </div>
+          <p className="hint nd-target-hint">Untick a nutrient to leave it out — the calculator then picks the best fertiliser combination for the ones you keep.</p>
 
           </div>
           </div>
@@ -582,7 +594,7 @@ export function NutrientDosingCalculator() {
         </div>
       )}
       {saveProg && activeId && (
-        <SaveAsDosingProgrammeModal systemId={activeId} cropName={selectedCrop?.name ?? 'Crop'} target={target} current={effectiveCurrent} volumeL={volumeL} caps={caps} products={products}
+        <SaveAsDosingProgrammeModal systemId={activeId} cropName={selectedCrop?.name ?? 'Crop'} target={target} current={effectiveCurrent} volumeL={volumeL} caps={caps} products={products} targeted={targeted}
           phBuffer={bufferObj && bufAmt != null && bufAmt > 0 && phDir && currentPh != null && targetPhNum != null
             ? { product: bufferObj.name, unit: bufferUnit, total_amount: bufAmt, current_ph: currentPh, target_ph: targetPhNum, direction: phDir }
             : null}

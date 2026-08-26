@@ -42,7 +42,7 @@ export async function fetchWaterQualityData(systemId) {
  * Fetch water quality entries with query parameters
  */
 export async function fetchWaterQualityEntries(systemId, limit = 50) {
-    const response = await fetch(`/api/data/entries/water-quality?system_id=${systemId}&limit=${limit}`, {
+    const response = await fetch(`/api/data/water-quality/${systemId}?limit=${limit}`, {
         method: 'GET',
         headers: getAuthHeaders()
     });
@@ -54,10 +54,13 @@ export async function fetchWaterQualityEntries(systemId, limit = 50) {
  * Add water quality entry
  */
 export async function addWaterQualityEntry(systemId, qualityData) {
-    const response = await fetch(`/api/data/water-quality/${systemId}`, {
+    const response = await fetch(`/api/data/nutrients`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify(qualityData)
+        body: JSON.stringify({
+            system_id: systemId,
+            ...qualityData
+        })
     });
     if (!response.ok) throw new Error('Failed to add water quality entry');
     return response.json();
@@ -67,7 +70,7 @@ export async function addWaterQualityEntry(systemId, qualityData) {
  * Update water quality entry
  */
 export async function updateWaterQualityEntry(entryId, qualityData) {
-    const response = await fetch(`/api/data/water-quality/${entryId}`, {
+    const response = await fetch(`/api/data/nutrients/${entryId}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(qualityData)

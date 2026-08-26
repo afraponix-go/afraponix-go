@@ -53,28 +53,10 @@ export default class Dashboard {
      * Initialize all dashboard charts
      */
     initializeCharts() {
-        if (!window.Chart) {
-            console.warn('⚠️ Chart.js not available, skipping chart initialization');
-            return;
-        }
-
-        console.log('📊 Initializing dashboard charts');
-        
-        const chartConfigs = this.getChartConfigurations();
-        
-        Object.entries(chartConfigs).forEach(([chartId, config]) => {
-            try {
-                const canvas = document.getElementById(chartId);
-                if (canvas) {
-                    this.charts[chartId] = new Chart(canvas.getContext('2d'), config);
-                    console.log(`✅ Initialized ${chartId} chart`);
-                } else {
-                    console.warn(`⚠️ Chart canvas not found: ${chartId}`);
-                }
-            } catch (error) {
-                console.error(`❌ Failed to initialize ${chartId} chart:`, error);
-            }
-        });
+        console.log('📊 Dashboard charts disabled - using MetricsChartManager instead');
+        // Chart initialization disabled to prevent NaN/Infinity errors
+        // All charts now handled by MetricsChartManager in Metrics tab only
+        return;
     }
 
     /**
@@ -115,7 +97,7 @@ export default class Dashboard {
         };
 
         return {
-            'temperature-chart': {
+            'temp-chart': {
                 type: 'line',
                 data: {
                     labels: [],
@@ -151,7 +133,7 @@ export default class Dashboard {
                 },
                 options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, min: 0, max: 14, title: { display: true, text: 'pH' } } } }
             },
-            'dissolved-oxygen-chart': {
+            'oxygen-chart': {
                 type: 'line',
                 data: {
                     labels: [],
@@ -236,64 +218,104 @@ export default class Dashboard {
         
         try {
             // Load all data in parallel
-            const [waterQualityData, fishData, plantData, nutrientData] = await Promise.all([
-                this.app.makeApiCall(`/data/water-quality/${this.app.activeSystemId}`).catch(() => []),
+            const [allReadingsData, fishData, plantData] = await Promise.all([
+                this.app.makeApiCall(`/data/water-quality/${this.app.activeSystemId}?limit=50`).catch(() => []), // Get water quality data with nutrients
                 this.app.makeApiCall(`/fish-inventory/system/${this.app.activeSystemId}`).catch(() => ({ tanks: [] })),
-                this.app.makeApiCall(`/data/plant-growth/${this.app.activeSystemId}`).catch(() => []),
-                this.app.makeApiCall(`/data/nutrients/latest/${this.app.activeSystemId}`).catch(() => [])
+                this.app.makeApiCall(`/data/plant-growth/${this.app.activeSystemId}`).catch(() => [])
             ]);
 
             // Update charts
-            this.updateCharts(waterQualityData);
-            
+            this.updateCharts(allReadingsData);
+
             // Update metric cards
-            this.updateMetricCards(waterQualityData, fishData, plantData, nutrientData);
-            
+            this.updateMetricCards(allReadingsData, fishData, plantData);
+
             console.log('✅ Dashboard data refreshed');
-            
+
         } catch (error) {
             console.error('❌ Failed to refresh dashboard data:', error);
         }
     }
 
     /**
-     * Update all charts with new data
+     * Update all charts with new data from water_quality table
      */
-    updateCharts(waterQualityData) {
-        if (!waterQualityData || !Array.isArray(waterQualityData)) return;
-        
+    updateCharts(allReadingsData) {
         // Skip if no charts exist (might be called before initialization)
         if (Object.keys(this.charts).length === 0) {
             console.log('📊 Skipping chart update - charts not initialized');
             return;
         }
 
-        console.log('📊 Updating dashboard charts with', waterQualityData.length, 'data points');
+        if (!allReadingsData || !Array.isArray(allReadingsData) || allReadingsData.length === 0) {
+            console.log('📊 No readings data available for charts');
+            return;
+        }
 
-        // Prepare data for charts (last 20 readings)
-        const recentData = waterQualityData.slice(-20);
-        const labels = recentData.map(entry => {
-            const date = new Date(entry.date || entry.created_at);
-            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        });
+        console.log('📊 Updating dashboard charts with', allReadingsData.length, 'total readings');
 
-        // Chart data mappings
-        const chartDataMap = {
-            'temperature-chart': recentData.map(entry => entry.water_temperature),
-            'ph-chart': recentData.map(entry => entry.ph),
-            'dissolved-oxygen-chart': recentData.map(entry => entry.dissolved_oxygen),
-            'ammonia-chart': recentData.map(entry => entry.ammonia),
-            'humidity-chart': recentData.map(entry => entry.humidity),
-            'salinity-chart': recentData.map(entry => entry.salinity)
+        // Process data by parameter type - from water_quality table
+        const processParameterData = (parameterType) => {
+            const labels = [];
+            const values = [];
+
+            // Water quality table has direct columns, not nutrient_type/value structure
+            allReadingsData.forEach(item => {
+                if (!item) return;
+
+                const value = item[parameterType];
+                if (value === null || value === undefined || value === '') return;
+
+                const parsedValue = parseFloat(value);
+                // Validate parsed value is finite and not NaN
+                if (isFinite(parsedValue) && !isNaN(parsedValue)) {
+                    const date = new Date(item.date || item.created_at);
+                    labels.push(date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+                    values.push(parsedValue);
+                } else {
+                    console.warn('📊 Dashboard: Filtered out invalid value for', parameterType, ':', value);
+                }
+            });
+
+            console.log('📊 Dashboard: Processed', parameterType, 'data points:', values.length, 'values:', values.slice(0, 3));
+
+            return { labels, values };
         };
 
-        // Update each chart
-        Object.entries(chartDataMap).forEach(([chartId, data]) => {
+        // All chart mappings - using actual HTML canvas IDs
+        const allChartTypes = {
+            // Water quality parameters (using actual HTML IDs)
+            'temp-chart': 'temperature',
+            'ph-chart': 'ph', 
+            'oxygen-chart': 'dissolved_oxygen',
+            'ammonia-chart': 'ammonia',
+            'humidity-chart': 'humidity',
+            'salinity-chart': 'salinity',
+            // Nutrient parameters
+            'ec-chart': 'ec',
+            'nitrate-chart': 'nitrate', 
+            'nitrite-chart': 'nitrite',
+            'phosphorus-chart': 'phosphorus',
+            'potassium-chart': 'potassium',
+            'calcium-chart': 'calcium',
+            'magnesium-chart': 'magnesium',
+            'iron-chart': 'iron'
+        };
+
+        // Update all charts
+        Object.entries(allChartTypes).forEach(([chartId, parameterType]) => {
             const chart = this.charts[chartId];
-            if (chart && data) {
-                chart.data.labels = labels;
-                chart.data.datasets[0].data = data;
-                chart.update('none'); // Skip animation for better performance
+            if (chart) {
+                const chartData = processParameterData(parameterType);
+                console.log(`📊 Chart ${chartId} (${parameterType}): ${chartData.values.length} data points`);
+                
+                if (chartData.values.length > 0) {
+                    chart.data.labels = chartData.labels;
+                    chart.data.datasets[0].data = chartData.values;
+                    chart.update('none'); // Skip animation for better performance
+                } else {
+                    console.log(`⚠️ No data found for ${parameterType}`);
+                }
             }
         });
     }
@@ -301,11 +323,11 @@ export default class Dashboard {
     /**
      * Update metric cards
      */
-    updateMetricCards(waterData, fishData, plantData, nutrientData) {
+    updateMetricCards(allReadingsData, fishData, plantData) {
         console.log('📊 Updating metric cards');
         
-        // Update water quality metrics
-        this.updateWaterQualityMetrics(waterData);
+        // Update water quality metrics from readings data
+        this.updateWaterQualityMetrics(allReadingsData);
         
         // Update fish metrics
         this.updateFishMetrics(fishData);
@@ -313,25 +335,27 @@ export default class Dashboard {
         // Update plant metrics
         this.updatePlantMetrics(plantData);
         
-        // Update nutrient metrics
-        this.updateNutrientMetrics(nutrientData);
+        // Update nutrient metrics from readings data
+        this.updateNutrientMetrics(allReadingsData);
     }
 
     /**
      * Update water quality metric cards
      */
-    updateWaterQualityMetrics(waterData) {
-        if (!waterData || !Array.isArray(waterData) || waterData.length === 0) return;
-        
-        const latest = this.getLatestWaterQualityData(waterData);
-        
+    updateWaterQualityMetrics(allReadingsData) {
+        if (!allReadingsData || !Array.isArray(allReadingsData) || allReadingsData.length === 0) return;
+
+        // Get latest record from water_quality table (already sorted by date DESC from API)
+        const latestRecord = allReadingsData[0];
+        if (!latestRecord) return;
+
         const metrics = {
-            'temperature-value': { value: latest.water_temperature, unit: '°C' },
-            'ph-value': { value: latest.ph, unit: '' },
-            'dissolved-oxygen-value': { value: latest.dissolved_oxygen, unit: 'mg/L' },
-            'ammonia-value': { value: latest.ammonia, unit: 'mg/L' },
-            'humidity-value': { value: latest.humidity, unit: '%' },
-            'salinity-value': { value: latest.salinity, unit: 'ppt' }
+            'temperature-value': { value: latestRecord.temperature, unit: '°C' },
+            'ph-value': { value: latestRecord.ph, unit: '' },
+            'dissolved-oxygen-value': { value: latestRecord.dissolved_oxygen, unit: 'mg/L' },
+            'ammonia-value': { value: latestRecord.ammonia, unit: 'mg/L' },
+            'humidity-value': { value: latestRecord.humidity, unit: '%' },
+            'salinity-value': { value: latestRecord.salinity, unit: 'ppt' }
         };
 
         Object.entries(metrics).forEach(([id, metric]) => {
@@ -339,7 +363,7 @@ export default class Dashboard {
             if (element && metric.value !== null && metric.value !== undefined) {
                 element.textContent = `${metric.value}${metric.unit}`;
             } else if (element) {
-                element.textContent = 'No data';
+                element.textContent = 'N/A';
             }
         });
     }
@@ -379,31 +403,25 @@ export default class Dashboard {
     /**
      * Update nutrient metric cards
      */
-    updateNutrientMetrics(nutrientData) {
-        if (!nutrientData || !Array.isArray(nutrientData)) return;
-        
-        // Get latest readings for key nutrients
-        const latestNutrients = {};
-        nutrientData.forEach(entry => {
-            if (!latestNutrients[entry.nutrient_type] || 
-                new Date(entry.date) > new Date(latestNutrients[entry.nutrient_type].date)) {
-                latestNutrients[entry.nutrient_type] = entry;
-            }
-        });
+    updateNutrientMetrics(allReadingsData) {
+        if (!allReadingsData || !Array.isArray(allReadingsData) || allReadingsData.length === 0) return;
+
+        // Get latest record from water_quality table
+        const latestRecord = allReadingsData[0];
+        if (!latestRecord) return;
 
         const nutrientElements = {
-            'ec-value': 'ec',
-            'nitrate-value': 'nitrate'
+            'ec-value': { value: latestRecord.ec, unit: ' μS/cm' },
+            'nitrate-value': { value: latestRecord.nitrate, unit: ' mg/L' }
         };
 
-        Object.entries(nutrientElements).forEach(([elementId, nutrientType]) => {
+        Object.entries(nutrientElements).forEach(([elementId, nutrient]) => {
             const element = document.getElementById(elementId);
-            const data = latestNutrients[nutrientType];
-            
-            if (element && data) {
-                element.textContent = `${data.value}${data.unit || ''}`;
+
+            if (element && nutrient.value !== null && nutrient.value !== undefined) {
+                element.textContent = `${nutrient.value}${nutrient.unit}`;
             } else if (element) {
-                element.textContent = 'No data';
+                element.textContent = 'N/A';
             }
         });
     }
@@ -413,7 +431,7 @@ export default class Dashboard {
      */
     getLatestWaterQualityData(waterData) {
         const latest = {
-            water_temperature: null,
+            temperature: null,
             ph: null,
             dissolved_oxygen: null,
             ammonia: null,

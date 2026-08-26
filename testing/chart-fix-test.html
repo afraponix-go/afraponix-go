@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chart Fix Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #0051b1 0%, #7BAAEE 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 30px;
+            color: #333;
+        }
+        .console {
+            background: #1a1a1a;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .status {
+            text-align: center;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .status.loading {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        .status.success {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Chart Initialization Fix Test</h1>
+        
+        <div id="status" class="status loading">
+            🔄 Loading app and running tests...
+        </div>
+        
+        <div id="console" class="console"></div>
+    </div>
+
+    <!-- Load Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Load main app -->
+    <script type="module" src="../script.js"></script>
+    
+    <!-- Load test script -->
+    <script src="chart-fix-test.js"></script>
+    
+    <script>
+        let consoleOutput = '';
+        
+        // Capture console output
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function updateConsole(level, args) {
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+            ).join(' ');
+            consoleOutput += `[${level.toUpperCase()}] ${message}\n`;
+            
+            const consoleDiv = document.getElementById('console');
+            if (consoleDiv) {
+                consoleDiv.textContent = consoleOutput;
+                consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            }
+        }
+        
+        console.log = (...args) => {
+            originalLog.apply(console, args);
+            updateConsole('log', args);
+        };
+        
+        console.error = (...args) => {
+            originalError.apply(console, args);
+            updateConsole('error', args);
+        };
+        
+        console.warn = (...args) => {
+            originalWarn.apply(console, args);
+            updateConsole('warn', args);
+        };
+        
+        // Wait for test completion and update status
+        setTimeout(() => {
+            if (window.testChartFix) {
+                window.testChartFix().then(result => {
+                    const statusDiv = document.getElementById('status');
+                    if (result && result.success) {
+                        statusDiv.className = 'status success';
+                        statusDiv.innerHTML = '✅ All tests passed! Chart initialization fix successful.';
+                    } else {
+                        statusDiv.className = 'status error';
+                        statusDiv.innerHTML = `❌ Some tests failed. Check console output below.`;
+                    }
+                }).catch(error => {
+                    const statusDiv = document.getElementById('status');
+                    statusDiv.className = 'status error';
+                    statusDiv.innerHTML = `❌ Test execution failed: ${error.message}`;
+                });
+            } else {
+                setTimeout(() => {
+                    const statusDiv = document.getElementById('status');
+                    statusDiv.className = 'status error';
+                    statusDiv.innerHTML = '❌ Test function not available';
+                }, 5000);
+            }
+        }, 3000);
+    </script>
+</body>
+</html>

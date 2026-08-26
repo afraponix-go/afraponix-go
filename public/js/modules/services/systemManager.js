@@ -142,8 +142,8 @@ export default class SystemManager {
 
             // Initialize charts for the new system
             if (this.app.dashboard && this.app.currentView === 'dashboard') {
-                // Reinitialize dashboard charts
-                this.app.dashboard.initializeCharts();
+                // Old dashboard charts disabled - using MetricsChartManager instead
+                // this.app.dashboard.initializeCharts();
                 await this.app.dashboard.refreshData();
             }
 
@@ -215,7 +215,7 @@ export default class SystemManager {
      */
     async loadSystemDataDirect(systemId) {
         const dataPromises = [
-            this.app.makeApiCall(`/data/water-quality/${systemId}`).catch(() => []),
+            this.app.makeApiCall(`/data/nutrients/${systemId}`).catch(() => []),
             this.app.makeApiCall(`/fish-inventory/system/${systemId}`).catch(() => ({ tanks: [] })),
             this.app.makeApiCall(`/data/fish-health/${systemId}`).catch(() => []),
             this.app.makeApiCall(`/data/plant-growth/${systemId}`).catch(() => []),

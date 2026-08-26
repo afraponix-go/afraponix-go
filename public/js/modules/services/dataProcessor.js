@@ -61,7 +61,7 @@ export default class DataProcessor {
             this.app.dataRecords = {
                 waterQuality: waterQualityData,
                 fishInventory: fishInventoryData,
-                fishEvents: fishHealthData,
+                fishHealth: fishHealthData,
                 plantGrowth: plantGrowthData,
                 operations: operationsData,
                 nutrients: nutrientsData
@@ -95,19 +95,48 @@ export default class DataProcessor {
      */
     async loadWaterQualityData(systemId) {
         const cacheKey = `water-quality-${systemId}`;
-        
+
         if (this.isCacheValid(cacheKey)) {
             return this.cache.get(cacheKey);
         }
 
         try {
-            console.log('🌊 Loading water quality data...');
-            const data = await this.app.makeApiCall(`/data/water-quality/${systemId}`);
-            
-            this.cache.set(cacheKey, data || []);
+            console.log('🌊 Loading water quality data from water_quality table...');
+            // Get water quality data from water_quality table
+            const data = await this.app.makeApiCall(`/data/water-quality/${systemId}?limit=50`);
+
+            console.log('🌊 Water quality data loaded:', data);
+
+            // Data is already in the correct format from water_quality table
+            const waterQualityData = (data || []).map(item => ({
+                system_id: item.system_id,
+                date: item.date,
+                created_at: item.created_at,
+                ph: item.ph,
+                ec: item.ec,
+                dissolved_oxygen: item.dissolved_oxygen,
+                temperature: item.temperature,
+                ammonia: item.ammonia,
+                nitrite: item.nitrite,
+                nitrate: item.nitrate,
+                iron: item.iron,
+                potassium: item.potassium,
+                calcium: item.calcium,
+                phosphorus: item.phosphorus,
+                magnesium: item.magnesium,
+                humidity: item.humidity,
+                salinity: item.salinity
+            }));
+
+            // Sort by date (newest first) and limit
+            const result = waterQualityData.sort((a, b) =>
+                new Date(b.date) - new Date(a.date)
+            ).slice(0, 50); // Return up to 50 entries
+
+            this.cache.set(cacheKey, result);
             this.lastUpdate.set(cacheKey, Date.now());
-            
-            return data || [];
+
+            return result;
         } catch (error) {
             console.error('❌ Failed to load water quality data:', error);
             return [];
@@ -151,7 +180,7 @@ export default class DataProcessor {
 
         try {
             console.log('🩺 Loading fish health data...');
-            const data = await this.app.makeApiCall(`/data/fish-health/${systemId}`);
+            const data = await this.app.makeApiCall(`/data/fish-health/${systemId}?limit=12`);
             
             this.cache.set(cacheKey, data || []);
             this.lastUpdate.set(cacheKey, Date.now());
@@ -175,7 +204,7 @@ export default class DataProcessor {
 
         try {
             console.log('🌱 Loading plant growth data...');
-            const data = await this.app.makeApiCall(`/data/plant-growth/${systemId}`);
+            const data = await this.app.makeApiCall(`/data/plant-growth/${systemId}?limit=12`);
             
             // Process plant data for better usability
             const processedData = this.processPlantGrowthData(data || []);
@@ -202,7 +231,7 @@ export default class DataProcessor {
 
         try {
             console.log('⚙️ Loading operations data...');
-            const data = await this.app.makeApiCall(`/data/operations/${systemId}`);
+            const data = await this.app.makeApiCall(`/data/operations/${systemId}?limit=12`);
             
             this.cache.set(cacheKey, data || []);
             this.lastUpdate.set(cacheKey, Date.now());
@@ -226,7 +255,7 @@ export default class DataProcessor {
 
         try {
             console.log('🧪 Loading nutrients data...');
-            const data = await this.app.makeApiCall(`/data/nutrients/${systemId}`);
+            const data = await this.app.makeApiCall(`/data/nutrients/${systemId}?limit=12`);
             
             this.cache.set(cacheKey, data || []);
             this.lastUpdate.set(cacheKey, Date.now());
@@ -299,7 +328,7 @@ export default class DataProcessor {
 
         return {
             water: this.getWaterQualityAnalytics(data.waterQuality),
-            fish: this.getFishAnalytics(data.fishInventory, data.fishEvents),
+            fish: this.getFishAnalytics(data.fishInventory, data.fishHealth),
             plants: this.getPlantAnalytics(data.plantGrowth),
             nutrients: this.getNutrientAnalytics(data.nutrients)
         };
@@ -318,7 +347,7 @@ export default class DataProcessor {
 
         // Calculate averages
         const averages = {};
-        ['water_temperature', 'ph', 'dissolved_oxygen', 'ammonia'].forEach(param => {
+        ['temperature', 'ph', 'dissolved_oxygen', 'ammonia'].forEach(param => {
             const values = recent.filter(d => d[param] != null).map(d => d[param]);
             if (values.length > 0) {
                 averages[param] = values.reduce((sum, val) => sum + val, 0) / values.length;
@@ -330,7 +359,7 @@ export default class DataProcessor {
         let factors = 0;
 
         if (latest.ph >= 6.5 && latest.ph <= 7.5) healthScore += 25; factors++;
-        if (latest.water_temperature >= 20 && latest.water_temperature <= 30) healthScore += 25; factors++;
+        if (latest.temperature >= 20 && latest.temperature <= 30) healthScore += 25; factors++;
         if (latest.dissolved_oxygen >= 5) healthScore += 25; factors++;
         if (latest.ammonia <= 0.25) healthScore += 25; factors++;
 

@@ -61,9 +61,15 @@ export function computeDose(
   current: Levels,
   target: Levels,
   products: Product[],
+  targeted?: Iterable<NutrientKey>,
 ): { doses: DoseResult[]; achieved: Levels; finalLevels: Levels } {
   const n = products.length
   if (n === 0 || volumeL <= 0) return { doses: [], achieved: emptyLevels(), finalLevels: { ...current } }
+
+  // Only these nutrients are optimised for. Untargeted ones drop out of the
+  // objective entirely (row zeroed), so the solver neither chases them nor
+  // avoids them — it's free to pick the best combination for what you DO target.
+  const on = new Set<NutrientKey>(targeted ?? KEYS)
 
   // Weighted per-gram contribution matrix A[k][i] (ppm of k per gram of product i)
   // and gap vector b[k], both divided by the nutrient's scale for relative error.
@@ -72,8 +78,8 @@ export function computeDose(
   const A: number[][] = []
   KEYS.forEach((k, ki) => {
     scale[k] = Math.max(target[k] || 0, 1)
-    b[ki] = Math.max(0, (target[k] || 0) - (current[k] || 0)) / scale[k]
-    A[ki] = products.map((p) => ((p[k] || 0) * 10) / volumeL / scale[k]) // (pct/100)*1000/V, weighted
+    b[ki] = on.has(k) ? Math.max(0, (target[k] || 0) - (current[k] || 0)) / scale[k] : 0
+    A[ki] = products.map((p) => (on.has(k) ? ((p[k] || 0) * 10) / volumeL / scale[k] : 0)) // (pct/100)*1000/V, weighted
   })
 
   // AᵀB (constant) for the multiplicative update.
@@ -157,9 +163,11 @@ export function recommendDose(targetPpm: number, currentPpm: number, volumeL: nu
 export const MAX_WEEKLY_PPM: Levels = { n: 30, p: 10, k: 25, ca: 25, mg: 10, fe: 1 }
 
 // Weeks needed to close the biggest gap without exceeding any nutrient's weekly cap.
-export function weeksToReach(target: Levels, current: Levels, caps: Levels): number {
+export function weeksToReach(target: Levels, current: Levels, caps: Levels, targeted?: Iterable<NutrientKey>): number {
+  const on = new Set<NutrientKey>(targeted ?? KEYS)
   let weeks = 1
   for (const k of KEYS) {
+    if (!on.has(k)) continue
     const gap = (target[k] || 0) - (current[k] || 0)
     const cap = caps[k] || 0
     if (gap > 0 && cap > 0) weeks = Math.max(weeks, Math.ceil(gap / cap))

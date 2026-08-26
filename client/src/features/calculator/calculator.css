@@ -480,3 +480,10 @@
 .nd-salinity b { color: var(--ink); }
 .nd-salinity-ic { font-size: 18px; flex: none; }
 .nd-mix-day { white-space: normal; }
+
+/* Per-nutrient targeting checkbox in the levels grid. */
+.nd-lv-name { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.nd-lv-name input[type="checkbox"] { flex: none; cursor: pointer; }
+.nd-lv-row.off { opacity: 0.5; }
+.nd-lv-row.off input[type="number"] { background: var(--surface-2); }
+.nd-target-hint { margin: 6px 0 0; font-size: 12.5px; }
