@@ -18,7 +18,6 @@ const TABS = [
   { to: '/plants', label: 'Plants', Icon: PlantIcon },
   { to: '/operations', label: 'Operations', Icon: SprayIcon },
   { to: '/calculator', label: 'Calculator', Icon: CalculatorIcon },
-  { to: '/settings', label: 'Settings', Icon: SettingsIcon },
 ]
 const PRIMARY_COUNT = 4
 const OVERFLOW = TABS.slice(PRIMARY_COUNT)
@@ -74,34 +73,40 @@ export function AppShell() {
             </label>
           )}
 
-          {/* Inline actions (desktop) */}
-          <div className="account-actions">
-            <button className="sys-add" onClick={() => setShowAdd(true)} title="Add system" aria-label="Add system">
-              {systems.length > 0 ? '+' : '+ Add system'}
-            </button>
-            <ThemeToggle />
-            <div className="user-chip" title={user?.email ?? undefined}>
+          {/* Quick add-system (contextual to the system switcher) */}
+          <button className="sys-add" onClick={() => setShowAdd(true)} title="Add system" aria-label="Add system">
+            {systems.length > 0 ? '+' : '+ Add system'}
+          </button>
+
+          {/* User menu — identity, settings, theme, log out */}
+          <div className="user-menu-wrap">
+            <button className="user-chip" onClick={() => setMenuOpen((v) => !v)} aria-haspopup="menu" aria-expanded={menuOpen} title={user?.email ?? undefined}>
               <span className="avatar">{initial}</span>
               <span className="who">{name}</span>
-            </div>
-            <button className="ghost" onClick={signOut}>Log out</button>
+              <span className="chip-caret" aria-hidden>▾</span>
+            </button>
+            {menuOpen && (
+              <>
+                <div className="popover-backdrop" onClick={() => setMenuOpen(false)} />
+                <div className="account-menu" role="menu">
+                  <div className="user-id">
+                    <span className="avatar">{initial}</span>
+                    <span className="user-id-text">
+                      <b>{name}</b>
+                      {user?.email && <span>{user.email}</span>}
+                    </span>
+                  </div>
+                  <div className="menu-sep" />
+                  <NavLink to="/settings" className="account-menu-item" role="menuitem">
+                    <SettingsIcon className="ami-icon" /> Settings
+                  </NavLink>
+                  <div className="account-menu-item as-toggle"><ThemeToggle /></div>
+                  <div className="menu-sep" />
+                  <button className="account-menu-item danger" onClick={signOut}>Log out</button>
+                </div>
+              </>
+            )}
           </div>
-
-          {/* Collapsed account menu (mobile) */}
-          <button className="account-menu-btn" onClick={() => setMenuOpen((v) => !v)} aria-label="Account menu" aria-expanded={menuOpen}>
-            <span className="avatar">{initial}</span>
-          </button>
-          {menuOpen && (
-            <>
-              <div className="popover-backdrop" onClick={() => setMenuOpen(false)} />
-              <div className="account-menu" role="menu">
-                <div className="account-menu-who">{name}</div>
-                <button className="account-menu-item" onClick={() => { setShowAdd(true); setMenuOpen(false) }}>Add system</button>
-                <div className="account-menu-item as-toggle"><ThemeToggle /></div>
-                <button className="account-menu-item danger" onClick={signOut}>Log out</button>
-              </div>
-            </>
-          )}
         </div>
       </header>
 
