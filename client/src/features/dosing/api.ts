@@ -47,7 +47,7 @@ export const deleteFertiliser = (id: number) =>
 
 // --- Dosing programmes (target-band maintenance) ---
 export type DosingTarget = { id?: number; nutrient: NutrientKey; target_value: number | null; product: string | null; dose_amount: number | null; dose_unit: string | null; days: string[] }
-export type DosingProgramme = { id: number; name: string; notes: string | null; status: 'active' | 'paused'; targets: DosingTarget[] }
+export type DosingProgramme = { id: number; name: string; notes: string | null; status: 'active' | 'paused'; start_date?: string | null; created_at?: string | null; targets: DosingTarget[] }
 
 export async function fetchDosingProgrammes(systemId: string): Promise<DosingProgramme[]> {
   const d = await api<{ programmes: DosingProgramme[] }>(`/dosing/programmes/${systemId}`)
@@ -57,6 +57,7 @@ export type DosingProgrammeInput = {
   name: string
   notes?: string | null
   status?: 'active' | 'paused'
+  start_date?: string | null
   targets: { nutrient: string; target_value: number | null; product: string | null; dose_amount?: number | null; dose_unit?: string | null; days: string[] }[]
 }
 export const createDosingProgramme = (systemId: string, input: DosingProgrammeInput) =>

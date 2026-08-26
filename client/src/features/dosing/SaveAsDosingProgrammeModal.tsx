@@ -24,7 +24,9 @@ export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current
   onClose: () => void
 }) {
   const qc = useQueryClient()
+  const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
   const [name, setName] = useState(`${cropName} maintenance`)
+  const [startDate, setStartDate] = useState(todayISO())
   const [error, setError] = useState<string | null>(null)
   const capOf = (k: keyof Levels) => (caps ?? MAX_WEEKLY_PPM)[k]
 
@@ -48,6 +50,7 @@ export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current
   const mut = useMutation({
     mutationFn: () => createDosingProgramme(systemId, {
       name: name.trim(),
+      start_date: startDate || null,
       targets: rows.filter((r) => r.product).map((r) => ({ nutrient: r.nutrient, target_value: r.target_value, product: r.product, dose_amount: r.amount, dose_unit: 'g', days: groupDays[r.group] })),
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['dosing-programmes'] }); onClose() },
@@ -68,9 +71,15 @@ export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current
     <Modal title="Save as dosing programme" onClose={onClose} wide>
       <form className="mform" onSubmit={onSubmit}>
         {error && <div className="wq-error">{error}</div>}
-        <div className="field">
-          <label htmlFor="sdp-name">Programme name</label>
-          <input id="sdp-name" type="text" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+        <div className="field-row">
+          <div className="field">
+            <label htmlFor="sdp-name">Programme name</label>
+            <input id="sdp-name" type="text" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          </div>
+          <div className="field">
+            <label htmlFor="sdp-start">Start date</label>
+            <input id="sdp-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </div>
         </div>
 
         <div className="dz-label">Targets <span className="unit-hint">· recommended doses{volumeL > 0 ? ` for ${volumeL.toLocaleString()} L` : ''} — confirm below</span></div>

@@ -57,7 +57,12 @@ export function SprayCalendar() {
   const dosingFor = (date: string) => {
     const wd = WD[parse(date).getDay()]
     const out: { programme: DosingProgramme; target: DosingProgramme['targets'][number]; applied: boolean }[] = []
-    for (const p of activeDosing) for (const t of p.targets) if (t.days.includes(wd)) out.push({ programme: p, target: t, applied: doseApplied.has(`${date}|${t.id}`) })
+    for (const p of activeDosing) {
+      // A programme doesn't schedule before it starts (created / start date).
+      const start = p.start_date ?? (p.created_at ? String(p.created_at).slice(0, 10) : null)
+      if (start && date < start) continue
+      for (const t of p.targets) if (t.days.includes(wd)) out.push({ programme: p, target: t, applied: doseApplied.has(`${date}|${t.id}`) })
+    }
     return out
   }
 

@@ -459,7 +459,7 @@ router.get('/calendar/:systemId', async (req, res) => {
         const from = `${year}-${mm}-01`;
         const to = `${year}-${mm}-${String(daysInMonth).padStart(2, '0')}`;
 
-        const [plans] = await pool.execute("SELECT * FROM programmes WHERE system_id = ? AND type = 'spray' AND status = 'active'", [req.params.systemId]);
+        const [plans] = await pool.execute("SELECT *, DATE_FORMAT(start_date, '%Y-%m-%d') AS start_str FROM programmes WHERE system_id = ? AND type = 'spray' AND status = 'active'", [req.params.systemId]);
         const planProds = {};
         for (const plan of plans) planProds[plan.id] = await planProducts(pool, plan.id);
         const [applied] = await pool.execute("SELECT DATE_FORMAT(event_date, '%Y-%m-%d') AS application_date, spray_product_id AS product_id FROM programme_log WHERE system_id = ? AND type = 'spray' AND event_date BETWEEN ? AND ?", [req.params.systemId, from, to]);
@@ -471,6 +471,8 @@ router.get('/calendar/:systemId', async (req, res) => {
             const dow = WEEKDAYS[new Date(date + 'T00:00:00').getDay()];
             const items = [];
             for (const plan of plans) {
+                // A programme doesn't schedule before its start date.
+                if (plan.start_str && date < plan.start_str) continue;
                 for (const p of planProds[plan.id]) {
                     if (!p.days.includes(dow)) continue;
                     items.push({

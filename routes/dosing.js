@@ -537,7 +537,7 @@ router.get('/programmes/:systemId', authenticateToken, async (req, res) => {
         const pool = getDatabase();
         if (!(await canReadSystem(req.params.systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
         const [progs] = await pool.execute(
-            "SELECT id, system_id, name, notes, status, created_at FROM programmes WHERE system_id = ? AND type = 'dosing' ORDER BY status, created_at DESC",
+            "SELECT id, system_id, name, notes, status, created_at, DATE_FORMAT(start_date, '%Y-%m-%d') AS start_date FROM programmes WHERE system_id = ? AND type = 'dosing' ORDER BY status, created_at DESC",
             [req.params.systemId]
         );
         const out = [];
@@ -555,9 +555,11 @@ router.post('/programmes/:systemId', authenticateToken, async (req, res) => {
         if (!(await canWriteSystem(req.params.systemId, req.user.userId, pool))) return res.status(404).json({ error: 'System not found or access denied' });
         const b = req.body || {};
         if (!b.name) return res.status(400).json({ error: 'name is required' });
+        // Schedule starts today by default, so a new programme never backfills
+        // doses onto past dates. The client may pass an explicit start_date.
         const [result] = await pool.execute(
-            "INSERT INTO programmes (system_id, type, name, notes, status) VALUES (?, 'dosing', ?, ?, ?)",
-            [req.params.systemId, String(b.name).slice(0, 255), b.notes || null, b.status === 'paused' ? 'paused' : 'active']
+            "INSERT INTO programmes (system_id, type, name, notes, status, start_date) VALUES (?, 'dosing', ?, ?, ?, COALESCE(?, CURDATE()))",
+            [req.params.systemId, String(b.name).slice(0, 255), b.notes || null, b.status === 'paused' ? 'paused' : 'active', b.start_date || null]
         );
         await replaceDosingTargets(pool, result.insertId, b.targets);
         res.json({ success: true, id: result.insertId });
