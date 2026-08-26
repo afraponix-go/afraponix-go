@@ -114,6 +114,7 @@ const STEPS = [
   { type: 'sql', file: 'database/migrations/2026-08-farm-display-metrics.sql', label: 'Farm overview: selectable display metrics' },
   { type: 'sql', file: 'database/migrations/2026-08-farm-shares.sql', label: 'Farm sharing (share a whole farm with a user)' },
   { type: 'sql', file: 'database/migrations/2026-08-seedlings-farm.sql', label: 'Seedlings become farm-level (one nursery per farm)' },
+  { type: 'sql', file: 'database/migrations/2026-08-dosing-doses.sql', label: 'Dosing: finite dose count (spread correction then end)' },
 ];
 
 function dbConfig() {

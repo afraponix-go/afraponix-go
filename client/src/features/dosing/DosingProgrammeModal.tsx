@@ -117,9 +117,12 @@ export function DosingProgrammeModal({ systemId, programme, onClose }: { systemI
     mutationFn: () => {
       const targets = rows.filter((r) => r.target_value.trim() !== '' && r.product).map((r, i) => {
         const g = groupOf(r.product) ?? 'C'
-        const amt = doseValue(rows.indexOf(r), r)
+        const ri = rows.indexOf(r)
+        const amt = doseValue(ri, r)
         void i
-        return { nutrient: r.nutrient, target_value: Number(r.target_value), product: r.product, dose_amount: amt.trim() === '' ? null : Number(amt), dose_unit: r.unit, days: groupDays[g] }
+        // Finite: dose until target is reached (weeks-to-target), then stop.
+        const doses = amt.trim() !== '' && Number(amt) > 0 ? Math.max(1, weeksFor(r)) : null
+        return { nutrient: r.nutrient, target_value: Number(r.target_value), product: r.product, dose_amount: amt.trim() === '' ? null : Number(amt), dose_unit: r.unit, doses, days: groupDays[g] }
       })
       const input = { name: name.trim(), notes: notes.trim() || null, targets }
       return editing ? updateDosingProgramme(programme!.id, input) : createDosingProgramme(systemId, input)

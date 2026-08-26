@@ -27,6 +27,9 @@ export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current
   const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
   const [name, setName] = useState(`${cropName} maintenance`)
   const [startDate, setStartDate] = useState(todayISO())
+  // Finite by default: spread each correction over the weeks needed to reach
+  // target safely, then stop. Off = repeat the weekly dose indefinitely.
+  const [finite, setFinite] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const capOf = (k: keyof Levels) => (caps ?? MAX_WEEKLY_PPM)[k]
 
@@ -40,6 +43,7 @@ export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current
     }), [target, current, volumeL, products, caps])
 
   const usedGroups = useMemo(() => (['A', 'B', 'C'] as MixGroup[]).filter((g) => rows.some((r) => r.group === g && r.product)), [rows])
+  const maxWeeks = useMemo(() => Math.max(1, ...rows.filter((r) => r.product).map((r) => r.weeks || 1)), [rows])
   const [groupDays, setGroupDays] = useState<Record<MixGroup, string[]>>({ ...DEFAULT_GROUP_DAYS })
   const toggleGroupDay = (g: MixGroup, d: string) => setGroupDays((s) => ({ ...s, [g]: s[g].includes(d) ? s[g].filter((x) => x !== d) : [...s[g], d] }))
   const clashDay = useMemo(() => {
@@ -51,7 +55,7 @@ export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current
     mutationFn: () => createDosingProgramme(systemId, {
       name: name.trim(),
       start_date: startDate || null,
-      targets: rows.filter((r) => r.product).map((r) => ({ nutrient: r.nutrient, target_value: r.target_value, product: r.product, dose_amount: r.amount, dose_unit: 'g', days: groupDays[r.group] })),
+      targets: rows.filter((r) => r.product).map((r) => ({ nutrient: r.nutrient, target_value: r.target_value, product: r.product, dose_amount: r.amount, dose_unit: 'g', doses: finite ? Math.max(1, r.weeks || 1) : null, days: groupDays[r.group] })),
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['dosing-programmes'] }); onClose() },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Could not create the programme.'),
@@ -109,6 +113,18 @@ export function SaveAsDosingProgrammeModal({ systemId, cropName, target, current
           ))}
           {clashDay && <div className="wq-error" style={{ marginTop: 8 }}>Calcium and phosphate/potassium mixes can't be dosed the same day — give them different days.</div>}
         </div>
+
+        <label className="dp-finite">
+          <input type="checkbox" checked={finite} onChange={(e) => setFinite(e.target.checked)} />
+          <span>
+            <b>Spread to target, then stop</b>
+            <span className="dz-hint" style={{ display: 'block' }}>
+              {finite
+                ? `Each nutrient doses its weekly amount until it reaches target${maxWeeks > 1 ? ` (up to ${maxWeeks} week${maxWeeks === 1 ? '' : 's'})` : ''}, then the schedule ends — no perpetual over-dosing.`
+                : 'The weekly dose repeats indefinitely (ongoing maintenance).'}
+            </span>
+          </span>
+        </label>
 
         <div className="mform-actions">
           <button type="button" className="ghost" onClick={onClose}>Cancel</button>

@@ -18,6 +18,22 @@ const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.get
 const mondayOf = (d: Date) => addDays(d, -((d.getDay() + 6) % 7))
 const parse = (s: string) => new Date(s + 'T00:00:00')
 
+// How many times a weekly schedule (these weekdays) has fired from start..date
+// inclusive — used to stop a finite correction after its `doses` occurrences.
+const occurrenceIndex = (startStr: string, dateStr: string, days: string[]): number => {
+  const start = parse(startStr), date = parse(dateStr)
+  let n = 0
+  for (const wd of days) {
+    const dow = WD.indexOf(wd)
+    if (dow < 0) continue
+    const first = new Date(start)
+    first.setDate(first.getDate() + ((dow - start.getDay() + 7) % 7))
+    if (first > date) continue
+    n += Math.floor((date.getTime() - first.getTime()) / (7 * 86400000)) + 1
+  }
+  return n
+}
+
 // The recommended dose, compactly (g→kg / ml→L above 1000).
 const fmtDose = (amt: number | null | undefined, unit: string | null | undefined): string | null => {
   if (amt == null) return null
@@ -69,7 +85,12 @@ export function SprayCalendar() {
       // A programme doesn't schedule before it starts (created / start date).
       const start = p.start_date ?? (p.created_at ? String(p.created_at).slice(0, 10) : null)
       if (start && date < start) continue
-      for (const t of p.targets) if (t.days.includes(wd)) out.push({ programme: p, target: t, applied: doseApplied.has(`${date}|${t.id}`) })
+      for (const t of p.targets) {
+        if (!t.days.includes(wd)) continue
+        // A finite correction stops once it has reached target (doses fired).
+        if (t.doses != null && start && occurrenceIndex(start, date, t.days) > t.doses) continue
+        out.push({ programme: p, target: t, applied: doseApplied.has(`${date}|${t.id}`) })
+      }
     }
     return out
   }
