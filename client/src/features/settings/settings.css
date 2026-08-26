@@ -355,6 +355,89 @@
   .settings-group-hint { max-width: 45vw; }
 }
 
+/* System information summary (read-only make-up of the system). */
+.sysinfo-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.sysinfo-stat {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2, var(--surface));
+  padding: 13px 15px;
+}
+.sysinfo-stat-val {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.sysinfo-stat-unit {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-faint);
+}
+.sysinfo-stat-label {
+  font-size: 12px;
+  color: var(--ink-faint);
+  margin-top: 3px;
+}
+.sysinfo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 26px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+.sysinfo-meta-k {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-right: 6px;
+}
+.sysinfo-h3 {
+  margin: 22px 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.sysinfo-table-wrap { overflow-x: auto; }
+.sysinfo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.sysinfo-table th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+  font-weight: 700;
+  padding: 7px 12px 7px 0;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.sysinfo-table td {
+  padding: 9px 12px 9px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  white-space: nowrap;
+}
+.sysinfo-table th.num, .sysinfo-table td.num {
+  text-align: right;
+  padding-right: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.sysinfo-table td.num.ok { color: var(--ok); font-weight: 600; }
+.sysinfo-table td.num.warn { color: var(--warn); font-weight: 600; }
+.sysinfo-table td.num.bad { color: var(--danger); font-weight: 700; }
+
 /* System scope bar — sits atop system-scoped settings pages so it's clear
    which system the settings below apply to, and lets the user switch it
    without touching the nav or the app-wide active system. */
