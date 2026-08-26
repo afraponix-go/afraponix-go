@@ -50,3 +50,21 @@
   padding: 2px 6px;
   border-radius: 999px;
 }
+
+/* Mobile: a single horizontally-scrolling strip instead of wrapping to many
+   rows (matches the sub-tab strip). The active pill is scrolled into view. */
+@media (max-width: 767px) {
+  .syspills {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 3px;
+  }
+  .syspills::-webkit-scrollbar { display: none; }
+  .syspill {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+}

@@ -1,7 +1,9 @@
+import { useEffect, useRef } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { isOwnedSystem } from '../systems/api'
 import { SettingsSystemProvider, useSettingsSystem } from './settingsSystem'
+import { centerActiveChild } from '../../lib/scrollStrip'
 import './settings.css'
 
 type Item = { to: string; label: string; end?: boolean }
@@ -38,6 +40,13 @@ export function SettingsLayout() {
 function SystemScopeBar() {
   const { pathname } = useLocation()
   const { systems, systemId, setSystemId, system } = useSettingsSystem()
+  const stripRef = useRef<HTMLDivElement>(null)
+
+  // Keep the selected chip visible when the strip scrolls horizontally (mobile).
+  useEffect(() => {
+    centerActiveChild(stripRef.current, '.settings-scope-chip.active')
+  }, [systemId, systems.length])
+
   if (!SYSTEM_SCOPED.has(pathname) || systems.length === 0) return null
 
   const ordered = [...systems].sort((a, b) =>
@@ -48,7 +57,7 @@ function SystemScopeBar() {
     <div className="settings-scopebar">
       <span className="settings-scopebar-label">Settings for</span>
       {systems.length > 1 ? (
-        <div className="settings-scope-chips" role="tablist" aria-label="System to configure">
+        <div className="settings-scope-chips" ref={stripRef} role="tablist" aria-label="System to configure">
           {ordered.map((s) => (
             <button
               key={s.id}

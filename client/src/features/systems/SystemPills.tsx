@@ -1,5 +1,7 @@
+import { useEffect, useRef } from 'react'
 import { useSystems, ALL_SYSTEMS_ID } from './SystemContext'
 import { isOwnedSystem } from './api'
+import { centerActiveChild } from '../../lib/scrollStrip'
 import './syspills.css'
 
 // App-wide system selector, shown at the top of each section's content (close
@@ -8,6 +10,13 @@ import './syspills.css'
 // when the farm has a single system, where there's nothing to choose.
 export function SystemPills() {
   const { systems, activeId, setActiveId } = useSystems()
+  const stripRef = useRef<HTMLDivElement>(null)
+
+  // Keep the selected pill visible when the strip scrolls horizontally (mobile).
+  useEffect(() => {
+    centerActiveChild(stripRef.current, '.syspill.active')
+  }, [activeId, systems.length])
+
   if (systems.length <= 1) return null
 
   const ordered = [...systems].sort((a, b) =>
@@ -15,7 +24,7 @@ export function SystemPills() {
   )
 
   return (
-    <div className="syspills" role="tablist" aria-label="System">
+    <div className="syspills" ref={stripRef} role="tablist" aria-label="System">
       <button
         type="button"
         role="tab"
