@@ -112,6 +112,7 @@ const STEPS = [
   { type: 'node', file: 'database/migrations/2026-08-farms-backfill.js', label: 'Backfill: one farm per owner, assign systems' },
   { type: 'sql', file: 'database/migrations/2026-08-stock-transfers.sql', label: 'Stock transfers audit (move fish/plants between systems)' },
   { type: 'sql', file: 'database/migrations/2026-08-farm-display-metrics.sql', label: 'Farm overview: selectable display metrics' },
+  { type: 'sql', file: 'database/migrations/2026-08-farm-shares.sql', label: 'Farm sharing (share a whole farm with a user)' },
 ];
 
 function dbConfig() {

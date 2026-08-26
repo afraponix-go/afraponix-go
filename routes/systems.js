@@ -24,17 +24,25 @@ router.get('/', async (req, res) => {
     try {
         const pool = getDatabase();
 
+        // Own systems + systems shared directly (system_shares) + systems in a
+        // farm shared with the user (farm_shares). shared_permission is the most
+        // permissive of the two share types; null when the user owns it.
+        const uid = req.user.userId;
         const [systems] = await pool.execute(
             `SELECT s.*,
-                    CASE WHEN s.user_id = ? THEN NULL ELSE ss.permission_level END AS shared_permission,
-                    (s.user_id = ?) AS is_owner
+                    CASE WHEN (s.user_id = ? OR f.owner_id = ?) THEN NULL
+                         ELSE COALESCE(fs.permission_level, ss.permission_level) END AS shared_permission,
+                    (s.user_id = ? OR f.owner_id = ?) AS is_owner
              FROM systems s
+             LEFT JOIN farms f ON f.id = s.farm_id
              LEFT JOIN system_shares ss
                     ON ss.system_id = s.id AND ss.shared_with_id = ? AND ss.status = 'accepted'
-             WHERE s.user_id = ? OR ss.id IS NOT NULL
+             LEFT JOIN farm_shares fs
+                    ON fs.farm_id = s.farm_id AND fs.shared_with_id = ? AND fs.status = 'accepted'
+             WHERE s.user_id = ? OR f.owner_id = ? OR ss.id IS NOT NULL OR fs.id IS NOT NULL
              GROUP BY s.id
              ORDER BY s.created_at DESC`,
-            [req.user.userId, req.user.userId, req.user.userId, req.user.userId]
+            [uid, uid, uid, uid, uid, uid, uid, uid]
         );
 
         res.json(systems);

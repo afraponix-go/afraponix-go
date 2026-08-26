@@ -48,7 +48,7 @@ export function AppShell() {
               <span className="farm-ico" aria-hidden>⌂</span>
               <select className="farm-select" value={activeFarmId ?? ''} onChange={(e) => setActiveFarmId(e.target.value)} aria-label="Active farm">
                 {farms.map((f) => (
-                  <option key={f.id} value={f.id}>{f.name}</option>
+                  <option key={f.id} value={f.id}>{f.name}{f.kind === 'shared' ? ' (shared)' : ''}</option>
                 ))}
               </select>
             </label>

@@ -14,7 +14,9 @@ export const SHARED_FARM_ID = '__shared__'
 // separated by system; other tabs prompt to pick a single system.
 export const ALL_SYSTEMS_ID = '__all__'
 
-export type FarmOption = { id: string; name: string; kind: 'own' | 'shared'; systemCount: number }
+// 'own' = your farm; 'shared' = a real farm another user shared with you;
+// 'bucket' = the synthetic "Shared with me" group for individually-shared systems.
+export type FarmOption = { id: string; name: string; kind: 'own' | 'shared' | 'bucket'; systemCount: number; permission?: string | null }
 
 type SystemState = {
   systems: System[]        // systems in the active farm (what the app operates on)
@@ -42,24 +44,30 @@ export function SystemProvider({ children }: { children: ReactNode }) {
   const [activeId, setActiveIdState] = useState<string | null>(() => localStorage.getItem(ACTIVE_KEY))
   const [activeFarmId, setActiveFarmIdState] = useState<string | null>(() => localStorage.getItem(ACTIVE_FARM_KEY))
 
-  // Farm options for the switcher: the user's own farms, plus a "Shared with me"
-  // group when any shared systems exist.
-  const sharedSystems = useMemo(() => allSystems.filter((s) => !isOwnedSystem(s)), [allSystems])
+  // Farm options for the switcher: the user's own farms and farms shared with
+  // them (both real farms, from /farms), plus a synthetic "Shared with me"
+  // bucket for any systems shared individually (not through a shared farm).
+  const farmIds = useMemo(() => new Set(ownFarms.map((f) => f.id)), [ownFarms])
+  const looseShared = useMemo(
+    () => allSystems.filter((s) => !isOwnedSystem(s) && !farmIds.has(s.farm_id ?? '')),
+    [allSystems, farmIds],
+  )
   const farms = useMemo<FarmOption[]>(() => {
     const opts: FarmOption[] = ownFarms.map((f) => ({
       id: f.id,
       name: f.name,
-      kind: 'own',
+      kind: (f.kind ?? 'own') as 'own' | 'shared',
       systemCount: f.system_count ?? allSystems.filter((s) => s.farm_id === f.id).length,
+      permission: f.permission ?? null,
     }))
-    if (sharedSystems.length) opts.push({ id: SHARED_FARM_ID, name: 'Shared with me', kind: 'shared', systemCount: sharedSystems.length })
+    if (looseShared.length) opts.push({ id: SHARED_FARM_ID, name: 'Shared with me', kind: 'bucket', systemCount: looseShared.length })
     return opts
-  }, [ownFarms, allSystems, sharedSystems])
+  }, [ownFarms, allSystems, looseShared])
 
   // The systems belonging to the active farm.
   const systemsInFarm = (farmId: string | null) =>
-    farmId === SHARED_FARM_ID ? sharedSystems : allSystems.filter((s) => s.farm_id === farmId)
-  const systems = useMemo(() => systemsInFarm(activeFarmId), [allSystems, sharedSystems, activeFarmId])
+    farmId === SHARED_FARM_ID ? looseShared : allSystems.filter((s) => s.farm_id === farmId)
+  const systems = useMemo(() => systemsInFarm(activeFarmId), [allSystems, looseShared, activeFarmId])
 
   // Keep the active farm valid (persisted one, else the first option). Wait for
   // real data: before auth resolves the queries are disabled and report empty

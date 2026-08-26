@@ -65,14 +65,14 @@ export function FarmDashboardPage() {
   const { activeFarm, activeFarmId, setActiveId, setActiveFarmId, farms, isLoading: systemsLoading } = useSystems()
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const ownFarms = farms.filter((f) => f.kind === 'own')
-  const own = activeFarm?.kind === 'own'
+  const own = activeFarm?.kind === 'own' // owner: may edit metric columns
+  const isRealFarm = activeFarm != null && activeFarm.kind !== 'bucket' // own or shared farm (has a rollup)
   const [customizing, setCustomizing] = useState(false)
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['farm-summary', activeFarmId],
     queryFn: () => fetchFarmSummary(activeFarmId as string),
-    enabled: own && !!activeFarmId,
+    enabled: isRealFarm && !!activeFarmId,
   })
 
   const setMetrics = useMutation({
@@ -80,15 +80,15 @@ export function FarmDashboardPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['farm-summary', activeFarmId] }),
   })
 
-  // Brand-new user (no farm of their own yet): set one up before anything else.
-  if (!systemsLoading && ownFarms.length === 0) {
+  // Brand-new user with no farm at all (own or shared): set one up first.
+  if (!systemsLoading && farms.length === 0) {
     return <FarmOnboarding onCreated={(id) => setActiveFarmId(id)} />
   }
 
-  if (!own) {
+  if (!isRealFarm) {
     return (
       <div className="empty">
-        The farm overview is for your own farms. Pick one of your farms from the switcher, or{' '}
+        Pick a farm from the switcher to see its overview, or{' '}
         <button type="button" className="link-btn" onClick={() => navigate('/overview')}>open the current system</button>.
       </div>
     )
@@ -133,8 +133,8 @@ export function FarmDashboardPage() {
           <div className="farm-sys-head">
             <h2 className="section-title" style={{ margin: 0 }}>Systems</h2>
             <div className="farm-customize">
-              <button type="button" className="farm-cust-btn" onClick={() => setCustomizing((v) => !v)} aria-expanded={customizing}>⚙ Columns</button>
-              {customizing && (
+              {own && <button type="button" className="farm-cust-btn" onClick={() => setCustomizing((v) => !v)} aria-expanded={customizing}>⚙ Columns</button>}
+              {own && customizing && (
                 <>
                   <div className="popover-backdrop" onClick={() => setCustomizing(false)} />
                   <div className="farm-cust-menu" role="menu">

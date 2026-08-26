@@ -3,6 +3,7 @@ const router = express.Router();
 const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
 const { generateFarmId } = require('../utils/farms');
+const { getFarmAccess } = require('../utils/systemAccess');
 
 router.use(authenticateToken);
 
@@ -32,13 +33,22 @@ function parseMetrics(raw) {
 router.get('/', async (req, res) => {
     try {
         const pool = getDatabase();
+        // The user's own farms, plus farms shared with them (accepted). `kind`
+        // distinguishes them; `permission` is the share level for shared farms.
         const [rows] = await pool.execute(
             `SELECT f.id, f.name, f.location, f.created_at,
-                    (SELECT COUNT(*) FROM systems s WHERE s.farm_id = f.id) AS system_count
+                    (SELECT COUNT(*) FROM systems s WHERE s.farm_id = f.id) AS system_count,
+                    'own' AS kind, NULL AS permission
+             FROM farms f WHERE f.owner_id = ?
+             UNION
+             SELECT f.id, f.name, f.location, f.created_at,
+                    (SELECT COUNT(*) FROM systems s WHERE s.farm_id = f.id) AS system_count,
+                    'shared' AS kind, fs.permission_level AS permission
              FROM farms f
-             WHERE f.owner_id = ?
-             ORDER BY f.created_at ASC, f.id ASC`,
-            [req.user.userId]
+             JOIN farm_shares fs ON fs.farm_id = f.id
+             WHERE fs.shared_with_id = ? AND fs.status = 'accepted' AND f.owner_id <> ?
+             ORDER BY kind ASC, created_at ASC, id ASC`,
+            [req.user.userId, req.user.userId, req.user.userId]
         );
         res.json({ farms: rows });
     } catch (error) {
@@ -53,7 +63,11 @@ router.get('/', async (req, res) => {
 router.get('/:id/summary', async (req, res) => {
     try {
         const pool = getDatabase();
-        const [own] = await pool.execute('SELECT id, name, display_metrics FROM farms WHERE id = ? AND owner_id = ?', [req.params.id, req.user.userId]);
+        // Owner or a user the farm is shared with may read the rollup.
+        if (!(await getFarmAccess(req.params.id, req.user.userId, pool))) {
+            return res.status(404).json({ error: 'Farm not found or access denied' });
+        }
+        const [own] = await pool.execute('SELECT id, name, display_metrics FROM farms WHERE id = ?', [req.params.id]);
         if (!own.length) return res.status(404).json({ error: 'Farm not found or access denied' });
         const displayMetrics = parseMetrics(own[0].display_metrics);
 

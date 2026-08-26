@@ -9,6 +9,10 @@ export const farmSchema = z.object({
   location: z.string().nullable().optional(),
   created_at: z.string().optional(),
   system_count: z.coerce.number().optional(),
+  // 'own' or 'shared' (a farm another user shared with you); permission is the
+  // share level on a shared farm, null on your own.
+  kind: z.enum(['own', 'shared']).optional(),
+  permission: z.string().nullable().optional(),
 })
 export type Farm = z.infer<typeof farmSchema>
 
@@ -51,4 +55,28 @@ export type FarmSummary = {
 }
 export async function fetchFarmSummary(farmId: string): Promise<FarmSummary> {
   return api<FarmSummary>(`/farms/${farmId}/summary`)
+}
+
+// --- Farm sharing (whole-farm collaborators) ---
+export type FarmShare = {
+  id: number
+  permission_level: 'view' | 'collaborator' | 'admin'
+  email: string
+  username?: string | null
+  first_name?: string | null
+  last_name?: string | null
+  created_at?: string
+}
+export async function fetchFarmShares(farmId: string): Promise<FarmShare[]> {
+  const data = await api<{ shares: FarmShare[] }>(`/farm-sharing/users?farm_id=${encodeURIComponent(farmId)}`)
+  return data.shares ?? []
+}
+export function inviteToFarm(farmId: string, email: string, permission_level: string) {
+  return api('/farm-sharing/invite', { method: 'POST', body: { farm_id: farmId, email, permission_level } })
+}
+export function updateFarmSharePermission(shareId: number, permission_level: string) {
+  return api('/farm-sharing/permission', { method: 'PUT', body: { share_id: shareId, permission_level } })
+}
+export function removeFarmShare(shareId: number) {
+  return api(`/farm-sharing/access/${shareId}`, { method: 'DELETE' })
 }
