@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { isOwnedSystem } from '../systems/api'
 import { SettingsSystemProvider, useSettingsSystem } from './settingsSystem'
@@ -7,9 +7,14 @@ import './settings.css'
 type Item = { to: string; label: string; end?: boolean }
 type Group = { title: string; hint?: string; items: Item[] }
 
+// Settings routes that act on one specific system (rather than the whole
+// account or farm). On these, we show a system scope bar above the content.
+const SYSTEM_SCOPED = new Set(['/settings', '/settings/metrics', '/settings/danger'])
+
 // Grouped settings navigation. Account / Farm settings are per-user (work in
-// farm mode); the "Systems" group edits any one system in the active farm via
-// an in-place picker — no need to change the app-wide active system.
+// farm mode); the system-scoped pages act on one system in the active farm,
+// chosen via the scope bar above the content — no need to change the app-wide
+// active system.
 export function SettingsLayout() {
   return (
     <SettingsSystemProvider>
@@ -18,6 +23,7 @@ export function SettingsLayout() {
         <div className="settings-shell">
           <SettingsNav />
           <div className="settings-content">
+            <SystemScopeBar />
             <Outlet />
           </div>
         </div>
@@ -26,9 +32,47 @@ export function SettingsLayout() {
   )
 }
 
+// Shown at the top of system-scoped settings pages. Makes it explicit that
+// these settings belong to one system and lets the user switch which — as a
+// segmented control, not a menu dropdown, so it never reads as navigation.
+function SystemScopeBar() {
+  const { pathname } = useLocation()
+  const { systems, systemId, setSystemId, system } = useSettingsSystem()
+  if (!SYSTEM_SCOPED.has(pathname) || systems.length === 0) return null
+
+  const ordered = [...systems].sort((a, b) =>
+    a.system_name.localeCompare(b.system_name, undefined, { numeric: true, sensitivity: 'base' }),
+  )
+
+  return (
+    <div className="settings-scopebar">
+      <span className="settings-scopebar-label">Settings for</span>
+      {systems.length > 1 ? (
+        <div className="settings-scope-chips" role="tablist" aria-label="System to configure">
+          {ordered.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              role="tab"
+              aria-selected={s.id === systemId}
+              className={`settings-scope-chip${s.id === systemId ? ' active' : ''}`}
+              onClick={() => setSystemId(s.id)}
+            >
+              {s.system_name}
+              {!isOwnedSystem(s) && <span className="settings-scope-shared">shared</span>}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <span className="settings-scope-single">{system?.system_name}</span>
+      )}
+    </div>
+  )
+}
+
 function SettingsNav() {
   const { user } = useAuth()
-  const { systems, systemId, setSystemId, system } = useSettingsSystem()
+  const { system } = useSettingsSystem()
   const owner = isOwnedSystem(system)
 
   const groups: Group[] = [
@@ -52,21 +96,10 @@ function SettingsNav() {
         </div>
       ))}
 
-      {/* System settings — pick any system in the farm, then edit it. */}
+      {/* System-scoped pages. Which system they act on is chosen in the scope
+          bar above the content, not here — the nav stays pure navigation. */}
       <div className="settings-group">
-        <div className="settings-group-title"><span>Systems</span></div>
-        {systems.length > 1 && (
-          <select
-            className="settings-system-picker"
-            value={systemId ?? ''}
-            onChange={(e) => setSystemId(e.target.value)}
-            aria-label="System to configure"
-          >
-            {systems.map((s) => (
-              <option key={s.id} value={s.id}>{s.system_name}{isOwnedSystem(s) ? '' : ' (shared)'}</option>
-            ))}
-          </select>
-        )}
+        <div className="settings-group-title"><span>System</span></div>
         <NavLink to="/settings" end className={({ isActive }) => `settings-navlink${isActive ? ' active' : ''}`}>System details</NavLink>
         <NavLink to="/settings/metrics" className={({ isActive }) => `settings-navlink${isActive ? ' active' : ''}`}>Tracked metrics</NavLink>
       </div>
