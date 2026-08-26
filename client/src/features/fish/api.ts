@@ -29,6 +29,28 @@ export async function fetchFishInventory(systemId: string): Promise<FishTank[]> 
   return parsed.success ? parsed.data.tanks : []
 }
 
+// Fish species the backend accepts on a tank.
+export const FISH_SPECIES = ['tilapia', 'catfish', 'trout', 'salmon', 'bass', 'other'] as const
+
+// Create or update a tank (POST upserts by system + tank_number). size_m3 is
+// derived from the litre volume so the two stay consistent.
+export function saveFishTank(systemId: string, t: { tank_number: number; volume_liters: number; fish_type: string }) {
+  return api('/fish-tanks', {
+    method: 'POST',
+    body: {
+      system_id: systemId,
+      tank_number: t.tank_number,
+      size_m3: t.volume_liters / 1000,
+      volume_liters: t.volume_liters,
+      fish_type: t.fish_type,
+    },
+  })
+}
+
+export function deleteFishTank(systemId: string, tankNumber: number) {
+  return api(`/fish-tanks/system/${systemId}/tank/${tankNumber}`, { method: 'DELETE' })
+}
+
 const densityPointSchema = z.object({
   date: z.string(),
   density: z.coerce.number(),

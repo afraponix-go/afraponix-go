@@ -1,9 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSettingsSystem } from './settingsSystem'
-import { updateSystem, isOwnedSystem } from '../systems/api'
-import { fetchFishInventory, tankMaxDensity, type FishTank } from '../fish/api'
-import { fetchGrowBedConfigs } from '../growbeds/api'
+import { updateSystem, isOwnedSystem, canWriteSystem } from '../systems/api'
+import { SystemScope } from '../systems/SystemContext'
+import { fetchFishInventory, tankMaxDensity, deleteFishTank, type FishTank } from '../fish/api'
+import { TankConfigModal } from '../fish/TankConfigModal'
+import { fetchGrowBedConfigs, deleteBed, type GrowBedConfig } from '../growbeds/api'
+import { BedConfigModal } from '../plants/BedConfigModal'
 import { fmt, sum } from '../fish/fishShared'
 import { ApiError } from '../../lib/apiClient'
 import '../fish/fish.css'
@@ -82,12 +85,33 @@ export function GeneralSettings() {
 // volume, fish stock and stocking density, plus grow beds and capacity. This
 // replaces the old "system type" field, which was never part of the setup.
 function SystemInformation({ systemId }: { systemId: string }) {
+  const { system } = useSettingsSystem()
+  const canWrite = canWriteSystem(system)
+  const qc = useQueryClient()
   const tanksQ = useQuery({ queryKey: ['fish-inventory', systemId], queryFn: () => fetchFishInventory(systemId) })
   const bedsQ = useQuery({ queryKey: ['grow-bed-configs', systemId], queryFn: () => fetchGrowBedConfigs(systemId) })
 
   const tanks = tanksQ.data ?? []
   const beds = bedsQ.data ?? []
   const loading = tanksQ.isLoading || bedsQ.isLoading
+
+  // Add/edit modal state (null = closed; an object with an optional record = open).
+  const [tankModal, setTankModal] = useState<{ tank?: FishTank } | null>(null)
+  const [bedModal, setBedModal] = useState<{ bed?: GrowBedConfig } | null>(null)
+  const tankNumbers = tanks.map((t) => t.tank_number)
+  const bedNumbers = beds.map((b) => b.bed_number ?? 0)
+
+  const removeTank = useMutation({
+    mutationFn: (t: FishTank) => deleteFishTank(systemId, t.tank_number),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['fish-inventory'] }),
+  })
+  const removeBed = useMutation({
+    mutationFn: (b: GrowBedConfig) => deleteBed(b.id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['grow-bed-configs'] })
+      qc.invalidateQueries({ queryKey: ['grow-beds'] })
+    },
+  })
 
   // Fish aggregates.
   const tankVolumeM3 = tanks.reduce((a, t) => a + tankM3(t), 0)
@@ -103,7 +127,10 @@ function SystemInformation({ systemId }: { systemId: string }) {
   return (
     <div className="set-card wide" style={{ marginTop: 18 }}>
       <h2 className="set-title">System information</h2>
-      <p className="set-sub">A live summary of this system's tanks, beds and stock, drawn from your latest data.</p>
+      <p className="set-sub">
+        A live summary of this system's tanks, beds and stock.
+        {canWrite ? ' Add or edit tanks and grow beds below.' : ''}
+      </p>
 
       {loading ? (
         <div className="empty">Loading…</div>
@@ -128,71 +155,112 @@ function SystemInformation({ systemId }: { systemId: string }) {
             )}
           </div>
 
-          {tanks.length > 0 && (
-            <>
-              <h3 className="sysinfo-h3">Fish tanks</h3>
-              <div className="sysinfo-table-wrap">
-                <table className="sysinfo-table">
-                  <thead>
-                    <tr>
-                      <th>Tank</th><th>Size</th><th>Species</th>
-                      <th className="num">Fish</th><th className="num">Biomass</th>
-                      <th className="num">Density</th><th className="num">of max</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...tanks].sort((a, b) => a.tank_number - b.tank_number).map((t) => {
-                      const m3 = tankM3(t)
-                      const dens = t.density_kg_m3 ?? (m3 > 0 && t.biomass_kg != null ? t.biomass_kg / m3 : null)
-                      const max = tankMaxDensity(t)
-                      const pct = dens != null && max > 0 ? dens / max : null
-                      return (
-                        <tr key={t.fish_tank_id}>
-                          <td>Tank {t.tank_number}</td>
-                          <td>{fmt(m3, m3 < 10 ? 1 : 0)} m³</td>
-                          <td>{label(t.tank_fish_type)}</td>
-                          <td className="num">{fmt(t.current_count)}</td>
-                          <td className="num">{fmt(t.biomass_kg, 1)} kg</td>
-                          <td className="num">{fmt(dens, 1)}</td>
-                          <td className={`num ${pctClass(pct)}`}>{pct != null ? `${Math.round(pct * 100)}%` : '—'}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-
-          {beds.length > 0 && (
-            <>
-              <h3 className="sysinfo-h3">Grow beds</h3>
-              <div className="sysinfo-table-wrap">
-                <table className="sysinfo-table">
-                  <thead>
-                    <tr>
-                      <th>Bed</th><th>Type</th>
-                      <th className="num">Area</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...beds].sort((a, b) => (a.bed_number ?? 0) - (b.bed_number ?? 0)).map((b) => (
-                      <tr key={b.id}>
-                        <td>{b.bed_name || `Bed ${b.bed_number ?? ''}`.trim()}</td>
-                        <td>{label(b.bed_type)}</td>
-                        <td className="num">{fmt(b.equivalent_m2 ?? b.area_m2, 1)} m²</td>
+          <div className="sysinfo-section-head">
+            <h3 className="sysinfo-h3">Fish tanks</h3>
+            {canWrite && <button type="button" className="sysinfo-add" onClick={() => setTankModal({})}>+ Add tank</button>}
+          </div>
+          {tanks.length > 0 ? (
+            <div className="sysinfo-table-wrap">
+              <table className="sysinfo-table">
+                <thead>
+                  <tr>
+                    <th>Tank</th><th>Size</th><th>Species</th>
+                    <th className="num">Fish</th><th className="num">Biomass</th>
+                    <th className="num">Density</th><th className="num">of max</th>
+                    {canWrite && <th className="sysinfo-act-col" aria-label="Actions" />}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...tanks].sort((a, b) => a.tank_number - b.tank_number).map((t) => {
+                    const m3 = tankM3(t)
+                    const dens = t.density_kg_m3 ?? (m3 > 0 && t.biomass_kg != null ? t.biomass_kg / m3 : null)
+                    const max = tankMaxDensity(t)
+                    const pct = dens != null && max > 0 ? dens / max : null
+                    return (
+                      <tr key={t.fish_tank_id}>
+                        <td>Tank {t.tank_number}</td>
+                        <td>{fmt(m3, m3 < 10 ? 1 : 0)} m³</td>
+                        <td>{label(t.tank_fish_type)}</td>
+                        <td className="num">{fmt(t.current_count)}</td>
+                        <td className="num">{fmt(t.biomass_kg, 1)} kg</td>
+                        <td className="num">{fmt(dens, 1)}</td>
+                        <td className={`num ${pctClass(pct)}`}>{pct != null ? `${Math.round(pct * 100)}%` : '—'}</td>
+                        {canWrite && (
+                          <td className="sysinfo-act-col">
+                            <div className="sysinfo-row-actions">
+                              <button type="button" className="sysinfo-rowbtn" onClick={() => setTankModal({ tank: t })}>Edit</button>
+                              <button
+                                type="button"
+                                className="sysinfo-rowbtn danger"
+                                disabled={removeTank.isPending}
+                                onClick={() => { if (confirm(`Delete Tank ${t.tank_number}? This removes the tank and its stock records.`)) removeTank.mutate(t) }}
+                              >Delete</button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="sysinfo-empty-line">No fish tanks yet.</p>
           )}
 
-          {tanks.length === 0 && beds.length === 0 && (
-            <div className="empty">No tanks or beds configured yet. Add them under Fish and Plants → Beds.</div>
+          <div className="sysinfo-section-head">
+            <h3 className="sysinfo-h3">Grow beds</h3>
+            {canWrite && <button type="button" className="sysinfo-add" onClick={() => setBedModal({})}>+ Add grow bed</button>}
+          </div>
+          {beds.length > 0 ? (
+            <div className="sysinfo-table-wrap">
+              <table className="sysinfo-table">
+                <thead>
+                  <tr>
+                    <th>Bed</th><th>Type</th>
+                    <th className="num">Area</th>
+                    {canWrite && <th className="sysinfo-act-col" aria-label="Actions" />}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...beds].sort((a, b) => (a.bed_number ?? 0) - (b.bed_number ?? 0)).map((b) => (
+                    <tr key={b.id}>
+                      <td>{b.bed_name || `Bed ${b.bed_number ?? ''}`.trim()}</td>
+                      <td>{label(b.bed_type)}</td>
+                      <td className="num">{fmt(b.equivalent_m2 ?? b.area_m2, 1)} m²</td>
+                      {canWrite && (
+                        <td className="sysinfo-act-col">
+                          <div className="sysinfo-row-actions">
+                            <button type="button" className="sysinfo-rowbtn" onClick={() => setBedModal({ bed: b })}>Edit</button>
+                            <button
+                              type="button"
+                              className="sysinfo-rowbtn danger"
+                              disabled={removeBed.isPending}
+                              onClick={() => { if (confirm(`Delete ${b.bed_name || `Bed ${b.bed_number ?? ''}`.trim()}? This removes the bed and its allocations.`)) removeBed.mutate(b) }}
+                            >Delete</button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="sysinfo-empty-line">No grow beds yet.</p>
           )}
         </>
+      )}
+
+      {/* Bed modal reads the active system from SystemContext, so pin it to the
+          settings-selected system while it's open. */}
+      {tankModal && (
+        <TankConfigModal systemId={systemId} tank={tankModal.tank} existingTankNumbers={tankNumbers} onClose={() => setTankModal(null)} />
+      )}
+      {bedModal && (
+        <SystemScope systemId={systemId}>
+          <BedConfigModal bed={bedModal.bed} existingBedNumbers={bedNumbers} onClose={() => setBedModal(null)} />
+        </SystemScope>
       )}
     </div>
   )
