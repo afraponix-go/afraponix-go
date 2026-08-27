@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthContext'
 import { useSystems } from '../features/systems/SystemContext'
 import { AddSystemModal } from '../features/systems/AddSystemModal'
+import { NewFarmModal } from '../features/systems/NewFarmModal'
 import { DashboardIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SprayIcon, SettingsIcon } from './icons'
 import { Brand } from '../components/Brand'
 import { ThemeToggle } from './ThemeToggle'
@@ -23,16 +25,22 @@ const OVERFLOW = TABS.slice(PRIMARY_COUNT)
 
 export function AppShell() {
   const { user, signOut } = useAuth()
-  const { systems, farms, activeFarmId, setActiveFarmId } = useSystems()
+  const qc = useQueryClient()
+  const { systems, farms, activeFarm, activeFarmId, setActiveFarmId } = useSystems()
   const [showAdd, setShowAdd] = useState(false)
+  const [addFarmId, setAddFarmId] = useState<string | undefined>(undefined)
+  const [showNewFarm, setShowNewFarm] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const { pathname } = useLocation()
   const name = user?.firstName || user?.email || 'Account'
   const initial = (user?.firstName?.[0] || user?.email?.[0] || '?').toUpperCase()
+  // Only owned farms can take a new system; a shared farm is someone else's.
+  const canAddToFarm = activeFarm?.kind === 'own'
 
   // Close the popovers on navigation.
-  useEffect(() => { setMoreOpen(false); setMenuOpen(false) }, [pathname])
+  useEffect(() => { setMoreOpen(false); setMenuOpen(false); setAddOpen(false) }, [pathname])
 
   const moreActive = OVERFLOW.some((t) => pathname === t.to || pathname.startsWith(t.to + '/'))
 
@@ -53,10 +61,29 @@ export function AppShell() {
               </select>
             </label>
           )}
-          {/* Quick add-system (contextual to the farm switcher) */}
-          <button className="sys-add" onClick={() => setShowAdd(true)} title="Add system" aria-label="Add system">
-            {systems.length > 0 ? '+' : '+ Add system'}
-          </button>
+          {/* Add menu — a system in this farm, or a whole new farm */}
+          <div className="add-menu-wrap">
+            <button className="sys-add" onClick={() => setAddOpen((v) => !v)} title="Add" aria-haspopup="menu" aria-expanded={addOpen} aria-label="Add system or farm">
+              {systems.length > 0 ? '+' : '+ Add system'}
+            </button>
+            {addOpen && (
+              <>
+                <div className="popover-backdrop" onClick={() => setAddOpen(false)} />
+                <div className="add-menu" role="menu">
+                  {canAddToFarm && (
+                    <button className="add-menu-item" role="menuitem" onClick={() => { setAddOpen(false); setAddFarmId(undefined); setShowAdd(true) }}>
+                      <span className="add-menu-title">Add system</span>
+                      <span className="add-menu-sub">to {activeFarm?.name ?? 'this farm'}</span>
+                    </button>
+                  )}
+                  <button className="add-menu-item" role="menuitem" onClick={() => { setAddOpen(false); setShowNewFarm(true) }}>
+                    <span className="add-menu-title">New farm</span>
+                    <span className="add-menu-sub">a separate farm with its own systems</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
 
           {/* User menu — identity, settings, theme, log out */}
           <div className="user-menu-wrap">
@@ -121,7 +148,23 @@ export function AppShell() {
         )}
       </nav>
 
-      {showAdd && <AddSystemModal onClose={() => setShowAdd(false)} />}
+      {showAdd && <AddSystemModal farmId={addFarmId} onClose={() => { setShowAdd(false); setAddFarmId(undefined) }} />}
+      {showNewFarm && (
+        <NewFarmModal
+          onClose={() => setShowNewFarm(false)}
+          onCreated={async (farm) => {
+            // Refetch farms so the new one is in context before we switch to it
+            // (otherwise the "keep active farm valid" guard would bounce it back).
+            await qc.invalidateQueries({ queryKey: ['farms'] })
+            setActiveFarmId(farm.id)
+            setShowNewFarm(false)
+            // Jump straight into adding the new farm's first system, targeting it
+            // explicitly in case context hasn't settled yet.
+            setAddFarmId(farm.id)
+            setShowAdd(true)
+          }}
+        />
+      )}
     </div>
   )
 }

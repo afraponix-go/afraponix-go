@@ -35,7 +35,9 @@ function bedToInputs(b: Bed): BedInputs {
 
 const STEPS = ['Setup', 'Basics', 'Fish tanks', 'Grow beds']
 
-export function AddSystemModal({ onClose }: { onClose: () => void }) {
+// `farmId` overrides which farm the new system lands in (used right after
+// creating a farm, before the farm list has refetched into context).
+export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmId?: string }) {
   const qc = useQueryClient()
   const { setActiveId, activeFarm, activeFarmId } = useSystems()
   const [step, setStep] = useState(1)
@@ -71,9 +73,10 @@ export function AddSystemModal({ onClose }: { onClose: () => void }) {
       // whatever it returns.
       const id = await createSystem({
         system_name: name, system_type: 'aquaponics',
-        // Land in the active farm when it's one of the user's own; otherwise the
-        // backend assigns their default farm (e.g. while viewing "Shared with me").
-        farm_id: activeFarm?.kind === 'own' ? activeFarmId ?? undefined : undefined,
+        // An explicit farmId wins (just-created farm); otherwise land in the
+        // active farm when it's one of the user's own; otherwise the backend
+        // assigns their default farm (e.g. while viewing "Shared with me").
+        farm_id: farmId ?? (activeFarm?.kind === 'own' ? activeFarmId ?? undefined : undefined),
         fish_type: tanks[0]?.fish_type || 'tilapia',
         fish_tank_count: tankCount, grow_bed_count: bedCount,
         total_grow_area: Math.round(totalArea * 100) / 100,

@@ -358,6 +358,23 @@
 .account-menu-item.danger { color: var(--danger); }
 .account-menu-item.as-toggle { padding: 6px 8px; }
 
+/* Add menu (system in this farm / new farm) */
+.add-menu-wrap { position: relative; display: inline-flex; }
+.add-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 30;
+  min-width: 232px; padding: 6px; display: flex; flex-direction: column; gap: 2px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 10px 34px rgba(0,0,0,.20);
+}
+.add-menu-item {
+  display: flex; flex-direction: column; gap: 2px; text-align: left; width: 100%;
+  font: inherit; padding: 9px 11px; border: 0; background: transparent; color: var(--ink);
+  border-radius: 10px; cursor: pointer;
+}
+.add-menu-item:hover { background: var(--surface-2); }
+.add-menu-title { font-size: 14px; font-weight: 600; }
+.add-menu-sub { font-size: 12px; color: var(--ink-faint); }
+
 /* Bottom-nav "More" overflow */
 .bottomnav .more-toggle { display: none; border: 0; background: transparent; cursor: pointer; }
 .more-toggle .more-dots { font-size: 20px; line-height: 1; height: 24px; display: grid; place-items: center; }
