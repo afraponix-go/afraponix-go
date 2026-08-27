@@ -250,7 +250,6 @@ router.put('/:id/metrics', async (req, res) => {
 // Create demo system using SQLite demo database
 router.post('/create-demo', async (req, res) => {
     const { system_name } = req.body;
-    const SQLiteDemoImporter = require('../database/sqlite-demo-importer');
 
     if (!system_name) {
         return res.status(400).json({ error: 'System name is required' });
@@ -278,7 +277,10 @@ router.post('/create-demo', async (req, res) => {
             let importResult;
             
             try {
-                // Try to use SQLite importer first
+                // Try to use SQLite importer first. Required lazily and inside
+                // this try so a missing/broken native sqlite3 binding falls back
+                // to the simple creator instead of throwing before any response.
+                const SQLiteDemoImporter = require('../database/sqlite-demo-importer');
                 const importer = new SQLiteDemoImporter(connection);
                 importResult = await importer.importDemoSystem(newSystemId, targetUserId);
                 console.log('✅ Demo system created using SQLite database');
