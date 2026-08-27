@@ -49,6 +49,32 @@
 }
 .driver-popover.afx-tour .driver-popover-arrow { color: var(--surface); }
 
+/* Close (×) button — small, contained, subtle hover (the default overflows). */
+.driver-popover.afx-tour .driver-popover-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--ink-faint);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  transition: background 0.12s, color 0.12s;
+}
+.driver-popover.afx-tour .driver-popover-close-btn:hover,
+.driver-popover.afx-tour .driver-popover-close-btn:focus-visible {
+  background: var(--surface-2, color-mix(in srgb, var(--ink) 8%, transparent));
+  color: var(--ink);
+  outline: none;
+}
+
 /* First-run welcome (shown on the dashboard for accounts with no systems). */
 .fr { max-width: 760px; margin: 24px auto; text-align: center; padding: 0 16px; }
 .fr-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
