@@ -3,7 +3,7 @@ import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { useSystems, SystemScope } from '../systems/SystemContext'
 import type { System } from '../systems/api'
-import { fetchBatches, type Batch, type BatchStatus } from './batches'
+import { fetchBatches, isOverdue, overdueDays, type Batch, type BatchStatus } from './batches'
 import { fetchPlantGrowth, isHarvestRow, deletePlantEntry, type PlantRow } from './plantGrowth'
 import { fetchGrowBeds, type GrowBed } from '../growbeds/api'
 import { prettyCrop } from './api'
@@ -25,6 +25,31 @@ const RANK: Record<BatchStatus, number> = { ready: 0, approaching: 1, growing: 2
 
 type ReadyItem = { system: System; batch: Batch }
 type HistoryItem = { system: System; row: PlantRow; beds: GrowBed[] }
+type SysGroup = { system: System; items: ReadyItem[] }
+type CropGroup = { crop: string; total: number; batches: number; systems: SysGroup[] }
+
+// Group batches by crop (product), then by system within each crop. Crops are
+// ordered by total plant count, systems by name.
+function groupByCropThenSystem(items: ReadyItem[]): CropGroup[] {
+  const byCrop = new Map<string, ReadyItem[]>()
+  for (const it of items) {
+    const list = byCrop.get(it.batch.crop_type)
+    if (list) list.push(it)
+    else byCrop.set(it.batch.crop_type, [it])
+  }
+  const groups: CropGroup[] = []
+  for (const [crop, list] of byCrop) {
+    const bySys = new Map<string, SysGroup>()
+    for (const it of list) {
+      const sg = bySys.get(it.system.id)
+      if (sg) sg.items.push(it)
+      else bySys.set(it.system.id, { system: it.system, items: [it] })
+    }
+    const systems = [...bySys.values()].sort((a, b) => a.system.system_name.localeCompare(b.system.system_name, undefined, { numeric: true }))
+    groups.push({ crop, total: list.reduce((n, it) => n + it.batch.remaining, 0), batches: list.length, systems })
+  }
+  return groups.sort((a, b) => b.total - a.total)
+}
 
 // Farm-mode Harvest: instead of a section per system, roll every system's
 // batches up into one "Ready to harvest" list and one "Harvest history" table,
@@ -57,13 +82,16 @@ export function HarvestFarm() {
 
   const loading = batchQs.some((q) => q.isLoading) || growthQs.some((q) => q.isLoading)
 
-  // Ready/approaching batches across the farm, most-urgent first.
+  // Overdue (a week+ past harvest) and ready/approaching batches across the farm.
+  const overdue: ReadyItem[] = []
   const ready: ReadyItem[] = []
   ordered.forEach((system, i) => {
     for (const b of batchQs[i].data ?? []) {
-      if (b.remaining > 0 && (b.status === 'ready' || b.status === 'approaching')) ready.push({ system, batch: b })
+      if (isOverdue(b)) overdue.push({ system, batch: b })
+      else if (b.remaining > 0 && (b.status === 'ready' || b.status === 'approaching')) ready.push({ system, batch: b })
     }
   })
+  overdue.sort((a, b) => (overdueDays(b.batch) ?? 0) - (overdueDays(a.batch) ?? 0))
   ready.sort((a, b) => RANK[a.batch.status] - RANK[b.batch.status] || (b.batch.age_days ?? 0) - (a.batch.age_days ?? 0))
 
   // Harvest history across the farm, newest first.
@@ -78,6 +106,45 @@ export function HarvestFarm() {
   const bedName = (beds: GrowBed[], id: number | null | undefined) =>
     beds.find((x) => x.id === id)?.bed_name ?? (id != null ? `Bed ${id}` : '—')
 
+  // Grouped rendering: crop (product) → system → its batches. Collapses the
+  // repetitive "System X · Lettuce" rows into one crop heading per product.
+  const renderGroups = (items: ReadyItem[], overdue: boolean) => (
+    <div className="harvest-groups">
+      {groupByCropThenSystem(items).map((g) => (
+        <div className="harvest-group" key={g.crop}>
+          <div className="harvest-group-head">
+            <span className="harvest-group-name">{prettyCrop(g.crop)}</span>
+            <span className="harvest-group-meta">{g.total.toLocaleString()} plants · {g.batches} {g.batches === 1 ? 'batch' : 'batches'}</span>
+          </div>
+          {g.systems.map((sg) => (
+            <div className="harvest-sysgroup" key={sg.system.id}>
+              <div className="harvest-sysgroup-head">{sg.system.system_name}</div>
+              <div className="crop-list ready-list">
+                {sg.items.map((it) => {
+                  const st = STATUS[it.batch.status] ?? STATUS.growing
+                  return (
+                    <div className={`crop-row${overdue ? ' overdue-row' : ''}`} key={`${it.system.id}-${it.batch.batch_id}`}>
+                      <div className="crop-main">
+                        <span className="crop-name">
+                          {it.batch.seed_variety ?? prettyCrop(it.batch.crop_type)}
+                          {overdue
+                            ? <span className="batch-badge overdue">{overdueDays(it.batch)}d overdue</span>
+                            : <span className={`batch-badge ${st.cls}`}>{st.label}</span>}
+                        </span>
+                        <span className="crop-date">{it.batch.bed_name ?? `Bed ${it.batch.bed_number ?? '—'}`} · {it.batch.remaining} plants · {it.batch.age_days ?? '—'}d old</span>
+                      </div>
+                      <button className="row-btn" onClick={() => setHarvesting(it)}>Harvest</button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+
   return (
     <div className="fm">
       <div className="fm-bar">
@@ -85,9 +152,17 @@ export function HarvestFarm() {
           <span className="fm-eyebrow">All systems</span>
           <b>{activeFarm?.name ?? 'Farm'}</b>
         </div>
+        {overdue.length > 0 && <div className="fm-stat"><b>{overdue.length}</b><span>Overdue</span></div>}
         <div className="fm-stat"><b>{ready.length}</b><span>Batches ready</span></div>
         <div className="fm-stat"><b>{history.length}</b><span>Harvest records</span></div>
       </div>
+
+      {overdue.length > 0 && (
+        <>
+          <h2 className="section-title overdue-title" style={{ marginTop: 18 }}>Overdue <span className="overdue-count">{overdue.length}</span></h2>
+          {renderGroups(overdue, true)}
+        </>
+      )}
 
       <h2 className="section-title" style={{ marginTop: 18 }}>Ready to harvest</h2>
       {loading ? (
@@ -95,27 +170,7 @@ export function HarvestFarm() {
       ) : ready.length === 0 ? (
         <div className="empty">No batches at maturity across the farm. Any batch can be harvested from its card on the Plantings tab.</div>
       ) : (
-        <div className="crop-list ready-list">
-          {ready.map((it) => {
-            const s = STATUS[it.batch.status] ?? STATUS.growing
-            return (
-              <div className="crop-row" key={`${it.system.id}-${it.batch.batch_id}`}>
-                <div className="crop-main">
-                  <span className="crop-name">
-                    <span className="harvest-sys">{it.system.system_name}</span>
-                    {prettyCrop(it.batch.crop_type)}
-                    <span className={`batch-badge ${s.cls}`}>{s.label}</span>
-                  </span>
-                  <span className="crop-date">
-                    {it.batch.seed_variety ? `${it.batch.seed_variety} · ` : ''}
-                    {it.batch.bed_name ?? `Bed ${it.batch.bed_number ?? '—'}`} · {it.batch.remaining} plants · {it.batch.age_days ?? '—'}d old
-                  </span>
-                </div>
-                <button className="row-btn" onClick={() => setHarvesting(it)}>Harvest</button>
-              </div>
-            )
-          })}
-        </div>
+        renderGroups(ready, false)
       )}
 
       <h2 className="section-title">Harvest history</h2>

@@ -127,6 +127,53 @@
   background: var(--surface-2);
   color: var(--ink-faint);
 }
+.batch-badge.overdue {
+  background: var(--danger-wash);
+  color: var(--danger);
+}
+
+/* Overdue section (batches a week+ past harvest date). */
+.overdue-title { color: var(--danger); display: flex; align-items: center; gap: 8px; }
+.overdue-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--danger);
+  background: var(--danger-wash);
+  padding: 2px 9px;
+  border-radius: 999px;
+}
+.overdue-row { background: color-mix(in srgb, var(--danger) 4%, transparent); }
+
+/* Crop → system grouping for the farm harvest lists. */
+.harvest-groups { display: flex; flex-direction: column; gap: 16px; }
+.harvest-group {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+.harvest-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2, transparent);
+}
+.harvest-group-name { font-size: 15px; font-weight: 700; color: var(--ink); }
+.harvest-group-meta { font-size: 12.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.harvest-sysgroup { padding: 4px 16px 10px; }
+.harvest-sysgroup-head {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding: 10px 0 4px;
+}
+/* Rows inside a group drop their own card chrome (the group provides the frame). */
+.harvest-sysgroup .ready-list { border: none; padding: 0; background: transparent; border-radius: 0; }
 /* Maturity bar fills, matching batch status */
 .density-fill.growing {
   background: var(--brand-green);

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { useSystems } from '../systems/SystemContext'
-import { fetchBatches, type Batch, type BatchStatus } from './batches'
+import { fetchBatches, isOverdue, overdueDays, type Batch, type BatchStatus } from './batches'
 import { fetchPlantGrowth, isHarvestRow, deletePlantEntry, type PlantRow } from './plantGrowth'
 import { fetchGrowBeds } from '../growbeds/api'
 import { prettyCrop } from './api'
@@ -47,10 +47,14 @@ export function Harvest() {
   if (isError) return <div className="empty">Could not load harvest data.</div>
 
   const bedName = (id: number | null | undefined) => beds.find((b) => b.id === id)?.bed_name ?? (id != null ? `Bed ${id}` : '—')
+  // Overdue batches (a week+ past harvest date) get their own urgent section.
+  const overdue = batches
+    .filter((b) => isOverdue(b))
+    .sort((a, b) => (overdueDays(b) ?? 0) - (overdueDays(a) ?? 0))
   // Surface batches at or near maturity here; any other batch can be harvested
-  // from its card on the Plantings tab.
+  // from its card on the Plantings tab. Overdue ones move up to their section.
   const harvestable = batches
-    .filter((b) => b.remaining > 0 && (b.status === 'ready' || b.status === 'approaching'))
+    .filter((b) => b.remaining > 0 && (b.status === 'ready' || b.status === 'approaching') && !isOverdue(b))
     .sort((a, b) => RANK[a.status] - RANK[b.status] || (b.age_days ?? 0) - (a.age_days ?? 0))
   // Most recent harvests first; paged 10 at a time via "Load more".
   const history = rows
@@ -60,7 +64,27 @@ export function Harvest() {
 
   return (
     <div>
-      <h2 className="section-title" style={{ marginTop: 0 }}>Ready to harvest</h2>
+      {overdue.length > 0 && (
+        <>
+          <h2 className="section-title overdue-title" style={{ marginTop: 0 }}>Overdue <span className="overdue-count">{overdue.length}</span></h2>
+          <div className="crop-list ready-list">
+            {overdue.map((b) => (
+              <div className="crop-row overdue-row" key={b.batch_id}>
+                <div className="crop-main">
+                  <span className="crop-name">
+                    {prettyCrop(b.crop_type)}
+                    <span className="batch-badge overdue">{overdueDays(b)}d overdue</span>
+                  </span>
+                  <span className="crop-date">{b.seed_variety ? `${b.seed_variety} · ` : ''}{b.bed_name ?? `Bed ${b.bed_number ?? '—'}`} · {b.remaining} plants · {b.age_days ?? '—'}d old</span>
+                </div>
+                <button className="row-btn" onClick={() => setHarvesting(b)}>Harvest</button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <h2 className="section-title" style={{ marginTop: overdue.length > 0 ? undefined : 0 }}>Ready to harvest</h2>
       {harvestable.length === 0 ? (
         <div className="empty">No batches at maturity yet. You can harvest any batch from its card on the Plantings tab.</div>
       ) : (

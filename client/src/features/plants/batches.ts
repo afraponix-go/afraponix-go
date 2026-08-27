@@ -34,3 +34,18 @@ export async function fetchBatches(systemId: string): Promise<Batch[]> {
   const parsed = z.object({ batches: z.array(batchSchema) }).safeParse(data)
   return parsed.success ? parsed.data.batches : []
 }
+
+// A batch counts as overdue once it's this many days past its harvest date.
+export const OVERDUE_DAYS = 7
+
+// Days past the target harvest date (age − days-to-harvest); null if unknown.
+export function overdueDays(b: Batch): number | null {
+  if (b.age_days == null || b.days_to_harvest == null) return null
+  return b.age_days - b.days_to_harvest
+}
+
+// Still standing (remaining > 0) and at least a week past its harvest date.
+export function isOverdue(b: Batch): boolean {
+  const over = overdueDays(b)
+  return b.remaining > 0 && over != null && over >= OVERDUE_DAYS
+}
