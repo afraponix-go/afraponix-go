@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
 const { getDatabase } = require('../database/init-mariadb');
+const { ensureUserFarm } = require('../utils/farms');
 const { sendPasswordResetEmail, sendVerificationEmail } = require('../utils/emailService');
 const { authenticateToken } = require('../middleware/auth');
 
@@ -42,6 +43,8 @@ async function seedNewUserDefaults(pool, userId) {
             SELECT ?, sv.crop_type, sv.variety_name FROM seed_varieties sv WHERE sv.user_id IS NULL
         `, [userId]);
     } catch (e) { console.error('Failed to seed default seed varieties:', e.message); }
+    // Give every new account a default farm so they can add systems straight away.
+    try { await ensureUserFarm(pool, userId); } catch (e) { console.error('Failed to create default farm:', e.message); }
 }
 
 // Sign in / sign up with Google. The frontend gets an ID token from Google
@@ -199,6 +202,9 @@ router.post('/register', async (req, res) => {
         } catch (seedErr) {
             console.error('Failed to seed default seed varieties for new user:', seedErr.message);
         }
+
+        // Give every new account a default farm so they can add systems straight away.
+        try { await ensureUserFarm(pool, userId); } catch (e) { console.error('Failed to create default farm for new user:', e.message); }
 
         // Check if SMTP is configured
         const smtpConfigured = process.env.SMTP_USER && process.env.SMTP_PASS;
