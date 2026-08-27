@@ -10,8 +10,7 @@ import { ProtectedRoute } from './ProtectedRoute'
 import { AppShell } from './AppShell'
 import { SubTabLayout } from './SubTabLayout'
 import { FarmScoped, SystemOnly } from '../features/systems/FarmScoped'
-import { DashboardPage } from '../features/dashboard/DashboardPage'
-import { FarmDashboardPage } from '../features/dashboard/FarmDashboardPage'
+import { DashboardHome } from '../features/dashboard/DashboardHome'
 import { Charts } from '../features/charts/Charts'
 import { Layout } from '../features/farm/Layout'
 import { WaterQualityPage } from '../features/water/WaterQualityPage'
@@ -45,8 +44,7 @@ import { AdminSettings } from '../features/settings/AdminSettings'
 import { DangerZone } from '../features/settings/DangerZone'
 
 const DASHBOARD_TABS = [
-  { to: '/', label: 'Farm', end: true },
-  { to: '/overview', label: 'Overview' },
+  { to: '/', label: 'Overview', end: true },
   { to: '/charts', label: 'Charts' },
   { to: '/layout', label: 'Layout' },
 ]
@@ -100,8 +98,9 @@ export const router = createBrowserRouter([
             path: '/',
             element: <SubTabLayout items={DASHBOARD_TABS} farmAware />,
             children: [
-              { index: true, element: <FarmDashboardPage /> },
-              { path: 'overview', element: <SystemOnly><DashboardPage /></SystemOnly> },
+              { index: true, element: <DashboardHome /> },
+              // Old separate Overview tab — keep the link working.
+              { path: 'overview', element: <Navigate to="/" replace /> },
               { path: 'charts', element: <Charts /> },
               { path: 'layout', element: <Layout /> },
             ],
