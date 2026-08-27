@@ -5,6 +5,7 @@ import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '../features/auth/ResetPasswordPage'
 import { TermsPage } from '../features/legal/TermsPage'
+import { PrivacyPage } from '../features/legal/PrivacyPage'
 import { LandingPage } from '../features/landing/LandingPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AppShell } from './AppShell'
@@ -87,6 +88,7 @@ export const router = createBrowserRouter([
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },
   { path: '/terms', element: <TermsPage /> },
+  { path: '/privacy', element: <PrivacyPage /> },
   {
     element: <ProtectedRoute />,
     children: [
