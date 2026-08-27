@@ -70,6 +70,11 @@ export function HarvestFarm() {
   const [editing, setEditing] = useState<PlantRow | null>(null)
   const [confirmDel, setConfirmDel] = useState<HistoryItem | null>(null)
   const [visibleHistory, setVisibleHistory] = useState(10)
+  // Collapsed crop groups, keyed `${section}:${crop}` so Overdue and Ready fold
+  // independently. Default: everything expanded.
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set())
+  const toggleGroup = (key: string) =>
+    setCollapsed((s) => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n })
 
   const del = useMutation({
     mutationFn: (it: HistoryItem) => deletePlantEntry(it.system.id, it.row.id),
@@ -108,15 +113,18 @@ export function HarvestFarm() {
 
   // Grouped rendering: crop (product) → system → its batches. Collapses the
   // repetitive "System X · Lettuce" rows into one crop heading per product.
-  const renderGroups = (items: ReadyItem[], overdue: boolean) => (
+  const renderGroups = (items: ReadyItem[], overdue: boolean, section: string) => (
     <div className="harvest-groups">
-      {groupByCropThenSystem(items).map((g) => (
-        <div className="harvest-group" key={g.crop}>
-          <div className="harvest-group-head">
-            <span className="harvest-group-name">{prettyCrop(g.crop)}</span>
+      {groupByCropThenSystem(items).map((g) => {
+        const key = `${section}:${g.crop}`
+        const open = !collapsed.has(key)
+        return (
+        <div className={`harvest-group${open ? ' open' : ''}`} key={g.crop}>
+          <button type="button" className="harvest-group-head" onClick={() => toggleGroup(key)} aria-expanded={open}>
+            <span className="harvest-group-name"><span className="harvest-chev" aria-hidden>▸</span>{prettyCrop(g.crop)}</span>
             <span className="harvest-group-meta">{g.total.toLocaleString()} plants · {g.batches} {g.batches === 1 ? 'batch' : 'batches'}</span>
-          </div>
-          {g.systems.map((sg) => (
+          </button>
+          {open && g.systems.map((sg) => (
             <div className="harvest-sysgroup" key={sg.system.id}>
               <div className="harvest-sysgroup-head">{sg.system.system_name}</div>
               <div className="crop-list ready-list">
@@ -141,7 +149,8 @@ export function HarvestFarm() {
             </div>
           ))}
         </div>
-      ))}
+        )
+      })}
     </div>
   )
 
@@ -160,7 +169,7 @@ export function HarvestFarm() {
       {overdue.length > 0 && (
         <>
           <h2 className="section-title overdue-title" style={{ marginTop: 18 }}>Overdue <span className="overdue-count">{overdue.length}</span></h2>
-          {renderGroups(overdue, true)}
+          {renderGroups(overdue, true, 'overdue')}
         </>
       )}
 
@@ -170,7 +179,7 @@ export function HarvestFarm() {
       ) : ready.length === 0 ? (
         <div className="empty">No batches at maturity across the farm. Any batch can be harvested from its card on the Plantings tab.</div>
       ) : (
-        renderGroups(ready, false)
+        renderGroups(ready, false, 'ready')
       )}
 
       <h2 className="section-title">Harvest history</h2>

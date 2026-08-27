@@ -154,14 +154,23 @@
 }
 .harvest-group-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
+  width: 100%;
   padding: 12px 16px;
+  border: none;
   border-bottom: 1px solid var(--line);
   background: var(--surface-2, transparent);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
-.harvest-group-name { font-size: 15px; font-weight: 700; color: var(--ink); }
+.harvest-group:not(.open) .harvest-group-head { border-bottom: none; }
+.harvest-group-head:hover { background: color-mix(in srgb, var(--ink) 4%, var(--surface)); }
+.harvest-group-name { font-size: 15px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+.harvest-chev { font-size: 12px; color: var(--ink-faint); transition: transform 0.15s; }
+.harvest-group.open .harvest-chev { transform: rotate(90deg); }
 .harvest-group-meta { font-size: 12.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
 .harvest-sysgroup { padding: 4px 16px 10px; }
 .harvest-sysgroup-head {
