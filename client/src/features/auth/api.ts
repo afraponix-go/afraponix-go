@@ -48,6 +48,12 @@ export async function login(email: string, password: string) {
   return loginResponse.parse(data)
 }
 
+// Exchange a Google Identity Services ID token for our own session token.
+export async function loginWithGoogle(credential: string) {
+  const data = await api('/auth/google', { method: 'POST', body: { credential } })
+  return loginResponse.parse(data)
+}
+
 export async function register(input: {
   email: string
   password: string

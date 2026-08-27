@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 const { getDatabase } = require('../database/init-mariadb');
 const { sendPasswordResetEmail, sendVerificationEmail } = require('../utils/emailService');
 const { authenticateToken } = require('../middleware/auth');
@@ -12,6 +13,106 @@ const router = express.Router();
 const formatDateForMySQL = (date) => {
     return date.toISOString().slice(0, 19).replace('T', ' ');
 };
+
+// Google Identity Services verifier — only available when a client id is set.
+let _googleClient = null;
+function getGoogleClient() {
+    if (!process.env.GOOGLE_CLIENT_ID) return null;
+    if (!_googleClient) _googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    return _googleClient;
+}
+
+// Seed a brand-new user with their own editable copies of the default crops and
+// seed varieties, mirroring /register. Best-effort: a failure here shouldn't
+// block account creation.
+async function seedNewUserDefaults(pool, userId) {
+    try {
+        await pool.execute(`
+            INSERT INTO custom_crops
+              (user_id, crop_code, crop_name, scientific_name, category, plant_spacing, growth_days, target_ec, ec_min, ec_max)
+            SELECT ?, c.code, c.name, c.scientific_name, cat.code, c.plant_spacing_cm, c.days_to_harvest,
+                   ROUND((c.default_ec_min + c.default_ec_max) / 2, 2), c.default_ec_min, c.default_ec_max
+            FROM crops c LEFT JOIN crop_categories cat ON c.category_id = cat.id
+            WHERE c.is_active = 1
+        `, [userId]);
+    } catch (e) { console.error('Failed to seed default crops:', e.message); }
+    try {
+        await pool.execute(`
+            INSERT INTO seed_varieties (user_id, crop_type, variety_name)
+            SELECT ?, sv.crop_type, sv.variety_name FROM seed_varieties sv WHERE sv.user_id IS NULL
+        `, [userId]);
+    } catch (e) { console.error('Failed to seed default seed varieties:', e.message); }
+}
+
+// Sign in / sign up with Google. The frontend gets an ID token from Google
+// Identity Services and posts it here; we verify it, then find-or-create the
+// user (linking to an existing account with the same email) and issue our own
+// session JWT — the same token shape the other auth routes return.
+router.post('/google', async (req, res) => {
+    const client = getGoogleClient();
+    if (!client) return res.status(501).json({ error: 'Google sign-in is not configured on this server.' });
+
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ error: 'Missing Google credential.' });
+
+    try {
+        const ticket = await client.verifyIdToken({ idToken: credential, audience: process.env.GOOGLE_CLIENT_ID });
+        const payload = ticket.getPayload();
+        const email = (payload.email || '').toLowerCase();
+        if (!email || !payload.email_verified) {
+            return res.status(400).json({ error: 'Your Google account email could not be verified.' });
+        }
+        const googleId = payload.sub;
+        const firstName = payload.given_name || (payload.name ? String(payload.name).split(' ')[0] : '') || 'Grower';
+        const lastName = payload.family_name || '';
+
+        const pool = getDatabase();
+        const [rows] = await pool.execute('SELECT * FROM users WHERE email = ? OR google_id = ? LIMIT 1', [email, googleId]);
+        let user = rows[0];
+
+        if (user) {
+            // Link Google to the existing account (by email) if not already linked.
+            if (!user.google_id) {
+                await pool.execute('UPDATE users SET google_id = ?, email_verified = 1 WHERE id = ?', [googleId, user.id]);
+                user.google_id = googleId;
+            }
+        } else {
+            // Create a new Google-only account (no password), email pre-verified.
+            const [result] = await pool.execute(
+                'INSERT INTO users (username, email, first_name, last_name, password_hash, google_id, email_verified) VALUES (?, ?, ?, ?, NULL, ?, 1)',
+                [email, email, firstName, lastName, googleId]
+            );
+            await seedNewUserDefaults(pool, result.insertId);
+            const [fresh] = await pool.execute('SELECT * FROM users WHERE id = ?', [result.insertId]);
+            user = fresh[0];
+        }
+
+        const userRole = user.user_role || 'basic';
+        const subscriptionStatus = user.subscription_status || 'basic';
+        const token = jwt.sign(
+            { userId: user.id, username: user.username, email: user.email, userRole, subscriptionStatus },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                userRole,
+                subscriptionStatus,
+                emailVerified: true,
+            },
+        });
+    } catch (error) {
+        console.error('Google sign-in error:', error.message);
+        res.status(401).json({ error: 'Google sign-in failed. Please try again.' });
+    }
+});
 
 // Register new user
 router.post('/register', async (req, res) => {

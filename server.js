@@ -89,15 +89,17 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+            // Google Identity Services (Sign in with Google) needs its script,
+            // an iframe, a connection and its avatar images allow-listed.
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://accounts.google.com/gsi/client", "https://accounts.google.com"],
             scriptSrcAttr: ["'unsafe-inline'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            imgSrc: ["'self'", "data:", "blob:"],
-            connectSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com/gsi/style"],
+            imgSrc: ["'self'", "data:", "blob:", "https://*.googleusercontent.com"],
+            connectSrc: ["'self'", "https://accounts.google.com"],
             fontSrc: ["'self'"],
             objectSrc: ["'none'"],
             mediaSrc: ["'self'"],
-            frameSrc: ["'none'"],
+            frameSrc: ["https://accounts.google.com"],
         },
     },
     crossOriginEmbedderPolicy: false, // Disable COEP to avoid message port issues

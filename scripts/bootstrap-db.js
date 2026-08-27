@@ -116,6 +116,7 @@ const STEPS = [
   { type: 'sql', file: 'database/migrations/2026-08-seedlings-farm.sql', label: 'Seedlings become farm-level (one nursery per farm)' },
   { type: 'sql', file: 'database/migrations/2026-08-dosing-doses.sql', label: 'Dosing: finite dose count (spread correction then end)' },
   { type: 'node', file: 'database/migrations/2026-08-shiman-hydroponic-seed.js', label: 'Fertiliser: seed Shiman Hydroponic default' },
+  { type: 'sql', file: 'database/migrations/2026-08-google-auth.sql', label: 'Auth: google_id column + nullable password_hash (Sign in with Google)' },
 ];
 
 function dbConfig() {

@@ -4,6 +4,7 @@ import { register, verifyCode, resendVerification } from './api'
 import { useAuth } from './AuthContext'
 import { ApiError } from '../../lib/apiClient'
 import { Brand } from '../../components/Brand'
+import { GoogleSignInButton } from './GoogleSignInButton'
 import './auth.css'
 
 // Same rules the old app enforced on the registration form.
@@ -275,6 +276,7 @@ export function RegisterPage() {
         <button className="btn" type="submit" disabled={busy}>
           {busy ? 'Creating…' : 'Create account'}
         </button>
+        <GoogleSignInButton onError={setError} />
         <p className="auth-switch">
           Already have an account? <Link to="/login">Sign in</Link>
         </p>

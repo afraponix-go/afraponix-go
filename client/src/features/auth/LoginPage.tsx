@@ -4,6 +4,7 @@ import { login } from './api'
 import { useAuth } from './AuthContext'
 import { ApiError } from '../../lib/apiClient'
 import { Brand } from '../../components/Brand'
+import { GoogleSignInButton } from './GoogleSignInButton'
 import './auth.css'
 
 export function LoginPage() {
@@ -64,6 +65,7 @@ export function LoginPage() {
         <button className="btn" type="submit" disabled={busy}>
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
+        <GoogleSignInButton onError={setError} />
         <p className="auth-switch">
           <Link to="/forgot-password">Forgot password?</Link>
         </p>
