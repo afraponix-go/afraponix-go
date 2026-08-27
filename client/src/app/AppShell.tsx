@@ -40,6 +40,9 @@ export function AppShell() {
   const initial = (user?.firstName?.[0] || user?.email?.[0] || '?').toUpperCase()
   // Only owned farms can take a new system; a shared farm is someone else's.
   const canAddToFarm = activeFarm?.kind === 'own'
+  // Sample-data farm created by "Load a sample farm" — flag it so it's never
+  // mistaken for real data.
+  const isDemoFarm = activeFarm?.name === 'Demo Farm'
 
   // Close the popovers on navigation.
   useEffect(() => { setMoreOpen(false); setMenuOpen(false); setAddOpen(false) }, [pathname])
@@ -60,6 +63,7 @@ export function AppShell() {
           <Brand />
         </Link>
         <div className="account">
+          {isDemoFarm && <span className="demo-badge" title="You're viewing the sample farm — not your real data">Demo</span>}
           {farms.length > 1 && (
             <label className="farm-switch" title="Active farm">
               <span className="farm-ico" aria-hidden>⌂</span>
