@@ -103,6 +103,10 @@ app.use(helmet({
         },
     },
     crossOriginEmbedderPolicy: false, // Disable COEP to avoid message port issues
+    // The default COOP (same-origin) severs window.opener for popups we open,
+    // which breaks the Google sign-in popup (it can't post the credential back).
+    // allow-popups keeps COOP protection while letting our own popups return.
+    crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
 }));
 app.use(cors({
     origin: [
