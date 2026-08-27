@@ -1,0 +1,50 @@
+/* Brand styling for the driver.js onboarding tour popover. */
+.driver-popover.afx-tour {
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+  max-width: 320px;
+  padding: 18px 18px 14px;
+}
+.driver-popover.afx-tour .driver-popover-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.driver-popover.afx-tour .driver-popover-description {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.driver-popover.afx-tour .driver-popover-progress-text {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.driver-popover.afx-tour .driver-popover-footer button {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  text-shadow: none;
+  border: 1px solid var(--line-strong, var(--line));
+  background: var(--surface);
+  color: var(--ink-soft);
+  padding: 6px 12px;
+}
+.driver-popover.afx-tour .driver-popover-footer button:hover {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+/* Primary "Next"/"Done" button in brand accent. */
+.driver-popover.afx-tour .driver-popover-next-btn {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.driver-popover.afx-tour .driver-popover-next-btn:hover {
+  background: color-mix(in srgb, var(--accent) 88%, #000);
+  color: #fff;
+}
+.driver-popover.afx-tour .driver-popover-arrow { color: var(--surface); }

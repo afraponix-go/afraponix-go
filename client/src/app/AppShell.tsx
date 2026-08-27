@@ -5,6 +5,7 @@ import { useAuth } from '../features/auth/AuthContext'
 import { useSystems } from '../features/systems/SystemContext'
 import { AddSystemModal } from '../features/systems/AddSystemModal'
 import { NewFarmModal } from '../features/systems/NewFarmModal'
+import { OnboardingTour, startTour } from '../features/onboarding/OnboardingTour'
 import { DashboardIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SprayIcon, SettingsIcon } from './icons'
 import { Brand } from '../components/Brand'
 import { ThemeToggle } from './ThemeToggle'
@@ -63,7 +64,7 @@ export function AppShell() {
           )}
           {/* Add menu — a system in this farm, or a whole new farm */}
           <div className="add-menu-wrap">
-            <button className="sys-add" onClick={() => setAddOpen((v) => !v)} title="Add" aria-haspopup="menu" aria-expanded={addOpen} aria-label="Add system or farm">
+            <button className="sys-add" data-tour="add" onClick={() => setAddOpen((v) => !v)} title="Add" aria-haspopup="menu" aria-expanded={addOpen} aria-label="Add system or farm">
               {systems.length > 0 ? '+' : '+ Add system'}
             </button>
             {addOpen && (
@@ -87,7 +88,7 @@ export function AppShell() {
 
           {/* User menu — identity, settings, theme, log out */}
           <div className="user-menu-wrap">
-            <button className="user-chip" onClick={() => setMenuOpen((v) => !v)} aria-haspopup="menu" aria-expanded={menuOpen} title={user?.email ?? undefined}>
+            <button className="user-chip" data-tour="account" onClick={() => setMenuOpen((v) => !v)} aria-haspopup="menu" aria-expanded={menuOpen} title={user?.email ?? undefined}>
               <span className="avatar">{initial}</span>
               <span className="who">{name}</span>
               <span className="chip-caret" aria-hidden>▾</span>
@@ -107,6 +108,9 @@ export function AppShell() {
                   <NavLink to="/settings" className="account-menu-item" role="menuitem">
                     <SettingsIcon className="ami-icon" /> Settings
                   </NavLink>
+                  <button className="account-menu-item" role="menuitem" onClick={() => { setMenuOpen(false); startTour() }}>
+                    <span className="ami-icon" aria-hidden>🧭</span> Take a tour
+                  </button>
                   <div className="account-menu-item as-toggle"><ThemeToggle /></div>
                   <div className="menu-sep" />
                   <button className="account-menu-item danger" onClick={signOut}>Log out</button>
@@ -123,7 +127,7 @@ export function AppShell() {
 
       <nav className="bottomnav" aria-label="Primary">
         {TABS.map(({ to, label, Icon, end }, i) => (
-          <NavLink key={to} to={to} end={end} className={({ isActive }) => `tab${isActive ? ' active' : ''}${i >= PRIMARY_COUNT ? ' tab-overflow' : ''}`}>
+          <NavLink key={to} to={to} end={end} data-tour={`nav:${to}`} className={({ isActive }) => `tab${isActive ? ' active' : ''}${i >= PRIMARY_COUNT ? ' tab-overflow' : ''}`}>
             <Icon className="tab-icon" />
             <span className="tab-label">{label}</span>
           </NavLink>
@@ -148,6 +152,7 @@ export function AppShell() {
         )}
       </nav>
 
+      <OnboardingTour />
       {showAdd && <AddSystemModal farmId={addFarmId} onClose={() => { setShowAdd(false); setAddFarmId(undefined) }} />}
       {showNewFarm && (
         <NewFarmModal
