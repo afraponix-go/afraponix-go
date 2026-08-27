@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, type ReactNode } from 'react'
 import { Brand } from '../../components/Brand'
+import { AuthDrawer } from '../auth/AuthDrawer'
 import './landing.css'
 
 const FEATURES = [
@@ -75,14 +75,17 @@ const CAL_DAYS = [
 ]
 
 export function LandingPage() {
+  const [auth, setAuth] = useState<{ open: boolean; mode: 'signin' | 'register' }>({ open: false, mode: 'signin' })
+  const openAuth = (mode: 'signin' | 'register') => setAuth({ open: true, mode })
+
   return (
     <div className="lp">
       <header className="lp-nav">
         <div className="lp-nav-inner">
           <Brand size={28} />
           <nav className="lp-nav-actions">
-            <Link className="lp-btn ghost" to="/login">Sign in</Link>
-            <Link className="lp-btn primary" to="/register">Get started</Link>
+            <button type="button" className="lp-btn ghost" onClick={() => openAuth('signin')}>Sign in</button>
+            <button type="button" className="lp-btn primary" onClick={() => openAuth('register')}>Get started</button>
           </nav>
         </div>
       </header>
@@ -100,8 +103,8 @@ export function LandingPage() {
               daily readings into the exact next action.
             </p>
             <div className="lp-hero-cta">
-              <Link className="lp-btn primary lg" to="/register">Create your account</Link>
-              <Link className="lp-btn ghost lg" to="/login">Sign in</Link>
+              <button type="button" className="lp-btn primary lg" onClick={() => openAuth('register')}>Create your account</button>
+              <button type="button" className="lp-btn ghost lg" onClick={() => openAuth('signin')}>Sign in</button>
             </div>
             <ul className="lp-stats">
               <li><b>All-in-one</b><span>Fish · plants · water</span></li>
@@ -261,8 +264,8 @@ export function LandingPage() {
           <h2>Ready to get your system on the numbers?</h2>
           <p>Create an account and set up your first system in a few minutes.</p>
           <div className="lp-hero-cta center">
-            <Link className="lp-btn primary lg" to="/register">Create your account</Link>
-            <Link className="lp-btn ghost lg" to="/login">Sign in</Link>
+            <button type="button" className="lp-btn primary lg" onClick={() => openAuth('register')}>Create your account</button>
+            <button type="button" className="lp-btn ghost lg" onClick={() => openAuth('signin')}>Sign in</button>
           </div>
         </section>
       </main>
@@ -270,6 +273,8 @@ export function LandingPage() {
       <footer className="lp-footer">
         <span>© {new Date().getFullYear()} Afraponix</span>
       </footer>
+
+      <AuthDrawer open={auth.open} initialMode={auth.mode} onClose={() => setAuth((a) => ({ ...a, open: false }))} />
     </div>
   )
 }
