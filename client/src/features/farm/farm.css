@@ -351,3 +351,60 @@
   height: 100%;
   min-width: 2px;
 }
+
+/* Whole-farm compact layout overview (one card per system; click to zoom in). */
+.flo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.flo-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s, transform 0.05s;
+}
+.flo-card:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); box-shadow: var(--shadow-sm); }
+.flo-card:active { transform: translateY(1px); }
+.flo-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.flo-name { font-size: 15px; font-weight: 700; color: var(--ink); }
+.flo-open { font-size: 12.5px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+.flo-metrics { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12.5px; color: var(--ink-faint); }
+.flo-muted { font-size: 13px; color: var(--ink-faint); }
+
+/* Mini fish-tank chips, coloured by stocking-density band. */
+.flo-tanks { display: flex; flex-wrap: wrap; gap: 5px; }
+.flo-tank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1.5px solid;
+}
+.flo-tank.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 55%, var(--line)); background: var(--ok-wash); }
+.flo-tank.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 55%, var(--line)); background: var(--warn-wash); }
+.flo-tank.bad { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 55%, var(--line)); background: var(--danger-wash); }
+
+/* Mini bed-fill bars, one per bed. */
+.flo-beds { display: flex; flex-direction: column; gap: 3px; }
+.flo-bed {
+  display: flex;
+  height: 9px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--surface-2, color-mix(in srgb, var(--ink) 6%, transparent));
+  border: 1px solid var(--line);
+}
+.flo-bed-seg { display: block; height: 100%; }

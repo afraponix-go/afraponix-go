@@ -13,7 +13,7 @@ import { FarmScoped, SystemOnly } from '../features/systems/FarmScoped'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { FarmDashboardPage } from '../features/dashboard/FarmDashboardPage'
 import { ChartsPage } from '../features/charts/ChartsPage'
-import { FarmLayout } from '../features/farm/FarmLayout'
+import { Layout } from '../features/farm/Layout'
 import { WaterQualityPage } from '../features/water/WaterQualityPage'
 import { FishOverview } from '../features/fish/FishOverview'
 import { FishDensity } from '../features/fish/FishDensity'
@@ -103,7 +103,7 @@ export const router = createBrowserRouter([
               { index: true, element: <FarmDashboardPage /> },
               { path: 'overview', element: <SystemOnly><DashboardPage /></SystemOnly> },
               { path: 'charts', element: <SystemOnly><ChartsPage /></SystemOnly> },
-              { path: 'layout', element: <SystemOnly><FarmLayout /></SystemOnly> },
+              { path: 'layout', element: <Layout /> },
             ],
           },
           // Calculator (Fish Stocking · Nutrient Dosing)

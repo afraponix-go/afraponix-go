@@ -23,13 +23,13 @@ const TANK_GAP = 28
 const TANK_PAD = 28
 const TANK_MAX_ROW = 860
 const TANK_HEIGHT_M = 1.2 // standard assumed tank height for volume→diameter
-const CROP_COLORS = ['#4f9d3a', '#2fabc6', '#8e5bd0', '#e0803a', '#c0392b', '#1aa5a5', '#c9a227', '#334e9d']
+export const CROP_COLORS = ['#4f9d3a', '#2fabc6', '#8e5bd0', '#e0803a', '#c0392b', '#1aa5a5', '#c9a227', '#334e9d']
 
 type TankNode = { kind: 'tank'; tank: FishTank; x: number; y: number; d: number }
-type BedSegment = { batch: Batch; color: string; area: number }
+export type BedSegment = { batch: Batch; color: string; area: number }
 // Bed fill is measured by area: each batch consumes remaining ÷ its planting
 // density (plants/m²), summed against the bed's effective growing area.
-type BedView = { kind: 'bed'; bed: GrowBedConfig; areaM2: number; usedM2: number; planted: number; pct: number; segments: BedSegment[] }
+export type BedView = { kind: 'bed'; bed: GrowBedConfig; areaM2: number; usedM2: number; planted: number; pct: number; segments: BedSegment[] }
 
 // Quick actions launched from a detail modal, reusing the existing action modals.
 type FarmAction =
@@ -38,7 +38,7 @@ type FarmAction =
   | { kind: 'move-batch'; batch: Batch }
   | { kind: 'tank'; tank: FishTank; action: TankAction }
 
-function tankM3(t: FishTank): number {
+export function tankM3(t: FishTank): number {
   return (t.size_m3 && t.size_m3 > 0 ? t.size_m3 : (t.volume_liters ?? 0) / 1000) || 0
 }
 function tankDiameterPx(m3: number): number {
@@ -83,7 +83,7 @@ function batchDensity(batch: Batch, densityByCrop: Map<string, number>): number 
   return densityByCrop.get(batch.crop_type) ?? DEFAULT_PLANTS_PER_M2
 }
 
-function buildBedViews(beds: GrowBedConfig[], batches: Batch[], densityByCrop: Map<string, number>): BedView[] {
+export function buildBedViews(beds: GrowBedConfig[], batches: Batch[], densityByCrop: Map<string, number>): BedView[] {
   return beds
     .slice()
     .sort((a, b) => (a.bed_number ?? 0) - (b.bed_number ?? 0))
