@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const { getDatabase, getDatabaseConnection } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
 const { canAccessSystem } = require('../utils/systemAccess');
-const { ensureUserFarm } = require('../utils/farms');
+const { ensureUserFarm, generateFarmId } = require('../utils/farms');
 
 const router = express.Router();
 
@@ -309,13 +309,14 @@ router.post('/create-demo', async (req, res) => {
             // Commit transaction
             await connection.execute('COMMIT');
 
-            // Assign the demo system to the user's default farm (non-fatal — the
-            // deploy backfill catches it if this ever fails), then top up the
+            // Put the demo in its OWN "Demo Farm" so it stays isolated from the
+            // user's real data and can be deleted wholesale. Then top up the
             // areas the SQLite importer predates (Operations + Seedlings).
             try {
                 const pool = getDatabase();
-                const farmId = await ensureUserFarm(pool, targetUserId);
-                await pool.execute('UPDATE systems SET farm_id = ? WHERE id = ? AND farm_id IS NULL', [farmId, newSystemId]);
+                const farmId = generateFarmId();
+                await pool.execute('INSERT INTO farms (id, owner_id, name) VALUES (?, ?, ?)', [farmId, targetUserId, 'Demo Farm']);
+                await pool.execute('UPDATE systems SET farm_id = ? WHERE id = ?', [farmId, newSystemId]);
                 try {
                     const { enrichDemoSystem } = require('../database/demo-enrich');
                     await enrichDemoSystem(pool, newSystemId, targetUserId, farmId);

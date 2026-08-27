@@ -130,7 +130,7 @@ class SQLiteDemoImporter {
                 INSERT INTO systems (id, user_id, system_name, system_type, fish_type, fish_tank_count, 
                                    total_fish_volume, grow_bed_count, total_grow_volume, total_grow_area)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [newSystemId, userId, 'Demo Farm', demoSystem.system_type,
+            `, [newSystemId, userId, 'Demo System', demoSystem.system_type,
                 demoSystem.fish_type, demoSystem.fish_tank_count, demoSystem.total_fish_volume,
                 demoSystem.grow_bed_count, demoSystem.total_grow_volume, demoSystem.total_grow_area]);
             

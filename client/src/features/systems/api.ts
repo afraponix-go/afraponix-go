@@ -96,7 +96,9 @@ export function saveGrowBedsBulk(systemId: string, growBeds: unknown[]) {
   return api(`/grow-beds/system/${systemId}`, { method: 'POST', body: { growBeds } })
 }
 
-// Import a full demo system for the current user.
-export async function createDemoSystem(name: string): Promise<void> {
-  await api('/systems/create-demo', { method: 'POST', body: { system_name: name.trim() } })
+// Import a full demo system (in its own "Demo Farm") for the current user.
+// Returns the created system + farm ids so the app can switch straight to it.
+export async function createDemoSystem(name: string): Promise<{ systemId: string; farmId: string | null }> {
+  const data = await api<{ id?: string; farm_id?: string | null }>('/systems/create-demo', { method: 'POST', body: { system_name: name.trim() } })
+  return { systemId: data?.id ?? '', farmId: data?.farm_id ?? null }
 }

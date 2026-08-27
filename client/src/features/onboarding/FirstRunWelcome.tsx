@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createDemoSystem } from '../systems/api'
+import { useSystems } from '../systems/SystemContext'
 import { startTour } from './OnboardingTour'
 import './onboarding.css'
 
@@ -10,12 +11,16 @@ export const ADD_SYSTEM_EVENT = 'afraponix:add-system'
 // fully-worked sample farm, or set up your own.
 export function FirstRunWelcome() {
   const qc = useQueryClient()
+  const { setActiveFarmId, setActiveId } = useSystems()
 
   const demo = useMutation({
-    mutationFn: () => createDemoSystem('Demo Farm'),
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['systems'] })
+    mutationFn: () => createDemoSystem('Demo System'),
+    onSuccess: async ({ systemId, farmId }) => {
+      // Refetch first so the new farm/system are in context before we switch.
       await qc.invalidateQueries({ queryKey: ['farms'] })
+      await qc.invalidateQueries({ queryKey: ['systems'] })
+      if (farmId) setActiveFarmId(farmId)
+      if (systemId) setActiveId(systemId)
       // Let the populated dashboard render, then walk through it.
       setTimeout(startTour, 900)
     },
