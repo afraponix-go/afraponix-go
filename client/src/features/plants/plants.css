@@ -459,3 +459,7 @@
 .op-add .btn { flex: 0 0 auto; width: auto; white-space: nowrap; }
 .op-list { display: flex; flex-direction: column; gap: 8px; max-width: 420px; margin-top: 16px; }
 .op-item { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; background: var(--surface); font-size: 14px; }
+
+/* Load-more row under a paged table (e.g. harvest history). */
+.load-more-row { display: flex; justify-content: center; padding: 14px 0 2px; }
+.load-more-row .ghost { width: auto; }

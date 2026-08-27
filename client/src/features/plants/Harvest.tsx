@@ -27,6 +27,7 @@ export function Harvest() {
   const [harvesting, setHarvesting] = useState<Batch | null>(null)
   const [editing, setEditing] = useState<PlantRow | null>(null)
   const [confirmDel, setConfirmDel] = useState<PlantRow | null>(null)
+  const [visibleHistory, setVisibleHistory] = useState(10)
 
   const { data: batches = [] } = useQuery({ queryKey: ['plant-batches', activeId], queryFn: () => fetchBatches(activeId as string), enabled: !!activeId })
   const { data: rows = [], isLoading, isError } = useQuery({ queryKey: ['plant-growth', activeId], queryFn: () => fetchPlantGrowth(activeId as string), enabled: !!activeId })
@@ -51,7 +52,11 @@ export function Harvest() {
   const harvestable = batches
     .filter((b) => b.remaining > 0 && (b.status === 'ready' || b.status === 'approaching'))
     .sort((a, b) => RANK[a.status] - RANK[b.status] || (b.age_days ?? 0) - (a.age_days ?? 0))
-  const history = rows.filter(isHarvestRow)
+  // Most recent harvests first; paged 10 at a time via "Load more".
+  const history = rows
+    .filter(isHarvestRow)
+    .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
+  const shownHistory = history.slice(0, visibleHistory)
 
   return (
     <div>
@@ -97,7 +102,7 @@ export function Harvest() {
               </tr>
             </thead>
             <tbody>
-              {history.map((r) => (
+              {shownHistory.map((r) => (
                 <tr key={r.id}>
                   <td>{r.date ? new Date(`${r.date.slice(0, 10)}T12:00:00`).toLocaleDateString() : '—'}</td>
                   <td className="op-text">{r.crop_type ? prettyCrop(r.crop_type) : '—'}</td>
@@ -114,6 +119,13 @@ export function Harvest() {
               ))}
             </tbody>
           </table>
+          {history.length > shownHistory.length && (
+            <div className="load-more-row">
+              <button type="button" className="ghost" onClick={() => setVisibleHistory((n) => n + 10)}>
+                Load more ({history.length - shownHistory.length} older)
+              </button>
+            </div>
+          )}
         </div>
       )}
 

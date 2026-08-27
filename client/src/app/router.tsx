@@ -140,7 +140,7 @@ export const router = createBrowserRouter([
           // Plants (Overview · Plantings · Harvest · Beds & Allocation · Crops)
           {
             path: 'plants',
-            element: <SubTabLayout items={PLANTS_TABS} farmAware />,
+            element: <SubTabLayout items={PLANTS_TABS} farmAware farmLevelPaths={['/plants/seedlings']} />,
             children: [
               { index: true, element: <FarmScoped kind="plants"><PlantsOverview /></FarmScoped> },
               { path: 'seedlings', element: <Seedlings /> },

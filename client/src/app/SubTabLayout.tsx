@@ -10,10 +10,13 @@ export type SubTab = { to: string; label: string; end?: boolean }
 // sub-tab strip above its routed content. On narrow screens the strip scrolls
 // horizontally; we fade the overflowing edge(s) to signal that and keep the
 // active tab scrolled into view.
-export function SubTabLayout({ items, farmAware = false }: { items: SubTab[]; farmAware?: boolean }) {
+// `farmLevelPaths` lists sub-tab routes that are farm-level (e.g. the shared
+// nursery), where the system pills are meaningless and so are hidden.
+export function SubTabLayout({ items, farmAware = false, farmLevelPaths = [] }: { items: SubTab[]; farmAware?: boolean; farmLevelPaths?: string[] }) {
   const navRef = useRef<HTMLElement>(null)
   const { pathname } = useLocation()
   const { isFarmMode } = useSystems()
+  const hidePills = farmLevelPaths.includes(pathname)
 
   // Toggle edge-fade affordances based on scroll position.
   const updateFade = () => {
@@ -35,7 +38,7 @@ export function SubTabLayout({ items, farmAware = false }: { items: SubTab[]; fa
 
   return (
     <div>
-      <SystemPills />
+      {!hidePills && <SystemPills />}
       <nav ref={navRef} className="subtabs" aria-label="Section" onScroll={updateFade}>
         {items.map((t) => (
           <NavLink key={t.to} to={t.to} end={t.end} className={({ isActive }) => (isActive ? 'active' : '')}>
