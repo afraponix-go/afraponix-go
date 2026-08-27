@@ -620,3 +620,8 @@
   .settings-scope-chips::-webkit-scrollbar { display: none; }
   .settings-scope-chip { flex: 0 0 auto; }
 }
+
+/* Manage farms list */
+.mf-list { display: flex; flex-direction: column; gap: 10px; }
+.mf-list .danger-row { background: var(--surface); }
+.mf-actions { display: flex; gap: 8px; flex: none; }

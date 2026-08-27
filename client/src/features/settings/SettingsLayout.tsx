@@ -12,20 +12,19 @@ type Group = { title: string; items: Item[] }
 
 // Settings routes that act on one specific system (rather than the whole
 // account or farm). On these, we show a system scope bar above the content.
-const SYSTEM_SCOPED = new Set(['/settings', '/settings/metrics', '/settings/danger'])
+const SYSTEM_SCOPED = new Set(['/settings', '/settings/metrics'])
 
 // The full grouped navigation. Account / Farm settings are per-user; the System
 // group's pages act on one system, chosen via the scope bar above the content.
-function buildGroups(user: User | null, owner: boolean): Group[] {
+function buildGroups(user: User | null): Group[] {
   const groups: Group[] = [
     { title: 'Account', items: [{ to: '/settings/account', label: 'Profile & account' }] },
     { title: 'Farm', items: [{ to: '/settings/farms', label: 'Farms & sharing' }, { to: '/settings/operators', label: 'Operators' }] },
     { title: 'System', items: [{ to: '/settings', label: 'System details', end: true }, { to: '/settings/metrics', label: 'Tracked metrics' }] },
   ]
-  const advanced: Item[] = []
-  if (owner) advanced.push({ to: '/settings/danger', label: 'Danger zone' })
+  const advanced: Item[] = [{ to: '/settings/manage-farms', label: 'Manage farms' }]
   if (user?.userRole === 'admin') advanced.push({ to: '/settings/admin', label: 'Admin' })
-  if (advanced.length) groups.push({ title: 'Advanced', items: advanced })
+  groups.push({ title: 'Advanced', items: advanced })
   return groups
 }
 
@@ -45,12 +44,10 @@ export function SettingsLayout() {
 // crowds it (a real win on mobile). The current section shows next to the title.
 function SettingsChrome() {
   const { user } = useAuth()
-  const { system } = useSettingsSystem()
-  const owner = isOwnedSystem(system)
   const { pathname } = useLocation()
   const [navOpen, setNavOpen] = useState(false)
 
-  const groups = useMemo(() => buildGroups(user, owner), [user, owner])
+  const groups = useMemo(() => buildGroups(user), [user])
   const activeLabel = useMemo(() => {
     for (const g of groups) for (const it of g.items) if (matches(pathname, it)) return it.label
     return 'Overview'

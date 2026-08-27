@@ -42,7 +42,7 @@ import { FarmsSettings } from '../features/settings/FarmsSettings'
 import { OperatorsSettings } from '../features/settings/OperatorsSettings'
 import { SharingSettings } from '../features/settings/SharingSettings'
 import { AdminSettings } from '../features/settings/AdminSettings'
-import { DangerZone } from '../features/settings/DangerZone'
+import { ManageFarms } from '../features/settings/ManageFarms'
 
 const DASHBOARD_TABS = [
   { to: '/', label: 'Overview', end: true },
@@ -181,7 +181,8 @@ export const router = createBrowserRouter([
               { path: 'operators', element: <OperatorsSettings /> },
               { path: 'sharing', element: <SharingSettings /> },
               { path: 'admin', element: <AdminSettings /> },
-              { path: 'danger', element: <DangerZone /> },
+              { path: 'manage-farms', element: <ManageFarms /> },
+              { path: 'danger', element: <Navigate to="/settings/manage-farms" replace /> },
             ],
           },
         ],

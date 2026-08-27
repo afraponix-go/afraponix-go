@@ -4,6 +4,7 @@ const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
 const { generateFarmId } = require('../utils/farms');
 const { getFarmAccess } = require('../utils/systemAccess');
+const { deleteSystemData } = require('../utils/systemCleanup');
 
 router.use(authenticateToken);
 
@@ -187,18 +188,36 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete (owner only) — refuses while systems still belong to it.
+// Delete a farm AND all of its data — every system in the farm (each cascading
+// its own data) plus farm-scoped rows (seedling batches, shares). Runs in a
+// transaction so it can't leave a half-deleted farm.
 router.delete('/:id', async (req, res) => {
+    const farmId = req.params.id;
+    let connection;
     try {
         const pool = getDatabase();
-        const [own] = await pool.execute('SELECT id FROM farms WHERE id = ? AND owner_id = ?', [req.params.id, req.user.userId]);
+        const [own] = await pool.execute('SELECT id FROM farms WHERE id = ? AND owner_id = ?', [farmId, req.user.userId]);
         if (!own.length) return res.status(404).json({ error: 'Farm not found or access denied' });
-        const [sys] = await pool.execute('SELECT COUNT(*) AS c FROM systems WHERE farm_id = ?', [req.params.id]);
-        if (sys[0].c > 0) return res.status(400).json({ error: "Move or remove this farm's systems first" });
-        await pool.execute('DELETE FROM farms WHERE id = ?', [req.params.id]);
-        res.json({ success: true });
+
+        const [systems] = await pool.execute('SELECT id FROM systems WHERE farm_id = ?', [farmId]);
+
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+        for (const s of systems) {
+            await deleteSystemData(connection, s.id);
+        }
+        await connection.execute('DELETE FROM seedling_batches WHERE farm_id = ?', [farmId]);
+        await connection.execute('DELETE FROM farm_shares WHERE farm_id = ?', [farmId]);
+        await connection.execute('DELETE FROM farms WHERE id = ?', [farmId]);
+        await connection.commit();
+
+        res.json({ success: true, deletedSystems: systems.length });
     } catch (error) {
+        if (connection) { try { await connection.rollback(); } catch (e) { console.error('Rollback failed:', e); } }
         console.error('Failed to delete farm:', error);
         res.status(500).json({ error: 'Failed to delete farm' });
+    } finally {
+        if (connection) connection.release();
     }
 });
 

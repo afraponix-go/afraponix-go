@@ -57,7 +57,7 @@ export function FarmsSettings() {
                   {f.id !== activeFarmId && <button className="link-btn" onClick={() => setActiveFarmId(f.id)}>Switch to</button>}
                   {!shared && <button className="link-btn" onClick={() => setSharing(f)}>Share</button>}
                   {!shared && <button className="link-btn" onClick={() => setModal({ farm: f })}>Rename</button>}
-                  {!shared && <button className="link-btn danger" disabled={count > 0} title={count > 0 ? 'Move or remove its systems first' : undefined} onClick={() => setConfirmDel(f)}>Delete</button>}
+                  {!shared && <button className="link-btn danger" onClick={() => setConfirmDel(f)}>Delete</button>}
                 </span>
               </div>
             )
@@ -69,7 +69,10 @@ export function FarmsSettings() {
       {sharing && <FarmShareModal farm={sharing} onClose={() => setSharing(null)} />}
       {confirmDel && (
         <Modal title="Delete farm" onClose={() => setConfirmDel(null)}>
-          <p style={{ marginTop: 0, color: 'var(--ink-soft)' }}>Delete <b>{confirmDel.name}</b>? This can't be undone.</p>
+          <p style={{ marginTop: 0, color: 'var(--ink-soft)' }}>
+            Delete <b>{confirmDel.name}</b> and <b>all of its data</b>
+            {(confirmDel.system_count ?? 0) > 0 ? ` — including its ${confirmDel.system_count} system${confirmDel.system_count === 1 ? '' : 's'}, readings, plantings, harvests and programmes` : ''}? This can't be undone.
+          </p>
           <div className="mform-actions">
             <button type="button" className="ghost" onClick={() => setConfirmDel(null)}>Cancel</button>
             <button type="button" className="btn btn-danger" disabled={del.isPending} onClick={() => del.mutate(confirmDel)}>{del.isPending ? 'Deleting…' : 'Delete'}</button>
