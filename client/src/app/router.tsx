@@ -21,7 +21,7 @@ import { FishHealth } from '../features/fish/FishHealth'
 import { FishDataCapture } from '../features/fish/FishDataCapture'
 import { PlantsOverview } from '../features/plants/PlantsOverview'
 import { Plantings } from '../features/plants/Plantings'
-import { Harvest } from '../features/plants/Harvest'
+import { HarvestView } from '../features/plants/HarvestView'
 import { BedsAllocation } from '../features/plants/BedsAllocation'
 import { Crops } from '../features/plants/CropsPage'
 import { Seedlings } from '../features/seedlings/Seedlings'
@@ -144,7 +144,7 @@ export const router = createBrowserRouter([
               { index: true, element: <FarmScoped kind="plants"><PlantsOverview /></FarmScoped> },
               { path: 'seedlings', element: <Seedlings /> },
               { path: 'plantings', element: <FarmScoped kind="plants"><Plantings /></FarmScoped> },
-              { path: 'harvest', element: <FarmScoped kind="plants"><Harvest /></FarmScoped> },
+              { path: 'harvest', element: <HarvestView /> },
               { path: 'beds', element: <SystemOnly><BedsAllocation /></SystemOnly> },
               { path: 'crops', element: <SystemOnly><Crops /></SystemOnly> },
             ],

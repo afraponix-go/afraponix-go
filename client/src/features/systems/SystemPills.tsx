@@ -24,6 +24,20 @@ export function SystemPills() {
   )
 
   return (
+    <>
+    {/* Mobile: a compact dropdown instead of a wrapping/scrolling pill strip. */}
+    <select
+      className="syspills-select"
+      value={activeId ?? ALL_SYSTEMS_ID}
+      onChange={(e) => setActiveId(e.target.value)}
+      aria-label="System"
+    >
+      <option value={ALL_SYSTEMS_ID}>◇ All systems</option>
+      {ordered.map((s) => (
+        <option key={s.id} value={s.id}>{s.system_name}{isOwnedSystem(s) ? '' : ' (shared)'}</option>
+      ))}
+    </select>
+
     <div className="syspills" ref={stripRef} role="tablist" aria-label="System">
       <button
         type="button"
@@ -48,5 +62,6 @@ export function SystemPills() {
         </button>
       ))}
     </div>
+    </>
   )
 }

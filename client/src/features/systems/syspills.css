@@ -5,6 +5,8 @@
   gap: 6px;
   margin-bottom: 14px;
 }
+/* The dropdown is the mobile form of the selector; hidden on desktop. */
+.syspills-select { display: none; }
 .syspill {
   display: inline-flex;
   align-items: center;
@@ -51,20 +53,21 @@
   border-radius: 999px;
 }
 
-/* Mobile: a single horizontally-scrolling strip instead of wrapping to many
-   rows (matches the sub-tab strip). The active pill is scrolled into view. */
+/* Mobile: collapse the pill strip into a single dropdown selector. */
 @media (max-width: 767px) {
-  .syspills {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scroll-snap-type: x proximity;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding-bottom: 3px;
-  }
-  .syspills::-webkit-scrollbar { display: none; }
-  .syspill {
-    flex: 0 0 auto;
-    scroll-snap-align: start;
+  .syspills { display: none; }
+  .syspills-select {
+    display: block;
+    width: 100%;
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    border: 1px solid var(--line-strong, var(--line));
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
   }
 }

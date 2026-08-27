@@ -463,3 +463,16 @@
 /* Load-more row under a paged table (e.g. harvest history). */
 .load-more-row { display: flex; justify-content: center; padding: 14px 0 2px; }
 .load-more-row .ghost { width: auto; }
+
+/* System tag on a farm-rolled-up harvest row. */
+.harvest-sys {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-wash);
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-right: 4px;
+}
