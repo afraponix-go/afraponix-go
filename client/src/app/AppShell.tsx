@@ -6,6 +6,7 @@ import { useSystems } from '../features/systems/SystemContext'
 import { AddSystemModal } from '../features/systems/AddSystemModal'
 import { NewFarmModal } from '../features/systems/NewFarmModal'
 import { OnboardingTour, startTour } from '../features/onboarding/OnboardingTour'
+import { ADD_SYSTEM_EVENT } from '../features/onboarding/FirstRunWelcome'
 import { DashboardIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SprayIcon, SettingsIcon } from './icons'
 import { Brand } from '../components/Brand'
 import { ThemeToggle } from './ThemeToggle'
@@ -42,6 +43,13 @@ export function AppShell() {
 
   // Close the popovers on navigation.
   useEffect(() => { setMoreOpen(false); setMenuOpen(false); setAddOpen(false) }, [pathname])
+
+  // The first-run welcome asks us to open the add-system wizard.
+  useEffect(() => {
+    const onAdd = () => { setAddFarmId(undefined); setShowAdd(true) }
+    window.addEventListener(ADD_SYSTEM_EVENT, onAdd)
+    return () => window.removeEventListener(ADD_SYSTEM_EVENT, onAdd)
+  }, [])
 
   const moreActive = OVERFLOW.some((t) => pathname === t.to || pathname.startsWith(t.to + '/'))
 

@@ -48,3 +48,22 @@
   color: #fff;
 }
 .driver-popover.afx-tour .driver-popover-arrow { color: var(--surface); }
+
+/* First-run welcome (shown on the dashboard for accounts with no systems). */
+.fr { max-width: 760px; margin: 24px auto; text-align: center; padding: 0 16px; }
+.fr-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.fr-title { margin: 8px 0 6px; font-size: 28px; letter-spacing: -0.02em; }
+.fr-lede { margin: 0 0 24px; color: var(--ink-soft); font-size: 15px; }
+.fr-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; text-align: left; }
+.fr-card {
+  display: flex; flex-direction: column; gap: 8px;
+  border: 1px solid var(--line); border-radius: var(--radius-lg, 16px);
+  background: var(--surface); padding: 22px; box-shadow: var(--shadow-sm);
+}
+.fr-card-icon { font-size: 26px; }
+.fr-card h2 { margin: 0; font-size: 17px; }
+.fr-card p { margin: 0 0 6px; font-size: 13.5px; line-height: 1.5; color: var(--ink-soft); flex: 1; }
+.fr-card .btn { width: 100%; }
+.fr-err { color: var(--danger); font-size: 13px; margin: 8px 0 0; }
+.fr-hint { margin-top: 20px; font-size: 13.5px; color: var(--ink-faint); }
+@media (max-width: 620px) { .fr-cards { grid-template-columns: 1fr; } }

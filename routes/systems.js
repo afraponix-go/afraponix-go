@@ -308,11 +308,18 @@ router.post('/create-demo', async (req, res) => {
             await connection.execute('COMMIT');
 
             // Assign the demo system to the user's default farm (non-fatal — the
-            // deploy backfill catches it if this ever fails).
+            // deploy backfill catches it if this ever fails), then top up the
+            // areas the SQLite importer predates (Operations + Seedlings).
             try {
                 const pool = getDatabase();
                 const farmId = await ensureUserFarm(pool, targetUserId);
                 await pool.execute('UPDATE systems SET farm_id = ? WHERE id = ? AND farm_id IS NULL', [farmId, newSystemId]);
+                try {
+                    const { enrichDemoSystem } = require('../database/demo-enrich');
+                    await enrichDemoSystem(pool, newSystemId, targetUserId, farmId);
+                } catch (enrichErr) {
+                    console.error('Demo enrichment failed (non-fatal):', enrichErr.message);
+                }
             } catch (e) {
                 console.error('Demo system farm assignment failed (non-fatal):', e.message);
             }
