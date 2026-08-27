@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthContext'
 import { useSystems } from '../features/systems/SystemContext'
 import { AddSystemModal } from '../features/systems/AddSystemModal'
@@ -39,7 +39,9 @@ export function AppShell() {
   return (
     <div className="shell">
       <header className="topbar">
-        <Brand />
+        <Link to="/" className="brand-link" aria-label="Go to dashboard">
+          <Brand />
+        </Link>
         <div className="account">
           {farms.length > 1 && (
             <label className="farm-switch" title="Active farm">

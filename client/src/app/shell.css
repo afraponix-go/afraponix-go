@@ -19,10 +19,18 @@
   z-index: 10;
 }
 /* The lockup itself is styled by the Brand component; the shell only decides
-   how it sits in the top bar. */
-.topbar > .brand {
+   how it sits in the top bar. The brand links back to the dashboard. */
+.brand-link {
   flex: 1;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 10px;
 }
+.brand-link:hover { opacity: 0.85; }
+.brand-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .account {
   display: flex;
   align-items: center;
@@ -366,7 +374,7 @@
 
 @media (max-width: 767px) {
   .topbar { gap: 10px; padding: 0 14px; }
-  .topbar > .brand { flex: 0 0 auto; }
+  .topbar > .brand-link { flex: 0 0 auto; }
   .account { flex: 1; min-width: 0; justify-content: flex-end; }
   /* Collapse the chip to just the avatar; keep the caret. */
   .user-chip { padding: 3px; }
