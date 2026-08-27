@@ -12,7 +12,7 @@ import { SubTabLayout } from './SubTabLayout'
 import { FarmScoped, SystemOnly } from '../features/systems/FarmScoped'
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { FarmDashboardPage } from '../features/dashboard/FarmDashboardPage'
-import { ChartsPage } from '../features/charts/ChartsPage'
+import { Charts } from '../features/charts/Charts'
 import { Layout } from '../features/farm/Layout'
 import { WaterQualityPage } from '../features/water/WaterQualityPage'
 import { FishOverview } from '../features/fish/FishOverview'
@@ -102,7 +102,7 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <FarmDashboardPage /> },
               { path: 'overview', element: <SystemOnly><DashboardPage /></SystemOnly> },
-              { path: 'charts', element: <SystemOnly><ChartsPage /></SystemOnly> },
+              { path: 'charts', element: <Charts /> },
               { path: 'layout', element: <Layout /> },
             ],
           },

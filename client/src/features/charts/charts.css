@@ -120,3 +120,36 @@
   justify-content: flex-end;
   margin-bottom: 14px;
 }
+
+/* Whole-farm charts rollup — sparkline card per system (click to zoom in). */
+.chf-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0 4px; }
+.chf-controls .chip-row { margin: 0; flex: 1 1 auto; }
+.chf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.chf-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s, transform 0.05s;
+}
+.chf-card:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); box-shadow: var(--shadow-sm); }
+.chf-card:active { transform: translateY(1px); }
+.chf-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.chf-name { font-size: 15px; font-weight: 700; color: var(--ink); }
+.chf-open { font-size: 12.5px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+.chf-metric { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.chf-metric-label { font-size: 12px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+.chf-metric-val { font-size: 18px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.chf-spark { min-height: 56px; display: flex; align-items: center; }
+.chf-muted { font-size: 13px; color: var(--ink-faint); }
