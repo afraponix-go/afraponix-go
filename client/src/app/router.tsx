@@ -30,7 +30,7 @@ import { FishStockingCalculator } from '../features/calculator/FishStockingCalcu
 import { NutrientDosingCalculator } from '../features/calculator/NutrientDosingCalculator'
 import { OperationsPage } from '../features/operations/OperationsPage'
 import { Programmes } from '../features/spray/Programmes'
-import { SprayCalendar } from '../features/spray/SprayCalendar'
+import { OperationsCalendar } from '../features/spray/OperationsCalendar'
 import { SprayLog } from '../features/spray/SprayLog'
 import { SprayCatalog } from '../features/spray/SprayCatalog'
 import { ImportExportPage } from '../features/importexport/ImportExportPage'
@@ -154,13 +154,13 @@ export const router = createBrowserRouter([
           // first programme type; dosing + operating follow in later phases.
           {
             path: 'operations',
-            element: <SubTabLayout items={OPERATIONS_TABS} />,
+            element: <SubTabLayout items={OPERATIONS_TABS} farmAware />,
             children: [
-              { index: true, element: <SprayCalendar /> },
-              { path: 'programmes', element: <Programmes /> },
+              { index: true, element: <OperationsCalendar /> },
+              { path: 'programmes', element: <SystemOnly><Programmes /></SystemOnly> },
               { path: 'calendar', element: <Navigate to="/operations" replace /> },
-              { path: 'log', element: <SprayLog /> },
-              { path: 'catalog', element: <SprayCatalog /> },
+              { path: 'log', element: <SystemOnly><SprayLog /></SystemOnly> },
+              { path: 'catalog', element: <SystemOnly><SprayCatalog /></SystemOnly> },
             ],
           },
           // Keep old /spray links working (bookmarks, back button).

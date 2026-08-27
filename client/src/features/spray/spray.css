@@ -186,3 +186,53 @@
 .cal-day .cal-item { font-size: 13px; padding: 8px 10px; }
 
 .cat-toggle { margin-bottom: 18px; }
+
+/* Operations calendar — farm rollup cards (one per system; click to zoom in). */
+.ops-farm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.ops-farm-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  text-align: left;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s, transform 0.05s;
+}
+.ops-farm-card:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); box-shadow: var(--shadow-sm); }
+.ops-farm-card:active { transform: translateY(1px); }
+.ops-farm-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ops-farm-name { font-size: 15px; font-weight: 700; color: var(--ink); }
+.ops-farm-open { font-size: 12.5px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+.ops-farm-due {
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--warn);
+  background: var(--warn-wash);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+.ops-farm-muted { font-size: 13px; color: var(--ink-faint); }
+.ops-farm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ops-farm-list li { font-size: 13.5px; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+.ops-farm-kind {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  flex: none;
+}
+.ops-farm-kind.dosing { color: var(--accent); background: var(--accent-wash); }
+.ops-farm-kind.spray { color: var(--ok); background: var(--ok-wash); }
