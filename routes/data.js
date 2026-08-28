@@ -235,6 +235,27 @@ router.post('/nutrients/:systemId', async (req, res) => {
     }
 });
 
+// Delete all nutrient readings for a system on a given day (a "reading" in the
+// UI is the day's composite of per-nutrient rows). date = YYYY-MM-DD.
+router.delete('/nutrients/:systemId/day/:date', async (req, res) => {
+    const { systemId, date } = req.params;
+    if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
+        return res.status(403).json({ error: 'Access denied to this system' });
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Invalid date' });
+    try {
+        const pool = getDatabase();
+        const [result] = await pool.execute(
+            'DELETE FROM nutrient_readings WHERE system_id = ? AND DATE(reading_date) = ?',
+            [systemId, date]
+        );
+        res.json({ deleted: result.affectedRows });
+    } catch (error) {
+        console.error('Error deleting nutrient readings:', error);
+        res.status(500).json({ error: 'Failed to delete readings' });
+    }
+});
+
 // Get latest nutrient values for dashboard (aggregated by type)
 router.get('/nutrients/latest/:systemId', async (req, res) => {
     const { systemId } = req.params;

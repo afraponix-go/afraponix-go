@@ -42,6 +42,11 @@ export type WaterFieldKey = (typeof WATER_FIELDS)[number]['key']
 // ---- Write: one reading = several typed rows in nutrient_readings ----
 export type WaterQualityInput = { date: string; notes?: string; values: Partial<Record<WaterFieldKey, number>> }
 
+// Delete all readings for a system on one day (a "reading" is a day's composite).
+export function deleteWaterQualityDay(systemId: string, date: string) {
+  return api(`/data/nutrients/${systemId}/day/${date}`, { method: 'DELETE' })
+}
+
 export async function createWaterQualityReading(systemId: string, input: WaterQualityInput) {
   // Store at noon so a reader's timezone offset can't shift the date to an
   // adjacent day when the datetime is later grouped by calendar date.
