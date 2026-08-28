@@ -13,7 +13,7 @@ export type Levels = Record<NutrientKey, number>
 
 // Element → the reading metric it maps to (nitrogen is read as nitrate).
 export const NUTRIENTS: { key: NutrientKey; label: string; readKey: string }[] = [
-  { key: 'n', label: 'Nitrogen (N)', readKey: 'nitrate' },
+  { key: 'n', label: 'Nitrate (N)', readKey: 'nitrate' },
   { key: 'p', label: 'Phosphorus (P)', readKey: 'phosphorus' },
   { key: 'k', label: 'Potassium (K)', readKey: 'potassium' },
   { key: 'ca', label: 'Calcium (Ca)', readKey: 'calcium' },

@@ -71,7 +71,7 @@ export const setDosingProgrammeStatus = (id: number, status: 'active' | 'paused'
   api(`/dosing/programmes/${id}`, { method: 'PUT', body: { status } })
 
 export const NUTRIENT_OPTS: { key: NutrientKey; label: string; short: string }[] = [
-  { key: 'n', label: 'Nitrogen (N)', short: 'N' },
+  { key: 'n', label: 'Nitrate (N)', short: 'N' },
   { key: 'p', label: 'Phosphorus (P)', short: 'P' },
   { key: 'k', label: 'Potassium (K)', short: 'K' },
   { key: 'ca', label: 'Calcium (Ca)', short: 'Ca' },
