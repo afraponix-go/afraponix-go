@@ -563,17 +563,39 @@ router.get('/density-history/:systemId', async (req, res) => {
             return `${y}-${m}-${day}`;
         };
 
-        // Reconstruct a baseline (pre-history) count and weight per tank.
+        // Reconstruct a baseline (pre-history) count per tank, plus the dated
+        // weigh-ins that shape the weight curve.
+        const dayMs = (key) => Date.parse(`${key}T00:00:00Z`);
         const perTank = tanks.map((t) => {
             const vol = Number(t.size_m3) > 0 ? Number(t.size_m3) : (Number(t.volume_liters) || 0) / 1000;
             const evs = events
                 .filter((e) => e.fish_tank_id === t.id)
-                .map((e) => ({ key: toKey(e.event_date), delta: Number(e.count_change) || 0, weight: e.weight != null ? Number(e.weight) : null }));
+                .map((e) => ({ ms: dayMs(toKey(e.event_date)), delta: Number(e.count_change) || 0, weight: e.weight != null ? Number(e.weight) : null }));
             const totalDelta = evs.reduce((s, e) => s + e.delta, 0);
             const baselineCount = (Number(t.current_fish_count) || 0) - totalDelta;
-            const firstWeight = evs.find((e) => e.weight != null);
-            return { vol, evs, baselineCount, baselineWeight: firstWeight ? firstWeight.weight : DEFAULT_WEIGHT };
+            // Weigh-ins (stocking weight + weight_update events), chronological.
+            const weighs = evs.filter((e) => e.weight != null).map((e) => ({ ms: e.ms, w: e.weight }));
+            return { vol, evs, baselineCount, weighs };
         });
+
+        // Weight is a point-in-time measurement, so interpolate it linearly
+        // between weigh-ins and hold flat outside their range. This keeps a new
+        // weigh-in from retroactively snapping the whole history to one value —
+        // it only re-slopes the segment since the previous weigh-in.
+        const weightAt = (weighs, ms) => {
+            if (weighs.length === 0) return DEFAULT_WEIGHT;
+            if (ms <= weighs[0].ms) return weighs[0].w;
+            const last = weighs[weighs.length - 1];
+            if (ms >= last.ms) return last.w;
+            for (let i = 0; i < weighs.length - 1; i++) {
+                const a = weighs[i], b = weighs[i + 1];
+                if (ms >= a.ms && ms <= b.ms) {
+                    const span = b.ms - a.ms;
+                    return span > 0 ? a.w + (b.w - a.w) * ((ms - a.ms) / span) : b.w;
+                }
+            }
+            return last.w;
+        };
 
         // Walk the day window and compute the aggregate density at each day's end.
         const end = new Date();
@@ -582,18 +604,16 @@ router.get('/density-history/:systemId', async (req, res) => {
             const d = new Date(end);
             d.setDate(end.getDate() - i);
             const key = toKey(d);
+            const ms = dayMs(key);
             let biomass = 0;
             let volume = 0;
             for (const t of perTank) {
                 volume += t.vol;
                 let count = t.baselineCount;
-                let weight = t.baselineWeight;
                 for (const e of t.evs) {
-                    if (e.key <= key) {
-                        count += e.delta;
-                        if (e.weight != null) weight = e.weight;
-                    }
+                    if (e.ms <= ms) count += e.delta;
                 }
+                const weight = weightAt(t.weighs, ms);
                 biomass += (Math.max(0, count) * weight) / 1000;
             }
             series.push({
