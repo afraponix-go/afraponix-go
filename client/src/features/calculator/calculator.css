@@ -482,8 +482,11 @@
 .nd-mix-day { white-space: normal; }
 
 /* Per-nutrient targeting checkbox in the levels grid. */
-.nd-lv-name { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
-.nd-lv-name input[type="checkbox"] { flex: none; cursor: pointer; }
+.nd-lv-name { display: flex; align-items: center; gap: 8px; cursor: pointer; min-width: 0; white-space: nowrap; }
+/* The generic .calc-form input rule stretches inputs to 100% — force the
+   checkbox back to its intrinsic size so the nutrient label isn't pushed off
+   to the right (and hidden behind the value box). */
+.nd-lv-name input[type="checkbox"] { flex: none; width: 16px; height: 16px; margin: 0; cursor: pointer; accent-color: var(--accent); }
 .nd-lv-row.off { opacity: 0.5; }
 .nd-lv-row.off input[type="number"] { background: var(--surface-2); }
 .nd-target-hint { margin: 6px 0 0; font-size: 12.5px; }
