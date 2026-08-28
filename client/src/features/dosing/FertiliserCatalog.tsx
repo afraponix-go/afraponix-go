@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { fetchFertilisers, deleteFertiliser, addFertiliser, DEFAULT_BUFFERS, NUTRIENT_OPTS, type Fertiliser } from './api'
 import { AddFertiliserModal } from './AddFertiliserModal'
-import { DEFAULT_PRODUCTS, saveUserProducts } from '../calculator/nutrientDosing'
+import { DEFAULT_PRODUCTS } from '../calculator/nutrientDosing'
 import '../spray/spray.css'
 import './dosing.css'
 
@@ -31,8 +31,17 @@ export function FertiliserCatalog() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['dosing-fertilisers'] }); qc.invalidateQueries({ queryKey: ['dosing-products'] }); setConfirmDel(null) },
   })
   const invalidate = () => { qc.invalidateQueries({ queryKey: ['dosing-fertilisers'] }); qc.invalidateQueries({ queryKey: ['dosing-products'] }) }
-  const loadDefaults = useMutation({ mutationFn: () => saveUserProducts(DEFAULT_PRODUCTS), onSuccess: invalidate })
+  // Additive: add each default fertiliser (upsert by name) without touching the
+  // rest of the catalogue — so loading defaults never wipes your pH buffers or
+  // custom fertilisers.
+  const loadDefaults = useMutation({
+    mutationFn: async () => {
+      for (const p of DEFAULT_PRODUCTS) await addFertiliser({ name: p.name, n: p.n, p: p.p, k: p.k, ca: p.ca, mg: p.mg, fe: p.fe })
+    },
+    onSuccess: invalidate,
+  })
   const loadBuffers = useMutation({ mutationFn: async () => { for (const b of DEFAULT_BUFFERS) await addFertiliser(b) }, onSuccess: invalidate })
+  const missingDefaults = DEFAULT_PRODUCTS.some((p) => !ferts.some((f) => f.name === p.name))
 
   const shown = useMemo(() => ferts.filter((f) => !filter || f.name.toLowerCase().includes(filter.toLowerCase())), [ferts, filter])
 
@@ -44,11 +53,18 @@ export function FertiliserCatalog() {
       </div>
       <p className="spray-lead">Your dosing fertilisers — nutrient content and a dose rate. These feed the Nutrient Dosing calculator and dosing programmes.</p>
       <input className="crop-search" type="search" placeholder="Search fertilisers…" value={filter} onChange={(e) => setFilter(e.target.value)} />
-      {ferts.length > 0 && !ferts.some((f) => f.ph_direction) && (
-        <button type="button" className="link-btn" style={{ marginTop: 8 }} disabled={loadBuffers.isPending} onClick={() => loadBuffers.mutate()}>
-          {loadBuffers.isPending ? 'Loading…' : '+ Load default pH buffers (Nitric, Phosphoric, KOH, Ca(OH)₂…)'}
-        </button>
-      )}
+      <div className="cat-load-links">
+        {ferts.length > 0 && missingDefaults && (
+          <button type="button" className="link-btn" disabled={loadDefaults.isPending} onClick={() => loadDefaults.mutate()}>
+            {loadDefaults.isPending ? 'Loading…' : '+ Load default fertilisers (Calcium Nitrate, MKP, Magnesium Sulphate, Iron…)'}
+          </button>
+        )}
+        {ferts.length > 0 && !ferts.some((f) => f.ph_direction) && (
+          <button type="button" className="link-btn" disabled={loadBuffers.isPending} onClick={() => loadBuffers.mutate()}>
+            {loadBuffers.isPending ? 'Loading…' : '+ Load default pH buffers (Nitric, Phosphoric, KOH, Ca(OH)₂…)'}
+          </button>
+        )}
+      </div>
 
       {isLoading ? <div className="empty">Loading…</div> : shown.length === 0 ? (
         filter ? <div className="empty">No fertilisers match.</div> : (

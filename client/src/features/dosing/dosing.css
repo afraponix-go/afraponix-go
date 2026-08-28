@@ -148,3 +148,6 @@
 .dp-ph-first { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
 .dp-ph-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); background: var(--accent-wash); border-radius: 999px; padding: 1px 7px; margin-left: 6px; }
 .cal-item.dosing.ph-first { border-left: 3px solid var(--accent); font-weight: 600; }
+
+/* Fertiliser catalogue: the "load defaults" helper links */
+.cat-load-links { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 8px; }
