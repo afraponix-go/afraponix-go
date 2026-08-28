@@ -70,8 +70,9 @@ export function FarmsSettings() {
       {confirmDel && (
         <Modal title="Delete farm" onClose={() => setConfirmDel(null)}>
           <p style={{ marginTop: 0, color: 'var(--ink-soft)' }}>
-            Delete <b>{confirmDel.name}</b> and <b>all of its data</b>
-            {(confirmDel.system_count ?? 0) > 0 ? ` — including its ${confirmDel.system_count} system${confirmDel.system_count === 1 ? '' : 's'}, readings, plantings, harvests and programmes` : ''}? This can't be undone.
+            Delete <b>{confirmDel.name}</b>
+            {(confirmDel.system_count ?? 0) > 0 ? ` and its ${confirmDel.system_count} system${confirmDel.system_count === 1 ? '' : 's'}` : ''}?
+            It's <b>archived</b> (not erased) — you can restore it from <b>Settings → Manage farms</b>.
           </p>
           <div className="mform-actions">
             <button type="button" className="ghost" onClick={() => setConfirmDel(null)}>Cancel</button>

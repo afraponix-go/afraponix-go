@@ -30,8 +30,24 @@ export async function updateFarm(id: string, input: { name?: string; location?: 
   return api(`/farms/${id}`, { method: 'PUT', body: input })
 }
 
+// "Delete" a farm — soft-delete (archive). Recoverable via restoreFarm.
 export async function deleteFarm(id: string) {
   return api(`/farms/${id}`, { method: 'DELETE' })
+}
+
+// Archived farms (owned, soft-deleted) — for the restore / permanent-delete list.
+export const archivedFarmSchema = farmSchema.extend({ archived_date: z.string().nullable().optional() })
+export type ArchivedFarm = z.infer<typeof archivedFarmSchema>
+export async function fetchArchivedFarms(): Promise<ArchivedFarm[]> {
+  const data = await api<{ farms: unknown[] }>('/farms/archived')
+  return z.array(archivedFarmSchema).parse(data.farms ?? [])
+}
+export async function restoreFarm(id: string) {
+  return api(`/farms/${id}/restore`, { method: 'POST' })
+}
+// Permanently delete a farm and all of its data (irreversible).
+export async function purgeFarm(id: string) {
+  return api(`/farms/${id}/purge`, { method: 'DELETE' })
 }
 
 // --- Farm rollup (all systems in a farm) ---

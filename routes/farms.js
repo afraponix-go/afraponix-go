@@ -40,14 +40,14 @@ router.get('/', async (req, res) => {
             `SELECT f.id, f.name, f.location, f.created_at,
                     (SELECT COUNT(*) FROM systems s WHERE s.farm_id = f.id) AS system_count,
                     'own' AS kind, NULL AS permission
-             FROM farms f WHERE f.owner_id = ?
+             FROM farms f WHERE f.owner_id = ? AND f.archived_at IS NULL
              UNION
              SELECT f.id, f.name, f.location, f.created_at,
                     (SELECT COUNT(*) FROM systems s WHERE s.farm_id = f.id) AS system_count,
                     'shared' AS kind, fs.permission_level AS permission
              FROM farms f
              JOIN farm_shares fs ON fs.farm_id = f.id
-             WHERE fs.shared_with_id = ? AND fs.status = 'accepted' AND f.owner_id <> ?
+             WHERE fs.shared_with_id = ? AND fs.status = 'accepted' AND f.owner_id <> ? AND f.archived_at IS NULL
              ORDER BY kind ASC, created_at ASC, id ASC`,
             [req.user.userId, req.user.userId, req.user.userId]
         );
@@ -55,6 +55,39 @@ router.get('/', async (req, res) => {
     } catch (error) {
         console.error('Failed to list farms:', error);
         res.status(500).json({ error: 'Failed to load farms' });
+    }
+});
+
+// Archived (soft-deleted) farms the user owns — for restore or permanent delete.
+router.get('/archived', async (req, res) => {
+    try {
+        const pool = getDatabase();
+        const [rows] = await pool.execute(
+            `SELECT f.id, f.name, f.location, f.created_at,
+                    DATE_FORMAT(f.archived_at, '%Y-%m-%d') AS archived_date,
+                    (SELECT COUNT(*) FROM systems s WHERE s.farm_id = f.id) AS system_count
+             FROM farms f WHERE f.owner_id = ? AND f.archived_at IS NOT NULL
+             ORDER BY f.archived_at DESC`,
+            [req.user.userId]
+        );
+        res.json({ farms: rows });
+    } catch (error) {
+        console.error('Failed to list archived farms:', error);
+        res.status(500).json({ error: 'Failed to load archived farms' });
+    }
+});
+
+// Restore an archived farm (and its systems become visible again).
+router.post('/:id/restore', async (req, res) => {
+    try {
+        const pool = getDatabase();
+        const [own] = await pool.execute('SELECT id FROM farms WHERE id = ? AND owner_id = ?', [req.params.id, req.user.userId]);
+        if (!own.length) return res.status(404).json({ error: 'Farm not found or access denied' });
+        await pool.execute('UPDATE farms SET archived_at = NULL WHERE id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Failed to restore farm:', error);
+        res.status(500).json({ error: 'Failed to restore farm' });
     }
 });
 
@@ -188,10 +221,25 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete (owner only) — refuses while systems still belong to it.
-// Delete a farm AND all of its data — every system in the farm (each cascading
-// its own data) plus farm-scoped rows (seedling batches, shares). Runs in a
-// transaction so it can't leave a half-deleted farm.
+// "Delete" a farm — soft-delete (archive) so it (and its systems) disappear from
+// the app but can be restored. Use /purge for permanent deletion.
 router.delete('/:id', async (req, res) => {
+    try {
+        const pool = getDatabase();
+        const [own] = await pool.execute('SELECT id FROM farms WHERE id = ? AND owner_id = ?', [req.params.id, req.user.userId]);
+        if (!own.length) return res.status(404).json({ error: 'Farm not found or access denied' });
+        await pool.execute('UPDATE farms SET archived_at = NOW() WHERE id = ?', [req.params.id]);
+        res.json({ success: true, archived: true });
+    } catch (error) {
+        console.error('Failed to archive farm:', error);
+        res.status(500).json({ error: 'Failed to archive farm' });
+    }
+});
+
+// Permanently delete a farm AND all of its data — every system in the farm (each
+// cascading its own data) plus farm-scoped rows (seedling batches, shares). Runs
+// in a transaction so it can't leave a half-deleted farm.
+router.delete('/:id/purge', async (req, res) => {
     const farmId = req.params.id;
     let connection;
     try {

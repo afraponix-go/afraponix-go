@@ -625,3 +625,7 @@
 .mf-list { display: flex; flex-direction: column; gap: 10px; }
 .mf-list .danger-row { background: var(--surface); }
 .mf-actions { display: flex; gap: 8px; flex: none; }
+
+/* System list inside the archive-farm warning */
+.mf-syslist { margin: 0 0 14px; padding-left: 20px; font-size: 13.5px; color: var(--ink); }
+.mf-syslist li { margin: 2px 0; }

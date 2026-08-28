@@ -39,7 +39,8 @@ router.get('/', async (req, res) => {
                     ON ss.system_id = s.id AND ss.shared_with_id = ? AND ss.status = 'accepted'
              LEFT JOIN farm_shares fs
                     ON fs.farm_id = s.farm_id AND fs.shared_with_id = ? AND fs.status = 'accepted'
-             WHERE s.user_id = ? OR f.owner_id = ? OR ss.id IS NOT NULL OR fs.id IS NOT NULL
+             WHERE (s.user_id = ? OR f.owner_id = ? OR ss.id IS NOT NULL OR fs.id IS NOT NULL)
+               AND (s.farm_id IS NULL OR f.archived_at IS NULL)
              GROUP BY s.id
              ORDER BY s.created_at DESC`,
             [uid, uid, uid, uid, uid, uid, uid, uid]
