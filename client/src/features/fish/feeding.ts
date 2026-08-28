@@ -130,6 +130,14 @@ export function logFeeding(
   return api(`/data/fish-health/${systemId}`, { method: 'POST', body: input })
 }
 
+// Edit / delete a single logged feeding (a fish_health entry).
+export function updateFeeding(entryId: number, input: { feed_consumption: number; feed_type?: string | null }) {
+  return api(`/data/fish-health/entry/${entryId}`, { method: 'PUT', body: input })
+}
+export function deleteFeeding(entryId: number) {
+  return api(`/data/fish-health/entry/${entryId}`, { method: 'DELETE' })
+}
+
 const num = z.union([z.string(), z.number()]).nullable().optional().transform((v) => (v == null || v === '' ? null : Number(v)))
 
 const healthRow = z.object({

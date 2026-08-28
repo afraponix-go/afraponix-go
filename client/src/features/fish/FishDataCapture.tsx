@@ -4,6 +4,7 @@ import { useSystems } from '../systems/SystemContext'
 import { fetchFishInventory } from './api'
 import { fetchFeedingLog } from './feeding'
 import { BulkFeedingForm } from './BulkFeedingForm'
+import { FeedingHistory } from './FeedingHistory'
 import '../dashboard/dashboard.css'
 import '../water/water.css'
 import './fish.css'
@@ -33,6 +34,8 @@ export function FishDataCapture() {
           }}
         />
       </div>
+
+      <FeedingHistory log={feedingLog} tanks={tanks} />
     </div>
   )
 }
