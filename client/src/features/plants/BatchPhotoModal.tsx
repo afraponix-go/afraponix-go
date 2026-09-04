@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { fetchBatchPhotos, uploadBatchPhoto, deleteBatchPhoto, type BatchPhoto } from './photos'
 import { downscaleImage } from './imageDownscale'
+import { CameraCaptureModal } from './CameraCaptureModal'
 import './photos.css'
 
 const fmt = (d: string) => new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
@@ -20,6 +21,7 @@ export function BatchPhotoModal({ systemId, batchId, title, cropType, onClose }:
   const inputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const [preparing, setPreparing] = useState(false)
+  const [camera, setCamera] = useState(false)
 
   const { data: photos = [], isLoading } = useQuery({
     queryKey: ['batch-photos', systemId, batchId],
@@ -51,10 +53,19 @@ export function BatchPhotoModal({ systemId, batchId, title, cropType, onClose }:
   return (
     <Modal title={`Photos · ${title}`} onClose={onClose}>
       {error && <div className="wq-error">{error}</div>}
-      <input ref={inputRef} type="file" accept="image/*" capture="environment" hidden onChange={onPick} />
-      <button type="button" className="btn photo-add" disabled={preparing || upload.isPending} onClick={() => inputRef.current?.click()}>
-        {preparing ? 'Preparing…' : upload.isPending ? 'Uploading…' : '📷 Take / add photo'}
+      <input ref={inputRef} type="file" accept="image/*" hidden onChange={onPick} />
+      <button type="button" className="btn photo-add" disabled={preparing || upload.isPending} onClick={() => setCamera(true)}>
+        {preparing ? 'Preparing…' : upload.isPending ? 'Uploading…' : '📷 Take photo'}
       </button>
+      <button type="button" className="link-btn photo-fallback" onClick={() => inputRef.current?.click()}>Upload a file instead</button>
+
+      {camera && (
+        <CameraCaptureModal
+          onCapture={(file) => { setCamera(false); upload.mutate(file) }}
+          onFallback={() => { setCamera(false); inputRef.current?.click() }}
+          onClose={() => setCamera(false)}
+        />
+      )}
 
       {isLoading ? (
         <div className="empty">Loading…</div>
