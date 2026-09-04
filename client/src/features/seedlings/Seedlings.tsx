@@ -10,7 +10,21 @@ import { ViewToggle, useViewMode } from '../../components/ViewToggle'
 import '../water/water.css'
 import './seedlings.css'
 
-const STATUS_LABEL: Record<string, string> = { sown: 'Sown', germinated: 'Germinated', transplanted: 'Transplanted' }
+const STATUS_LABEL: Record<string, string> = { sown: 'Sown', germinated: 'Germinated', partially_transplanted: 'Partly transplanted', transplanted: 'Transplanted' }
+
+// Seedlings still awaiting a bed (germinated count, else total sown) minus what's
+// already gone out.
+function seedlingsLeft(s: Seedling): number {
+  return Math.max(0, (s.germinated_count ?? s.total_sown) - (s.transplanted_count ?? 0))
+}
+
+// How the transplant state reads on a card/row.
+function transplantText(s: Seedling): string {
+  const done = s.transplanted_count ?? 0
+  if (s.status === 'transplanted') return `${done.toLocaleString()} on ${s.transplant_date}${s.actual_transplant_days != null ? ` · ${s.actual_transplant_days}d` : ''}`
+  if (s.status === 'partially_transplanted') return `${done.toLocaleString()} placed · ${seedlingsLeft(s).toLocaleString()} left`
+  return s.predicted_transplant_date ? `by ${s.predicted_transplant_date}` : '—'
+}
 
 function readiness(s: Seedling): { text: string; cls: string } | null {
   if (s.status === 'transplanted') return null
@@ -56,6 +70,7 @@ export function Seedlings() {
           <span className="seedling-name">{s.crop_name ?? 'Crop'}{s.seed_variety ? ` · ${s.seed_variety}` : ''}</span>
           <span className={`seedling-badge st-${s.status}`}>{STATUS_LABEL[s.status] ?? s.status}</span>
         </div>
+        {s.batch_number && <div className="seedling-batchno">{s.batch_number}</div>}
         <div className="seedling-meta">Sown {s.sow_date} · {
           s.tray_groups.length === 1
             ? `${s.tray_groups[0].trays} tray${s.tray_groups[0].trays === 1 ? '' : 's'} × ${s.tray_groups[0].cells}`
@@ -68,11 +83,7 @@ export function Seedlings() {
           </div>
           <div className="seedling-fact">
             <span className="k">Transplant</span>
-            <span className="v">
-              {s.status === 'transplanted'
-                ? `${(s.transplanted_count ?? 0).toLocaleString()} on ${s.transplant_date}${s.actual_transplant_days != null ? ` · ${s.actual_transplant_days}d` : ''}`
-                : s.predicted_transplant_date ? `by ${s.predicted_transplant_date}` : '—'}
-            </span>
+            <span className="v">{transplantText(s)}</span>
           </div>
         </div>
         {rd && <div className={`seedling-ready ${rd.cls}`}>{rd.text}</div>}
@@ -92,7 +103,7 @@ export function Seedlings() {
     const pct = germPct(s)
     return (
       <div key={s.id} className="seedling-done-row">
-        <span className="dr-name">{s.crop_name ?? 'Crop'}{s.seed_variety ? ` · ${s.seed_variety}` : ''}</span>
+        <span className="dr-name">{s.crop_name ?? 'Crop'}{s.seed_variety ? ` · ${s.seed_variety}` : ''}{s.batch_number ? <span className="seedling-batchno inline"> {s.batch_number}</span> : null}</span>
         <span className="dr-meta">{s.total_sown.toLocaleString()} sown{pct != null ? ` · ${pct}% germ` : ''}</span>
         <span className="dr-tp">→ {(s.transplanted_count ?? 0).toLocaleString()} on {s.transplant_date}{s.actual_transplant_days != null ? ` · ${s.actual_transplant_days}d` : ''}</span>
         <span className="dr-actions">
@@ -124,15 +135,15 @@ export function Seedlings() {
             const rd = readiness(s)
             return (
               <tr key={s.id}>
-                <td className="op-text">{s.crop_name ?? 'Crop'}</td>
+                <td className="op-text">{s.crop_name ?? 'Crop'}{s.batch_number ? <div className="seedling-batchno">{s.batch_number}</div> : null}</td>
                 <td className="op-text">{s.seed_variety ?? '—'}</td>
                 <td><span className={`seedling-badge st-${s.status}`}>{STATUS_LABEL[s.status] ?? s.status}</span></td>
                 <td className="op-text">{s.sow_date}</td>
                 <td>{s.total_sown.toLocaleString()}</td>
                 <td>{pct != null ? `${pct}%` : '—'}</td>
                 <td className="op-text">
-                  {s.status === 'transplanted'
-                    ? `${(s.transplanted_count ?? 0).toLocaleString()} on ${s.transplant_date}`
+                  {s.status === 'transplanted' || s.status === 'partially_transplanted'
+                    ? transplantText(s)
                     : rd ? rd.text : s.predicted_transplant_date ? `by ${s.predicted_transplant_date}` : '—'}
                 </td>
                 <td className="row-actions">

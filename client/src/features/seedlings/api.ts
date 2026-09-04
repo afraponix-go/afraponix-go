@@ -1,6 +1,6 @@
 import { api } from '../../lib/apiClient'
 
-export type SeedlingStatus = 'sown' | 'germinated' | 'transplanted'
+export type SeedlingStatus = 'sown' | 'germinated' | 'partially_transplanted' | 'transplanted'
 export type TrayGroup = { trays: number; cells: number }
 
 export type Seedling = {
@@ -21,6 +21,7 @@ export type Seedling = {
   transplanted_count: number | null
   grow_bed_id: number | null
   plant_batch_id: string | null
+  batch_number: string | null
   status: SeedlingStatus
   notes: string | null
   actual_germ_days: number | null

@@ -27,7 +27,9 @@ export function TransplantModal({ systems, seedling, onClose }: { systems: Syste
   // A bed belongs to a system, so clear the choice when the system changes.
   useEffect(() => { setBedId('') }, [systemId])
   const [date, setDate] = useState(todayISO())
-  const [count, setCount] = useState(String(seedling.germinated_count ?? seedling.total_sown))
+  // Seedlings still to place: germinated (else sown) minus any already transplanted.
+  const remaining = Math.max(0, (seedling.germinated_count ?? seedling.total_sown) - (seedling.transplanted_count ?? 0))
+  const [count, setCount] = useState(String(remaining))
   const [density, setDensity] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -70,7 +72,10 @@ export function TransplantModal({ systems, seedling, onClose }: { systems: Syste
     <Modal title={`Transplant · ${seedling.crop_name ?? 'seedlings'}${seedling.seed_variety ? ` (${seedling.seed_variety})` : ''}`} onClose={onClose}>
       <form className="mform" onSubmit={onSubmit}>
         {error && <div className="wq-error">{error}</div>}
-        <p className="seedling-hint">Creates a planting batch in the chosen system’s bed and marks this sowing transplanted.</p>
+        <p className="seedling-hint">
+          Creates a planting batch in the chosen system’s bed, traceable back to this sowing
+          {seedling.batch_number ? <> as <b>{seedling.batch_number}-…</b></> : null}. {remaining.toLocaleString()} seedling{remaining === 1 ? '' : 's'} left to place — transplant fewer to split this batch across beds.
+        </p>
 
         <div className="field">
           <label htmlFor="t-system">System</label>
@@ -107,7 +112,7 @@ export function TransplantModal({ systems, seedling, onClose }: { systems: Syste
           </div>
           <div className="field">
             <label htmlFor="t-count">Plants transplanted</label>
-            <input id="t-count" type="number" min="1" step="1" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} />
+            <input id="t-count" type="number" min="1" max={remaining} step="1" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} />
           </div>
         </div>
 

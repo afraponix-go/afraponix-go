@@ -3,6 +3,7 @@ const router = express.Router();
 const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
 const { canWriteSystem, getFarmAccess, WRITE_LEVELS } = require('../utils/systemAccess');
+const { batchLabel, buildBatchNumber } = require('../utils/batchNumber');
 
 router.use(authenticateToken);
 
@@ -55,7 +56,7 @@ const SELECT_COLS = `
   predicted_germ_days, predicted_transplant_days,
   DATE_FORMAT(germination_date, '%Y-%m-%d') AS germination_date, germinated_count,
   DATE_FORMAT(transplant_date, '%Y-%m-%d') AS transplant_date, transplanted_count,
-  grow_bed_id, plant_batch_id, status, notes,
+  grow_bed_id, plant_batch_id, batch_number, status, notes,
   DATEDIFF(germination_date, sow_date) AS actual_germ_days,
   DATE_FORMAT(DATE_ADD(sow_date, INTERVAL predicted_transplant_days DAY), '%Y-%m-%d') AS predicted_transplant_date,
   DATEDIFF(DATE_ADD(sow_date, INTERVAL predicted_transplant_days DAY), CURDATE()) AS days_to_transplant_remaining,
@@ -86,14 +87,18 @@ router.post('/:farmId', async (req, res) => {
         const b = req.body || {};
         if (!b.sow_date) return res.status(400).json({ error: 'sow_date is required' });
         const tf = trayFieldsFrom(b.tray_groups, b.trays, b.cells_per_tray);
+        // Human batch number "WW/YY · Label" from the sow week, unique in the farm.
+        const [taken] = await pool.execute('SELECT batch_number FROM seedling_batches WHERE farm_id = ? AND batch_number IS NOT NULL', [req.params.farmId]);
+        const sowWhen = /^\d{4}-\d{2}-\d{2}/.test(b.sow_date) ? new Date(`${b.sow_date.slice(0, 10)}T12:00:00`) : new Date();
+        const batchNumber = buildBatchNumber(batchLabel(b.crop_name || b.crop_code, b.seed_variety), taken.map((r) => r.batch_number), sowWhen);
         const [result] = await pool.execute(
-            `INSERT INTO seedling_batches (farm_id, crop_code, crop_name, seed_variety, sow_date, trays, cells_per_tray, tray_groups, predicted_germ_days, predicted_transplant_days, notes)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO seedling_batches (farm_id, crop_code, crop_name, seed_variety, sow_date, trays, cells_per_tray, tray_groups, predicted_germ_days, predicted_transplant_days, notes, batch_number)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [req.params.farmId, b.crop_code || null, b.crop_name || null, b.seed_variety || null, b.sow_date,
              tf.trays, tf.cells, tf.json,
-             intOrNull(b.predicted_germ_days), intOrNull(b.predicted_transplant_days), b.notes || null]
+             intOrNull(b.predicted_germ_days), intOrNull(b.predicted_transplant_days), b.notes || null, batchNumber]
         );
-        res.json({ success: true, id: result.insertId });
+        res.json({ success: true, id: result.insertId, batch_number: batchNumber });
     } catch (error) {
         console.error('Failed to create seedling batch:', error);
         res.status(500).json({ error: 'Failed to create seedling batch' });
@@ -111,7 +116,8 @@ router.put('/:id', async (req, res) => {
         const val = (key, fallback) => (b[key] !== undefined ? b[key] : fallback);
         const germinationDate = val('germination_date', sb.germination_date);
         let status = sb.status;
-        if (status !== 'transplanted') status = germinationDate ? 'germinated' : 'sown';
+        // Don't disturb a batch that's (partly) transplanted — only sown/germinated flip.
+        if (status !== 'transplanted' && status !== 'partially_transplanted') status = germinationDate ? 'germinated' : 'sown';
         const tf = b.tray_groups !== undefined
             ? trayFieldsFrom(b.tray_groups, val('trays', sb.trays), val('cells_per_tray', sb.cells_per_tray))
             : { json: sb.tray_groups, trays: Math.max(1, intOrNull(val('trays', sb.trays)) || 1), cells: intOrNull(val('cells_per_tray', sb.cells_per_tray)) };
@@ -163,19 +169,65 @@ router.post('/:id/transplant', async (req, res) => {
             if (crop.length && crop[0].growth_days != null) dth = Number(crop[0].growth_days);
         }
         const cropType = sb.crop_code || (sb.crop_name || '').toLowerCase().replace(/[^a-z0-9]+/g, '_');
-        const batchId = `sb${sb.id}-${cropType}`.slice(0, 100);
 
-        await pool.execute(
-            `INSERT INTO plant_growth (system_id, grow_bed_id, date, crop_type, count, plants_per_m2, new_seedlings, growth_stage, batch_id, seed_variety, batch_created_date, days_to_harvest)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 'transplant', ?, ?, ?, ?)`,
-            [targetSystemId, bedId, date, cropType, count, intOrNull(b.plants_per_m2), count, batchId, sb.seed_variety || null, date, dth]
-        );
-        // Record where the batch went (system_id = destination).
-        await pool.execute(
-            `UPDATE seedling_batches SET transplant_date=?, transplanted_count=?, system_id=?, grow_bed_id=?, plant_batch_id=?, status='transplanted' WHERE id=?`,
-            [date, count, targetSystemId, bedId, batchId, req.params.id]
-        );
-        res.json({ success: true, batch_id: batchId });
+        // Don't transplant more than the batch has left (germinated, else sown).
+        const sourceTotal = intOrNull(sb.germinated_count) ?? trayInfo(sb).total;
+        const already = intOrNull(sb.transplanted_count) || 0;
+        const remaining = sourceTotal - already;
+        if (remaining <= 0) return res.status(400).json({ error: 'This batch has already been fully transplanted' });
+        if (count > remaining) return res.status(400).json({ error: `Only ${remaining} seedling${remaining === 1 ? '' : 's'} remain to transplant` });
+
+        // Every planting inherits the seedling batch number with a "-N" split
+        // suffix, so it's always traceable back. Backfill the number for legacy
+        // rows sown before batch numbers existed.
+        let base = sb.batch_number;
+        if (!base) {
+            const [taken] = await pool.execute('SELECT batch_number FROM seedling_batches WHERE farm_id = ? AND batch_number IS NOT NULL', [sb.farm_id]);
+            const sowWhen = sb.sow_date ? new Date(new Date(sb.sow_date).getTime()) : new Date();
+            base = buildBatchNumber(batchLabel(sb.crop_name || sb.crop_code, sb.seed_variety), taken.map((r) => r.batch_number), sowWhen);
+            await pool.execute('UPDATE seedling_batches SET batch_number = ? WHERE id = ?', [base, sb.id]);
+        }
+        // Next split index: max existing "-N" for this base across the farm + 1.
+        const [farmSystems] = await pool.execute('SELECT id FROM systems WHERE farm_id = ?', [sb.farm_id]);
+        let nextSplit = 1;
+        if (farmSystems.length) {
+            const placeholders = farmSystems.map(() => '?').join(',');
+            const [prior] = await pool.execute(
+                `SELECT DISTINCT batch_id FROM plant_growth WHERE system_id IN (${placeholders}) AND batch_id LIKE ?`,
+                [...farmSystems.map((s) => s.id), `${base}-%`]
+            );
+            for (const row of prior) {
+                const n = parseInt(String(row.batch_id).slice(base.length + 1), 10);
+                if (Number.isFinite(n) && n >= nextSplit) nextSplit = n + 1;
+            }
+        }
+        const batchId = `${base}-${nextSplit}`;
+        // Accumulate what's been transplanted; only mark done once it's all placed.
+        const newTransplanted = already + count;
+        const status = newTransplanted >= sourceTotal ? 'transplanted' : 'partially_transplanted';
+
+        // Atomic: the bed planting and the seedling update both land, or neither —
+        // otherwise a failure orphans a planting and burns a split number.
+        const conn = await pool.getConnection();
+        try {
+            await conn.beginTransaction();
+            await conn.execute(
+                `INSERT INTO plant_growth (system_id, grow_bed_id, date, crop_type, count, plants_per_m2, new_seedlings, growth_stage, batch_id, seed_variety, batch_created_date, days_to_harvest)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, 'transplant', ?, ?, ?, ?)`,
+                [targetSystemId, bedId, date, cropType, count, intOrNull(b.plants_per_m2), count, batchId, sb.seed_variety || null, date, dth]
+            );
+            await conn.execute(
+                `UPDATE seedling_batches SET transplant_date=?, transplanted_count=?, system_id=?, grow_bed_id=?, plant_batch_id=?, status=? WHERE id=?`,
+                [date, newTransplanted, targetSystemId, bedId, batchId, status, req.params.id]
+            );
+            await conn.commit();
+        } catch (e) {
+            await conn.rollback();
+            throw e;
+        } finally {
+            conn.release();
+        }
+        res.json({ success: true, batch_id: batchId, status, transplanted_count: newTransplanted, remaining: sourceTotal - newTransplanted });
     } catch (error) {
         console.error('Failed to transplant seedling batch:', error);
         res.status(500).json({ error: 'Failed to transplant' });
