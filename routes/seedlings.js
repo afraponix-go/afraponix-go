@@ -187,21 +187,23 @@ router.post('/:id/transplant', async (req, res) => {
             base = buildBatchNumber(batchLabel(sb.crop_name || sb.crop_code, sb.seed_variety), taken.map((r) => r.batch_number), sowWhen);
             await pool.execute('UPDATE seedling_batches SET batch_number = ? WHERE id = ?', [base, sb.id]);
         }
-        // Next split index: max existing "-N" for this base across the farm + 1.
+        // The first planting keeps the batch number; only a split (more than one
+        // planting from the batch) gets a "-2", "-3"… week batch number.
         const [farmSystems] = await pool.execute('SELECT id FROM systems WHERE farm_id = ?', [sb.farm_id]);
-        let nextSplit = 1;
+        let batchId = base;
         if (farmSystems.length) {
             const placeholders = farmSystems.map(() => '?').join(',');
             const [prior] = await pool.execute(
-                `SELECT DISTINCT batch_id FROM plant_growth WHERE system_id IN (${placeholders}) AND batch_id LIKE ?`,
-                [...farmSystems.map((s) => s.id), `${base}-%`]
+                `SELECT DISTINCT batch_id FROM plant_growth WHERE system_id IN (${placeholders}) AND (batch_id = ? OR batch_id LIKE ?)`,
+                [...farmSystems.map((s) => s.id), base, `${base}-%`]
             );
-            for (const row of prior) {
-                const n = parseInt(String(row.batch_id).slice(base.length + 1), 10);
-                if (Number.isFinite(n) && n >= nextSplit) nextSplit = n + 1;
+            const taken = new Set(prior.map((r) => String(r.batch_id)));
+            if (taken.has(base)) {
+                let n = 2;
+                while (taken.has(`${base}-${n}`)) n++;
+                batchId = `${base}-${n}`;
             }
         }
-        const batchId = `${base}-${nextSplit}`;
         // Accumulate what's been transplanted; only mark done once it's all placed.
         const newTransplanted = already + count;
         const status = newTransplanted >= sourceTotal ? 'transplanted' : 'partially_transplanted';

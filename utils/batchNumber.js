@@ -20,17 +20,18 @@ function batchLabel(cropDisplay, seedVariety) {
     return cultivar || (cropDisplay || '').trim() || 'Batch';
 }
 
-// Build "WW/YY · Label", appending " #2", " #3"… when that id already exists in
-// `existing` (an iterable of taken numbers).
+// Build "YYWW-Variety" (2-digit year + ISO week, then variety), appending
+// "-2", "-3"… only when that id already exists in `existing` (more than one of
+// that variety in the week); the first stays unsuffixed.
 function buildBatchNumber(label, existing = [], when = new Date()) {
     const { week, year } = isoWeekYear(when);
     const p2 = (n) => String(n).padStart(2, '0');
-    const base = `${p2(week)}/${p2(year % 100)} · ${(label || 'Batch').trim()}`;
+    const base = `${p2(year % 100)}${p2(week)}-${(label || 'Batch').trim()}`;
     const taken = new Set(existing);
     if (!taken.has(base)) return base;
     let n = 2;
-    while (taken.has(`${base} #${n}`)) n++;
-    return `${base} #${n}`;
+    while (taken.has(`${base}-${n}`)) n++;
+    return `${base}-${n}`;
 }
 
 module.exports = { isoWeekYear, batchLabel, buildBatchNumber };

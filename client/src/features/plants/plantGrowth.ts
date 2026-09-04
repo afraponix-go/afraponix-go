@@ -21,19 +21,18 @@ export function batchLabel(cropDisplay: string, seedVariety?: string | null): st
   return cultivar || cropDisplay
 }
 
-// Batch id in the growers' convention (matches the imported Oribi data):
-//   "WW/YY · Label" — ISO week / 2-digit year · cultivar-or-crop.
-// If that id already exists this week (same crop/cultivar sown twice), a
-// " #2", " #3"… suffix keeps it unique.
+// Batch id: "YYWW-Variety" (2-digit year + ISO week, then cultivar-or-crop).
+// Only when more than one batch of that variety exists in the same week does a
+// "-2", "-3"… week batch number get appended; the first stays unsuffixed.
 export function generateBatchId(label: string, existing: Iterable<string> = [], when: Date = new Date()): string {
   const { week, year } = isoWeekYear(when)
   const p2 = (n: number) => String(n).padStart(2, '0')
-  const base = `${p2(week)}/${p2(year % 100)} · ${(label || 'Batch').trim()}`
+  const base = `${p2(year % 100)}${p2(week)}-${(label || 'Batch').trim()}`
   const taken = new Set(existing)
   if (!taken.has(base)) return base
   let n = 2
-  while (taken.has(`${base} #${n}`)) n++
-  return `${base} #${n}`
+  while (taken.has(`${base}-${n}`)) n++
+  return `${base}-${n}`
 }
 
 // Record a new planting: one plant_growth row with new_seedlings = count.
