@@ -27,39 +27,52 @@ export function CameraCaptureModal({ onCapture, onClose, onFallback }: {
     sample.height = 96
     const sctx = sample.getContext('2d', { willReadFrequently: true })
 
-    // Look only at the centre region (where the guide sits): how much detail
-    // (sharpness/closeness) and leaf-green it holds.
+    // Look only at the centre region (where the guide sits) and gauge how much
+    // real subject detail it holds — colour-agnostic, so it works for green
+    // leaves and non-green flowers/fruit alike. Two signals: overall contrast
+    // (a filled, textured subject spans a wide luminance range) and edge
+    // sharpness (in focus / close). Green is deliberately NOT used.
+    const W = 96
+    const H = 96
+    const N = W * H
+    const luma = new Float32Array(N)
     function analyze() {
       const v = videoRef.current
       if (!v || v.readyState < 2 || !sctx) return
       const side = Math.min(v.videoWidth, v.videoHeight) * 0.6
       const cx = (v.videoWidth - side) / 2
       const cy = (v.videoHeight - side) / 2
-      sctx.drawImage(v, cx, cy, side, side, 0, 0, 96, 96)
-      const d = sctx.getImageData(0, 0, 96, 96).data
-      const n = 96 * 96
-      let green = 0
+      sctx.drawImage(v, cx, cy, side, side, 0, 0, W, H)
+      const d = sctx.getImageData(0, 0, W, H).data
       let sum = 0
-      let sumSq = 0
-      for (let i = 0; i < d.length; i += 4) {
-        const r = d[i]
-        const g = d[i + 1]
-        const b = d[i + 2]
-        const l = 0.299 * r + 0.587 * g + 0.114 * b
+      for (let p = 0, i = 0; p < N; p++, i += 4) {
+        const l = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]
+        luma[p] = l
         sum += l
-        sumSq += l * l
-        if (g > r * 1.03 && g > b * 1.03 && g > 50) green++
       }
-      const mean = sum / n
-      const std = Math.sqrt(Math.max(0, sumSq / n - mean * mean)) // detail / focus
-      const cover = green / n // how much the plant fills the centre
+      const mean = sum / N
+      let sq = 0
+      let grad = 0
+      let gcnt = 0
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const l = luma[y * W + x]
+          sq += (l - mean) * (l - mean)
+          if (x) {
+            grad += Math.abs(l - luma[y * W + x - 1])
+            gcnt++
+          }
+        }
+      }
+      const std = Math.sqrt(sq / N) // contrast — subject present & filling
+      const sharp = grad / gcnt // edge detail — in focus / close
 
-      if (std > 38 && cover > 0.22) {
+      if (sharp > 6 || std > 34) {
         setLevel('ready')
         setHint('Looks sharp — tap to capture')
-      } else if (std > 20 || cover > 0.12) {
+      } else if (sharp > 3 || std > 20) {
         setLevel('mid')
-        setHint(cover < 0.12 ? 'Move closer — fill the circle' : 'Almost — hold steady')
+        setHint('Almost — center the plant and hold steady')
       } else {
         setLevel('far')
         setHint('Move closer — fill the circle with the plant')
