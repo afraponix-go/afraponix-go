@@ -2,6 +2,7 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { fetchBatchPhotos, uploadBatchPhoto, deleteBatchPhoto, type BatchPhoto } from './photos'
+import { downscaleImage } from './imageDownscale'
 import './photos.css'
 
 const fmt = (d: string) => new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
@@ -18,6 +19,7 @@ export function BatchPhotoModal({ systemId, batchId, title, cropType, onClose }:
   const qc = useQueryClient()
   const inputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
+  const [preparing, setPreparing] = useState(false)
 
   const { data: photos = [], isLoading } = useQuery({
     queryKey: ['batch-photos', systemId, batchId],
@@ -34,19 +36,24 @@ export function BatchPhotoModal({ systemId, batchId, title, cropType, onClose }:
     onSuccess: () => qc.invalidateQueries({ queryKey: ['batch-photos', systemId, batchId] }),
   })
 
-  function onPick(e: ChangeEvent<HTMLInputElement>) {
+  async function onPick(e: ChangeEvent<HTMLInputElement>) {
     setError(null)
     const file = e.target.files?.[0]
-    if (file) upload.mutate(file)
     e.target.value = '' // allow re-picking the same file
+    if (!file) return
+    // Shrink on-device before uploading so field uploads stay small.
+    setPreparing(true)
+    const prepared = await downscaleImage(file)
+    setPreparing(false)
+    upload.mutate(prepared)
   }
 
   return (
     <Modal title={`Photos · ${title}`} onClose={onClose}>
       {error && <div className="wq-error">{error}</div>}
       <input ref={inputRef} type="file" accept="image/*" capture="environment" hidden onChange={onPick} />
-      <button type="button" className="btn photo-add" disabled={upload.isPending} onClick={() => inputRef.current?.click()}>
-        {upload.isPending ? 'Uploading…' : '📷 Take / add photo'}
+      <button type="button" className="btn photo-add" disabled={preparing || upload.isPending} onClick={() => inputRef.current?.click()}>
+        {preparing ? 'Preparing…' : upload.isPending ? 'Uploading…' : '📷 Take / add photo'}
       </button>
 
       {isLoading ? (
