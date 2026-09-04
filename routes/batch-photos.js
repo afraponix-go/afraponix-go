@@ -164,6 +164,20 @@ router.post('/:id/analyze', async (req, res) => {
         if (error.code === 'engine_unconfigured') {
             return res.status(503).json({ error: error.message });
         }
+        // Surface AI-provider errors (billing, rate limit) so they're actionable
+        // instead of a misleading "try again".
+        if (typeof error.status === 'number') {
+            const m = String(error.message || '');
+            const friendly = /credit balance|billing|quota/i.test(m)
+                ? 'The AI provider account is out of credits — add credits in the Anthropic Console (Plans & Billing).'
+                : error.status === 429
+                    ? 'The AI provider is rate-limiting requests — try again in a moment.'
+                    : error.status === 401 || error.status === 403
+                        ? 'The AI provider rejected the API key — check ANTHROPIC_API_KEY.'
+                        : `Analysis engine error (${error.status}).`;
+            console.error('Analyze provider error:', error.status, m);
+            return res.status(502).json({ error: friendly });
+        }
         console.error('Failed to analyze batch photo:', error);
         res.status(500).json({ error: 'Analysis failed — please try again.' });
     }
