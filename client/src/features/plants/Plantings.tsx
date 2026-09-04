@@ -7,6 +7,7 @@ import { prettyCrop } from './api'
 import { NewPlantingModal } from './NewPlantingModal'
 import { MoveBatchModal } from './MoveBatchModal'
 import { HarvestModal } from './HarvestModal'
+import { BatchPhotoModal } from './BatchPhotoModal'
 import { ViewToggle, useViewMode } from '../../components/ViewToggle'
 import '../dashboard/dashboard.css'
 import '../fish/fish.css'
@@ -48,6 +49,7 @@ export function Plantings() {
   const [showNew, setShowNew] = useState(false)
   const [moving, setMoving] = useState<Batch | null>(null)
   const [harvesting, setHarvesting] = useState<Batch | null>(null)
+  const [photoFor, setPhotoFor] = useState<Batch | null>(null)
   const { data: batches = [], isLoading, isError } = useQuery({
     queryKey: ['plant-batches', activeId],
     queryFn: () => fetchBatches(activeId as string),
@@ -112,6 +114,7 @@ export function Plantings() {
                     <td className="row-actions">
                       <button className="link-btn" onClick={() => setHarvesting(b)} disabled={b.remaining <= 0}>Harvest</button>
                       <button className="link-btn" onClick={() => setMoving(b)} disabled={b.remaining <= 0}>Move</button>
+                      <button className="link-btn" onClick={() => setPhotoFor(b)}>Photo</button>
                     </td>
                   </tr>
                 )
@@ -153,6 +156,7 @@ export function Plantings() {
                     <div className="tank-actions">
                       <button className="tank-action-btn" onClick={() => setHarvesting(b)} disabled={b.remaining <= 0}>Harvest</button>
                       <button className="tank-action-btn" onClick={() => setMoving(b)} disabled={b.remaining <= 0}>Move</button>
+                      <button className="tank-action-btn" onClick={() => setPhotoFor(b)}>Photo</button>
                     </div>
                   </div>
                 )
@@ -165,6 +169,15 @@ export function Plantings() {
       {showNew && <NewPlantingModal onClose={() => setShowNew(false)} />}
       {moving && <MoveBatchModal batch={moving} onClose={() => setMoving(null)} />}
       {harvesting && <HarvestModal batch={harvesting} onClose={() => setHarvesting(null)} />}
+      {photoFor && activeId && (
+        <BatchPhotoModal
+          systemId={activeId}
+          batchId={photoFor.batch_id}
+          title={photoFor.batch_id}
+          cropType={photoFor.crop_type}
+          onClose={() => setPhotoFor(null)}
+        />
+      )}
     </div>
   )
 }

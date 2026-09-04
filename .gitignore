@@ -125,3 +125,5 @@ scratch/
 *.key
 *.crt
 *.cert
+# Operator-uploaded batch photos (persist on the server, never committed)
+images/batch-photos/

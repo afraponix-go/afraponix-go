@@ -7,6 +7,7 @@ import { fetchSeedlings, type Seedling } from '../seedlings/api'
 import { prettyCrop } from './api'
 import { HarvestModal } from './HarvestModal'
 import { MoveBatchModal } from './MoveBatchModal'
+import { BatchPhotoModal } from './BatchPhotoModal'
 import { GerminationModal } from '../seedlings/GerminationModal'
 import { TransplantModal } from '../seedlings/TransplantModal'
 import { batchScanUrl } from './batchQr'
@@ -62,6 +63,7 @@ function BedBatchScan({ systemId, batchId }: { systemId: string; batchId: string
   const batch = batches.find((x) => x.batch_id === batchId)
   const [harvesting, setHarvesting] = useState(false)
   const [moving, setMoving] = useState(false)
+  const [photo, setPhoto] = useState(false)
 
   if (!ready || isLoading) return <ScanShell><div className="empty">Loading batch…</div></ScanShell>
   if (!batch) return <ScanShell><div className="empty">Batch <b>{batchId}</b> isn’t in this system anymore.</div></ScanShell>
@@ -83,11 +85,13 @@ function BedBatchScan({ systemId, batchId }: { systemId: string; batchId: string
         <div className="scan-actions">
           <button className="scan-btn primary" disabled={batch.remaining <= 0} onClick={() => setHarvesting(true)}>Harvest</button>
           <button className="scan-btn" disabled={batch.remaining <= 0} onClick={() => setMoving(true)}>Move</button>
+          <button className="scan-btn" onClick={() => setPhoto(true)}>Take photo</button>
           <Link className="scan-btn ghost" to="/plants/plantings">Open in Plantings</Link>
         </div>
       </div>
       {harvesting && <HarvestModal batch={batch} onClose={() => setHarvesting(false)} />}
       {moving && <MoveBatchModal batch={batch} onClose={() => setMoving(false)} />}
+      {photo && <BatchPhotoModal systemId={systemId} batchId={batch.batch_id} title={batch.batch_id} cropType={batch.crop_type} onClose={() => setPhoto(false)} />}
     </ScanShell>
   )
 }
