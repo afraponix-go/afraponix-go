@@ -98,7 +98,7 @@ export function Plantings() {
                 const pct = maturity(b)
                 return (
                   <tr key={b.batch_id}>
-                    <td className="op-text">{b.bed_name ?? `Bed ${b.bed_number ?? '—'}`}</td>
+                    <td className="op-text">{b.bed_name ?? `Bed ${b.bed_number ?? '—'}`}<span className="batch-id-tag block">{b.batch_id}</span></td>
                     <td className="op-text">{prettyCrop(b.crop_type)}</td>
                     <td className="op-text">{b.seed_variety ?? '—'}</td>
                     <td><span className={`batch-badge ${s.cls}`}>{s.label}</span></td>
@@ -135,6 +135,7 @@ export function Plantings() {
                         <span className={`batch-badge ${s.cls}`}>{s.label}</span>
                       </span>
                       {b.seed_variety && <span className="tank-type">{b.seed_variety}</span>}
+                      <span className="batch-id-tag block">{b.batch_id}</span>
                     </div>
                     <div className="tank-rows">
                       <div><span>Remaining</span><b>{b.remaining.toLocaleString()}</b></div>

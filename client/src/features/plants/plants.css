@@ -29,6 +29,13 @@
   font-size: 12px;
   color: var(--ink-faint);
 }
+/* Batch number surfaced on planting/harvest rows (traceable back to the sowing). */
+.batch-id-tag {
+  font-family: 'SFMono-Regular', Consolas, Menlo, monospace;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.batch-id-tag.block { display: block; margin-top: 2px; }
 .crop-nums {
   display: flex;
   flex-direction: column;

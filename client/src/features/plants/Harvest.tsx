@@ -76,6 +76,7 @@ export function Harvest() {
                     <span className="batch-badge overdue">{overdueDays(b)}d overdue</span>
                   </span>
                   <span className="crop-date">{b.seed_variety ? `${b.seed_variety} · ` : ''}{b.bed_name ?? `Bed ${b.bed_number ?? '—'}`} · {b.remaining} plants · {b.age_days ?? '—'}d old</span>
+                  <span className="batch-id-tag block">{b.batch_id}</span>
                 </div>
                 <button className="row-btn" onClick={() => setHarvesting(b)}>Harvest</button>
               </div>
@@ -99,6 +100,7 @@ export function Harvest() {
                     <span className={`batch-badge ${s.cls}`}>{s.label}</span>
                   </span>
                   <span className="crop-date">{b.seed_variety ? `${b.seed_variety} · ` : ''}{b.bed_name ?? `Bed ${b.bed_number ?? '—'}`} · {b.remaining} plants · {b.age_days ?? '—'}d old</span>
+                  <span className="batch-id-tag block">{b.batch_id}</span>
                 </div>
                 <button className="row-btn" onClick={() => setHarvesting(b)}>Harvest</button>
               </div>
@@ -118,6 +120,7 @@ export function Harvest() {
                 <th>Date</th>
                 <th>Crop</th>
                 <th>Variety</th>
+                <th>Batch</th>
                 <th>Bed</th>
                 <th>Plants</th>
                 <th>Weight</th>
@@ -131,6 +134,7 @@ export function Harvest() {
                   <td>{r.date ? new Date(`${r.date.slice(0, 10)}T12:00:00`).toLocaleDateString() : '—'}</td>
                   <td className="op-text">{r.crop_type ? prettyCrop(r.crop_type) : '—'}</td>
                   <td className="op-text">{r.seed_variety ?? '—'}</td>
+                  <td><span className="batch-id-tag">{r.batch_id ?? '—'}</span></td>
                   <td className="op-text">{bedName(r.grow_bed_id)}</td>
                   <td>{r.plants_harvested ?? 0}</td>
                   <td>{r.harvest_weight != null && r.harvest_weight > 0 ? `${(r.harvest_weight / 1000).toFixed(2)} kg` : '—'}</td>
