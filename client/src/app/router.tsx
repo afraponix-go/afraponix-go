@@ -23,6 +23,8 @@ import { FishDataCapture } from '../features/fish/FishDataCapture'
 import { PlantsOverview } from '../features/plants/PlantsOverview'
 import { Plantings } from '../features/plants/Plantings'
 import { BatchLabels } from '../features/plants/BatchLabels'
+import { BatchScan } from '../features/plants/BatchScan'
+import { ScanPage } from '../features/plants/ScanPage'
 import { HarvestView } from '../features/plants/HarvestView'
 import { BedsAllocation } from '../features/plants/BedsAllocation'
 import { Crops } from '../features/plants/CropsPage'
@@ -166,6 +168,9 @@ export const router = createBrowserRouter([
               { path: 'catalog', element: <SystemOnly><SprayCatalog /></SystemOnly> },
             ],
           },
+          // Batch QR: camera scanner + scanned-label resolver (action sheet).
+          { path: 'scan', element: <ScanPage /> },
+          { path: 'b', element: <BatchScan /> },
           // Keep old /spray links working (bookmarks, back button).
           { path: 'spray', element: <Navigate to="/operations/programmes" replace /> },
           { path: 'spray/calendar', element: <Navigate to="/operations" replace /> },

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
 import { Modal } from '../../components/Modal'
@@ -172,6 +173,7 @@ export function Seedlings() {
         <h2 className="section-title" style={{ margin: 0 }}>Seedlings</h2>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <ViewToggle />
+          <Link to="/scan" className="ghost">Scan</Link>
           <button className="btn feed-btn" onClick={() => setSow({})}>+ New sowing</button>
         </div>
       </div>

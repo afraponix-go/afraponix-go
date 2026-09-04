@@ -71,6 +71,7 @@ export function Plantings() {
             <button className={`seg-btn ${showAll ? 'active' : ''}`} onClick={() => setShowAll(true)}>All</button>
           </div>
           <ViewToggle />
+          <Link to="/scan" className="ghost">Scan</Link>
           <Link to="/plants/labels" className="ghost">Print labels</Link>
           <button className="btn feed-btn" onClick={() => setShowNew(true)}>+ New planting</button>
         </div>

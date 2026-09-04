@@ -5,6 +5,7 @@ export type TrayGroup = { trays: number; cells: number }
 
 export type Seedling = {
   id: number
+  system_id: string | null
   crop_code: string | null
   crop_name: string | null
   seed_variety: string | null

@@ -55,16 +55,24 @@ Plantings **Print labels** sheet (below) is the bulk/reprint path for bed batche
 - QR via `qrcode.react` (`<QRCodeSVG>`), rendered as SVG so it stays sharp at any
   print DPI. No server round-trip; generation is entirely client-side.
 
-## Phase 2 — scan → action  (NEXT)
+## Phase 2 — scan → action  (SHIPPED)
 
-- **Route** `/b` (SPA-served) reads `s` + `b`, resolves the batch (`fetchBatches`
-  → find by id), shows crop/variety/bed/remaining + an **action sheet**: Move /
-  Harvest / Weigh / Note → the existing modals/endpoints.
-- **Scanner**: a `/scan` screen using the device camera (`getUserMedia` +
-  `zxing`/`jsQR`) for in-app scanning; needs HTTPS (prod ✓). Generic-camera scans
-  hit `/b` directly.
+- **Resolver** `/b` (`BatchScan.tsx`): reads the query, points the app context at
+  the scanned system/farm, resolves the batch, and shows an action sheet.
+  - Bed batch (`s`+`b`): crop/variety/bed/remaining/status → **Harvest** /
+    **Move** (disabled when nothing remains) / **Open in Plantings**.
+  - Nursery batch (`f`+`sb`): sown/total/germinated/status → **Transplant** /
+    **Record germination** / **Open in Seedlings**; if already transplanted,
+    **Open bed batch** (follows `system_id`+`plant_batch_id` to its `/b?s=&b=`).
+  - Reuses the existing HarvestModal / MoveBatchModal / GerminationModal /
+    TransplantModal — no new write paths.
+- **Scanner** `/scan` (`ScanPage.tsx`): device camera (`getUserMedia`
+  `facingMode:environment`) decoded with `jsQR` each frame; on a valid `/b` link it
+  navigates in-app. Graceful error when camera/HTTPS is unavailable. Reached from a
+  **Scan** button on Plantings and Seedlings. Generic phone-camera scans hit `/b`
+  directly.
 - Attribution: stamp `recorded_by` on the resulting write once the operator model
-  lands (see the operator-app notes).
+  lands (see the operator-app notes). Still TODO.
 
 ## Ops notes
 
