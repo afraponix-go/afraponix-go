@@ -1,6 +1,17 @@
 import { api } from '../../lib/apiClient'
 import { getToken } from '../../lib/token'
 
+export type Deficiency = { nutrient: string; confidence?: string; visible_signs?: string; severity?: string }
+export type PhotoAnalysis = {
+  engine?: string
+  model?: string
+  deficiencies: Deficiency[]
+  ruling_out?: string[]
+  overall?: string
+  suggested_checks?: string[]
+}
+export type LabelStatus = 'confirmed' | 'corrected' | 'not_deficiency'
+
 export type BatchPhoto = {
   id: number
   batch_id: string
@@ -8,6 +19,11 @@ export type BatchPhoto = {
   crop_type: string | null
   taken_at: string
   notes: string | null
+  analysis: PhotoAnalysis | null
+  analysis_engine: string | null
+  analyzed_at: string | null
+  label_status: LabelStatus | null
+  label_nutrient: string | null
 }
 
 // batch_id goes in the query/body (not the path) — it contains "/", which Apache
@@ -42,4 +58,17 @@ export async function uploadBatchPhoto(
 
 export function deleteBatchPhoto(id: number) {
   return api(`/batch-photos/${id}`, { method: 'DELETE' })
+}
+
+// Run deficiency analysis on a stored photo (advisory; fuses the crop's targets
+// + the system's latest readings server-side).
+export async function analyzeBatchPhoto(id: number): Promise<BatchPhoto> {
+  const d = await api<{ photo: BatchPhoto }>(`/batch-photos/${id}/analyze`, { method: 'POST' })
+  return d.photo
+}
+
+// Operator confirm/correct — the label a future in-house engine learns from.
+export async function labelBatchPhoto(id: number, body: { status: LabelStatus; nutrient?: string }): Promise<BatchPhoto> {
+  const d = await api<{ photo: BatchPhoto }>(`/batch-photos/${id}/label`, { method: 'POST', body })
+  return d.photo
 }

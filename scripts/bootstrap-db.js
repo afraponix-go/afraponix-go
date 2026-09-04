@@ -120,6 +120,7 @@ const STEPS = [
   { type: 'sql', file: 'database/migrations/2026-08-farm-archive.sql', label: 'Farms: archived_at (soft-delete / recovery)' },
   { type: 'sql', file: 'database/migrations/2026-09-seedling-batch-number.sql', label: 'Seedlings: batch_number (WW/YY · Label, inherited by plantings)' },
   { type: 'sql', file: 'database/migrations/2026-09-batch-photos.sql', label: 'Batch photos (crop photo timeline per batch)' },
+  { type: 'sql', file: 'database/migrations/2026-09-batch-photo-analysis.sql', label: 'Batch photo deficiency analysis + label loop' },
 ];
 
 function dbConfig() {

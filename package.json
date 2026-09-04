@@ -23,6 +23,7 @@
     "pretest": "node testing/auth-scanner.js || echo '⚠️ Authentication issues detected - tests will show details'"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
     "axios": "^1.11.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
