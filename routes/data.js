@@ -633,36 +633,46 @@ router.put('/fish-health/entry/:entryId', async (req, res) => {
 });
 
 // Update grow bed for all records in a batch
-router.put('/batch/:systemId/:batchId/grow-bed', async (req, res) => {
-    const { systemId, batchId } = req.params;
+// Move a whole batch to another grow bed. batch_id goes in the BODY, not the
+// path, because batch ids contain "/" ("WW/YY · Label") which Apache rejects in
+// a path segment even when percent-encoded (AllowEncodedSlashes Off).
+async function moveBatchToGrowBed(req, res) {
+    const { systemId } = req.params;
+    const batchId = req.body.batchId ?? req.params.batchId;
     const { newGrowBedId } = req.body;
 
     if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
+    if (!batchId) {
+        return res.status(400).json({ error: 'batchId is required' });
+    }
     if (!newGrowBedId) {
         return res.status(400).json({ error: 'newGrowBedId is required' });
     }
 
-    // Using connection pool - no manual connection management
     try {
         const pool = getDatabase();
-        const [result] = await pool.execute('UPDATE plant_growth SET grow_bed_id = ? WHERE batch_id = ? AND system_id = ?', 
+        const [result] = await pool.execute('UPDATE plant_growth SET grow_bed_id = ? WHERE batch_id = ? AND system_id = ?',
             [newGrowBedId, batchId, systemId]);
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'No records found for batch' });
         }
 
-        res.json({ 
+        res.json({
             message: `Updated ${result.affectedRows} records for batch ${batchId}`,
-            changes: result.affectedRows 
+            changes: result.affectedRows
         });
     } catch (error) {
         console.error('Error updating batch grow bed:', error);
         res.status(500).json({ error: 'Failed to update batch grow bed' });
     }
-});
+}
+
+router.put('/batch/:systemId/grow-bed', moveBatchToGrowBed);
+// Legacy path-param form (kept for batch ids without a "/").
+router.put('/batch/:systemId/:batchId/grow-bed', moveBatchToGrowBed);
 
 // Get latest sensor data for a system
 router.get('/sensors/latest/:systemId', async (req, res) => {

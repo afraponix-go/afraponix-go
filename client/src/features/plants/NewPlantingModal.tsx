@@ -6,7 +6,8 @@ import { useSystems } from '../systems/SystemContext'
 import { fetchGrowBeds } from '../growbeds/api'
 import { fetchCropOptions, plantsPerM2FromSpacing, spacingFromPlantsPerM2, DEFAULT_PLANTS_PER_M2 } from './crops'
 import { fetchSeedVarieties, addSeedVariety } from './cropsAdmin'
-import { recordPlanting } from './plantGrowth'
+import { recordPlanting, batchLabel } from './plantGrowth'
+import { fetchBatches } from './batches'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const STAGES = [
@@ -22,6 +23,9 @@ export function NewPlantingModal({ initialBedId, onClose }: { initialBedId?: num
   const { data: beds = [] } = useQuery({ queryKey: ['grow-beds', activeId], queryFn: () => fetchGrowBeds(activeId as string), enabled: !!activeId })
   const { data: crops = [] } = useQuery({ queryKey: ['crop-options', activeId], queryFn: () => fetchCropOptions(activeId as string), enabled: !!activeId })
   const { data: allVarieties = [] } = useQuery({ queryKey: ['seed-varieties'], queryFn: fetchSeedVarieties })
+  // Existing batch ids in this system — lets the new batch number disambiguate
+  // (#2, #3) when the same crop/cultivar is sown twice in one week.
+  const { data: batches = [] } = useQuery({ queryKey: ['plant-batches', activeId], queryFn: () => fetchBatches(activeId as string), enabled: !!activeId })
 
   const [date, setDate] = useState(today())
   const [bed, setBed] = useState(initialBedId != null ? String(initialBedId) : '')
@@ -77,6 +81,8 @@ export function NewPlantingModal({ initialBedId, onClose }: { initialBedId?: num
         seed_variety: sv || undefined,
         days_to_harvest: days ? Number(days) : undefined,
         notes: notes.trim() || undefined,
+        batch_label: batchLabel(cropDef?.label ?? crop, sv),
+        existing_batch_ids: batches.map((b) => b.batch_id),
       })
     },
     onSuccess: () => {
