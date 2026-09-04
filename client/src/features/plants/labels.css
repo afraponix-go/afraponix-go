@@ -25,7 +25,7 @@
   border-radius: 8px;
 }
 
-.label {
+.qr-label {
   height: 33.9mm;
   box-sizing: border-box;
   display: flex;
@@ -39,7 +39,7 @@
   color: #0f172a;
   position: relative;
 }
-.label.is-out { opacity: 0.3; }
+.qr-label.is-out { opacity: 0.3; }
 
 .label-qr { flex: none; }
 .label-qr svg { display: block; width: 22mm; height: 22mm; }
@@ -61,8 +61,8 @@
     width: 210mm; margin: 0; padding: 8mm;
     border: none; border-radius: 0; gap: 2mm;
   }
-  .label { border-color: transparent; }   /* no cut guides on the sticker */
-  .label.is-out { display: none !important; }
+  .qr-label { border-color: transparent; }   /* no cut guides on the sticker */
+  .qr-label.is-out { display: none !important; }
   .label-pick { display: none !important; }
   @page { size: A4; margin: 0; }
 }

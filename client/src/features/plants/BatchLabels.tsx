@@ -70,7 +70,7 @@ export function BatchLabels() {
           {shown.map((b) => {
             const out = excluded.has(b.batch_id)
             return (
-              <div className={`label${out ? ' is-out' : ''}`} key={b.batch_id}>
+              <div className={`qr-label${out ? ' is-out' : ''}`} key={b.batch_id}>
                 <input
                   type="checkbox"
                   className="label-pick"
