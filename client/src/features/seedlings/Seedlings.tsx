@@ -6,6 +6,8 @@ import { fetchSeedlings, deleteSeedling, germPct, type Seedling } from './api'
 import { SowModal } from './SowModal'
 import { GerminationModal } from './GerminationModal'
 import { TransplantModal } from './TransplantModal'
+import { LabelPrintModal } from '../plants/LabelPrintModal'
+import { seedlingScanUrl } from '../plants/batchQr'
 import { ViewToggle, useViewMode } from '../../components/ViewToggle'
 import '../water/water.css'
 import './seedlings.css'
@@ -40,6 +42,7 @@ export function Seedlings() {
   const [sow, setSow] = useState<{ seedling?: Seedling } | null>(null)
   const [germ, setGerm] = useState<Seedling | null>(null)
   const [transplant, setTransplant] = useState<Seedling | null>(null)
+  const [labelFor, setLabelFor] = useState<Seedling | null>(null)
   const [confirmDel, setConfirmDel] = useState<Seedling | null>(null)
   const [showDone, setShowDone] = useState(false)
   const [filter, setFilter] = useState<'all' | 'ready' | 'nursery' | 'transplanted'>('all')
@@ -91,6 +94,7 @@ export function Seedlings() {
           {s.status !== 'transplanted' && <button className="row-btn" onClick={() => setGerm(s)}>{s.germinated_count != null ? 'Edit germination' : 'Record germination'}</button>}
           {s.status !== 'transplanted' && <button className="row-btn" onClick={() => setTransplant(s)}>Transplant</button>}
           <span className="seedling-links">
+            <button className="link-btn" onClick={() => setLabelFor(s)}>Label</button>
             <button className="link-btn" onClick={() => setSow({ seedling: s })}>Edit</button>
             <button className="link-btn danger" onClick={() => setConfirmDel(s)}>Delete</button>
           </span>
@@ -107,6 +111,7 @@ export function Seedlings() {
         <span className="dr-meta">{s.total_sown.toLocaleString()} sown{pct != null ? ` · ${pct}% germ` : ''}</span>
         <span className="dr-tp">→ {(s.transplanted_count ?? 0).toLocaleString()} on {s.transplant_date}{s.actual_transplant_days != null ? ` · ${s.actual_transplant_days}d` : ''}</span>
         <span className="dr-actions">
+          <button className="link-btn" onClick={() => setLabelFor(s)}>Label</button>
           <button className="link-btn" onClick={() => setSow({ seedling: s })}>Edit</button>
           <button className="link-btn danger" onClick={() => setConfirmDel(s)}>Delete</button>
         </span>
@@ -149,6 +154,7 @@ export function Seedlings() {
                 <td className="row-actions">
                   {s.status !== 'transplanted' && <button className="link-btn" onClick={() => setGerm(s)}>Germ.</button>}
                   {s.status !== 'transplanted' && <button className="link-btn" onClick={() => setTransplant(s)}>Transplant</button>}
+                  <button className="link-btn" onClick={() => setLabelFor(s)}>Label</button>
                   <button className="link-btn" onClick={() => setSow({ seedling: s })}>Edit</button>
                   <button className="link-btn danger" onClick={() => setConfirmDel(s)}>Delete</button>
                 </td>
@@ -234,6 +240,15 @@ export function Seedlings() {
       {sow && activeFarmId && <SowModal farmId={activeFarmId} systemId={systems[0]?.id} seedling={sow.seedling} onClose={() => setSow(null)} />}
       {germ && <GerminationModal seedling={germ} onClose={() => setGerm(null)} />}
       {transplant && <TransplantModal systems={systems} seedling={transplant} onClose={() => setTransplant(null)} />}
+      {labelFor && activeFarmId && (
+        <LabelPrintModal
+          url={seedlingScanUrl(activeFarmId, labelFor.id)}
+          title={labelFor.batch_number ?? labelFor.crop_name ?? 'Batch'}
+          line1={`${labelFor.crop_name ?? 'Crop'}${labelFor.seed_variety ? ` · ${labelFor.seed_variety}` : ''}`}
+          line2={`Sown ${labelFor.sow_date}`}
+          onClose={() => setLabelFor(null)}
+        />
+      )}
       {confirmDel && (
         <Modal title="Delete sowing" onClose={() => setConfirmDel(null)}>
           <p style={{ marginTop: 0, color: 'var(--ink-soft)' }}>Delete this {confirmDel.crop_name ?? 'seedling'} sowing? Any bed planting already created from it is kept.</p>

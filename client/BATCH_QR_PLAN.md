@@ -20,9 +20,27 @@ https://go.afraponix.com/b?s=<systemId>&b=<encodeURIComponent(batch_id)>
 - Built from `window.location.origin` so it points at whatever host generated it
   (in practice prod, since labels are printed from prod).
 
-Helper: `batchScanUrl(systemId, batchId)` in `features/plants/batchQr.ts`.
+A **nursery (seedling) batch** is farm-level and not in a system yet, so its
+label — printed at sowing and stuck on the tray — is keyed by the seedling batch's
+own id instead:
 
-## Phase 1 — generation + print  (THIS CHANGE)
+```
+https://go.afraponix.com/b?f=<farmId>&sb=<seedlingBatchId>
+```
+
+Once transplanted, the phase-2 resolver follows a scanned `sb` to its bed batch(es).
+
+Helpers in `features/plants/batchQr.ts`: `batchScanUrl(systemId, batchId)` (bed
+batch) and `seedlingScanUrl(farmId, seedlingId)` (nursery batch).
+
+## Labels are created at sowing
+
+A batch's label exists from the moment it's sown, not only when reprinted later.
+The Seedlings tab has a **Label** action on every batch (`LabelPrintModal`, a single
+QR label + Print), so the operator prints and sticks it on the tray at sowing. The
+Plantings **Print labels** sheet (below) is the bulk/reprint path for bed batches.
+
+## Phase 1 — generation + print
 
 - **Route** `/plants/labels` (system-scoped), reached from a **Print labels** button
   on the Plantings page. Not a browse tab — it's a print utility.

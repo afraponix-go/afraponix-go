@@ -11,6 +11,11 @@
    preview then matches the printed page exactly (WYSIWYG). */
 .label-sheet-wrap { overflow-x: auto; padding-bottom: 10px; }
 
+/* A single label (in the print-one modal): normal box on screen, but still an
+   A4 sheet in print so the existing print rules apply. */
+.label-sheet.single { width: auto; grid-template-columns: 1fr; padding: 0; border: none; }
+.label-sheet.single .qr-label { border-style: solid; border-color: var(--line); }
+
 /* The sheet: a real A4-width canvas so the on-screen preview matches the print. */
 .label-sheet {
   background: #fff;
