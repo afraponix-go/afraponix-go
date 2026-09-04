@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
 import { fetchBatches, type Batch, type BatchStatus } from './batches'
@@ -70,6 +71,7 @@ export function Plantings() {
             <button className={`seg-btn ${showAll ? 'active' : ''}`} onClick={() => setShowAll(true)}>All</button>
           </div>
           <ViewToggle />
+          <Link to="/plants/labels" className="ghost">Print labels</Link>
           <button className="btn feed-btn" onClick={() => setShowNew(true)}>+ New planting</button>
         </div>
       </div>

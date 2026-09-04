@@ -22,6 +22,7 @@ import { FishHealth } from '../features/fish/FishHealth'
 import { FishDataCapture } from '../features/fish/FishDataCapture'
 import { PlantsOverview } from '../features/plants/PlantsOverview'
 import { Plantings } from '../features/plants/Plantings'
+import { BatchLabels } from '../features/plants/BatchLabels'
 import { HarvestView } from '../features/plants/HarvestView'
 import { BedsAllocation } from '../features/plants/BedsAllocation'
 import { Crops } from '../features/plants/CropsPage'
@@ -149,6 +150,7 @@ export const router = createBrowserRouter([
               { path: 'harvest', element: <HarvestView /> },
               { path: 'beds', element: <SystemOnly><BedsAllocation /></SystemOnly> },
               { path: 'crops', element: <SystemOnly><Crops /></SystemOnly> },
+              { path: 'labels', element: <SystemOnly><BatchLabels /></SystemOnly> },
             ],
           },
           // Operations (Programmes · Calendar · Log · Catalogue). Spray is the

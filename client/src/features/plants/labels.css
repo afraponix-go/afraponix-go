@@ -1,0 +1,68 @@
+/* Batch QR labels — an A4 sticker sheet (screen preview + print). Default layout
+   is a 3-column, 24-up sheet (~63.5 × 33.9 mm, Avery L7159 / generic). Peel-off
+   die-cut sheets vary by printer; the @page margin can be calibrated. */
+
+.labels-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.labels-sub { color: var(--ink-faint); font-size: 13px; margin: 0 0 14px; }
+.labels-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.labels-count { font-size: 13px; color: var(--ink-soft); }
+
+/* Scroll the true-A4 sheet on narrow screens rather than shrinking it — the
+   preview then matches the printed page exactly (WYSIWYG). */
+.label-sheet-wrap { overflow-x: auto; padding-bottom: 10px; }
+
+/* The sheet: a real A4-width canvas so the on-screen preview matches the print. */
+.label-sheet {
+  background: #fff;
+  width: 210mm;
+  margin: 0 auto;
+  padding: 8mm;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2mm;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.label {
+  height: 33.9mm;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 3mm;
+  padding: 2.5mm 3mm;
+  border: 1px dashed #cbd5e1;      /* cut guide on screen; removed for print */
+  border-radius: 3px;
+  overflow: hidden;
+  background: #fff;
+  color: #0f172a;
+  position: relative;
+}
+.label.is-out { opacity: 0.3; }
+
+.label-qr { flex: none; }
+.label-qr svg { display: block; width: 22mm; height: 22mm; }
+
+.label-info { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 0.6mm; }
+.label-batch { font-family: 'SFMono-Regular', Consolas, Menlo, monospace; font-size: 3.1mm; font-weight: 700; line-height: 1.15; color: #0f172a; overflow-wrap: anywhere; }
+.label-crop { font-size: 2.9mm; font-weight: 600; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.label-sub { font-size: 2.6mm; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Screen-only per-label exclude toggle. */
+.label-pick { position: absolute; top: 1mm; right: 1mm; width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
+
+@media print {
+  /* Print only the sheet: hide everything, then reveal the sheet subtree. */
+  body * { visibility: hidden !important; }
+  .label-sheet, .label-sheet * { visibility: visible !important; }
+  .label-sheet {
+    position: absolute; left: 0; top: 0;
+    width: 210mm; margin: 0; padding: 8mm;
+    border: none; border-radius: 0; gap: 2mm;
+  }
+  .label { border-color: transparent; }   /* no cut guides on the sticker */
+  .label.is-out { display: none !important; }
+  .label-pick { display: none !important; }
+  @page { size: A4; margin: 0; }
+}
