@@ -224,6 +224,11 @@
   flex: 1;
   min-width: 0;
 }
+/* On phones, two-up field rows get cramped — stack them full-width. */
+@media (max-width: 480px) {
+  .field-row { flex-direction: column; gap: 14px; }
+  .field-row .field { width: 100%; }
+}
 
 /* Compact button on a harvestable-batch row */
 .row-btn {
