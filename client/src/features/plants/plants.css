@@ -36,6 +36,16 @@
   color: var(--ink-faint);
 }
 .batch-id-tag.block { display: block; margin-top: 2px; }
+
+/* Latest batch photo shown on the planting card (top-right thumbnail). */
+.tank-card.has-photo { position: relative; }
+.tank-card.has-photo .tank-head { padding-right: 64px; }
+.tank-photo {
+  position: absolute; top: 14px; right: 14px;
+  width: 52px; height: 52px; object-fit: cover;
+  border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface-2); cursor: pointer;
+}
 .crop-nums {
   display: flex;
   flex-direction: column;

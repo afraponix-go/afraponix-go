@@ -26,6 +26,7 @@ export const batchSchema = z.object({
   harvest_weight_g: num,
   age_days: numish,
   status: z.string().transform((s) => s as BatchStatus),
+  photo_url: z.string().nullable().optional(),
 })
 export type Batch = z.infer<typeof batchSchema>
 

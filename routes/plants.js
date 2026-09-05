@@ -113,6 +113,17 @@ router.get('/batches/:systemId', async (req, res) => {
             };
         });
 
+        // Attach each batch's most recent photo (if any) for the card thumbnail.
+        const [photoRows] = await pool.execute(
+            'SELECT batch_id, file_path FROM batch_photos WHERE system_id = ? ORDER BY taken_at DESC, id DESC',
+            [req.params.systemId]
+        );
+        const latestPhoto = new Map();
+        for (const p of photoRows) {
+            if (!latestPhoto.has(p.batch_id)) latestPhoto.set(p.batch_id, p.file_path);
+        }
+        for (const b of batches) b.photo_url = latestPhoto.get(b.batch_id) || null;
+
         res.json({ system_id: req.params.systemId, batches });
 
     } catch (error) {

@@ -134,7 +134,10 @@ export function Plantings() {
                 const s = STATUS[b.status] ?? STATUS.growing
                 const pct = maturity(b)
                 return (
-                  <div className="tank-card" key={b.batch_id}>
+                  <div className={`tank-card${b.photo_url ? ' has-photo' : ''}`} key={b.batch_id}>
+                    {b.photo_url && (
+                      <img className="tank-photo" src={b.photo_url} alt="Latest batch photo" loading="lazy" onClick={() => setPhotoFor(b)} />
+                    )}
                     <div className="tank-head">
                       <span className="tank-name">
                         {b.bed_name ?? `Bed ${b.bed_number ?? '—'}`}
