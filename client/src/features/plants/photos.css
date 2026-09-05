@@ -66,3 +66,4 @@
 .an-feedback { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .an-feedback select { padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; }
 .an-labeled { color: var(--ok, #2e7d32); font-weight: 600; }
+.an-quota { font-size: 12px; color: var(--ink-faint); margin-top: 8px; }

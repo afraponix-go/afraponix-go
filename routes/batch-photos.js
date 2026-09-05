@@ -143,6 +143,26 @@ router.post('/:id/analyze', async (req, res) => {
         if (!(await canAccessSystem(photo.system_id, req.user.userId, { write: true }))) {
             return res.status(403).json({ error: 'Access denied' });
         }
+
+        // Per-user weekly cap (rolling 7 days). Admins are exempt. Counted only on
+        // success (below), so a provider error doesn't burn a user's quota.
+        const LIMIT = Number(process.env.AI_WEEKLY_LIMIT) || 10;
+        const capped = req.user.userRole !== 'admin';
+        let used = 0;
+        if (capped) {
+            const [cnt] = await pool.execute(
+                "SELECT COUNT(*) AS c FROM ai_usage WHERE user_id = ? AND kind = 'deficiency_analysis' AND created_at > (NOW() - INTERVAL 7 DAY)",
+                [req.user.userId]
+            );
+            used = Number(cnt[0].c) || 0;
+            if (used >= LIMIT) {
+                return res.status(429).json({
+                    error: `Weekly analysis limit reached — ${LIMIT} per week. It frees up as your earlier analyses pass 7 days old.`,
+                    quota: { limit: LIMIT, used, remaining: 0 },
+                });
+            }
+        }
+
         // Read the image off disk.
         const filePath = path.join('.', photo.file_path);
         if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Photo file missing' });
@@ -158,8 +178,13 @@ router.post('/:id/analyze', async (req, res) => {
             'UPDATE batch_photos SET analysis = ?, analysis_engine = ?, analyzed_at = NOW() WHERE id = ?',
             [JSON.stringify(result), result.engine + (result.model ? `:${result.model}` : ''), photo.id]
         );
+        // Count this successful call against the user's weekly quota.
+        if (capped) {
+            await pool.execute("INSERT INTO ai_usage (user_id, kind) VALUES (?, 'deficiency_analysis')", [req.user.userId]);
+            used += 1;
+        }
         const [updated] = await pool.execute('SELECT * FROM batch_photos WHERE id = ?', [photo.id]);
-        res.json({ photo: rowToPhoto(updated[0]) });
+        res.json({ photo: rowToPhoto(updated[0]), quota: { limit: LIMIT, used, remaining: capped ? Math.max(0, LIMIT - used) : null } });
     } catch (error) {
         if (error.code === 'engine_unconfigured') {
             return res.status(503).json({ error: error.message });

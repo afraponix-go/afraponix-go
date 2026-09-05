@@ -60,11 +60,13 @@ export function deleteBatchPhoto(id: number) {
   return api(`/batch-photos/${id}`, { method: 'DELETE' })
 }
 
+export type AiQuota = { limit: number; used: number; remaining: number | null }
+
 // Run deficiency analysis on a stored photo (advisory; fuses the crop's targets
-// + the system's latest readings server-side).
-export async function analyzeBatchPhoto(id: number): Promise<BatchPhoto> {
-  const d = await api<{ photo: BatchPhoto }>(`/batch-photos/${id}/analyze`, { method: 'POST' })
-  return d.photo
+// + the system's latest readings server-side). Returns the photo + the caller's
+// remaining weekly quota.
+export async function analyzeBatchPhoto(id: number): Promise<{ photo: BatchPhoto; quota?: AiQuota }> {
+  return api<{ photo: BatchPhoto; quota?: AiQuota }>(`/batch-photos/${id}/analyze`, { method: 'POST' })
 }
 
 // Operator confirm/correct — the label a future in-house engine learns from.

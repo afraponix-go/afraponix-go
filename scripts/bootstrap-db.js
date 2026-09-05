@@ -121,6 +121,7 @@ const STEPS = [
   { type: 'sql', file: 'database/migrations/2026-09-seedling-batch-number.sql', label: 'Seedlings: batch_number (WW/YY · Label, inherited by plantings)' },
   { type: 'sql', file: 'database/migrations/2026-09-batch-photos.sql', label: 'Batch photos (crop photo timeline per batch)' },
   { type: 'sql', file: 'database/migrations/2026-09-batch-photo-analysis.sql', label: 'Batch photo deficiency analysis + label loop' },
+  { type: 'sql', file: 'database/migrations/2026-09-ai-usage.sql', label: 'AI usage ledger (per-user weekly analysis cap)' },
 ];
 
 function dbConfig() {

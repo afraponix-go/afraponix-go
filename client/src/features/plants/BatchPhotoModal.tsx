@@ -108,10 +108,11 @@ function AnalysisPanel({ photo, onDone, onDeleted }: { photo: BatchPhoto; onDone
   const [error, setError] = useState<string | null>(null)
   const [correcting, setCorrecting] = useState(false)
   const [correctN, setCorrectN] = useState(NUTRIENTS[0])
+  const [quota, setQuota] = useState<{ limit: number; remaining: number | null } | null>(null)
 
   const analyze = useMutation({
     mutationFn: () => analyzeBatchPhoto(photo.id),
-    onSuccess: onDone,
+    onSuccess: (res) => { if (res.quota) setQuota(res.quota); onDone() },
     onError: (e) => setError(e instanceof Error ? e.message : 'Analysis failed.'),
   })
   const label = useMutation({ mutationFn: (b: { status: LabelStatus; nutrient?: string }) => labelBatchPhoto(photo.id, b), onSuccess: onDone })
@@ -130,6 +131,9 @@ function AnalysisPanel({ photo, onDone, onDeleted }: { photo: BatchPhoto; onDone
             </button>
             <button className="link-btn danger" disabled={del.isPending} onClick={() => del.mutate()}>Delete</button>
           </div>
+          {quota && quota.remaining != null && (
+            <div className="an-quota">{quota.remaining} of {quota.limit} analyses left this week</div>
+          )}
         </div>
       </div>
 
