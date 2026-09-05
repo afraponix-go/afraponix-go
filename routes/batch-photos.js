@@ -5,15 +5,29 @@ const path = require('path');
 const multer = require('multer');
 const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
-const { canAccessSystem } = require('../utils/systemAccess');
+const { canAccessSystem, getFarmAccess, WRITE_LEVELS } = require('../utils/systemAccess');
 
 router.use(authenticateToken);
 
-// Photos live under images/batch-photos/<systemId>/ (served statically) and are
-// indexed in batch_photos.
+const canWriteFarm = (acc) => !!acc && (acc.level === 'owner' || WRITE_LEVELS.has(acc.level));
+
+// A photo belongs either to a bed batch (system_id + batch_id) or a nursery batch
+// (seedling_batch_id + farm_id). Access is checked against whichever it is.
+async function canAccessPhoto(photo, userId, write) {
+    if (photo.system_id) return canAccessSystem(photo.system_id, userId, { write });
+    if (photo.farm_id) {
+        const acc = await getFarmAccess(photo.farm_id, userId, getDatabase());
+        return write ? canWriteFarm(acc) : !!acc;
+    }
+    return false;
+}
+
+// Photos live under images/batch-photos/<systemId | seedling-<id>>/ (served
+// statically) and are indexed in batch_photos.
 const storage = multer.diskStorage({
     destination(req, file, cb) {
-        const dir = path.join('./images/batch-photos', String(req.params.systemId));
+        const sub = req.params.systemId || `seedling-${req.params.seedlingId}`;
+        const dir = path.join('./images/batch-photos', String(sub));
         fs.mkdirSync(dir, { recursive: true });
         cb(null, dir);
     },
@@ -38,6 +52,18 @@ async function requireWrite(req, res, next) {
     if (!(await canAccessSystem(req.params.systemId, req.user.userId, { write: true }))) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
+    next();
+}
+
+// Same, for a nursery (seedling) batch — checks the seedling's farm.
+async function requireSeedlingWrite(req, res, next) {
+    const pool = getDatabase();
+    const [rows] = await pool.execute('SELECT id, farm_id, crop_name, batch_number FROM seedling_batches WHERE id = ?', [req.params.seedlingId]);
+    if (!rows.length) return res.status(404).json({ error: 'Seedling batch not found' });
+    if (!canWriteFarm(await getFarmAccess(rows[0].farm_id, req.user.userId, pool))) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+    req.seedling = rows[0];
     next();
 }
 
@@ -100,13 +126,54 @@ router.get('/:systemId', async (req, res) => {
     }
 });
 
+// ---- Nursery (seedling) photos: keyed by seedling id, farm-scoped ----
+router.post('/seedling/:seedlingId', requireSeedlingWrite, upload.single('photo'), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: 'No photo uploaded' });
+        const sb = req.seedling;
+        const url = `/images/batch-photos/seedling-${sb.id}/${req.file.filename}`;
+        const pool = getDatabase();
+        const [result] = await pool.execute(
+            `INSERT INTO batch_photos (seedling_batch_id, farm_id, batch_id, file_path, crop_type, recorded_by, notes)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [sb.id, sb.farm_id, sb.batch_number || `seedling-${sb.id}`, url, sb.crop_name || null, req.user.userId, req.body.notes || null]
+        );
+        const [rows] = await pool.execute('SELECT * FROM batch_photos WHERE id = ?', [result.insertId]);
+        res.status(201).json({ photo: rowToPhoto(rows[0]) });
+    } catch (error) {
+        console.error('Failed to save seedling photo:', error);
+        res.status(500).json({ error: 'Failed to save photo' });
+    }
+});
+
+router.get('/seedling/:seedlingId', async (req, res) => {
+    try {
+        const pool = getDatabase();
+        const [sb] = await pool.execute('SELECT farm_id FROM seedling_batches WHERE id = ?', [req.params.seedlingId]);
+        if (!sb.length) return res.status(404).json({ error: 'Not found' });
+        if (!(await getFarmAccess(sb[0].farm_id, req.user.userId, pool))) return res.status(403).json({ error: 'Access denied' });
+        const [rows] = await pool.execute('SELECT * FROM batch_photos WHERE seedling_batch_id = ? ORDER BY taken_at DESC, id DESC', [req.params.seedlingId]);
+        res.json({ photos: rows.map(rowToPhoto) });
+    } catch (error) {
+        console.error('Failed to load seedling photos:', error);
+        res.status(500).json({ error: 'Failed to load photos' });
+    }
+});
+
 // Gather the per-crop nutrient targets + latest water readings for a photo's
 // system — the context that makes the analysis specific to this grower.
 async function analysisContext(pool, photo) {
     let targets = null;
     let crop = { name: photo.crop_type, code: photo.crop_type };
-    const [sys] = await pool.execute('SELECT user_id FROM systems WHERE id = ?', [photo.system_id]);
-    const ownerId = sys.length ? sys[0].user_id : null;
+    // Owner: from the system (bed photo) or the farm (nursery photo).
+    let ownerId = null;
+    if (photo.system_id) {
+        const [sys] = await pool.execute('SELECT user_id FROM systems WHERE id = ?', [photo.system_id]);
+        ownerId = sys.length ? sys[0].user_id : null;
+    } else if (photo.farm_id) {
+        const [f] = await pool.execute('SELECT owner_id FROM farms WHERE id = ?', [photo.farm_id]);
+        ownerId = f.length ? f[0].owner_id : null;
+    }
     if (ownerId && photo.crop_type) {
         const [cc] = await pool.execute(
             `SELECT crop_name, target_n, target_p, target_k, target_ca, target_mg, target_fe, target_ec
@@ -140,7 +207,7 @@ router.post('/:id/analyze', async (req, res) => {
         const [rows] = await pool.execute('SELECT * FROM batch_photos WHERE id = ?', [req.params.id]);
         if (!rows.length) return res.status(404).json({ error: 'Not found' });
         const photo = rows[0];
-        if (!(await canAccessSystem(photo.system_id, req.user.userId, { write: true }))) {
+        if (!(await canAccessPhoto(photo, req.user.userId, true))) {
             return res.status(403).json({ error: 'Access denied' });
         }
 
@@ -216,9 +283,9 @@ router.post('/:id/label', async (req, res) => {
             return res.status(400).json({ error: 'status must be confirmed, corrected or not_deficiency' });
         }
         const pool = getDatabase();
-        const [rows] = await pool.execute('SELECT system_id FROM batch_photos WHERE id = ?', [req.params.id]);
+        const [rows] = await pool.execute('SELECT system_id, farm_id FROM batch_photos WHERE id = ?', [req.params.id]);
         if (!rows.length) return res.status(404).json({ error: 'Not found' });
-        if (!(await canAccessSystem(rows[0].system_id, req.user.userId, { write: true }))) {
+        if (!(await canAccessPhoto(rows[0], req.user.userId, true))) {
             return res.status(403).json({ error: 'Access denied' });
         }
         await pool.execute(
@@ -239,7 +306,7 @@ router.delete('/:id', async (req, res) => {
         const pool = getDatabase();
         const [rows] = await pool.execute('SELECT * FROM batch_photos WHERE id = ?', [req.params.id]);
         if (!rows.length) return res.status(404).json({ error: 'Not found' });
-        if (!(await canAccessSystem(rows[0].system_id, req.user.userId, { write: true }))) {
+        if (!(await canAccessPhoto(rows[0], req.user.userId, true))) {
             return res.status(403).json({ error: 'Access denied' });
         }
         await pool.execute('DELETE FROM batch_photos WHERE id = ?', [req.params.id]);

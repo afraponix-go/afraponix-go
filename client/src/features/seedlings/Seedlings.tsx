@@ -8,6 +8,7 @@ import { SowModal } from './SowModal'
 import { GerminationModal } from './GerminationModal'
 import { TransplantModal } from './TransplantModal'
 import { LabelPrintModal } from '../plants/LabelPrintModal'
+import { BatchPhotoModal } from '../plants/BatchPhotoModal'
 import { seedlingScanUrl } from '../plants/batchQr'
 import { ViewToggle, useViewMode } from '../../components/ViewToggle'
 import '../water/water.css'
@@ -44,6 +45,7 @@ export function Seedlings() {
   const [germ, setGerm] = useState<Seedling | null>(null)
   const [transplant, setTransplant] = useState<Seedling | null>(null)
   const [labelFor, setLabelFor] = useState<Seedling | null>(null)
+  const [photoFor, setPhotoFor] = useState<Seedling | null>(null)
   const [confirmDel, setConfirmDel] = useState<Seedling | null>(null)
   const [showDone, setShowDone] = useState(false)
   const [filter, setFilter] = useState<'all' | 'ready' | 'nursery' | 'transplanted'>('all')
@@ -96,6 +98,7 @@ export function Seedlings() {
           {s.status !== 'transplanted' && <button className="row-btn" onClick={() => setTransplant(s)}>Transplant</button>}
           <span className="seedling-links">
             <button className="link-btn" onClick={() => setLabelFor(s)}>Label</button>
+            <button className="link-btn" onClick={() => setPhotoFor(s)}>Photo</button>
             <button className="link-btn" onClick={() => setSow({ seedling: s })}>Edit</button>
             <button className="link-btn danger" onClick={() => setConfirmDel(s)}>Delete</button>
           </span>
@@ -113,6 +116,7 @@ export function Seedlings() {
         <span className="dr-tp">→ {(s.transplanted_count ?? 0).toLocaleString()} on {s.transplant_date}{s.actual_transplant_days != null ? ` · ${s.actual_transplant_days}d` : ''}</span>
         <span className="dr-actions">
           <button className="link-btn" onClick={() => setLabelFor(s)}>Label</button>
+            <button className="link-btn" onClick={() => setPhotoFor(s)}>Photo</button>
           <button className="link-btn" onClick={() => setSow({ seedling: s })}>Edit</button>
           <button className="link-btn danger" onClick={() => setConfirmDel(s)}>Delete</button>
         </span>
@@ -156,6 +160,7 @@ export function Seedlings() {
                   {s.status !== 'transplanted' && <button className="link-btn" onClick={() => setGerm(s)}>Germ.</button>}
                   {s.status !== 'transplanted' && <button className="link-btn" onClick={() => setTransplant(s)}>Transplant</button>}
                   <button className="link-btn" onClick={() => setLabelFor(s)}>Label</button>
+            <button className="link-btn" onClick={() => setPhotoFor(s)}>Photo</button>
                   <button className="link-btn" onClick={() => setSow({ seedling: s })}>Edit</button>
                   <button className="link-btn danger" onClick={() => setConfirmDel(s)}>Delete</button>
                 </td>
@@ -249,6 +254,14 @@ export function Seedlings() {
           line1={`${labelFor.crop_name ?? 'Crop'}${labelFor.seed_variety ? ` · ${labelFor.seed_variety}` : ''}`}
           line2={`Sown ${labelFor.sow_date}`}
           onClose={() => setLabelFor(null)}
+        />
+      )}
+      {photoFor && (
+        <BatchPhotoModal
+          seedlingId={photoFor.id}
+          title={photoFor.batch_number ?? photoFor.crop_name ?? 'Seedling'}
+          cropType={photoFor.crop_name}
+          onClose={() => setPhotoFor(null)}
         />
       )}
       {confirmDel && (

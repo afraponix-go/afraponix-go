@@ -60,6 +60,28 @@ export function deleteBatchPhoto(id: number) {
   return api(`/batch-photos/${id}`, { method: 'DELETE' })
 }
 
+// ---- Nursery (seedling) photos — same store, keyed by the seedling id ----
+export async function fetchSeedlingPhotos(seedlingId: number): Promise<BatchPhoto[]> {
+  const d = await api<{ photos: BatchPhoto[] }>(`/batch-photos/seedling/${seedlingId}`)
+  return d.photos
+}
+
+export async function uploadSeedlingPhoto(seedlingId: number, file: File, opts?: { crop_type?: string | null; notes?: string }): Promise<BatchPhoto> {
+  const fd = new FormData()
+  fd.append('photo', file)
+  if (opts?.crop_type) fd.append('crop_type', opts.crop_type)
+  if (opts?.notes) fd.append('notes', opts.notes)
+  const token = getToken()
+  const res = await fetch(`/api/batch-photos/seedling/${seedlingId}`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: fd,
+  })
+  const payload = await res.json().catch(() => null)
+  if (!res.ok) throw new Error((payload && payload.error) || `Upload failed (${res.status})`)
+  return payload.photo
+}
+
 export type AiQuota = { limit: number; used: number; remaining: number | null }
 
 // Run deficiency analysis on a stored photo (advisory; fuses the crop's targets

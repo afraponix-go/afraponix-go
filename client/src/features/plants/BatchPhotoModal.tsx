@@ -2,7 +2,8 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import {
-  fetchBatchPhotos, uploadBatchPhoto, deleteBatchPhoto, analyzeBatchPhoto, labelBatchPhoto,
+  fetchBatchPhotos, uploadBatchPhoto, fetchSeedlingPhotos, uploadSeedlingPhoto,
+  deleteBatchPhoto, analyzeBatchPhoto, labelBatchPhoto,
   type BatchPhoto, type LabelStatus,
 } from './photos'
 import { downscaleImage } from './imageDownscale'
@@ -14,10 +15,12 @@ const NUTRIENTS = ['Nitrogen (N)', 'Phosphorus (P)', 'Potassium (K)', 'Calcium (
 const shortN = (s: string) => (s.match(/\(([^)]+)\)/)?.[1] ?? s.split(' ')[0])
 const confClass = (c?: string) => (c === 'high' ? 'high' : c === 'medium' ? 'mid' : 'low')
 
-// View + capture crop photos for one batch, and run advisory deficiency analysis.
-export function BatchPhotoModal({ systemId, batchId, title, cropType, onClose }: {
-  systemId: string
-  batchId: string
+// View + capture crop photos for one batch (a bed batch via systemId+batchId, or
+// a nursery batch via seedlingId), and run advisory deficiency analysis.
+export function BatchPhotoModal({ systemId, batchId, seedlingId, title, cropType, onClose }: {
+  systemId?: string
+  batchId?: string
+  seedlingId?: number
   title: string
   cropType?: string | null
   onClose: () => void
@@ -29,14 +32,20 @@ export function BatchPhotoModal({ systemId, batchId, title, cropType, onClose }:
   const [camera, setCamera] = useState(false)
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
+  const isSeedling = seedlingId != null
+  const queryKey = isSeedling ? ['batch-photos', 'seedling', seedlingId] : ['batch-photos', systemId, batchId]
+
   const { data: photos = [], isLoading } = useQuery({
-    queryKey: ['batch-photos', systemId, batchId],
-    queryFn: () => fetchBatchPhotos(systemId, batchId),
+    queryKey,
+    queryFn: () => (isSeedling ? fetchSeedlingPhotos(seedlingId as number) : fetchBatchPhotos(systemId as string, batchId as string)),
   })
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['batch-photos', systemId, batchId] })
+  const invalidate = () => qc.invalidateQueries({ queryKey })
 
   const upload = useMutation({
-    mutationFn: (file: File) => uploadBatchPhoto(systemId, batchId, file, { crop_type: cropType }),
+    mutationFn: (file: File) =>
+      isSeedling
+        ? uploadSeedlingPhoto(seedlingId as number, file, { crop_type: cropType })
+        : uploadBatchPhoto(systemId as string, batchId as string, file, { crop_type: cropType }),
     onSuccess: invalidate,
     onError: (e) => setError(e instanceof Error ? e.message : 'Could not upload the photo.'),
   })
