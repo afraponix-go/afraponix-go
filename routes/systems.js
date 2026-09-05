@@ -209,7 +209,7 @@ router.put('/:id', async (req, res) => {
 // The metric keys a system may choose to track. Kept in sync with the client's
 // water-quality field list.
 const TRACKABLE_METRICS = new Set([
-    'ph', 'ec', 'dissolved_oxygen', 'temperature', 'humidity', 'salinity',
+    'ph', 'kh', 'ec', 'dissolved_oxygen', 'temperature', 'humidity', 'salinity',
     'ammonia', 'nitrite', 'nitrate', 'iron', 'potassium', 'calcium',
     'phosphorus', 'magnesium'
 ]);
