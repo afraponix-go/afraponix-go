@@ -43,7 +43,7 @@ async function claudeEngine(context) {
   }
   const Anthropic = require('@anthropic-ai/sdk');
   const client = new Anthropic({ apiKey });
-  const model = process.env.DEFICIENCY_MODEL || 'claude-opus-5';
+  const model = process.env.DEFICIENCY_MODEL || 'claude-sonnet-5';
 
   const cropName = context.crop?.name || context.crop?.code || 'an aquaponics leafy crop';
   const system =
