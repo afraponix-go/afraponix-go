@@ -14,11 +14,10 @@ function isoWeekYear(d: Date): { week: number; year: number } {
   return { week, year: t.getUTCFullYear() }
 }
 
-// The label after the dot: for "Type — Cultivar" varieties it's the cultivar
-// (e.g. "Butter — Anandra" → "Anandra"); otherwise the crop's display name.
-export function batchLabel(cropDisplay: string, seedVariety?: string | null): string {
-  const cultivar = seedVariety?.split('—').pop()?.trim()
-  return cultivar || cropDisplay
+// The batch-number label is the high-level crop (e.g. "Spinach"); the specific
+// variety stays separate (seed_variety + the card badge), not in the code.
+export function batchLabel(cropDisplay: string, _seedVariety?: string | null): string {
+  return (cropDisplay || '').trim() || 'Batch'
 }
 
 // Batch id: "YYWW-Variety" (2-digit year + ISO week, then cultivar-or-crop).
