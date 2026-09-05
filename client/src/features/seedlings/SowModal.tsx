@@ -104,7 +104,7 @@ export function SowModal({ farmId, systemId, seedling, onClose }: { farmId: stri
               {cropOptions.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
             </select>
           </div>
-          <div className="field">
+          <div className="field" style={addingVar ? { flexBasis: '100%' } : undefined}>
             <label htmlFor="sw-variety">Variety</label>
             {addingVar ? (
               <div className="spray-op-add">

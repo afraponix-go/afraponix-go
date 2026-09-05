@@ -218,6 +218,7 @@
 .field-row {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 .field-row .field {
   flex: 1;
