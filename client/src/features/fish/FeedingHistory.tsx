@@ -32,17 +32,17 @@ export function FeedingHistory({ log, tanks }: { log: FeedingRecord[]; tanks: Fi
     <div style={{ marginTop: 26 }}>
       <h2 className="section-title">Feeding history</h2>
       <div className="wq-table-wrap">
-        <table className="wq-table op-table">
+        <table className="wq-table op-table resp-cards">
           <thead>
             <tr><th>Date</th><th>Tank</th><th>Feed</th><th>Type</th><th></th></tr>
           </thead>
           <tbody>
             {shown.map((r) => (
               <tr key={r.id}>
-                <td>{fmtDate(r.date)}</td>
-                <td className="op-text">Tank {tankNo.get(r.fish_tank_id ?? -1) ?? r.fish_tank_id ?? '—'}</td>
-                <td>{r.feed_consumption != null ? `${r.feed_consumption} g` : '—'}</td>
-                <td className="op-text">{r.feed_type ?? '—'}</td>
+                <td data-label="Date">{fmtDate(r.date)}</td>
+                <td className="op-text" data-label="Tank">Tank {tankNo.get(r.fish_tank_id ?? -1) ?? r.fish_tank_id ?? '—'}</td>
+                <td data-label="Feed">{r.feed_consumption != null ? `${r.feed_consumption} g` : '—'}</td>
+                <td className="op-text" data-label="Type">{r.feed_type ?? '—'}</td>
                 <td className="row-actions">
                   <button className="link-btn" onClick={() => setEditing(r)}>Edit</button>
                   <button className="link-btn danger" onClick={() => setConfirmDel(r)}>Delete</button>
