@@ -15,6 +15,16 @@ export const DashboardIcon = svg(
   </>,
 )
 
+export const ScanIcon = svg(
+  <>
+    <path d="M4 8V6a2 2 0 0 1 2-2h2" />
+    <path d="M16 4h2a2 2 0 0 1 2 2v2" />
+    <path d="M20 16v2a2 2 0 0 1-2 2h-2" />
+    <path d="M8 20H6a2 2 0 0 1-2-2v-2" />
+    <line x1="4" y1="12" x2="20" y2="12" />
+  </>,
+)
+
 export const CalculatorIcon = svg(
   <>
     <rect x="5" y="2.5" width="14" height="19" rx="2" />

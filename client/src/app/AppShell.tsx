@@ -7,20 +7,23 @@ import { AddSystemModal } from '../features/systems/AddSystemModal'
 import { NewFarmModal } from '../features/systems/NewFarmModal'
 import { OnboardingTour, startTour } from '../features/onboarding/OnboardingTour'
 import { ADD_SYSTEM_EVENT } from '../features/onboarding/FirstRunWelcome'
-import { DashboardIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SprayIcon, SettingsIcon } from './icons'
+import { DashboardIcon, ScanIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SprayIcon, SettingsIcon } from './icons'
 import { Brand } from '../components/Brand'
 import { ThemeToggle } from './ThemeToggle'
 import './shell.css'
 
 // Bottom tab bar. The first four are the daily-use sections shown on mobile;
 // the rest collapse into a "More" sheet on small screens (all show on desktop).
+// Scan leads (operators live in it); the Dashboard is reached via the logo and
+// the More sheet.
 const TABS = [
-  { to: '/', label: 'Dashboard', Icon: DashboardIcon, end: true },
+  { to: '/scan', label: 'Scan', Icon: ScanIcon },
   { to: '/data', label: 'Log', Icon: DataCaptureIcon },
   { to: '/fish', label: 'Fish', Icon: FishIcon },
   { to: '/plants', label: 'Plants', Icon: PlantIcon },
   { to: '/operations', label: 'Operations', Icon: SprayIcon },
   { to: '/calculator', label: 'Calculator', Icon: CalculatorIcon },
+  { to: '/', label: 'Dashboard', Icon: DashboardIcon, end: true },
 ]
 const PRIMARY_COUNT = 4
 const OVERFLOW = TABS.slice(PRIMARY_COUNT)

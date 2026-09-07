@@ -17,7 +17,7 @@ function buildSteps(): DriveStep[] {
   return [
     { popover: { title: 'Welcome to Afraponix Go 🌱', description: "Let's take a 60-second tour. We'll start by setting up your farm, then show you around." } },
     { element: '[data-tour="add"]', popover: { title: 'Create your farm & first system', description: 'Start here. Add a farm, then a system — its fish tanks and grow beds. Everything else hangs off this.', side: 'bottom', align: 'end' } },
-    { element: '[data-tour="nav:/"]', popover: { title: 'Dashboard', description: 'Your farm overview — totals, per-system status, charts and a top-down layout map.', side: 'top', align: 'start' } },
+    { element: '[data-tour="nav:/scan"]', popover: { title: 'Scan', description: 'Scan a batch’s QR label to jump straight to its actions — harvest, move, transplant, add a photo. (Your dashboard is on the logo, top-left.)', side: 'top', align: 'start' } },
     { element: '[data-tour="nav:/data"]', popover: { title: 'Log', description: 'Record daily water-quality and nutrient readings, plus fish and plant data. Each reading is scored against a healthy band.', side: 'top', align: 'start' } },
     { element: '[data-tour="nav:/fish"]', popover: { title: 'Fish', description: 'Manage tanks, stocking density, feeding, growth and mortality across every tank.', side: 'top', align: 'start' } },
     { element: '[data-tour="nav:/plants"]', popover: { title: 'Plants', description: 'Seedlings, plantings, harvests and grow-bed allocation — from nursery to recorded harvest weight.', side: 'top', align: 'start' } },
