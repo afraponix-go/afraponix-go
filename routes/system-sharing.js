@@ -74,17 +74,19 @@ router.get('/invitations', async (req, res) => {
         }
 
         // Get pending invitations
+        // Includes email-only invites (no account yet: shared_with_id IS NULL).
         const [invitations] = await pool.execute(`
-            SELECT 
+            SELECT
                 ss.id,
                 ss.permission_level,
                 ss.created_at,
                 u.username,
-                u.email,
+                COALESCE(u.email, ss.shared_with_email) AS email,
                 u.first_name,
-                u.last_name
+                u.last_name,
+                (ss.shared_with_id IS NULL) AS awaiting_signup
             FROM system_shares ss
-            JOIN users u ON ss.shared_with_id = u.id
+            LEFT JOIN users u ON ss.shared_with_id = u.id
             WHERE ss.system_id = ? AND ss.status = 'pending'
             ORDER BY ss.created_at DESC
         `, [system_id]);        res.json({ invitations: invitations || [] });
@@ -130,7 +132,26 @@ router.post('/invite', async (req, res) => {
         );
         const user = userRows[0];
 
-        if (!user) {            return res.status(404).json({ error: 'User not found with that email address' });
+        if (!user) {
+            // No account yet — create a pending invite keyed by email and notify
+            // them. It links to their user when they sign up with this email.
+            const [existingInvite] = await pool.execute(
+                'SELECT id FROM system_shares WHERE system_id = ? AND shared_with_email = ? AND shared_with_id IS NULL',
+                [system_id, email]
+            );
+            if (existingInvite[0]) {
+                return res.status(400).json({ error: 'That email has already been invited to this system' });
+            }
+            await pool.execute(
+                `INSERT INTO system_shares (system_id, owner_id, shared_with_email, permission_level, status)
+                 VALUES (?, ?, ?, ?, 'pending')`,
+                [system_id, req.user.userId, email, permission_level]
+            );
+            const [ownerRows] = await pool.execute('SELECT first_name, username FROM users WHERE id = ?', [req.user.userId]);
+            const inviterName = ownerRows[0]?.first_name || ownerRows[0]?.username || 'An Afraponix Go user';
+            const { sendSystemShareInvite } = require('../utils/emailService');
+            sendSystemShareInvite(email, system.system_name, inviterName).catch((e) => console.error('Share invite email error:', e.message));
+            return res.json({ success: true, invited: true, message: `Invitation sent to ${email} — they'll get an email to create an account.` });
         }
 
         if (user.id === req.user.userId) {            return res.status(400).json({ error: 'Cannot share system with yourself' });

@@ -16,6 +16,8 @@ const shareSchema = z.object({
   email: z.string(),
   first_name: z.string().nullable().optional(),
   last_name: z.string().nullable().optional(),
+  // 1 for an email invite whose recipient hasn't signed up yet.
+  awaiting_signup: z.union([z.number(), z.string(), z.boolean()]).nullish().transform((v) => !!Number(v ?? 0)),
 })
 export type Share = z.infer<typeof shareSchema>
 
@@ -32,7 +34,7 @@ export async function fetchPendingInvites(systemId: string): Promise<Share[]> {
 }
 
 export function inviteUser(systemId: string, email: string, permission_level: string) {
-  return api('/system-sharing/invite', {
+  return api<{ success?: boolean; invited?: boolean; message?: string }>('/system-sharing/invite', {
     method: 'POST',
     body: { system_id: systemId, email: email.trim(), permission_level },
   })

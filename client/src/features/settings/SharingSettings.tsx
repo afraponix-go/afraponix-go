@@ -47,8 +47,8 @@ export function SharingSettings() {
 
   const inviteMut = useMutation({
     mutationFn: () => inviteUser(activeId as string, email, permission),
-    onSuccess: () => {
-      setNotice(`Invitation sent to ${email.trim()}.`)
+    onSuccess: (res) => {
+      setNotice(res?.message || `Invitation sent to ${email.trim()}.`)
       setEmail('')
       refresh()
       setTimeout(() => setNotice(null), 3000)
@@ -85,8 +85,8 @@ export function SharingSettings() {
       <div className="set-card">
         <h2 className="set-title">Invite people</h2>
         <p className="set-sub">
-          Share <b>{activeSystem?.system_name}</b> with another Afraponix Go user. They must already have an account
-          with the email you enter.
+          Share <b>{activeSystem?.system_name}</b> with someone by email. If they don’t have an Afraponix Go account yet,
+          they’ll get an email inviting them to create one — and the system will be waiting when they sign in.
         </p>
 
         <form className="mform" onSubmit={onInvite}>
@@ -153,7 +153,7 @@ export function SharingSettings() {
                   <div className="share-email">{s.email} · {s.permission_level}</div>
                 </div>
                 <div className="share-controls">
-                  <span className="share-pending">Pending</span>
+                  <span className="share-pending">{s.awaiting_signup ? 'Awaiting sign-up' : 'Pending'}</span>
                   <button className="share-revoke" type="button" onClick={() => revokeMut.mutate(s.id)} disabled={revokeMut.isPending}>
                     Cancel
                   </button>

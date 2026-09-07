@@ -123,6 +123,7 @@ const STEPS = [
   { type: 'sql', file: 'database/migrations/2026-09-batch-photo-analysis.sql', label: 'Batch photo deficiency analysis + label loop' },
   { type: 'sql', file: 'database/migrations/2026-09-ai-usage.sql', label: 'AI usage ledger (per-user weekly analysis cap)' },
   { type: 'sql', file: 'database/migrations/2026-09-seedling-photos.sql', label: 'Batch photos: also key by seedling (nursery photos)' },
+  { type: 'sql', file: 'database/migrations/2026-09-share-invite-by-email.sql', label: 'System shares: invite by email (no account yet)' },
 ];
 
 function dbConfig() {

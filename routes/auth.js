@@ -45,6 +45,16 @@ async function seedNewUserDefaults(pool, userId) {
     } catch (e) { console.error('Failed to seed default seed varieties:', e.message); }
     // Give every new account a default farm so they can add systems straight away.
     try { await ensureUserFarm(pool, userId); } catch (e) { console.error('Failed to create default farm:', e.message); }
+    // Activate any system shares that were invited to this email before signup.
+    try {
+        const [u] = await pool.execute('SELECT email FROM users WHERE id = ?', [userId]);
+        if (u[0]?.email) {
+            await pool.execute(
+                "UPDATE system_shares SET shared_with_id = ?, status = 'accepted' WHERE shared_with_email = ? AND shared_with_id IS NULL",
+                [userId, u[0].email]
+            );
+        }
+    } catch (e) { console.error('Failed to link pending shares:', e.message); }
 }
 
 // Sign in / sign up with Google. The frontend gets an ID token from Google
@@ -205,6 +215,14 @@ router.post('/register', async (req, res) => {
 
         // Give every new account a default farm so they can add systems straight away.
         try { await ensureUserFarm(pool, userId); } catch (e) { console.error('Failed to create default farm for new user:', e.message); }
+
+        // Activate any system shares invited to this email before signup.
+        try {
+            await pool.execute(
+                "UPDATE system_shares SET shared_with_id = ?, status = 'accepted' WHERE shared_with_email = ? AND shared_with_id IS NULL",
+                [userId, email]
+            );
+        } catch (e) { console.error('Failed to link pending shares:', e.message); }
 
         // Check if SMTP is configured
         const smtpConfigured = process.env.SMTP_USER && process.env.SMTP_PASS;

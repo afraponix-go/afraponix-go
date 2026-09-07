@@ -225,8 +225,63 @@ can safely ignore this email.
     }
 };
 
+// Notify someone (with no account yet) that a system was shared with them, and
+// invite them to sign up with the same email so the share is waiting for them.
+const sendSystemShareInvite = async (email, systemName, inviterName) => {
+    try {
+        let config;
+        try {
+            config = loadSmtpConfig();
+        } catch (configError) {
+            console.error('SMTP configuration not available:', configError.message);
+            return { success: false, error: 'Email service not configured.' };
+        }
+        const transporter = createTransporter();
+        const baseUrl = process.env.BASE_URL || 'https://go.afraponix.com';
+        const signupLink = `${baseUrl}/register?email=${encodeURIComponent(email)}`;
+        const inviter = escapeHtml(inviterName || 'An Afraponix Go user');
+        const sys = escapeHtml(systemName || 'an aquaponics system');
+
+        const htmlContent = renderBrandEmail({
+            preheader: `${inviter} shared ${sys} with you on Afraponix Go.`,
+            heading: 'You’ve been invited to a system',
+            intro: `${inviter} has shared <b>${sys}</b> with you on Afraponix Go. Create a free account with this email address to view and manage it.`,
+            buttonLabel: 'Create your account',
+            buttonUrl: signupLink,
+            altLabel: 'Or paste this link into your browser:',
+            altUrl: signupLink,
+            note: 'Sign up with this exact email address so the shared system is waiting for you when you log in. If you weren’t expecting this, you can safely ignore it.',
+        });
+
+        const mailOptions = {
+            from: `"${config.from.name}" <${config.from.address}>`,
+            to: email,
+            subject: `${inviterName || 'Someone'} shared a system with you — Afraponix Go`,
+            html: htmlContent,
+            text: `You've been invited to Afraponix Go
+
+${inviterName || 'An Afraponix Go user'} has shared "${systemName || 'a system'}" with you.
+
+Create a free account with this email address to access it:
+${signupLink}
+
+Sign up with this exact email so the shared system is waiting for you when you log in.
+
+— Afraponix Go`,
+        };
+
+        const result = await transporter.sendMail(mailOptions);
+        console.log('Share invite email sent:', result.messageId);
+        return { success: true, messageId: result.messageId };
+    } catch (error) {
+        console.error('Failed to send share invite email:', error);
+        return { success: false, error: error.message };
+    }
+};
+
 module.exports = {
     sendPasswordResetEmail,
     sendVerificationEmail,
+    sendSystemShareInvite,
     loadSmtpConfig
 };
