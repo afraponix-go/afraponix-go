@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import jsQR from 'jsqr'
 import './scan.css'
 
-// Camera QR scanner. Decodes a batch label and jumps to its /b action sheet.
-// Needs HTTPS (prod is behind Cloudflare) or localhost for camera access.
+// Camera QR scanner. Decodes a batch or tank label and jumps to its action
+// sheet (/b or /t). Needs HTTPS (prod is behind Cloudflare) or localhost for
+// camera access.
 export function ScanPage() {
   const navigate = useNavigate()
   const videoRef = useRef<HTMLVideoElement>(null)
   const [error, setError] = useState<string | null>(null)
-  const [hint, setHint] = useState('Point the camera at a batch label')
+  const [hint, setHint] = useState('Point the camera at a batch or tank label')
 
   useEffect(() => {
     let stream: MediaStream | null = null
@@ -17,11 +18,12 @@ export function ScanPage() {
     let done = false
     const canvas = document.createElement('canvas')
 
-    // Turn a decoded string into an in-app path if it's one of our /b links.
+    // Turn a decoded string into an in-app path if it's one of our /b or /t links.
     function toBatchPath(data: string): string | null {
       try {
         const u = new URL(data, window.location.origin)
         if (u.pathname === '/b' && (u.searchParams.has('b') || u.searchParams.has('sb'))) return u.pathname + u.search
+        if (u.pathname === '/t' && u.searchParams.has('tank')) return u.pathname + u.search
       } catch {
         /* not a URL */
       }
@@ -46,7 +48,7 @@ export function ScanPage() {
               navigate(path)
               return
             }
-            setHint('That QR isn’t an Afraponix batch label — keep looking')
+            setHint('That QR isn’t an Afraponix label — keep looking')
           }
         }
       }
@@ -76,7 +78,7 @@ export function ScanPage() {
 
   return (
     <div className="scan-wrap">
-      <h2 className="section-title" style={{ marginTop: 0 }}>Scan a batch</h2>
+      <h2 className="section-title" style={{ marginTop: 0 }}>Scan</h2>
       {error ? (
         <div className="empty">{error}</div>
       ) : (

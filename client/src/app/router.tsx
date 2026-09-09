@@ -25,6 +25,8 @@ import { Plantings } from '../features/plants/Plantings'
 import { BatchLabels } from '../features/plants/BatchLabels'
 import { BatchScan } from '../features/plants/BatchScan'
 import { ScanPage } from '../features/plants/ScanPage'
+import { TankScan } from '../features/fish/TankScan'
+import { TankLabels } from '../features/fish/TankLabels'
 import { HarvestView } from '../features/plants/HarvestView'
 import { BedsAllocation } from '../features/plants/BedsAllocation'
 import { Crops } from '../features/plants/CropsPage'
@@ -139,6 +141,7 @@ export const router = createBrowserRouter([
               { path: 'density', element: <FarmScoped kind="fish"><FishDensity /></FarmScoped> },
               { path: 'tanks', element: <FarmScoped kind="fish"><TankInformation /></FarmScoped> },
               { path: 'health', element: <FarmScoped kind="fish"><FishHealth /></FarmScoped> },
+              { path: 'labels', element: <SystemOnly><TankLabels /></SystemOnly> },
             ],
           },
           // Plants (Overview · Plantings · Harvest · Beds & Allocation · Crops)
@@ -171,6 +174,7 @@ export const router = createBrowserRouter([
           // Batch QR: camera scanner + scanned-label resolver (action sheet).
           { path: 'scan', element: <ScanPage /> },
           { path: 'b', element: <BatchScan /> },
+          { path: 't', element: <TankScan /> },
           // Keep old /spray links working (bookmarks, back button).
           { path: 'spray', element: <Navigate to="/operations/programmes" replace /> },
           { path: 'spray/calendar', element: <Navigate to="/operations" replace /> },
