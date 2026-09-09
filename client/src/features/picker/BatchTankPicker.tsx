@@ -32,12 +32,31 @@ type Item = {
   groupKey: string
   groupLabel: string
   path: string
+  // Days since planted/sown — null for tanks, which have no single start
+  // date. Drives the default oldest-first sort and the row's age badge.
+  ageDays: number | null
+  // Plants remaining / seedlings sown / fish in the tank — for the totals line.
+  qty: number
 }
 
 const KIND_TEXT: Record<Kind, { title: string; search: string; empty: string }> = {
   bed: { title: 'Choose a batch', search: 'Search batch…', empty: 'No active batches found.' },
   seedling: { title: 'Choose a nursery batch', search: 'Search batch…', empty: 'No nursery batches found.' },
   fish: { title: 'Choose a tank', search: 'Search tank…', empty: 'No tanks found.' },
+}
+const KIND_NOUNS: Record<Kind, { item: string; itemPlural: string; qty: string; qtyPlural: string }> = {
+  bed: { item: 'batch', itemPlural: 'batches', qty: 'plant', qtyPlural: 'plants' },
+  seedling: { item: 'nursery batch', itemPlural: 'nursery batches', qty: 'seedling', qtyPlural: 'seedlings' },
+  fish: { item: 'tank', itemPlural: 'tanks', qty: 'fish', qtyPlural: 'fish' },
+}
+const plural = (n: number, one: string, many: string) => (n === 1 ? one : many)
+
+// Whole days between a past date (YYYY-MM-DD or full timestamp) and today.
+function daysSince(dateStr: string): number | null {
+  const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? `${dateStr}T00:00:00` : dateStr)
+  if (Number.isNaN(d.getTime())) return null
+  const ms = Date.now() - d.getTime()
+  return Math.max(0, Math.floor(ms / 86400000))
 }
 
 // The scan fallback (Operator Access proposal, §05/§08): a filtered, searchable
@@ -84,6 +103,8 @@ export function BatchTankPicker() {
           groupKey: s.id,
           groupLabel: s.system_name,
           path: toPath(batchScanUrl(s.id, b.batch_id)),
+          ageDays: b.age_days ?? (b.planted_date ? daysSince(b.planted_date) : null),
+          qty: b.remaining,
         })
       }
       for (const t of tankQs[i]?.data ?? []) {
@@ -96,6 +117,8 @@ export function BatchTankPicker() {
           groupKey: s.id,
           groupLabel: s.system_name,
           path: toPath(tankScanUrl(s.id, t.fish_tank_id)),
+          ageDays: null,
+          qty: t.current_count ?? 0,
         })
       }
     })
@@ -112,10 +135,20 @@ export function BatchTankPicker() {
           groupKey: `farm:${f}`,
           groupLabel: `${farmName} · Nursery`,
           path: toPath(seedlingScanUrl(f, sd.id)),
+          ageDays: daysSince(sd.sow_date),
+          qty: sd.total_sown,
         })
       }
     })
-    return out.sort((a, b) => a.groupLabel.localeCompare(b.groupLabel) || a.label.localeCompare(b.label, undefined, { numeric: true }))
+    // Oldest first — the item that's been growing longest leads, since
+    // that's usually what you're looking for (most likely ready). Items
+    // with no age (tanks) sort after every dated item.
+    return out.sort((a, b) => {
+      if (a.ageDays == null && b.ageDays == null) return a.label.localeCompare(b.label, undefined, { numeric: true })
+      if (a.ageDays == null) return 1
+      if (b.ageDays == null) return -1
+      return b.ageDays - a.ageDays
+    })
   }, [systems, batchQs, tankQs, farmIds, seedlingQs, farms])
 
   const scoped = useMemo(() => (kindParam ? items.filter((it) => it.kind === kindParam) : items), [items, kindParam])
@@ -146,6 +179,24 @@ export function BatchTankPicker() {
   const text = kindParam ? KIND_TEXT[kindParam] : { title: 'Choose manually', search: 'Search batch or tank…', empty: 'No active batches or tanks found.' }
   const backTo = kindParam ? '/log' : '/scan'
   const backLabel = kindParam ? '‹ Back to Log' : '‹ Back to scan'
+
+  // "7 batches · 189 plants" — broken out per kind when the list mixes them
+  // (e.g. the unscoped picker showing both bed batches and tanks).
+  const totalsLine = useMemo(() => {
+    const byKind = new Map<Kind, { count: number; qty: number }>()
+    for (const it of filtered) {
+      const cur = byKind.get(it.kind) ?? { count: 0, qty: 0 }
+      cur.count += 1
+      cur.qty += it.qty
+      byKind.set(it.kind, cur)
+    }
+    return [...byKind.entries()]
+      .map(([kind, { count, qty }]) => {
+        const n = KIND_NOUNS[kind]
+        return `${count} ${plural(count, n.item, n.itemPlural)} · ${qty.toLocaleString()} ${plural(qty, n.qty, n.qtyPlural)}`
+      })
+      .join(' · ')
+  }, [filtered])
 
   return (
     <div className="scan-wrap">
@@ -181,20 +232,27 @@ export function BatchTankPicker() {
       ) : filtered.length === 0 ? (
         <div className="empty">{scoped.length === 0 ? text.empty : 'Nothing matches.'}</div>
       ) : (
-        <div className="pick-list">
-          {filtered.map((it) => (
-            <button key={it.key} type="button" className="pick-row" onClick={() => navigate(it.path)}>
-              <span className="pick-icon" aria-hidden>
-                {it.kind === 'fish' ? <FishIcon /> : it.kind === 'seedling' ? <SeedIcon /> : <PlantIcon />}
-              </span>
-              <span className="pick-text">
-                <span className="pick-label">{it.label}</span>
-                <span className="pick-sub">{it.cropLabel} · {it.sub}{groupOptions.length > 1 ? ` · ${it.groupLabel}` : ''}</span>
-              </span>
-              <span className="pick-chevron" aria-hidden>›</span>
-            </button>
-          ))}
-        </div>
+        <>
+          <p className="pick-totals">{totalsLine}</p>
+          <div className="pick-list">
+            {filtered.map((it) => (
+              <button key={it.key} type="button" className="pick-row" onClick={() => navigate(it.path)}>
+                <span className="pick-icon" aria-hidden>
+                  {it.kind === 'fish' ? <FishIcon /> : it.kind === 'seedling' ? <SeedIcon /> : <PlantIcon />}
+                </span>
+                <span className="pick-text">
+                  <span className="pick-label">{it.label}</span>
+                  <span className="pick-sub">
+                    {it.cropLabel} · {it.sub}
+                    {groupOptions.length > 1 ? ` · ${it.groupLabel}` : ''}
+                    {it.ageDays != null ? ` · ${it.ageDays} d` : ''}
+                  </span>
+                </span>
+                <span className="pick-chevron" aria-hidden>›</span>
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )
