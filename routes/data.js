@@ -1,7 +1,7 @@
 const express = require('express');
 const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
-const { canAccessSystem } = require('../utils/systemAccess');
+const { canAccessSystem, canCaptureSystem, getSystemAccess, isOwnEntryToday } = require('../utils/systemAccess');
 
 const router = express.Router();
 
@@ -74,6 +74,13 @@ router.get('/latest/:systemId', async (req, res) => {
 // that modify data so view-only collaborators are rejected.
 async function verifySystemOwnership(systemId, userId, write = false) {
     return canAccessSystem(systemId, userId, { write });
+}
+
+// Like verifySystemOwnership(systemId, userId, true), but also admits a
+// restricted 'operator' share — for the specific capture routes an operator
+// account may use (logging readings, scanning a batch/tank into an action).
+async function verifySystemCapture(systemId, userId) {
+    return canCaptureSystem(systemId, userId);
 }
 
 // Water Quality endpoints - stores complete water quality snapshots
@@ -194,7 +201,7 @@ router.post('/nutrients/:systemId', async (req, res) => {
     const { systemId } = req.params;
     const { nutrients } = req.body; // Array of {type, value, unit, reading_date, source, notes}
 
-    if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
+    if (!await verifySystemCapture(systemId, req.user.userId)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
@@ -206,26 +213,27 @@ router.post('/nutrients/:systemId', async (req, res) => {
     try {
         const pool = getDatabase();
         const insertedIds = [];
-        
+
         for (const nutrient of nutrients) {
             if (!nutrient.type || nutrient.value === null || nutrient.value === undefined || nutrient.value === '' || isNaN(nutrient.value)) {
                 continue; // Skip invalid entries
             }
 
-            const [result] = await pool.execute(`INSERT INTO nutrient_readings 
-                (system_id, nutrient_type, value, unit, reading_date, source, notes) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)`, 
+            const [result] = await pool.execute(`INSERT INTO nutrient_readings
+                (system_id, nutrient_type, value, unit, reading_date, source, notes, recorded_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
-                    systemId, 
-                    nutrient.type, 
-                    parseFloat(nutrient.value), 
-                    nutrient.unit || 'mg/L', 
-                    (nutrient.reading_date || new Date().toISOString()).replace('T', ' ').slice(0, 19), 
-                    nutrient.source || 'manual', 
-                    nutrient.notes || ''
+                    systemId,
+                    nutrient.type,
+                    parseFloat(nutrient.value),
+                    nutrient.unit || 'mg/L',
+                    (nutrient.reading_date || new Date().toISOString()).replace('T', ' ').slice(0, 19),
+                    nutrient.source || 'manual',
+                    nutrient.notes || '',
+                    req.user.userId
                 ]);
             insertedIds.push(result.insertId);
-        }        res.status(201).json({ 
+        }        res.status(201).json({
             ids: insertedIds, 
             message: `${insertedIds.length} nutrient readings saved` 
         });
@@ -239,12 +247,25 @@ router.post('/nutrients/:systemId', async (req, res) => {
 // UI is the day's composite of per-nutrient rows). date = YYYY-MM-DD.
 router.delete('/nutrients/:systemId/day/:date', async (req, res) => {
     const { systemId, date } = req.params;
-    if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
+    if (!await verifySystemCapture(systemId, req.user.userId)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Invalid date' });
     try {
         const pool = getDatabase();
+        // An operator may only clear a day that is entirely their own same-day
+        // entries — full-write levels (collaborator/admin/owner) are unrestricted.
+        const access = await getSystemAccess(systemId, req.user.userId, pool);
+        if (access.level === 'operator') {
+            const [rows] = await pool.execute(
+                'SELECT recorded_by FROM nutrient_readings WHERE system_id = ? AND DATE(reading_date) = ?',
+                [systemId, date]
+            );
+            const allOwnToday = rows.every((r) => isOwnEntryToday(r.recorded_by, req.user.userId, date));
+            if (rows.length && !allOwnToday) {
+                return res.status(403).json({ error: 'Operators can only edit their own readings from today' });
+            }
+        }
         const [result] = await pool.execute(
             'DELETE FROM nutrient_readings WHERE system_id = ? AND DATE(reading_date) = ?',
             [systemId, date]
@@ -330,26 +351,26 @@ router.post('/fish-health/:systemId', async (req, res) => {
     const { systemId } = req.params;
     const { date, fish_tank_id, count, mortality, average_weight, feed_consumption, feed_type, behavior, notes } = req.body;
 
-    if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
+    if (!await verifySystemCapture(systemId, req.user.userId)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
     // Using connection pool - no manual connection management
     try {
         const pool = getDatabase();
-        
+
         // Map tank_number to actual tank ID
         const [tankRows] = await pool.execute(
             'SELECT id FROM fish_tanks WHERE system_id = ? AND (id = ? OR tank_number = ?)',
             [systemId, fish_tank_id || 1, fish_tank_id || 1]
         );
-        
+
         const actualTankId = tankRows && tankRows.length > 0 ? tankRows[0].id : fish_tank_id || 1;
-        
-        const [result] = await pool.execute(`INSERT INTO fish_health 
-            (system_id, fish_tank_id, date, count, mortality, average_weight, feed_consumption, feed_type, behavior, notes) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
-            [toSqlValue(systemId), toSqlValue(actualTankId), toSqlValue(date), toSqlValue(count), toSqlValue(mortality), toSqlValue(average_weight), toSqlValue(feed_consumption), toSqlValue(feed_type), toSqlValue(behavior), toSqlValue(notes)]);        res.status(201).json({ id: result.insertId, message: 'Fish health data saved' });
+
+        const [result] = await pool.execute(`INSERT INTO fish_health
+            (system_id, fish_tank_id, date, count, mortality, average_weight, feed_consumption, feed_type, behavior, notes, recorded_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [toSqlValue(systemId), toSqlValue(actualTankId), toSqlValue(date), toSqlValue(count), toSqlValue(mortality), toSqlValue(average_weight), toSqlValue(feed_consumption), toSqlValue(feed_type), toSqlValue(behavior), toSqlValue(notes), req.user.userId]);        res.status(201).json({ id: result.insertId, message: 'Fish health data saved' });
     } catch (error) {
         console.error('Error saving fish health data:', error);
         res.status(500).json({ error: 'Failed to save data' });
@@ -379,7 +400,7 @@ router.post('/plant-growth/:systemId', async (req, res) => {
     const { systemId } = req.params;
     const { date, grow_bed_id, crop_type, count, plants_per_m2, harvest_weight, plants_harvested, new_seedlings, pest_control, health, growth_stage, notes, batch_id, seed_variety, batch_created_date, days_to_harvest } = req.body;
 
-    if (!await verifySystemOwnership(systemId, req.user.userId, true)) {
+    if (!await verifySystemCapture(systemId, req.user.userId)) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
 
@@ -387,9 +408,9 @@ router.post('/plant-growth/:systemId', async (req, res) => {
     try {
         const pool = getDatabase();
         const [result] = await pool.execute(`INSERT INTO plant_growth
-            (system_id, grow_bed_id, date, crop_type, count, plants_per_m2, harvest_weight, plants_harvested, new_seedlings, pest_control, health, growth_stage, notes, batch_id, seed_variety, batch_created_date, days_to_harvest)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [systemId, grow_bed_id, date, crop_type, count || null, plants_per_m2 || null, harvest_weight || null, plants_harvested || null, new_seedlings || null, pest_control || null, health || null, growth_stage || null, notes || null, batch_id || null, seed_variety || null, batch_created_date || null, days_to_harvest || null]);        res.status(201).json({ id: result.insertId, message: 'Plant growth data saved' });
+            (system_id, grow_bed_id, date, crop_type, count, plants_per_m2, harvest_weight, plants_harvested, new_seedlings, pest_control, health, growth_stage, notes, batch_id, seed_variety, batch_created_date, days_to_harvest, recorded_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [systemId, grow_bed_id, date, crop_type, count || null, plants_per_m2 || null, harvest_weight || null, plants_harvested || null, new_seedlings || null, pest_control || null, health || null, growth_stage || null, notes || null, batch_id || null, seed_variety || null, batch_created_date || null, days_to_harvest || null, req.user.userId]);        res.status(201).json({ id: result.insertId, message: 'Plant growth data saved' });
     } catch (error) {
         console.error('Error saving plant growth data:', error);
         res.status(500).json({ error: 'Failed to save data' });
@@ -429,13 +450,21 @@ router.put('/plant-growth/:entryId', async (req, res) => {
     try {
         const pool = getDatabase();
         // First verify the entry belongs to a system owned by the user
-        const [entryRows] = await pool.execute('SELECT system_id FROM plant_growth WHERE id = ?', [entryId]);
+        const [entryRows] = await pool.execute('SELECT system_id, recorded_by, date FROM plant_growth WHERE id = ?', [entryId]);
         const entry = entryRows[0];
 
         if (!entry) {            return res.status(404).json({ error: 'Plant growth record not found' });
         }
 
-        if (!await verifySystemOwnership(entry.system_id, req.user.userId, true)) {            return res.status(403).json({ error: 'Access denied to this system' });
+        const access = await getSystemAccess(entry.system_id, req.user.userId, pool);
+        if (!access) {            return res.status(403).json({ error: 'Access denied to this system' });
+        }
+        if (access.level === 'operator') {
+            if (!isOwnEntryToday(entry.recorded_by, req.user.userId, entry.date)) {
+                return res.status(403).json({ error: 'Operators can only edit their own entries from today' });
+            }
+        } else if (!(access.level === 'owner' || access.level === 'collaborator' || access.level === 'admin')) {
+            return res.status(403).json({ error: 'Access denied to this system' });
         }
 
         // Update the record
@@ -584,15 +613,23 @@ router.delete('/fish-health/entry/:entryId', async (req, res) => {
         const pool = getDatabase();
         
         // First verify the entry exists and belongs to a system owned by the user
-        const [entryRows] = await pool.execute('SELECT system_id FROM fish_health WHERE id = ?', [entryId]);
-        
+        const [entryRows] = await pool.execute('SELECT system_id, recorded_by, date FROM fish_health WHERE id = ?', [entryId]);
+
         if (entryRows.length === 0) {            return res.status(404).json({ error: 'Entry not found' });
         }
-        
+
         const entry = entryRows[0];
-        if (!await verifySystemOwnership(entry.system_id, req.user.userId, true)) {            return res.status(403).json({ error: 'Access denied to this system' });
+        const access = await getSystemAccess(entry.system_id, req.user.userId, pool);
+        if (!access) {            return res.status(403).json({ error: 'Access denied to this system' });
         }
-        
+        if (access.level === 'operator') {
+            if (!isOwnEntryToday(entry.recorded_by, req.user.userId, entry.date)) {
+                return res.status(403).json({ error: 'Operators can only delete their own entries from today' });
+            }
+        } else if (!(access.level === 'owner' || access.level === 'collaborator' || access.level === 'admin')) {
+            return res.status(403).json({ error: 'Access denied to this system' });
+        }
+
         // Delete the entry
         const [result] = await pool.execute('DELETE FROM fish_health WHERE id = ?', [entryId]);        res.json({ message: 'Entry deleted successfully' });
     } catch (error) {
@@ -611,15 +648,23 @@ router.put('/fish-health/entry/:entryId', async (req, res) => {
         const pool = getDatabase();
         
         // First verify the entry exists and belongs to a system owned by the user
-        const [entryRows] = await pool.execute('SELECT system_id FROM fish_health WHERE id = ?', [entryId]);
-        
+        const [entryRows] = await pool.execute('SELECT system_id, recorded_by, date FROM fish_health WHERE id = ?', [entryId]);
+
         if (entryRows.length === 0) {            return res.status(404).json({ error: 'Entry not found' });
         }
-        
+
         const entry = entryRows[0];
-        if (!await verifySystemOwnership(entry.system_id, req.user.userId, true)) {            return res.status(403).json({ error: 'Access denied to this system' });
+        const access = await getSystemAccess(entry.system_id, req.user.userId, pool);
+        if (!access) {            return res.status(403).json({ error: 'Access denied to this system' });
         }
-        
+        if (access.level === 'operator') {
+            if (!isOwnEntryToday(entry.recorded_by, req.user.userId, entry.date)) {
+                return res.status(403).json({ error: 'Operators can only edit their own entries from today' });
+            }
+        } else if (!(access.level === 'owner' || access.level === 'collaborator' || access.level === 'admin')) {
+            return res.status(403).json({ error: 'Access denied to this system' });
+        }
+
         // Update the entry
         const [result] = await pool.execute(`
             UPDATE fish_health 

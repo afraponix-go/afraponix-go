@@ -2,12 +2,15 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
-const { canWriteSystem, getFarmAccess, WRITE_LEVELS } = require('../utils/systemAccess');
+const { canWriteSystem, canCaptureSystem, getFarmAccess, WRITE_LEVELS, CAPTURE_LEVELS } = require('../utils/systemAccess');
 const { batchLabel, buildBatchNumber } = require('../utils/batchNumber');
 
 router.use(authenticateToken);
 
 const canWriteFarm = (acc) => !!acc && (acc.level === 'owner' || WRITE_LEVELS.has(acc.level));
+// Transplanting is a capture action (it's one of the scanned nursery-batch
+// actions) — also open to a restricted 'operator' share on the seedling's farm.
+const canCaptureFarm = (acc) => !!acc && (acc.level === 'owner' || CAPTURE_LEVELS.has(acc.level));
 
 // Fetch a seedling batch the caller may access. Seedlings belong to a farm; a
 // couple of legacy rows may only have system_id, so fall back to that. Pass
@@ -142,8 +145,18 @@ router.put('/:id', async (req, res) => {
 router.post('/:id/transplant', async (req, res) => {
     try {
         const pool = getDatabase();
-        const sb = await accessibleSeedling(pool, req.params.id, req.user.userId, true);
+        // A capture-level check (not the general write-only accessibleSeedling),
+        // so an operator can transplant without also being able to edit the
+        // sowing's crop/variety/dates via PUT /:id.
+        const [sbRows] = await pool.execute('SELECT * FROM seedling_batches WHERE id = ?', [req.params.id]);
+        const sb = sbRows[0];
         if (!sb) return res.status(404).json({ error: 'Not found or access denied' });
+        const allowed = sb.farm_id
+            ? canCaptureFarm(await getFarmAccess(sb.farm_id, req.user.userId, pool))
+            : sb.system_id
+                ? await canCaptureSystem(sb.system_id, req.user.userId, pool)
+                : false;
+        if (!allowed) return res.status(404).json({ error: 'Not found or access denied' });
         const b = req.body || {};
         const bedId = intOrNull(b.grow_bed_id);
         const targetSystemId = b.system_id;
@@ -155,7 +168,7 @@ router.post('/:id/transplant', async (req, res) => {
         // must be able to write it, and the bed must be in that system.
         const [sys] = await pool.execute('SELECT id, user_id FROM systems WHERE id = ? AND farm_id = ?', [targetSystemId, sb.farm_id]);
         if (sys.length === 0) return res.status(400).json({ error: 'System is not in this farm' });
-        if (!(await canWriteSystem(targetSystemId, req.user.userId, pool))) return res.status(403).json({ error: 'No write access to that system' });
+        if (!(await canCaptureSystem(targetSystemId, req.user.userId, pool))) return res.status(403).json({ error: 'No write access to that system' });
         const [bed] = await pool.execute('SELECT id FROM grow_beds WHERE id = ? AND system_id = ?', [bedId, targetSystemId]);
         if (bed.length === 0) return res.status(400).json({ error: 'Bed not in that system' });
 
@@ -214,9 +227,9 @@ router.post('/:id/transplant', async (req, res) => {
         try {
             await conn.beginTransaction();
             await conn.execute(
-                `INSERT INTO plant_growth (system_id, grow_bed_id, date, crop_type, count, plants_per_m2, new_seedlings, growth_stage, batch_id, seed_variety, batch_created_date, days_to_harvest)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, 'transplant', ?, ?, ?, ?)`,
-                [targetSystemId, bedId, date, cropType, count, intOrNull(b.plants_per_m2), count, batchId, sb.seed_variety || null, date, dth]
+                `INSERT INTO plant_growth (system_id, grow_bed_id, date, crop_type, count, plants_per_m2, new_seedlings, growth_stage, batch_id, seed_variety, batch_created_date, days_to_harvest, recorded_by)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, 'transplant', ?, ?, ?, ?, ?)`,
+                [targetSystemId, bedId, date, cropType, count, intOrNull(b.plants_per_m2), count, batchId, sb.seed_variety || null, date, dth, req.user.userId]
             );
             await conn.execute(
                 `UPDATE seedling_batches SET transplant_date=?, transplanted_count=?, system_id=?, grow_bed_id=?, plant_batch_id=?, status=? WHERE id=?`,

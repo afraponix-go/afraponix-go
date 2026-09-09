@@ -5,11 +5,13 @@ const path = require('path');
 const multer = require('multer');
 const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
-const { canAccessSystem, getFarmAccess, WRITE_LEVELS } = require('../utils/systemAccess');
+const { canAccessSystem, canCaptureSystem, getFarmAccess, WRITE_LEVELS, CAPTURE_LEVELS } = require('../utils/systemAccess');
 
 router.use(authenticateToken);
 
 const canWriteFarm = (acc) => !!acc && (acc.level === 'owner' || WRITE_LEVELS.has(acc.level));
+// Adding a photo is a capture action — also open to a restricted 'operator' share.
+const canCaptureFarm = (acc) => !!acc && (acc.level === 'owner' || CAPTURE_LEVELS.has(acc.level));
 
 // A photo belongs either to a bed batch (system_id + batch_id) or a nursery batch
 // (seedling_batch_id + farm_id). Access is checked against whichever it is.
@@ -47,9 +49,10 @@ const upload = multer({
     },
 });
 
-// Check write access before multer writes the file to disk.
+// Check capture access before multer writes the file to disk. Adding a photo
+// is a scan-friendly capture action, so a restricted 'operator' share qualifies.
 async function requireWrite(req, res, next) {
-    if (!(await canAccessSystem(req.params.systemId, req.user.userId, { write: true }))) {
+    if (!(await canCaptureSystem(req.params.systemId, req.user.userId))) {
         return res.status(403).json({ error: 'Access denied to this system' });
     }
     next();
@@ -60,7 +63,7 @@ async function requireSeedlingWrite(req, res, next) {
     const pool = getDatabase();
     const [rows] = await pool.execute('SELECT id, farm_id, crop_name, batch_number FROM seedling_batches WHERE id = ?', [req.params.seedlingId]);
     if (!rows.length) return res.status(404).json({ error: 'Seedling batch not found' });
-    if (!canWriteFarm(await getFarmAccess(rows[0].farm_id, req.user.userId, pool))) {
+    if (!canCaptureFarm(await getFarmAccess(rows[0].farm_id, req.user.userId, pool))) {
         return res.status(403).json({ error: 'Access denied' });
     }
     req.seedling = rows[0];

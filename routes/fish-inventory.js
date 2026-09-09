@@ -1,7 +1,7 @@
 const express = require('express');
 const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
-const { canAccessSystem } = require('../utils/systemAccess');
+const { canAccessSystem, canCaptureSystem } = require('../utils/systemAccess');
 
 const router = express.Router();
 
@@ -120,7 +120,7 @@ router.post('/add-fish', async (req, res) => {
 
         try {
             // Verify system ownership
-            const systemRows = ((await canAccessSystem(system_id, req.user.userId, { write: true }, pool)) ? [1] : []);
+            const systemRows = ((await canCaptureSystem(system_id, req.user.userId, pool)) ? [1] : []);
 
             if (!systemRows || systemRows.length === 0) {
                 await executeQuery(pool, 'ROLLBACK');                return res.status(404).json({ error: 'System not found or access denied' });
@@ -194,7 +194,7 @@ router.post('/mortality', async (req, res) => {
 
         try {
             // Verify system ownership
-            const systemRows = ((await canAccessSystem(system_id, req.user.userId, { write: true }, pool)) ? [1] : []);
+            const systemRows = ((await canCaptureSystem(system_id, req.user.userId, pool)) ? [1] : []);
 
             if (!systemRows || systemRows.length === 0) {
                 await executeQuery(pool, 'ROLLBACK');                return res.status(404).json({ error: 'System not found or access denied' });
@@ -283,7 +283,7 @@ router.post('/update-weight', async (req, res) => {
 
         try {
             // Verify system ownership
-            const systemRows = ((await canAccessSystem(system_id, req.user.userId, { write: true }, pool)) ? [1] : []);
+            const systemRows = ((await canCaptureSystem(system_id, req.user.userId, pool)) ? [1] : []);
 
             if (!systemRows || systemRows.length === 0) {
                 await executeQuery(pool, 'ROLLBACK');                return res.status(404).json({ error: 'System not found or access denied' });
@@ -351,8 +351,8 @@ router.post('/move-fish', async (req, res) => {
 
         try {
             // Write access on both the source and the destination system.
-            const canSource = await canAccessSystem(system_id, req.user.userId, { write: true }, pool);
-            const canDest = crossSystem ? await canAccessSystem(toSystemId, req.user.userId, { write: true }, pool) : canSource;
+            const canSource = await canCaptureSystem(system_id, req.user.userId, pool);
+            const canDest = crossSystem ? await canCaptureSystem(toSystemId, req.user.userId, pool) : canSource;
             if (!canSource || !canDest) {
                 await executeQuery(pool, 'ROLLBACK');
                 return res.status(404).json({ error: 'System not found or access denied' });
@@ -463,7 +463,7 @@ router.post('/harvest', async (req, res) => {
 
         try {
             // Verify system ownership
-            const systemRows = ((await canAccessSystem(system_id, req.user.userId, { write: true }, pool)) ? [1] : []);
+            const systemRows = ((await canCaptureSystem(system_id, req.user.userId, pool)) ? [1] : []);
             if (!systemRows || systemRows.length === 0) {
                 await executeQuery(pool, 'ROLLBACK');
                 return res.status(404).json({ error: 'System not found or access denied' });
