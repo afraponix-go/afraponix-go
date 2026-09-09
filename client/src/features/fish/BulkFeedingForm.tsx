@@ -28,12 +28,17 @@ export function BulkFeedingForm({
   previousLog,
   onDone,
   onCancel,
+  onSaveAndNext,
 }: {
   systemId: string
   tanks: FishTank[]
   previousLog: FeedingRecord[]
   onDone: () => void
   onCancel?: () => void
+  // When provided, a second "Save & next system" action appears alongside
+  // the main save button (the operator's multi-system Feeding capture page);
+  // omitted everywhere else, where there's only ever the one save action.
+  onSaveAndNext?: () => void
 }) {
   const qc = useQueryClient()
   const [date, setDate] = useState(today())
@@ -79,6 +84,7 @@ export function BulkFeedingForm({
   }
 
   const toSave = tanks.filter((t) => Number(rows[t.fish_tank_id]?.amount) > 0)
+  const [after, setAfter] = useState<'exit' | 'next'>('exit')
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -94,16 +100,22 @@ export function BulkFeedingForm({
       ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['feeding-log'] })
-      onDone()
+      if (after === 'next' && onSaveAndNext) onSaveAndNext()
+      else onDone()
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Could not save feeding.'),
   })
 
-  function onSubmit(e: FormEvent) {
-    e.preventDefault()
+  function submit(next: 'exit' | 'next') {
     setError(null)
     if (toSave.length === 0) return setError('Enter a feed amount for at least one tank.')
+    setAfter(next)
     mutation.mutate()
+  }
+
+  function onSubmit(e: FormEvent) {
+    e.preventDefault()
+    submit('exit')
   }
 
   return (
@@ -180,8 +192,17 @@ export function BulkFeedingForm({
         {onCancel && (
           <button type="button" className="ghost" onClick={onCancel}>Cancel</button>
         )}
+        {onSaveAndNext && (
+          <button type="button" className="ghost" disabled={mutation.isPending} onClick={() => submit('next')}>
+            {mutation.isPending && after === 'next' ? 'Saving…' : 'Save & next system'}
+          </button>
+        )}
         <button type="submit" className="btn" disabled={mutation.isPending}>
-          {mutation.isPending ? 'Saving…' : `Save feeding (${toSave.length} tank${toSave.length === 1 ? '' : 's'})`}
+          {mutation.isPending && after === 'exit'
+            ? 'Saving…'
+            : onSaveAndNext
+              ? 'Save & exit'
+              : `Save feeding (${toSave.length} tank${toSave.length === 1 ? '' : 's'})`}
         </button>
       </div>
     </form>

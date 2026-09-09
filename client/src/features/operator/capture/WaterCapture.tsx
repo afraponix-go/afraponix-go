@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '../../../lib/apiClient'
 import { createWaterQualityReading, WATER_FIELDS, parseTrackedMetrics, type WaterFieldKey } from '../../water/api'
@@ -13,6 +13,7 @@ const today = () => new Date().toISOString().slice(0, 10)
 // The operator's Water tile: just "record a reading" — no history table, no
 // edit/delete of past days. The full admin Water Quality page keeps those.
 export function WaterCapture() {
+  const navigate = useNavigate()
   const { systems, systemId, system, setActiveId } = useCaptureSystem()
   const qc = useQueryClient()
   const tracked = parseTrackedMetrics(system?.tracked_metrics)
@@ -24,18 +25,17 @@ export function WaterCapture() {
   const mutation = useMutation({
     mutationFn: (input: { date: string; notes?: string; values: Partial<Record<WaterFieldKey, number>> }) =>
       createWaterQualityReading(systemId as string, input),
-    onSuccess: () => {
-      setSaved(true)
-      setValues({ date: today() })
-      qc.invalidateQueries({ queryKey: ['nutrients'] })
-      qc.invalidateQueries({ queryKey: ['water-quality'] })
-      setTimeout(() => setSaved(false), 2500)
-    },
-    onError: (e) => setError(e instanceof ApiError ? e.message : 'Could not save the reading.'),
   })
 
-  function onSubmit(e: FormEvent) {
-    e.preventDefault()
+  // Multiple systems in this farm: cycle through them in name order, wrapping
+  // back to the first — a lap through every system in one sitting.
+  function nextSystemId(): string | undefined {
+    const ordered = systems.slice().sort((a, b) => a.system_name.localeCompare(b.system_name, undefined, { numeric: true }))
+    const idx = ordered.findIndex((s) => s.id === systemId)
+    return ordered[(idx + 1) % ordered.length]?.id
+  }
+
+  async function submit(after: 'exit' | 'next') {
     setError(null)
     const parsed: Partial<Record<WaterFieldKey, number>> = {}
     let hasValue = false
@@ -49,7 +49,22 @@ export function WaterCapture() {
       }
     }
     if (!hasValue) return setError('Enter at least one measurement.')
-    mutation.mutate({ date: values.date || today(), notes: values.notes || undefined, values: parsed })
+    try {
+      await mutation.mutateAsync({ date: values.date || today(), notes: values.notes || undefined, values: parsed })
+      qc.invalidateQueries({ queryKey: ['nutrients'] })
+      qc.invalidateQueries({ queryKey: ['water-quality'] })
+      setValues({ date: today() })
+      if (after === 'exit') {
+        navigate('/log')
+      } else {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 2000)
+        const next = nextSystemId()
+        if (next) setActiveId(next)
+      }
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not save the reading.')
+    }
   }
 
   return (
@@ -62,7 +77,7 @@ export function WaterCapture() {
       {!systemId ? (
         <div className="empty">No system to log a reading for.</div>
       ) : (
-        <form className="wq-form" onSubmit={onSubmit}>
+        <form className="wq-form" onSubmit={(e) => { e.preventDefault(); submit('exit') }}>
           {error && <div className="wq-error">{error}</div>}
           {saved && <div className="wq-ok">Reading saved ✓</div>}
           <div className="wq-grid">
@@ -92,9 +107,16 @@ export function WaterCapture() {
               <input id="notes" type="text" value={values.notes ?? ''} onChange={(e) => setValues((v) => ({ ...v, notes: e.target.value }))} placeholder="Optional" />
             </div>
           </div>
-          <button className="btn wq-submit" type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Saving…' : 'Save reading'}
-          </button>
+          <div className="wq-actions">
+            {systems.length > 1 && (
+              <button type="button" className="ghost" disabled={mutation.isPending} onClick={() => submit('next')}>
+                {mutation.isPending ? 'Saving…' : 'Save & next system'}
+              </button>
+            )}
+            <button className="btn wq-submit" type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? 'Saving…' : 'Save & exit'}
+            </button>
+          </div>
         </form>
       )}
     </div>

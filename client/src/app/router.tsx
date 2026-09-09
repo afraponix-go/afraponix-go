@@ -33,6 +33,7 @@ import { LogHub } from '../features/operator/LogHub'
 import { FeedingCapture } from '../features/operator/capture/FeedingCapture'
 import { WaterCapture } from '../features/operator/capture/WaterCapture'
 import { PlantingCapture } from '../features/operator/capture/PlantingCapture'
+import { SeedlingCapture } from '../features/operator/capture/SeedlingCapture'
 import { useOperatorMode } from '../features/operator/operatorMode'
 import { HarvestView } from '../features/plants/HarvestView'
 import { BedsAllocation } from '../features/plants/BedsAllocation'
@@ -198,6 +199,7 @@ export const router = createBrowserRouter([
           { path: 'log/feeding', element: <FeedingCapture /> },
           { path: 'log/water', element: <WaterCapture /> },
           { path: 'log/planting', element: <PlantingCapture /> },
+          { path: 'log/seedling', element: <SeedlingCapture /> },
           // Keep old /spray links working (bookmarks, back button).
           { path: 'spray', element: <Navigate to="/operations/programmes" replace /> },
           { path: 'spray/calendar', element: <Navigate to="/operations" replace /> },

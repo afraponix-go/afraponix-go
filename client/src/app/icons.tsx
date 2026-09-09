@@ -87,3 +87,65 @@ export const SettingsIcon = svg(
     <path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.3.9a7 7 0 0 0-2-1.2L16.2 2h-4l-.4 2.3a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.6A7 7 0 0 0 5 12a7 7 0 0 0 .1 1.2l-2 1.6 2 3.4 2.3-.9a7 7 0 0 0 2 1.2L12 22h4l-.4-2.3a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.6A7 7 0 0 0 19 12Z" />
   </>,
 )
+
+export const WaterDropIcon = svg(
+  <path d="M12 3c3.5 4.2 6 7.6 6 10.5a6 6 0 1 1-12 0C6 10.6 8.5 7.2 12 3Z" />,
+)
+
+export const ScaleIcon = svg(
+  <>
+    <path d="M12 3v18M8 21h8" />
+    <path d="M5 6h14" />
+    <path d="M5 6 2 11a3 3 0 0 0 6 0L5 6ZM19 6l-3 5a3 3 0 0 0 6 0l-3-5Z" />
+  </>,
+)
+
+export const SeedIcon = svg(
+  <>
+    <path d="M12 21c4-1 7-5 7-10 0-3-2-6-7-8-5 2-7 5-7 8 0 5 3 9 7 10Z" />
+    <path d="M12 13v8" />
+  </>,
+)
+
+export const TransplantIcon = svg(
+  <>
+    <path d="M4 7h11a3 3 0 0 1 3 3v1" />
+    <path d="m15 4 3 3-3 3" />
+    <path d="M20 17H9a3 3 0 0 1-3-3v-1" />
+    <path d="m9 20-3-3 3-3" />
+  </>,
+)
+
+export const HarvestIcon = svg(
+  <>
+    <path d="M12 21V9" />
+    <path d="M12 9c0-3-2-5-5-6 0 3 1 5.5 5 6Z" />
+    <path d="M12 11c0-3.2 2.2-5.6 6-6.6 0 3.3-1.3 6-6 6.6Z" />
+    <path d="M8 21h8" />
+  </>,
+)
+
+export const CompassIcon = svg(
+  <>
+    <circle cx="12" cy="12" r="9" />
+    <path d="m14.5 9.5-1.8 4.2a1 1 0 0 1-.5.5L8 16l1.8-4.2a1 1 0 0 1 .5-.5Z" />
+  </>,
+)
+
+export const BadgeIcon = svg(
+  <>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <circle cx="9" cy="12" r="2" />
+    <path d="M6 16c.6-1.3 1.7-2 3-2s2.4.7 3 2" />
+    <line x1="14" y1="10" x2="18" y2="10" />
+    <line x1="14" y1="13" x2="18" y2="13" />
+  </>,
+)
+
+export const ExitIcon = svg(
+  <>
+    <path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" />
+    <path d="M14 16l4-4-4-4" />
+    <line x1="18" y1="12" x2="8" y2="12" />
+  </>,
+)

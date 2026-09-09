@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useSystems } from '../systems/SystemContext'
-import { ScanIcon } from '../../app/icons'
+import { ScanIcon, FishIcon, ScaleIcon, WaterDropIcon, SeedIcon, TransplantIcon, PlantIcon, HarvestIcon } from '../../app/icons'
 import '../plants/scan.css'
 import './operator.css'
 
@@ -39,27 +39,37 @@ export function LogTiles() {
   return (
     <div className="op-tiles">
       <Link to="/log/feeding" className="op-tile">
-        <span className="op-tile-icon" aria-hidden>🐟</span>
+        <FishIcon className="op-tile-icon" />
         <span className="op-tile-label">Feeding</span>
         <span className="op-tile-sub">Record what was fed</span>
       </Link>
       <Link to="/pick?kind=fish" className="op-tile">
-        <span className="op-tile-icon" aria-hidden>⚖️</span>
+        <ScaleIcon className="op-tile-icon" />
         <span className="op-tile-label">Fish tank</span>
         <span className="op-tile-sub">Weigh, mortality, harvest</span>
       </Link>
       <Link to="/log/water" className="op-tile">
-        <span className="op-tile-icon" aria-hidden>💧</span>
+        <WaterDropIcon className="op-tile-icon" />
         <span className="op-tile-label">Water</span>
         <span className="op-tile-sub">Log a reading</span>
       </Link>
+      <Link to="/log/seedling" className="op-tile">
+        <SeedIcon className="op-tile-icon" />
+        <span className="op-tile-label">Sow seedlings</span>
+        <span className="op-tile-sub">Start a nursery batch</span>
+      </Link>
+      <Link to="/pick?kind=seedling" className="op-tile">
+        <TransplantIcon className="op-tile-icon" />
+        <span className="op-tile-label">Transplant</span>
+        <span className="op-tile-sub">Move seedlings to a bed</span>
+      </Link>
       <Link to="/log/planting" className="op-tile">
-        <span className="op-tile-icon" aria-hidden>🌱</span>
+        <PlantIcon className="op-tile-icon" />
         <span className="op-tile-label">Planting</span>
         <span className="op-tile-sub">Record a new planting</span>
       </Link>
       <Link to="/pick?kind=bed" className="op-tile">
-        <span className="op-tile-icon" aria-hidden>🌾</span>
+        <HarvestIcon className="op-tile-icon" />
         <span className="op-tile-label">Harvest</span>
         <span className="op-tile-sub">Log a plant harvest</span>
       </Link>

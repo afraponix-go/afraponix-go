@@ -82,11 +82,13 @@ router.get('/:farmId', async (req, res) => {
     }
 });
 
-// Sow a new batch into the farm's nursery (not tied to a system yet).
+// Sow a new batch into the farm's nursery (not tied to a system yet). A
+// capture action like transplanting — an operator's "planting" is sowing a
+// new nursery batch, so this needs the same level as the transplant route.
 router.post('/:farmId', async (req, res) => {
     try {
         const pool = getDatabase();
-        if (!canWriteFarm(await getFarmAccess(req.params.farmId, req.user.userId, pool))) return res.status(404).json({ error: 'Farm not found or access denied' });
+        if (!canCaptureFarm(await getFarmAccess(req.params.farmId, req.user.userId, pool))) return res.status(404).json({ error: 'Farm not found or access denied' });
         const b = req.body || {};
         if (!b.sow_date) return res.status(400).json({ error: 'sow_date is required' });
         const tf = trayFieldsFrom(b.tray_groups, b.trays, b.cells_per_tray);

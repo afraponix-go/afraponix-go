@@ -9,6 +9,7 @@ import { fetchSeedlings } from '../seedlings/api'
 import { prettyCrop } from '../plants/api'
 import { batchScanUrl, seedlingScanUrl } from '../plants/batchQr'
 import { tankScanUrl } from '../fish/tankQr'
+import { FishIcon, PlantIcon, SeedIcon } from '../../app/icons'
 import '../dashboard/dashboard.css'
 import '../plants/plants.css'
 import '../plants/scan.css'
@@ -183,7 +184,9 @@ export function BatchTankPicker() {
         <div className="pick-list">
           {filtered.map((it) => (
             <button key={it.key} type="button" className="pick-row" onClick={() => navigate(it.path)}>
-              <span className="pick-icon" aria-hidden>{it.kind === 'fish' ? '🐟' : '🌱'}</span>
+              <span className="pick-icon" aria-hidden>
+                {it.kind === 'fish' ? <FishIcon /> : it.kind === 'seedling' ? <SeedIcon /> : <PlantIcon />}
+              </span>
               <span className="pick-text">
                 <span className="pick-label">{it.label}</span>
                 <span className="pick-sub">{it.cropLabel} · {it.sub}{groupOptions.length > 1 ? ` · ${it.groupLabel}` : ''}</span>

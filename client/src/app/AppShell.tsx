@@ -7,7 +7,7 @@ import { AddSystemModal } from '../features/systems/AddSystemModal'
 import { NewFarmModal } from '../features/systems/NewFarmModal'
 import { OnboardingTour, startTour } from '../features/onboarding/OnboardingTour'
 import { ADD_SYSTEM_EVENT } from '../features/onboarding/FirstRunWelcome'
-import { DashboardIcon, ScanIcon, TodayIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SprayIcon, SettingsIcon } from './icons'
+import { DashboardIcon, ScanIcon, TodayIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SprayIcon, SettingsIcon, CompassIcon, BadgeIcon, ExitIcon } from './icons'
 import { Brand } from '../components/Brand'
 import { ThemeToggle } from './ThemeToggle'
 import { useOperatorMode } from '../features/operator/operatorMode'
@@ -146,7 +146,7 @@ export function AppShell() {
                   )}
                   {!isOperatorView && (
                     <button className="account-menu-item" role="menuitem" onClick={() => { setMenuOpen(false); startTour() }}>
-                      <span className="ami-icon" aria-hidden>🧭</span> Take a tour
+                      <CompassIcon className="ami-icon" /> Take a tour
                     </button>
                   )}
                   <div className="account-menu-item as-toggle"><ThemeToggle /></div>
@@ -165,7 +165,7 @@ export function AppShell() {
                         navigate('/')
                       }}
                     >
-                      <span className="ami-icon" aria-hidden>{viewAsOperator ? '↩' : '🪪'}</span>
+                      {viewAsOperator ? <ExitIcon className="ami-icon" /> : <BadgeIcon className="ami-icon" />}
                       {viewAsOperator ? 'Switch back' : 'Switch to operator'}
                     </button>
                   )}
