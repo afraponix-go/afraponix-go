@@ -26,8 +26,16 @@ type Kind = 'bed' | 'seedling' | 'fish'
 type Item = {
   key: string
   kind: Kind
-  label: string
+  // The human-readable heading — crop + variety, or "Tank N". Never the raw
+  // batch id: real ones are short ("2637-Lettuce") but demo/imported data can
+  // be an ugly system-prefixed string, and neither reads as a name.
+  name: string
+  // Crop/species only (no variety) — what the crop filter groups and matches on.
   cropLabel: string
+  // The batch's own identifier (what's on the printed QR label) — shown small
+  // and muted, never as the heading. Null for tanks, which aren't individually
+  // coded the same way.
+  code: string | null
   sub: string
   groupKey: string
   groupLabel: string
@@ -94,11 +102,13 @@ export function BatchTankPicker() {
     systems.forEach((s, i) => {
       for (const b of batchQs[i]?.data ?? []) {
         if (b.remaining <= 0) continue
+        const cropLabel = prettyCrop(b.crop_type)
         out.push({
           key: `bed:${s.id}:${b.batch_id}`,
           kind: 'bed',
-          label: b.batch_id,
-          cropLabel: prettyCrop(b.crop_type),
+          name: b.seed_variety ? `${cropLabel} · ${b.seed_variety}` : cropLabel,
+          cropLabel,
+          code: b.batch_id,
           sub: b.bed_name ?? (b.bed_number != null ? `Bed ${b.bed_number}` : 'Unassigned'),
           groupKey: s.id,
           groupLabel: s.system_name,
@@ -111,8 +121,9 @@ export function BatchTankPicker() {
         out.push({
           key: `fish:${s.id}:${t.fish_tank_id}`,
           kind: 'fish',
-          label: `Tank ${t.tank_number}`,
+          name: `Tank ${t.tank_number}`,
           cropLabel: t.tank_fish_type ? t.tank_fish_type[0].toUpperCase() + t.tank_fish_type.slice(1) : 'Fish',
+          code: null,
           sub: `${t.current_count ?? 0} fish`,
           groupKey: s.id,
           groupLabel: s.system_name,
@@ -126,11 +137,13 @@ export function BatchTankPicker() {
       const farmName = farms.find((fm) => fm.id === f)?.name ?? 'Nursery'
       for (const sd of seedlingQs[i]?.data ?? []) {
         if (sd.status === 'transplanted') continue
+        const cropLabel = sd.crop_name ? prettyCrop(sd.crop_name) : 'Crop'
         out.push({
           key: `seedling:${f}:${sd.id}`,
           kind: 'seedling',
-          label: sd.batch_number ?? `Seedling #${sd.id}`,
-          cropLabel: sd.crop_name ? prettyCrop(sd.crop_name) : 'Crop',
+          name: sd.seed_variety ? `${cropLabel} · ${sd.seed_variety}` : cropLabel,
+          cropLabel,
+          code: sd.batch_number ?? `#${sd.id}`,
           sub: 'Nursery',
           groupKey: `farm:${f}`,
           groupLabel: `${farmName} · Nursery`,
@@ -144,7 +157,7 @@ export function BatchTankPicker() {
     // that's usually what you're looking for (most likely ready). Items
     // with no age (tanks) sort after every dated item.
     return out.sort((a, b) => {
-      if (a.ageDays == null && b.ageDays == null) return a.label.localeCompare(b.label, undefined, { numeric: true })
+      if (a.ageDays == null && b.ageDays == null) return a.name.localeCompare(b.name, undefined, { numeric: true })
       if (a.ageDays == null) return 1
       if (b.ageDays == null) return -1
       return b.ageDays - a.ageDays
@@ -171,7 +184,7 @@ export function BatchTankPicker() {
     if (cropFilter !== 'all' && it.cropLabel !== cropFilter) return false
     if (search.trim()) {
       const q = search.trim().toLowerCase()
-      if (!it.label.toLowerCase().includes(q) && !it.cropLabel.toLowerCase().includes(q)) return false
+      if (!it.name.toLowerCase().includes(q) && !(it.code ?? '').toLowerCase().includes(q)) return false
     }
     return true
   })
@@ -241,10 +254,12 @@ export function BatchTankPicker() {
                   {it.kind === 'fish' ? <FishIcon /> : it.kind === 'seedling' ? <SeedIcon /> : <PlantIcon />}
                 </span>
                 <span className="pick-text">
-                  <span className="pick-label">{it.label}</span>
+                  <span className="pick-label">
+                    {it.name}
+                    {it.code && <span className="pick-code">{it.code}</span>}
+                  </span>
                   <span className="pick-sub">
-                    {it.cropLabel} · {it.sub}
-                    {groupOptions.length > 1 ? ` · ${it.groupLabel}` : ''}
+                    {it.groupLabel} · {it.sub}
                     {it.ageDays != null ? ` · ${it.ageDays} d` : ''}
                   </span>
                 </span>
