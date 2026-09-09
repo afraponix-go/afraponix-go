@@ -1,0 +1,19 @@
+/* Manual batch/tank picker — the scan fallback. */
+.pick-filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.pick-select {
+  flex: 1; min-width: 140px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface); color: var(--ink); font: inherit; font-size: 13.5px;
+}
+
+.pick-list { display: flex; flex-direction: column; gap: 8px; }
+.pick-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; box-sizing: border-box;
+  padding: 13px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+}
+.pick-row:hover { border-color: var(--border-strong, #cbd5e1); }
+.pick-icon { font-size: 18px; flex: none; }
+.pick-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pick-label { font-weight: 700; font-size: 14.5px; }
+.pick-sub { font-size: 12.5px; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-chevron { color: var(--ink-faint); flex: none; font-size: 18px; }

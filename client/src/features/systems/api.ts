@@ -35,6 +35,13 @@ export function canWriteSystem(s: System | null | undefined): boolean {
   return isOwnedSystem(s) || s?.shared_permission === 'collaborator' || s?.shared_permission === 'admin'
 }
 
+// The broader set that also admits an 'operator' share — mirrors the server's
+// CAPTURE_LEVELS (utils/systemAccess.js). Use this, not canWriteSystem, to
+// decide whether to offer a system as a capture/scan target.
+export function canCaptureSystem(s: System | null | undefined): boolean {
+  return isOwnedSystem(s) || s?.shared_permission === 'operator' || s?.shared_permission === 'collaborator' || s?.shared_permission === 'admin'
+}
+
 export async function fetchSystems(): Promise<System[]> {
   const data = await api<unknown[]>('/systems')
   return z.array(systemSchema).parse(data)

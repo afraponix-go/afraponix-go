@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useSystems } from '../systems/SystemContext'
 import { ScanIcon } from '../../app/icons'
+import '../plants/scan.css'
 import './operator.css'
 
 // The landing screen for an operator session (a real operator-level share, or
@@ -16,6 +17,7 @@ export function OperatorHome() {
         <ScanIcon className="tab-icon" />
         Scan a label
       </Link>
+      <p className="op-fallback">Can't scan? <Link to="/pick">Choose manually</Link></p>
 
       <div className="op-section">
         <div className="op-section-h"><h2 className="section-title">Today</h2></div>

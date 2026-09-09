@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import jsQR from 'jsqr'
 import './scan.css'
 
@@ -88,6 +88,7 @@ export function ScanPage() {
           <p className="scanner-hint">{hint}</p>
         </div>
       )}
+      <p className="op-fallback">Can't scan? <Link to="/pick">Choose manually</Link></p>
     </div>
   )
 }

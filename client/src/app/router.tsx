@@ -26,6 +26,7 @@ import { BatchLabels } from '../features/plants/BatchLabels'
 import { BatchScan } from '../features/plants/BatchScan'
 import { ScanPage } from '../features/plants/ScanPage'
 import { TankScan } from '../features/fish/TankScan'
+import { BatchTankPicker } from '../features/picker/BatchTankPicker'
 import { TankLabels } from '../features/fish/TankLabels'
 import { OperatorHome } from '../features/operator/OperatorHome'
 import { LogHub } from '../features/operator/LogHub'
@@ -185,6 +186,7 @@ export const router = createBrowserRouter([
           },
           // Batch QR: camera scanner + scanned-label resolver (action sheet).
           { path: 'scan', element: <ScanPage /> },
+          { path: 'pick', element: <BatchTankPicker /> },
           { path: 'b', element: <BatchScan /> },
           { path: 't', element: <TankScan /> },
           { path: 'log', element: <LogHub /> },
