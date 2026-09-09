@@ -1,8 +1,8 @@
 import { LogTiles } from './OperatorHome'
 import './operator.css'
 
-// The "Log" tab for an operator session — the same four capture shortcuts
-// shown on the operator home, as their own destination.
+// The "Log" tab for an operator session — the four capture shortcuts, as
+// their own destination (Today stays focused on the task list).
 export function LogHub() {
   return (
     <div className="op-wrap">

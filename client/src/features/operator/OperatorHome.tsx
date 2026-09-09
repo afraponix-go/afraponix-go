@@ -7,7 +7,8 @@ import './operator.css'
 // The landing screen for an operator session (a real operator-level share, or
 // an owner/admin previewing "View as operator"). Scan leads; "Today" is a task
 // list once operating-programme tasks exist (Operator Access proposal, Phase 3
-// — not built yet), so it's an honest empty state for now, not fake data.
+// — not built yet), so it's an honest empty state for now, not fake data. Log
+// has its own tab (LogHub) — it doesn't repeat here too.
 export function OperatorHome() {
   const { activeSystem } = useSystems()
 
@@ -23,11 +24,6 @@ export function OperatorHome() {
         <div className="op-section-h"><h2 className="section-title">Today</h2></div>
         {activeSystem && <p className="op-hint">{activeSystem.system_name}</p>}
         <div className="op-today-empty">No tasks assigned yet — task lists are coming soon.</div>
-      </div>
-
-      <div className="op-section">
-        <div className="op-section-h"><h2 className="section-title">Log</h2></div>
-        <LogTiles />
       </div>
     </div>
   )

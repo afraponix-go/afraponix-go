@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthContext'
 import { useSystems } from '../features/systems/SystemContext'
 import { AddSystemModal } from '../features/systems/AddSystemModal'
@@ -40,6 +40,7 @@ const OPERATOR_TABS = [
 export function AppShell() {
   const { user, signOut } = useAuth()
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const { systems, farms, activeFarm, activeFarmId, setActiveFarmId } = useSystems()
   const { isOperatorView, canToggle, viewAsOperator, setViewAsOperator } = useOperatorMode()
   const [showAdd, setShowAdd] = useState(false)
@@ -153,9 +154,19 @@ export function AppShell() {
                       what the account can actually do. Never offered to a real
                       operator account (canToggle is false for one). */}
                   {canToggle && (
-                    <button className="account-menu-item" role="menuitem" onClick={() => setViewAsOperator(!viewAsOperator)}>
+                    <button
+                      className="account-menu-item"
+                      role="menuitem"
+                      onClick={() => {
+                        setMenuOpen(false)
+                        setViewAsOperator(!viewAsOperator)
+                        // Land back on Today/Dashboard — whatever route was open
+                        // (e.g. Settings) may no longer make sense in the new mode.
+                        navigate('/')
+                      }}
+                    >
                       <span className="ami-icon" aria-hidden>{viewAsOperator ? '↩' : '🪪'}</span>
-                      {viewAsOperator ? 'Exit operator view' : 'View as operator'}
+                      {viewAsOperator ? 'Switch back' : 'Switch to operator'}
                     </button>
                   )}
                   <div className="menu-sep" />
