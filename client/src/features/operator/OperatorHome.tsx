@@ -30,29 +30,38 @@ export function OperatorHome() {
 }
 
 // Shared with LogHub so the home screen and the dedicated Log tab show the
-// identical four shortcuts — reused, not two components to keep in sync.
+// identical shortcuts — reused, not two components to keep in sync. Each
+// tile is either a direct, single-purpose form (Feeding, Water, Planting) or,
+// where the action needs an existing tank/batch first (weighing, mortality,
+// tank harvest, plant harvest), the manual picker pre-scoped to the right
+// kind — the same minimal action sheet a scan lands on, not an admin page.
 export function LogTiles() {
   return (
     <div className="op-tiles">
-      <Link to="/data/fish" className="op-tile">
+      <Link to="/log/feeding" className="op-tile">
         <span className="op-tile-icon" aria-hidden>🐟</span>
         <span className="op-tile-label">Feeding</span>
         <span className="op-tile-sub">Record what was fed</span>
       </Link>
-      <Link to="/data" className="op-tile">
+      <Link to="/pick?kind=fish" className="op-tile">
+        <span className="op-tile-icon" aria-hidden>⚖️</span>
+        <span className="op-tile-label">Fish tank</span>
+        <span className="op-tile-sub">Weigh, mortality, harvest</span>
+      </Link>
+      <Link to="/log/water" className="op-tile">
         <span className="op-tile-icon" aria-hidden>💧</span>
         <span className="op-tile-label">Water</span>
         <span className="op-tile-sub">Log a reading</span>
       </Link>
-      <Link to="/plants/plantings" className="op-tile">
+      <Link to="/log/planting" className="op-tile">
         <span className="op-tile-icon" aria-hidden>🌱</span>
         <span className="op-tile-label">Planting</span>
         <span className="op-tile-sub">Record a new planting</span>
       </Link>
-      <Link to="/plants/harvest" className="op-tile">
+      <Link to="/pick?kind=bed" className="op-tile">
         <span className="op-tile-icon" aria-hidden>🌾</span>
         <span className="op-tile-label">Harvest</span>
-        <span className="op-tile-sub">Log a harvest</span>
+        <span className="op-tile-sub">Log a plant harvest</span>
       </Link>
     </div>
   )

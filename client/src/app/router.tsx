@@ -30,6 +30,9 @@ import { BatchTankPicker } from '../features/picker/BatchTankPicker'
 import { TankLabels } from '../features/fish/TankLabels'
 import { OperatorHome } from '../features/operator/OperatorHome'
 import { LogHub } from '../features/operator/LogHub'
+import { FeedingCapture } from '../features/operator/capture/FeedingCapture'
+import { WaterCapture } from '../features/operator/capture/WaterCapture'
+import { PlantingCapture } from '../features/operator/capture/PlantingCapture'
 import { useOperatorMode } from '../features/operator/operatorMode'
 import { HarvestView } from '../features/plants/HarvestView'
 import { BedsAllocation } from '../features/plants/BedsAllocation'
@@ -190,6 +193,11 @@ export const router = createBrowserRouter([
           { path: 'b', element: <BatchScan /> },
           { path: 't', element: <TankScan /> },
           { path: 'log', element: <LogHub /> },
+          // Simple, single-purpose capture forms — no admin sub-tabs, no
+          // history tables — for the operator Log tiles above.
+          { path: 'log/feeding', element: <FeedingCapture /> },
+          { path: 'log/water', element: <WaterCapture /> },
+          { path: 'log/planting', element: <PlantingCapture /> },
           // Keep old /spray links working (bookmarks, back button).
           { path: 'spray', element: <Navigate to="/operations/programmes" replace /> },
           { path: 'spray/calendar', element: <Navigate to="/operations" replace /> },
