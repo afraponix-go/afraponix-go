@@ -254,10 +254,7 @@ export function BatchTankPicker() {
                   {it.kind === 'fish' ? <FishIcon /> : it.kind === 'seedling' ? <SeedIcon /> : <PlantIcon />}
                 </span>
                 <span className="pick-text">
-                  <span className="pick-label">
-                    {it.name}
-                    {it.code && <span className="pick-code">{it.code}</span>}
-                  </span>
+                  <span className="pick-label">{it.name}</span>
                   <span className="pick-sub">
                     {it.groupLabel} · {it.sub}
                     {it.ageDays != null ? ` · ${it.ageDays} d` : ''}

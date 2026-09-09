@@ -17,10 +17,6 @@
 .pick-icon { display: flex; flex: none; width: 20px; height: 20px; color: var(--accent, #334e9d); }
 .pick-icon svg { width: 100%; height: 100%; }
 .pick-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.pick-label { display: flex; flex-direction: column; gap: 1px; font-weight: 700; font-size: 14.5px; }
-.pick-code {
-  font-weight: 500; font-size: 11px; font-family: 'SFMono-Regular', Consolas, Menlo, monospace;
-  color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
+.pick-label { font-weight: 700; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pick-sub { font-size: 12.5px; color: var(--ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pick-chevron { color: var(--ink-faint); flex: none; font-size: 18px; }
