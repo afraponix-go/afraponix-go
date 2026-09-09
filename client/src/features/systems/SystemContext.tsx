@@ -80,7 +80,11 @@ export function SystemProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!authed || isLoading) return
     if (activeFarmId != null && farms.some((f) => f.id === activeFarmId)) return
-    const next = farms[0]?.id ?? null
+    // Prefer a farm that actually has systems (e.g. one shared with the user)
+    // over an empty own farm — otherwise a freshly-registered operator lands
+    // on their empty auto-created farm's owner welcome screen instead of the
+    // system they were actually invited to.
+    const next = farms.find((f) => f.systemCount > 0)?.id ?? farms[0]?.id ?? null
     setActiveFarmIdState(next)
     if (next) localStorage.setItem(ACTIVE_FARM_KEY, next)
     else localStorage.removeItem(ACTIVE_FARM_KEY)

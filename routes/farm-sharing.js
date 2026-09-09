@@ -5,7 +5,7 @@ const { authenticateToken } = require('../middleware/auth');
 
 router.use(authenticateToken);
 
-const VALID = ['view', 'collaborator', 'admin'];
+const VALID = ['view', 'operator', 'collaborator', 'admin'];
 
 // Confirm the caller owns the farm (only owners manage sharing).
 async function ownsFarm(pool, farmId, userId) {

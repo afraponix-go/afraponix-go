@@ -7,9 +7,10 @@ import { AddSystemModal } from '../features/systems/AddSystemModal'
 import { NewFarmModal } from '../features/systems/NewFarmModal'
 import { OnboardingTour, startTour } from '../features/onboarding/OnboardingTour'
 import { ADD_SYSTEM_EVENT } from '../features/onboarding/FirstRunWelcome'
-import { DashboardIcon, ScanIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SprayIcon, SettingsIcon } from './icons'
+import { DashboardIcon, ScanIcon, TodayIcon, CalculatorIcon, DataCaptureIcon, FishIcon, PlantIcon, SprayIcon, SettingsIcon } from './icons'
 import { Brand } from '../components/Brand'
 import { ThemeToggle } from './ThemeToggle'
+import { useOperatorMode } from '../features/operator/operatorMode'
 import './shell.css'
 
 // Bottom tab bar. The first four are the daily-use sections shown on mobile;
@@ -28,10 +29,19 @@ const TABS = [
 const PRIMARY_COUNT = 4
 const OVERFLOW = TABS.slice(PRIMARY_COUNT)
 
+// A restricted operator session (real or previewed): just the three things an
+// operator actually does — nothing collapses into "More".
+const OPERATOR_TABS = [
+  { to: '/scan', label: 'Scan', Icon: ScanIcon },
+  { to: '/', label: 'Today', Icon: TodayIcon, end: true },
+  { to: '/log', label: 'Log', Icon: DataCaptureIcon },
+]
+
 export function AppShell() {
   const { user, signOut } = useAuth()
   const qc = useQueryClient()
   const { systems, farms, activeFarm, activeFarmId, setActiveFarmId } = useSystems()
+  const { isOperatorView, canToggle, viewAsOperator, setViewAsOperator } = useOperatorMode()
   const [showAdd, setShowAdd] = useState(false)
   const [addFarmId, setAddFarmId] = useState<string | undefined>(undefined)
   const [showNewFarm, setShowNewFarm] = useState(false)
@@ -57,7 +67,10 @@ export function AppShell() {
     return () => window.removeEventListener(ADD_SYSTEM_EVENT, onAdd)
   }, [])
 
-  const moreActive = OVERFLOW.some((t) => pathname === t.to || pathname.startsWith(t.to + '/'))
+  const tabs = isOperatorView ? OPERATOR_TABS : TABS
+  const primaryCount = isOperatorView ? tabs.length : PRIMARY_COUNT
+  const overflow = isOperatorView ? [] : OVERFLOW
+  const moreActive = overflow.some((t) => pathname === t.to || pathname.startsWith(t.to + '/'))
 
   return (
     <div className="shell">
@@ -67,7 +80,7 @@ export function AppShell() {
         </Link>
         <div className="account">
           {isDemoFarm && <span className="demo-badge" title="You're viewing the sample farm — not your real data">Demo</span>}
-          {farms.length > 1 && (
+          {!isOperatorView && farms.length > 1 && (
             <label className="farm-switch" title="Active farm">
               <span className="farm-ico" aria-hidden>⌂</span>
               <select className="farm-select" value={activeFarmId ?? ''} onChange={(e) => setActiveFarmId(e.target.value)} aria-label="Active farm">
@@ -77,29 +90,32 @@ export function AppShell() {
               </select>
             </label>
           )}
-          {/* Add menu — a system in this farm, or a whole new farm */}
-          <div className="add-menu-wrap">
-            <button className="sys-add" data-tour="add" onClick={() => setAddOpen((v) => !v)} title="Add" aria-haspopup="menu" aria-expanded={addOpen} aria-label="Add system or farm">
-              {systems.length > 0 ? '+' : '+ Add system'}
-            </button>
-            {addOpen && (
-              <>
-                <div className="popover-backdrop" onClick={() => setAddOpen(false)} />
-                <div className="add-menu" role="menu">
-                  {canAddToFarm && (
-                    <button className="add-menu-item" role="menuitem" onClick={() => { setAddOpen(false); setAddFarmId(undefined); setShowAdd(true) }}>
-                      <span className="add-menu-title">Add system</span>
-                      <span className="add-menu-sub">to {activeFarm?.name ?? 'this farm'}</span>
+          {/* Add menu — a system in this farm, or a whole new farm. Not for an
+              operator session: adding systems/farms is owner/admin territory. */}
+          {!isOperatorView && (
+            <div className="add-menu-wrap">
+              <button className="sys-add" data-tour="add" onClick={() => setAddOpen((v) => !v)} title="Add" aria-haspopup="menu" aria-expanded={addOpen} aria-label="Add system or farm">
+                {systems.length > 0 ? '+' : '+ Add system'}
+              </button>
+              {addOpen && (
+                <>
+                  <div className="popover-backdrop" onClick={() => setAddOpen(false)} />
+                  <div className="add-menu" role="menu">
+                    {canAddToFarm && (
+                      <button className="add-menu-item" role="menuitem" onClick={() => { setAddOpen(false); setAddFarmId(undefined); setShowAdd(true) }}>
+                        <span className="add-menu-title">Add system</span>
+                        <span className="add-menu-sub">to {activeFarm?.name ?? 'this farm'}</span>
+                      </button>
+                    )}
+                    <button className="add-menu-item" role="menuitem" onClick={() => { setAddOpen(false); setShowNewFarm(true) }}>
+                      <span className="add-menu-title">New farm</span>
+                      <span className="add-menu-sub">a separate farm with its own systems</span>
                     </button>
-                  )}
-                  <button className="add-menu-item" role="menuitem" onClick={() => { setAddOpen(false); setShowNewFarm(true) }}>
-                    <span className="add-menu-title">New farm</span>
-                    <span className="add-menu-sub">a separate farm with its own systems</span>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           {/* User menu — identity, settings, theme, log out */}
           <div className="user-menu-wrap">
@@ -120,13 +136,28 @@ export function AppShell() {
                     </span>
                   </div>
                   <div className="menu-sep" />
-                  <NavLink to="/settings" className="account-menu-item" role="menuitem">
-                    <SettingsIcon className="ami-icon" /> Settings
-                  </NavLink>
-                  <button className="account-menu-item" role="menuitem" onClick={() => { setMenuOpen(false); startTour() }}>
-                    <span className="ami-icon" aria-hidden>🧭</span> Take a tour
-                  </button>
+                  {/* Settings holds sharing, farms and billing — out of bounds
+                      for a restricted operator session. */}
+                  {!isOperatorView && (
+                    <NavLink to="/settings" className="account-menu-item" role="menuitem">
+                      <SettingsIcon className="ami-icon" /> Settings
+                    </NavLink>
+                  )}
+                  {!isOperatorView && (
+                    <button className="account-menu-item" role="menuitem" onClick={() => { setMenuOpen(false); startTour() }}>
+                      <span className="ami-icon" aria-hidden>🧭</span> Take a tour
+                    </button>
+                  )}
                   <div className="account-menu-item as-toggle"><ThemeToggle /></div>
+                  {/* A client-side view switch only — it changes nothing about
+                      what the account can actually do. Never offered to a real
+                      operator account (canToggle is false for one). */}
+                  {canToggle && (
+                    <button className="account-menu-item" role="menuitem" onClick={() => setViewAsOperator(!viewAsOperator)}>
+                      <span className="ami-icon" aria-hidden>{viewAsOperator ? '↩' : '🪪'}</span>
+                      {viewAsOperator ? 'Exit operator view' : 'View as operator'}
+                    </button>
+                  )}
                   <div className="menu-sep" />
                   <button className="account-menu-item danger" onClick={signOut}>Log out</button>
                 </div>
@@ -141,22 +172,24 @@ export function AppShell() {
       </main>
 
       <nav className="bottomnav" aria-label="Primary">
-        {TABS.map(({ to, label, Icon, end }, i) => (
-          <NavLink key={to} to={to} end={end} data-tour={`nav:${to}`} className={({ isActive }) => `tab${isActive ? ' active' : ''}${i >= PRIMARY_COUNT ? ' tab-overflow' : ''}`}>
+        {tabs.map(({ to, label, Icon, end }, i) => (
+          <NavLink key={to} to={to} end={end} data-tour={`nav:${to}`} className={({ isActive }) => `tab${isActive ? ' active' : ''}${i >= primaryCount ? ' tab-overflow' : ''}`}>
             <Icon className="tab-icon" />
             <span className="tab-label">{label}</span>
           </NavLink>
         ))}
-        <button type="button" className={`tab more-toggle${moreActive ? ' active' : ''}`} onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen} aria-label="More sections">
-          <span className="tab-icon more-dots" aria-hidden>⋯</span>
-          <span className="tab-label">More</span>
-        </button>
+        {overflow.length > 0 && (
+          <button type="button" className={`tab more-toggle${moreActive ? ' active' : ''}`} onClick={() => setMoreOpen((v) => !v)} aria-expanded={moreOpen} aria-label="More sections">
+            <span className="tab-icon more-dots" aria-hidden>⋯</span>
+            <span className="tab-label">More</span>
+          </button>
+        )}
 
-        {moreOpen && (
+        {moreOpen && overflow.length > 0 && (
           <>
             <div className="popover-backdrop" onClick={() => setMoreOpen(false)} />
             <div className="more-sheet" role="menu">
-              {OVERFLOW.map(({ to, label, Icon }) => (
+              {overflow.map(({ to, label, Icon }) => (
                 <NavLink key={to} to={to} className={({ isActive }) => `more-item${isActive ? ' active' : ''}`}>
                   <Icon className="more-item-icon" />
                   <span>{label}</span>

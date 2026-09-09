@@ -1,0 +1,40 @@
+/* Operator home + log hub — mobile-first, task-focused. */
+.op-wrap { max-width: 520px; margin: 0 auto; }
+.op-scan {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 18px; border: none; border-radius: 16px;
+  background: var(--accent, #334e9d); color: #fff; font: 700 16px/1 inherit;
+  text-decoration: none; margin-bottom: 24px; box-shadow: var(--sh-sm, 0 1px 2px rgba(15,23,42,.08));
+}
+.op-scan svg { flex: none; }
+
+.op-section { margin-bottom: 28px; }
+.op-section-h { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+.op-section-h h2 { margin: 0; }
+.op-hint { font-size: 13px; color: var(--ink-faint); margin: 0 0 14px; }
+
+.op-today-empty {
+  border: 1px dashed var(--line); border-radius: 14px; padding: 22px; text-align: center;
+  color: var(--ink-faint); font-size: 14px; background: var(--surface-2);
+}
+
+.op-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.op-tile {
+  display: flex; flex-direction: column; gap: 6px; padding: 20px 16px; border-radius: 14px;
+  border: 1px solid var(--line); background: var(--surface); text-decoration: none; color: var(--ink);
+  box-shadow: var(--sh-sm, 0 1px 2px rgba(15,23,42,.06));
+}
+.op-tile .op-tile-icon { font-size: 22px; line-height: 1; }
+.op-tile .op-tile-label { font-weight: 700; font-size: 14.5px; }
+.op-tile .op-tile-sub { font-size: 12px; color: var(--ink-faint); }
+
+.op-log-list { display: flex; flex-direction: column; gap: 10px; }
+.op-log-row {
+  display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 14px;
+  border: 1px solid var(--line); background: var(--surface); text-decoration: none; color: var(--ink);
+}
+.op-log-row .op-tile-icon { font-size: 22px; }
+.op-log-row .op-log-text { flex: 1; min-width: 0; }
+.op-log-row .op-tile-label { font-weight: 700; font-size: 15px; display: block; }
+.op-log-row .op-tile-sub { font-size: 12.5px; color: var(--ink-faint); }
+.op-log-row .op-chevron { color: var(--ink-faint); flex: none; }

@@ -27,6 +27,9 @@ import { BatchScan } from '../features/plants/BatchScan'
 import { ScanPage } from '../features/plants/ScanPage'
 import { TankScan } from '../features/fish/TankScan'
 import { TankLabels } from '../features/fish/TankLabels'
+import { OperatorHome } from '../features/operator/OperatorHome'
+import { LogHub } from '../features/operator/LogHub'
+import { useOperatorMode } from '../features/operator/operatorMode'
 import { HarvestView } from '../features/plants/HarvestView'
 import { BedsAllocation } from '../features/plants/BedsAllocation'
 import { Crops } from '../features/plants/CropsPage'
@@ -54,6 +57,15 @@ const DASHBOARD_TABS = [
   { to: '/charts', label: 'Charts' },
   { to: '/layout', label: 'Layout' },
 ]
+
+// The "/" route: the farm dashboard for everyone else, or the operator home
+// (no sub-tabs — Charts/Layout aren't part of an operator's job) for a real
+// operator share or an owner/admin previewing "View as operator".
+function HomeGate() {
+  const { isOperatorView } = useOperatorMode()
+  if (isOperatorView) return <OperatorHome />
+  return <SubTabLayout items={DASHBOARD_TABS} farmAware />
+}
 const DATA_TABS = [
   { to: '/data', label: 'Water Quality', end: true },
   { to: '/data/fish', label: 'Fish' },
@@ -103,7 +115,7 @@ export const router = createBrowserRouter([
           // Dashboard (Overview · Charts)
           {
             path: '/',
-            element: <SubTabLayout items={DASHBOARD_TABS} farmAware />,
+            element: <HomeGate />,
             children: [
               { index: true, element: <DashboardHome /> },
               // Old separate Overview tab — keep the link working.
@@ -175,6 +187,7 @@ export const router = createBrowserRouter([
           { path: 'scan', element: <ScanPage /> },
           { path: 'b', element: <BatchScan /> },
           { path: 't', element: <TankScan /> },
+          { path: 'log', element: <LogHub /> },
           // Keep old /spray links working (bookmarks, back button).
           { path: 'spray', element: <Navigate to="/operations/programmes" replace /> },
           { path: 'spray/calendar', element: <Navigate to="/operations" replace /> },

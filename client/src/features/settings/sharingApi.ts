@@ -3,6 +3,7 @@ import { api } from '../../lib/apiClient'
 
 export const PERMISSIONS = [
   { value: 'view', label: 'Viewer (read-only)' },
+  { value: 'operator', label: 'Operator (log readings & scan labels only)' },
   { value: 'collaborator', label: 'Collaborator (can edit data)' },
   { value: 'admin', label: 'Admin (full access)' },
 ] as const

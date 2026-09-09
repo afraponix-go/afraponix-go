@@ -227,7 +227,9 @@ can safely ignore this email.
 
 // Notify someone (with no account yet) that a system was shared with them, and
 // invite them to sign up with the same email so the share is waiting for them.
-const sendSystemShareInvite = async (email, systemName, inviterName) => {
+// permissionLevel tailors the copy — an 'operator' invite is a different job
+// (log readings, scan a label) than a full collaborator/admin invite.
+const sendSystemShareInvite = async (email, systemName, inviterName, permissionLevel) => {
     try {
         let config;
         try {
@@ -241,11 +243,20 @@ const sendSystemShareInvite = async (email, systemName, inviterName) => {
         const signupLink = `${baseUrl}/register?email=${encodeURIComponent(email)}`;
         const inviter = escapeHtml(inviterName || 'An Afraponix Go user');
         const sys = escapeHtml(systemName || 'an aquaponics system');
+        const isOperator = permissionLevel === 'operator';
+
+        const intro = isOperator
+            ? `${inviter} has added you as an <b>operator</b> on <b>${sys}</b> on Afraponix Go — scan a batch or tank label and log readings, feeding, plantings and harvests. Create a free account with this email address to get started.`
+            : `${inviter} has shared <b>${sys}</b> with you on Afraponix Go. Create a free account with this email address to view and manage it.`;
+        const heading = isOperator ? 'You’ve been added as an operator' : 'You’ve been invited to a system';
+        const subject = isOperator
+            ? `${inviterName || 'Someone'} added you as an operator — Afraponix Go`
+            : `${inviterName || 'Someone'} shared a system with you — Afraponix Go`;
 
         const htmlContent = renderBrandEmail({
-            preheader: `${inviter} shared ${sys} with you on Afraponix Go.`,
-            heading: 'You’ve been invited to a system',
-            intro: `${inviter} has shared <b>${sys}</b> with you on Afraponix Go. Create a free account with this email address to view and manage it.`,
+            preheader: isOperator ? `${inviter} added you as an operator on ${sys} on Afraponix Go.` : `${inviter} shared ${sys} with you on Afraponix Go.`,
+            heading,
+            intro,
             buttonLabel: 'Create your account',
             buttonUrl: signupLink,
             altLabel: 'Or paste this link into your browser:',
@@ -256,9 +267,20 @@ const sendSystemShareInvite = async (email, systemName, inviterName) => {
         const mailOptions = {
             from: `"${config.from.name}" <${config.from.address}>`,
             to: email,
-            subject: `${inviterName || 'Someone'} shared a system with you — Afraponix Go`,
+            subject,
             html: htmlContent,
-            text: `You've been invited to Afraponix Go
+            text: isOperator
+                ? `You've been added as an operator on Afraponix Go
+
+${inviterName || 'An Afraponix Go user'} has added you as an operator on "${systemName || 'a system'}" — scan a batch or tank label and log readings, feeding, plantings and harvests.
+
+Create a free account with this email address to get started:
+${signupLink}
+
+Sign up with this exact email so it's waiting for you when you log in.
+
+— Afraponix Go`
+                : `You've been invited to Afraponix Go
 
 ${inviterName || 'An Afraponix Go user'} has shared "${systemName || 'a system'}" with you.
 

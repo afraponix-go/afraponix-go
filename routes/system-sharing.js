@@ -107,7 +107,7 @@ router.post('/invite', async (req, res) => {
     }
 
     // Validate permission level
-    const validPermissions = ['view', 'collaborator', 'admin'];
+    const validPermissions = ['view', 'operator', 'collaborator', 'admin'];
     if (!validPermissions.includes(permission_level)) {
         return res.status(400).json({ error: 'Invalid permission level' });
     }
@@ -150,7 +150,7 @@ router.post('/invite', async (req, res) => {
             const [ownerRows] = await pool.execute('SELECT first_name, username FROM users WHERE id = ?', [req.user.userId]);
             const inviterName = ownerRows[0]?.first_name || ownerRows[0]?.username || 'An Afraponix Go user';
             const { sendSystemShareInvite } = require('../utils/emailService');
-            sendSystemShareInvite(email, system.system_name, inviterName).catch((e) => console.error('Share invite email error:', e.message));
+            sendSystemShareInvite(email, system.system_name, inviterName, permission_level).catch((e) => console.error('Share invite email error:', e.message));
             return res.json({ success: true, invited: true, message: `Invitation sent to ${email} — they'll get an email to create an account.` });
         }
 
@@ -195,7 +195,7 @@ router.put('/permission', async (req, res) => {
     }
 
     // Validate permission level
-    const validPermissions = ['view', 'collaborator', 'admin'];
+    const validPermissions = ['view', 'operator', 'collaborator', 'admin'];
     if (!validPermissions.includes(permission_level)) {
         return res.status(400).json({ error: 'Invalid permission level' });
     }

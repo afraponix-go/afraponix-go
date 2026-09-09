@@ -25,6 +25,14 @@ export const ScanIcon = svg(
   </>,
 )
 
+export const TodayIcon = svg(
+  <>
+    <path d="M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" />
+    <path d="M8 3v3M16 3v3M4 9h16" />
+    <path d="m8.5 13 2 2 4-4" />
+  </>,
+)
+
 export const CalculatorIcon = svg(
   <>
     <rect x="5" y="2.5" width="14" height="19" rx="2" />
