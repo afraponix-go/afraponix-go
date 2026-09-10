@@ -6,6 +6,27 @@ const { authenticateToken } = require('../middleware/auth');
 // All routes require authentication
 router.use(authenticateToken);
 
+// Confirm the caller can manage this system's sharing — the owner, or anyone
+// holding an accepted 'admin' share on it (admins can see/manage sharing too).
+async function canManageSystemSharing(pool, systemId, userId) {
+    const [systemRows] = await pool.execute('SELECT * FROM systems WHERE id = ?', [systemId]);
+    const system = systemRows[0];
+    if (!system) return null;
+    if (system.user_id === userId) return system;
+    const [shareRows] = await pool.execute(
+        "SELECT id FROM system_shares WHERE system_id = ? AND shared_with_id = ? AND status = 'accepted' AND permission_level = 'admin'",
+        [systemId, userId]
+    );
+    return shareRows[0] ? system : null;
+}
+
+// Resolve the system a share row belongs to, for permission/access routes
+// that only carry a share_id.
+async function systemIdForShare(pool, shareId) {
+    const [rows] = await pool.execute('SELECT system_id FROM system_shares WHERE id = ?', [shareId]);
+    return rows[0]?.system_id || null;
+}
+
 // Get shared users for a system
 router.get('/users', async (req, res) => {
     const { system_id } = req.query;
@@ -17,15 +38,9 @@ router.get('/users', async (req, res) => {
 
     try {
         const pool = getDatabase();
-        
-        // Check if user owns the system
-        const [systemRows] = await pool.execute(
-            'SELECT * FROM systems WHERE id = ? AND user_id = ?',
-            [system_id, req.user.userId]
-        );
-        const system = systemRows[0];
 
-        if (!system) {            return res.status(403).json({ error: 'Not authorized to view this system' });
+        if (!(await canManageSystemSharing(pool, system_id, req.user.userId))) {
+            return res.status(403).json({ error: 'Not authorized to view this system' });
         }
 
         // Get shared users with their details
@@ -62,15 +77,9 @@ router.get('/invitations', async (req, res) => {
 
     try {
         const pool = getDatabase();
-        
-        // Check if user owns the system
-        const [systemRows] = await pool.execute(
-            'SELECT * FROM systems WHERE id = ? AND user_id = ?',
-            [system_id, req.user.userId]
-        );
-        const system = systemRows[0];
 
-        if (!system) {            return res.status(403).json({ error: 'Not authorized to view this system' });
+        if (!(await canManageSystemSharing(pool, system_id, req.user.userId))) {
+            return res.status(403).json({ error: 'Not authorized to view this system' });
         }
 
         // Get pending invitations
@@ -114,14 +123,8 @@ router.post('/invite', async (req, res) => {
 
     try {
         const pool = getDatabase();
-        
-        // Check if user owns the system
-        const [systemRows] = await pool.execute(
-            'SELECT * FROM systems WHERE id = ? AND user_id = ?',
-            [system_id, req.user.userId]
-        );
-        const system = systemRows[0];
 
+        const system = await canManageSystemSharing(pool, system_id, req.user.userId);
         if (!system) {            return res.status(403).json({ error: 'Not authorized to share this system' });
         }
 
@@ -202,17 +205,10 @@ router.put('/permission', async (req, res) => {
 
     try {
         const pool = getDatabase();
-        
-        // Check if user owns the system
-        const [shareRows] = await pool.execute(`
-            SELECT ss.*, s.user_id as system_owner_id
-            FROM system_shares ss
-            JOIN systems s ON ss.system_id = s.id
-            WHERE ss.id = ?
-        `, [share_id]);
-        const share = shareRows[0];
 
-        if (!share || share.system_owner_id !== req.user.userId) {            return res.status(403).json({ error: 'Not authorized to modify this share' });
+        const systemId = await systemIdForShare(pool, share_id);
+        if (!systemId || !(await canManageSystemSharing(pool, systemId, req.user.userId))) {
+            return res.status(403).json({ error: 'Not authorized to modify this share' });
         }
 
         // Update permission level
@@ -234,17 +230,10 @@ router.delete('/access/:share_id', async (req, res) => {
 
     try {
         const pool = getDatabase();
-        
-        // Check if user owns the system
-        const [shareRows] = await pool.execute(`
-            SELECT ss.*, s.user_id as system_owner_id
-            FROM system_shares ss
-            JOIN systems s ON ss.system_id = s.id
-            WHERE ss.id = ?
-        `, [share_id]);
-        const share = shareRows[0];
 
-        if (!share || share.system_owner_id !== req.user.userId) {            return res.status(403).json({ error: 'Not authorized to remove this access' });
+        const systemId = await systemIdForShare(pool, share_id);
+        if (!systemId || !(await canManageSystemSharing(pool, systemId, req.user.userId))) {
+            return res.status(403).json({ error: 'Not authorized to remove this access' });
         }
 
         // Remove access

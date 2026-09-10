@@ -35,6 +35,11 @@ export function canWriteSystem(s: System | null | undefined): boolean {
   return isOwnedSystem(s) || s?.shared_permission === 'collaborator' || s?.shared_permission === 'admin'
 }
 
+// Whether the current user can view/manage who this system is shared with.
+export function canManageSystemSharing(s: System | null | undefined): boolean {
+  return isOwnedSystem(s) || s?.shared_permission === 'admin'
+}
+
 // The broader set that also admits an 'operator' share — mirrors the server's
 // CAPTURE_LEVELS (utils/systemAccess.js). Use this, not canWriteSystem, to
 // decide whether to offer a system as a capture/scan target.
