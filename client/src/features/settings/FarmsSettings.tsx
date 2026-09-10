@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
-import { fetchFarms, createFarm, updateFarm, deleteFarm, fetchFarmShares, inviteToFarm, updateFarmSharePermission, removeFarmShare, type Farm } from '../systems/farmApi'
+import { fetchFarms, createFarm, updateFarm, deleteFarm, fetchFarmShares, fetchFarmInvitations, inviteToFarm, updateFarmSharePermission, removeFarmShare, type Farm } from '../systems/farmApi'
 import { useSystems } from '../systems/SystemContext'
 import '../fish/fish.css'
 import '../plants/plants.css'
@@ -86,6 +86,7 @@ export function FarmsSettings() {
 
 const LEVELS = [
   { value: 'view', label: 'View — read only' },
+  { value: 'operator', label: 'Operator — log readings & scan labels only' },
   { value: 'collaborator', label: 'Collaborator — read & write data' },
   { value: 'admin', label: 'Admin — full data & config' },
 ]
@@ -95,12 +96,22 @@ function FarmShareModal({ farm, onClose }: { farm: Farm; onClose: () => void }) 
   const [email, setEmail] = useState('')
   const [level, setLevel] = useState('collaborator')
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const { data: shares = [], isLoading } = useQuery({ queryKey: ['farm-shares', farm.id], queryFn: () => fetchFarmShares(farm.id) })
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['farm-shares', farm.id] })
+  const { data: pending = [] } = useQuery({ queryKey: ['farm-shares', 'pending', farm.id], queryFn: () => fetchFarmInvitations(farm.id) })
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['farm-shares', farm.id] })
+    qc.invalidateQueries({ queryKey: ['farm-shares', 'pending', farm.id] })
+  }
 
   const invite = useMutation({
-    mutationFn: () => inviteToFarm(farm.id, email.trim(), level),
-    onSuccess: () => { setEmail(''); invalidate() },
+    mutationFn: () => inviteToFarm(farm.id, email, level),
+    onSuccess: (res) => {
+      setNotice(res?.message || `Invitation sent to ${email.trim()}.`)
+      setEmail('')
+      invalidate()
+      setTimeout(() => setNotice(null), 3000)
+    },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Could not share the farm.'),
   })
   const changeLevel = useMutation({ mutationFn: ({ id, lvl }: { id: number; lvl: string }) => updateFarmSharePermission(id, lvl), onSuccess: invalidate })
@@ -109,13 +120,15 @@ function FarmShareModal({ farm, onClose }: { farm: Farm; onClose: () => void }) 
   return (
     <Modal title={`Share ${farm.name}`} onClose={onClose}>
       <p style={{ marginTop: 0, color: 'var(--ink-faint)', fontSize: 13 }}>
-        Everyone you add gets access to <b>every system in this farm</b> — including any you add later. They must already have an Afraponix Go account.
+        Everyone you add gets access to <b>every system in this farm</b> — including any you add later. If they don’t have an
+        Afraponix Go account yet, they’ll get an email inviting them to create one, and the farm will be waiting when they sign in.
       </p>
-      <form className="mform" onSubmit={(e) => { e.preventDefault(); setError(null); if (!email.trim()) return setError('Enter an email address.'); invite.mutate() }}>
+      <form className="mform" onSubmit={(e) => { e.preventDefault(); setError(null); setNotice(null); if (!email.trim()) return setError('Enter an email address.'); invite.mutate() }}>
         {error && <div className="wq-error">{error}</div>}
+        {notice && <div className="wq-ok">{notice}</div>}
         <div className="field">
           <label htmlFor="share-email">Invite by email</label>
-          <input id="share-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" autoFocus />
+          <input id="share-email" type="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" autoFocus />
         </div>
         <div className="field">
           <label htmlFor="share-level">Permission</label>
@@ -150,6 +163,26 @@ function FarmShareModal({ farm, onClose }: { farm: Farm; onClose: () => void }) 
             </div>
           ))}
         </div>
+      )}
+
+      {pending.length > 0 && (
+        <>
+          <h3 className="section-title" style={{ fontSize: 14, marginTop: 18 }}>Pending invitations</h3>
+          <div className="op-list">
+            {pending.map((s) => (
+              <div key={s.id} className="op-item">
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{s.first_name || s.username || s.email}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--ink-faint)' }}>{s.email} · {s.permission_level}</div>
+                </div>
+                <span className="crop-card-actions">
+                  <span style={{ fontSize: 12, color: 'var(--ink-faint)' }}>{s.awaiting_signup ? 'Awaiting sign-up' : 'Pending'}</span>
+                  <button className="link-btn danger" onClick={() => remove.mutate(s.id)}>Cancel</button>
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </Modal>
   )

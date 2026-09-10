@@ -125,6 +125,7 @@ const STEPS = [
   { type: 'sql', file: 'database/migrations/2026-09-seedling-photos.sql', label: 'Batch photos: also key by seedling (nursery photos)' },
   { type: 'sql', file: 'database/migrations/2026-09-share-invite-by-email.sql', label: 'System shares: invite by email (no account yet)' },
   { type: 'sql', file: 'database/migrations/2026-09-operator-access.sql', label: 'Operator access Phase 0: recorded_by attribution columns' },
+  { type: 'sql', file: 'database/migrations/2026-09-farm-share-invite-by-email.sql', label: 'Farm shares: invite by email (no account yet)' },
 ];
 
 function dbConfig() {

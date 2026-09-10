@@ -76,19 +76,29 @@ export async function fetchFarmSummary(farmId: string): Promise<FarmSummary> {
 // --- Farm sharing (whole-farm collaborators) ---
 export type FarmShare = {
   id: number
-  permission_level: 'view' | 'collaborator' | 'admin'
+  permission_level: 'view' | 'operator' | 'collaborator' | 'admin'
   email: string
   username?: string | null
   first_name?: string | null
   last_name?: string | null
   created_at?: string
+  // Present only on /invitations rows — 1 for an email invite whose
+  // recipient hasn't signed up yet.
+  awaiting_signup?: boolean
 }
 export async function fetchFarmShares(farmId: string): Promise<FarmShare[]> {
   const data = await api<{ shares: FarmShare[] }>(`/farm-sharing/users?farm_id=${encodeURIComponent(farmId)}`)
   return data.shares ?? []
 }
+export async function fetchFarmInvitations(farmId: string): Promise<FarmShare[]> {
+  const data = await api<{ invitations: FarmShare[] }>(`/farm-sharing/invitations?farm_id=${encodeURIComponent(farmId)}`)
+  return (data.invitations ?? []).map((s) => ({ ...s, awaiting_signup: !!Number(s.awaiting_signup) }))
+}
 export function inviteToFarm(farmId: string, email: string, permission_level: string) {
-  return api('/farm-sharing/invite', { method: 'POST', body: { farm_id: farmId, email, permission_level } })
+  return api<{ success?: boolean; invited?: boolean; message?: string }>('/farm-sharing/invite', {
+    method: 'POST',
+    body: { farm_id: farmId, email: email.trim(), permission_level },
+  })
 }
 export function updateFarmSharePermission(shareId: number, permission_level: string) {
   return api('/farm-sharing/permission', { method: 'PUT', body: { share_id: shareId, permission_level } })

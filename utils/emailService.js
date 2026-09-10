@@ -225,11 +225,13 @@ can safely ignore this email.
     }
 };
 
-// Notify someone (with no account yet) that a system was shared with them, and
-// invite them to sign up with the same email so the share is waiting for them.
-// permissionLevel tailors the copy — an 'operator' invite is a different job
-// (log readings, scan a label) than a full collaborator/admin invite.
-const sendSystemShareInvite = async (email, systemName, inviterName, permissionLevel) => {
+// Notify someone (with no account yet) that a system or farm was shared with
+// them, and invite them to sign up with the same email so the share is
+// waiting for them. permissionLevel tailors the copy — an 'operator' invite
+// is a different job (log readings, scan a label) than a full collaborator/
+// admin invite. kind ('system' | 'farm') tailors the noun — a farm share
+// grants every system in it, not just the one named.
+const sendSystemShareInvite = async (email, systemName, inviterName, permissionLevel, kind = 'system') => {
     try {
         let config;
         try {
@@ -242,16 +244,17 @@ const sendSystemShareInvite = async (email, systemName, inviterName, permissionL
         const baseUrl = process.env.BASE_URL || 'https://go.afraponix.com';
         const signupLink = `${baseUrl}/register?email=${encodeURIComponent(email)}`;
         const inviter = escapeHtml(inviterName || 'An Afraponix Go user');
-        const sys = escapeHtml(systemName || 'an aquaponics system');
+        const sys = escapeHtml(systemName || (kind === 'farm' ? 'a farm' : 'an aquaponics system'));
         const isOperator = permissionLevel === 'operator';
+        const noun = kind === 'farm' ? 'farm' : 'system';
 
         const intro = isOperator
             ? `${inviter} has added you as an <b>operator</b> on <b>${sys}</b> on Afraponix Go — scan a batch or tank label and log readings, feeding, plantings and harvests. Create a free account with this email address to get started.`
-            : `${inviter} has shared <b>${sys}</b> with you on Afraponix Go. Create a free account with this email address to view and manage it.`;
-        const heading = isOperator ? 'You’ve been added as an operator' : 'You’ve been invited to a system';
+            : `${inviter} has shared <b>${sys}</b>${kind === 'farm' ? ' — and every system in it —' : ''} with you on Afraponix Go. Create a free account with this email address to view and manage it.`;
+        const heading = isOperator ? 'You’ve been added as an operator' : `You’ve been invited to a ${noun}`;
         const subject = isOperator
             ? `${inviterName || 'Someone'} added you as an operator — Afraponix Go`
-            : `${inviterName || 'Someone'} shared a system with you — Afraponix Go`;
+            : `${inviterName || 'Someone'} shared a ${noun} with you — Afraponix Go`;
 
         const htmlContent = renderBrandEmail({
             preheader: isOperator ? `${inviter} added you as an operator on ${sys} on Afraponix Go.` : `${inviter} shared ${sys} with you on Afraponix Go.`,
@@ -261,7 +264,7 @@ const sendSystemShareInvite = async (email, systemName, inviterName, permissionL
             buttonUrl: signupLink,
             altLabel: 'Or paste this link into your browser:',
             altUrl: signupLink,
-            note: 'Sign up with this exact email address so the shared system is waiting for you when you log in. If you weren’t expecting this, you can safely ignore it.',
+            note: `Sign up with this exact email address so the shared ${noun} is waiting for you when you log in. If you weren’t expecting this, you can safely ignore it.`,
         });
 
         const mailOptions = {
@@ -282,12 +285,12 @@ Sign up with this exact email so it's waiting for you when you log in.
 — Afraponix Go`
                 : `You've been invited to Afraponix Go
 
-${inviterName || 'An Afraponix Go user'} has shared "${systemName || 'a system'}" with you.
+${inviterName || 'An Afraponix Go user'} has shared "${systemName || `a ${noun}`}"${kind === 'farm' ? ' — and every system in it —' : ''} with you.
 
 Create a free account with this email address to access it:
 ${signupLink}
 
-Sign up with this exact email so the shared system is waiting for you when you log in.
+Sign up with this exact email so the shared ${noun} is waiting for you when you log in.
 
 — Afraponix Go`,
         };
