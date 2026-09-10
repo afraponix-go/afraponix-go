@@ -1,16 +1,19 @@
 import { Link } from 'react-router-dom'
-import { useSystems } from '../systems/SystemContext'
-import { ScanIcon, FishIcon, ScaleIcon, WaterDropIcon, SeedIcon, TransplantIcon, PlantIcon, HarvestIcon } from '../../app/icons'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCaptureSystem } from './useCaptureSystem'
+import { CaptureSystemSwitch } from './CaptureSystemSwitch'
+import { fetchOperatingDue, logOperatingTask, undoOperatingLog, type DueTask } from '../operating/api'
+import { ScanIcon, FishIcon, ScaleIcon, WaterDropIcon, SeedIcon, TransplantIcon, PlantIcon, HarvestIcon, CheckIcon, SkipIcon, UndoIcon } from '../../app/icons'
 import '../plants/scan.css'
 import './operator.css'
 
 // The landing screen for an operator session (a real operator-level share, or
-// an owner/admin previewing "View as operator"). Scan leads; "Today" is a task
-// list once operating-programme tasks exist (Operator Access proposal, Phase 3
-// — not built yet), so it's an honest empty state for now, not fake data. Log
-// has its own tab (LogHub) — it doesn't repeat here too.
+// an owner/admin previewing "View as operator"). Scan leads; Today is the
+// operating-programme task list (Operator Access proposal, Phase 3) — what's
+// scheduled for today on the active system, with one-tap done/skip. Log has
+// its own tab (LogHub) — it doesn't repeat here too.
 export function OperatorHome() {
-  const { activeSystem } = useSystems()
+  const { systems, systemId, setActiveId } = useCaptureSystem()
 
   return (
     <div className="op-wrap">
@@ -22,9 +25,61 @@ export function OperatorHome() {
 
       <div className="op-section">
         <div className="op-section-h"><h2 className="section-title">Today</h2></div>
-        {activeSystem && <p className="op-hint">{activeSystem.system_name}</p>}
-        <div className="op-today-empty">No tasks assigned yet — task lists are coming soon.</div>
+        <CaptureSystemSwitch systems={systems} systemId={systemId} onChange={setActiveId} />
+        {systemId ? <TodayTasks systemId={systemId} /> : <div className="op-today-empty">No system to show tasks for.</div>}
       </div>
+    </div>
+  )
+}
+
+function TodayTasks({ systemId }: { systemId: string }) {
+  const qc = useQueryClient()
+  const { data, isLoading } = useQuery({ queryKey: ['operating-due', systemId], queryFn: () => fetchOperatingDue(systemId) })
+  const due = data?.due ?? []
+
+  const refresh = () => qc.invalidateQueries({ queryKey: ['operating-due', systemId] })
+  const log = useMutation({
+    mutationFn: ({ itemId, status }: { itemId: number; status: 'done' | 'skipped' }) => logOperatingTask(systemId, itemId, status),
+    onSuccess: refresh,
+  })
+  const undo = useMutation({
+    mutationFn: (logId: number) => undoOperatingLog(logId),
+    onSuccess: refresh,
+  })
+
+  if (isLoading) return <div className="op-today-empty">Loading…</div>
+  if (due.length === 0) return <div className="op-today-empty">Nothing scheduled for today.</div>
+
+  return (
+    <div className="op-task-list">
+      {due.map((t) => <TaskRow key={t.item_id} task={t} busy={log.isPending || undo.isPending} onLog={(status) => log.mutate({ itemId: t.item_id, status })} onUndo={() => t.log_id != null && undo.mutate(t.log_id)} />)}
+    </div>
+  )
+}
+
+function TaskRow({ task, busy, onLog, onUndo }: { task: DueTask; busy: boolean; onLog: (status: 'done' | 'skipped') => void; onUndo: () => void }) {
+  return (
+    <div className={`op-task-row${task.status !== 'open' ? ` ${task.status}` : ''}`}>
+      <div className="op-task-main">
+        <span className="op-task-label">{task.label}</span>
+        <span className="op-task-sub">
+          {task.status === 'done' ? `Done${task.operator_name ? ` · ${task.operator_name}` : ''}` : task.status === 'skipped' ? `Skipped${task.operator_name ? ` · ${task.operator_name}` : ''}` : task.est_minutes != null ? `~${task.est_minutes} min` : task.programme_name}
+        </span>
+      </div>
+      {task.status === 'open' ? (
+        <div className="op-task-actions">
+          <button type="button" className="op-task-btn skip" disabled={busy} onClick={() => onLog('skipped')} aria-label="Skip">
+            <SkipIcon />
+          </button>
+          <button type="button" className="op-task-btn done" disabled={busy} onClick={() => onLog('done')} aria-label="Mark done">
+            <CheckIcon />
+          </button>
+        </div>
+      ) : (
+        <button type="button" className="op-task-undo" disabled={busy} onClick={onUndo}>
+          <UndoIcon /> Undo
+        </button>
+      )}
     </div>
   )
 }

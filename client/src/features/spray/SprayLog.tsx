@@ -6,6 +6,7 @@ import { fetchLog, deleteLog, rateLogEffectiveness, type LogEntry } from './api'
 import { RecordModal } from './RecordModal'
 import { fetchDosingLog, deleteDoseLog, nutrientShort, type DosingLogEntry } from '../dosing/api'
 import { RetestModal } from '../dosing/RetestModal'
+import { fetchOperatingLog, undoOperatingLog, type OperatingLogRow } from '../operating/api'
 import '../dosing/dosing.css'
 import './spray.css'
 
@@ -32,6 +33,13 @@ export function SprayLog() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['dosing-log'] }); setConfirmDelDose(null) },
   })
   const recoveryClass = (pct: number | null) => (pct == null ? 'pending' : pct >= 80 ? 'good' : pct >= 50 ? 'mid' : 'low')
+
+  const { data: opLog = [] } = useQuery({ queryKey: ['operating-log', activeId], queryFn: () => fetchOperatingLog(activeId as string), enabled: !!activeId })
+  const [confirmUndoOp, setConfirmUndoOp] = useState<OperatingLogRow | null>(null)
+  const undoOp = useMutation({
+    mutationFn: (l: OperatingLogRow) => undoOperatingLog(l.id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['operating-log'] }); qc.invalidateQueries({ queryKey: ['operating-due'] }); setConfirmUndoOp(null) },
+  })
 
   if (!activeId) return <div className="empty">Select a system to see the log.</div>
 
@@ -113,6 +121,39 @@ export function SprayLog() {
             </table>
           </div>
         </div>
+      )}
+
+      {opLog.length > 0 && (
+        <div style={{ marginTop: 28 }}>
+          <h2 className="section-title" style={{ margin: '0 0 4px', fontSize: 16 }}>Operating log</h2>
+          <p className="spray-lead">Tasks completed or skipped, and who did them.</p>
+          <div className="log-table-wrap">
+            <table className="log-table">
+              <thead><tr><th>Date</th><th>Task</th><th>Status</th><th>By</th><th></th></tr></thead>
+              <tbody>
+                {opLog.map((l) => (
+                  <tr key={l.id}>
+                    <td>{l.event_date}</td>
+                    <td><b>{l.label ?? '—'}</b>{l.notes && <div className="log-note">{l.notes}</div>}</td>
+                    <td>{l.status === 'done' ? 'Done' : 'Skipped'}</td>
+                    <td>{l.operator_name ?? '—'}</td>
+                    <td className="r"><button className="link-btn danger" onClick={() => setConfirmUndoOp(l)}>Undo</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {confirmUndoOp && (
+        <Modal title="Undo log entry" onClose={() => setConfirmUndoOp(null)}>
+          <p style={{ marginTop: 0, color: 'var(--ink-soft)' }}>Undo <b>{confirmUndoOp.label ?? 'this task'}</b> on {confirmUndoOp.event_date}? It goes back to not logged for that day.</p>
+          <div className="mform-actions">
+            <button type="button" className="ghost" onClick={() => setConfirmUndoOp(null)}>Cancel</button>
+            <button type="button" className="btn btn-danger" disabled={undoOp.isPending} onClick={() => undoOp.mutate(confirmUndoOp)}>{undoOp.isPending ? 'Undoing…' : 'Undo'}</button>
+          </div>
+        </Modal>
       )}
 
       {retest && <RetestModal entry={retest} onClose={() => setRetest(null)} />}

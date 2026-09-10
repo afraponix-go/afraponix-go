@@ -149,3 +149,19 @@ export const ExitIcon = svg(
     <line x1="18" y1="12" x2="8" y2="12" />
   </>,
 )
+
+export const CheckIcon = svg(<path d="m5 13 4 4L19 7" />)
+
+export const SkipIcon = svg(
+  <>
+    <path d="M6 5v14l10-7Z" />
+    <line x1="18" y1="5" x2="18" y2="19" />
+  </>,
+)
+
+export const UndoIcon = svg(
+  <>
+    <path d="M4 10h9a5 5 0 0 1 5 5v0a5 5 0 0 1-5 5H9" />
+    <path d="m4 10 5-5M4 10l5 5" />
+  </>,
+)

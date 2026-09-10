@@ -9,6 +9,8 @@ import { RecordModal, type RecordPrefill } from './RecordModal'
 import { DosingProgrammeModal } from '../dosing/DosingProgrammeModal'
 import { DosingRecordModal } from '../dosing/DosingRecordModal'
 import { fetchDosingProgrammes, deleteDosingProgramme, setDosingProgrammeStatus, nutrientShort, WEEKDAY_LABEL as DOSE_WEEKDAY_LABEL, type DosingProgramme } from '../dosing/api'
+import { OperatingProgrammeModal } from '../operating/OperatingProgrammeModal'
+import { fetchOperatingProgrammes, deleteOperatingProgramme, setOperatingProgrammeStatus, WEEKDAY_LABEL as OP_WEEKDAY_LABEL, type OperatingProgramme } from '../operating/api'
 import './spray.css'
 
 export function Programmes() {
@@ -48,6 +50,18 @@ export function Programmes() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['dosing-programmes'] }),
   })
 
+  const [operatingEdit, setOperatingEdit] = useState<{ programme?: OperatingProgramme } | null>(null)
+  const [confirmDelOperating, setConfirmDelOperating] = useState<OperatingProgramme | null>(null)
+  const { data: operatingProgrammes = [] } = useQuery({ queryKey: ['operating-programmes', activeId], queryFn: () => fetchOperatingProgrammes(activeId as string), enabled: !!activeId })
+  const operatingDel = useMutation({
+    mutationFn: (p: OperatingProgramme) => deleteOperatingProgramme(p.id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['operating-programmes'] }); qc.invalidateQueries({ queryKey: ['operating-due'] }); setConfirmDelOperating(null) },
+  })
+  const operatingStatusMut = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: 'active' | 'paused' }) => setOperatingProgrammeStatus(id, status),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['operating-programmes'] }); qc.invalidateQueries({ queryKey: ['operating-due'] }) },
+  })
+
   if (!activeId) return <div className="empty">Select a system to manage programmes.</div>
 
   const due = dueData?.due ?? []
@@ -69,15 +83,15 @@ export function Programmes() {
                 <button role="menuitem" className="np-item" onClick={() => { setNewMenu(false); setDosingEdit({}) }}>
                   <span className="np-dot dosing" /> Dosing programme
                 </button>
-                <button role="menuitem" className="np-item" disabled>
-                  <span className="np-dot operating" /> Operating programme <span className="np-soon">Soon</span>
+                <button role="menuitem" className="np-item" onClick={() => { setNewMenu(false); setOperatingEdit({}) }}>
+                  <span className="np-dot operating" /> Operating programme
                 </button>
               </div>
             </>
           )}
         </div>
       </div>
-      <p className="spray-lead">Recurring work for this system — spray and dosing programmes now, operating programmes coming. Spray products are flagged for fish safety; never let a fish‑toxic spray reach the system water.</p>
+      <p className="spray-lead">Recurring work for this system — spray, dosing and operating programmes. Spray products are flagged for fish safety; never let a fish‑toxic spray reach the system water.</p>
 
       {holds.length > 0 && (
         <div className="spray-hold">
@@ -116,8 +130,8 @@ export function Programmes() {
 
       {isLoading ? (
         <div className="empty">Loading…</div>
-      ) : programmes.length === 0 && dosingProgrammes.length === 0 ? (
-        <div className="empty">No programmes yet. Add a spray or dosing programme to get started.</div>
+      ) : programmes.length === 0 && dosingProgrammes.length === 0 && operatingProgrammes.length === 0 ? (
+        <div className="empty">No programmes yet. Add a spray, dosing or operating programme to get started.</div>
       ) : programmes.length === 0 ? null : (
         <div className="spray-cards">
           {programmes.map((p) => (
@@ -189,7 +203,51 @@ export function Programmes() {
         </div>
       )}
 
+      {operatingProgrammes.length > 0 && (
+        <div className="dp-section">
+          <div className="feed-head"><h3 className="section-title" style={{ margin: '18px 0 0', fontSize: 15 }}>Operating programmes</h3></div>
+          <div className="spray-cards">
+            {operatingProgrammes.map((p) => (
+              <div key={p.id} className={`spray-card ${p.status !== 'active' ? 'inactive' : ''}`}>
+                <div className="spray-card-head">
+                  <span className="spray-card-name">{p.name}{p.status !== 'active' && <span className="spray-inactive-tag">paused</span>}</span>
+                  <span className="crop-card-actions">
+                    <button className="link-btn" disabled={operatingStatusMut.isPending} onClick={() => operatingStatusMut.mutate({ id: p.id, status: p.status === 'active' ? 'paused' : 'active' })}>{p.status === 'active' ? 'Pause' : 'Resume'}</button>
+                    <button className="link-btn" onClick={() => setOperatingEdit({ programme: p })}>Edit</button>
+                    <button className="link-btn danger" onClick={() => setConfirmDelOperating(p)}>Delete</button>
+                  </span>
+                </div>
+                {p.tasks.length === 0 ? (
+                  <div className="spray-card-empty">No tasks — edit to add some.</div>
+                ) : (
+                  <div className="spray-card-products">
+                    {p.tasks.map((t) => (
+                      <div key={t.id} className="spray-cp">
+                        <span className="spray-cp-name">{t.label}</span>
+                        {t.est_minutes != null && <span className="spray-cp-days">~{t.est_minutes} min</span>}
+                        <span className="spray-cp-days">{t.weekdays.length ? t.weekdays.map((d) => OP_WEEKDAY_LABEL[d]).join(' · ') : 'no days set'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {p.notes && <div className="spray-card-notes">{p.notes}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {edit && activeId && <ProgrammeModal systemId={activeId} programme={edit.programme} onClose={() => setEdit(null)} />}
+      {operatingEdit && activeId && <OperatingProgrammeModal systemId={activeId} programme={operatingEdit.programme} onClose={() => setOperatingEdit(null)} />}
+      {confirmDelOperating && (
+        <Modal title="Delete operating programme" onClose={() => setConfirmDelOperating(null)}>
+          <p style={{ marginTop: 0, color: 'var(--ink-soft)' }}>Delete <b>{confirmDelOperating.name}</b>? Its tasks are removed; anything already logged is kept.</p>
+          <div className="mform-actions">
+            <button type="button" className="ghost" onClick={() => setConfirmDelOperating(null)}>Cancel</button>
+            <button type="button" className="btn btn-danger" disabled={operatingDel.isPending} onClick={() => operatingDel.mutate(confirmDelOperating)}>{operatingDel.isPending ? 'Deleting…' : 'Delete'}</button>
+          </div>
+        </Modal>
+      )}
       {dosingEdit && activeId && <DosingProgrammeModal systemId={activeId} programme={dosingEdit.programme} onClose={() => setDosingEdit(null)} />}
       {dosingRecord && activeId && <DosingRecordModal systemId={activeId} programme={dosingRecord} onClose={() => setDosingRecord(null)} />}
       {confirmDelDosing && (
