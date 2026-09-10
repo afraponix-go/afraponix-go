@@ -16,6 +16,7 @@ import { sum, fmt, Stat } from '../fish/fishShared'
 import { CHARTABLE, fetchSeries, type SeriesPoint } from '../charts/api'
 import { parseTrackedMetrics, ALL_METRIC_KEYS } from '../water/api'
 import { MetricChartModal } from '../charts/MetricChartModal'
+import { SensorIcon, FlaskIcon, NoteIcon } from '../../app/icons'
 import './dashboard.css'
 import '../fish/fish.css'
 
@@ -56,9 +57,9 @@ const NUTRIENTS: { key: string; label: string }[] = [
 
 function sourceBadge(source?: string | null) {
   const s = (source ?? '').toLowerCase()
-  if (s.includes('sensor')) return { icon: '📡', label: 'Sensor' }
-  if (s.includes('calc')) return { icon: '🧪', label: 'Calculated' }
-  return { icon: '📝', label: 'Manual' }
+  if (s.includes('sensor')) return { Icon: SensorIcon, label: 'Sensor' }
+  if (s.includes('calc')) return { Icon: FlaskIcon, label: 'Calculated' }
+  return { Icon: NoteIcon, label: 'Manual' }
 }
 
 function clickProps(onOpen?: () => void) {
@@ -112,7 +113,7 @@ function NutrientTile({ label, reading, band, onOpen }: { label: string; reading
       {statusText && band?.target != null ? (
         <span className={`status band-${status}`} title={`Target ${band.target}${band.floor != null ? ` · floor ${band.floor}` : ''}`}>{statusText}</span>
       ) : (
-        <span className="source" title={`${badge.label} reading`}>{badge.icon} {badge.label}</span>
+        <span className="source" title={`${badge.label} reading`}><badge.Icon className="source-ic" /> {badge.label}</span>
       )}
     </div>
   )

@@ -466,7 +466,7 @@
   color: var(--ink-soft);
 }
 .nd-slow b { color: var(--ink); }
-.nd-slow-ic { font-size: 20px; line-height: 1.2; flex: none; }
+.nd-slow-ic { width: 20px; height: 20px; flex: none; }
 
 /* Salinity impact flag on the results step. */
 .nd-salinity {
@@ -478,7 +478,7 @@
 }
 .nd-salinity.high { background: color-mix(in srgb, var(--danger, #ce3341) 8%, var(--surface)); border-color: color-mix(in srgb, var(--danger, #ce3341) 32%, var(--line)); }
 .nd-salinity b { color: var(--ink); }
-.nd-salinity-ic { font-size: 18px; flex: none; }
+.nd-salinity-ic { width: 18px; height: 18px; flex: none; }
 .nd-mix-day { white-space: normal; }
 
 /* Per-nutrient targeting checkbox in the levels grid. */

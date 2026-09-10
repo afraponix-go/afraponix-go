@@ -91,7 +91,11 @@
   background: var(--surface);
 }
 .wizard-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 650;
   font-size: 14px;
   margin-bottom: 12px;
 }
+.wizard-card-ic { width: 15px; height: 15px; flex: 0 0 auto; }

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createDemoSystem } from '../systems/api'
 import { useSystems } from '../systems/SystemContext'
 import { startTour } from './OnboardingTour'
+import { PlantIcon, SettingsIcon } from '../../app/icons'
 import './onboarding.css'
 
 // Ask AppShell to open the add-system wizard (kept there so it owns the modal).
@@ -34,7 +35,7 @@ export function FirstRunWelcome() {
 
       <div className="fr-cards">
         <div className="fr-card">
-          <div className="fr-card-icon" aria-hidden>🌱</div>
+          <div className="fr-card-icon" aria-hidden><PlantIcon /></div>
           <h2>Explore a sample farm</h2>
           <p>Load a fully-worked demo — fish tanks, grow beds, water-quality history, plantings, harvests and programmes — so you can see every feature in action.</p>
           <button className="btn" type="button" disabled={demo.isPending} onClick={() => demo.mutate()}>
@@ -44,7 +45,7 @@ export function FirstRunWelcome() {
         </div>
 
         <div className="fr-card">
-          <div className="fr-card-icon" aria-hidden>⚙️</div>
+          <div className="fr-card-icon" aria-hidden><SettingsIcon /></div>
           <h2>Set up my own system</h2>
           <p>Add your first system — name it, then configure its fish tanks and grow beds. This is the real thing, ready for your daily readings.</p>
           <button className="btn ghost" type="button" onClick={() => window.dispatchEvent(new Event(ADD_SYSTEM_EVENT))}>

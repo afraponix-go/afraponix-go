@@ -165,3 +165,52 @@ export const UndoIcon = svg(
     <path d="m4 10 5-5M4 10l5 5" />
   </>,
 )
+
+export const SensorIcon = svg(
+  <>
+    <path d="M12 20v-6" />
+    <circle cx="12" cy="12" r="2" />
+    <path d="M8.5 8.5a5 5 0 0 0 0 7" />
+    <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+    <path d="M5.5 5.5a9 9 0 0 0 0 13" />
+    <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+  </>,
+)
+
+export const FlaskIcon = svg(
+  <>
+    <path d="M10 3h4" />
+    <path d="M10.5 3v6l-5 9.5a1.5 1.5 0 0 0 1.3 2.2h10.4a1.5 1.5 0 0 0 1.3-2.2l-5-9.5V3" />
+    <path d="M7.5 15.5h9" />
+  </>,
+)
+
+export const NoteIcon = svg(
+  <>
+    <path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+    <path d="M14 3v5h5" />
+    <line x1="8" y1="13" x2="16" y2="13" />
+    <line x1="8" y1="17" x2="13" y2="17" />
+  </>,
+)
+
+export const HourglassIcon = svg(
+  <>
+    <path d="M7 3h10M7 21h10" />
+    <path d="M7 3c0 4.5 3 6.5 5 7-2 .5-5 2.5-5 7M17 3c0 4.5-3 6.5-5 7 2 .5 5 2.5 5 7" />
+  </>,
+)
+
+export const SaltIcon = svg(
+  <>
+    <path d="M12 3 4 9l3 12h10l3-12-8-6Z" />
+    <path d="M9 21 12 9l3 12" />
+  </>,
+)
+
+export const CameraIcon = svg(
+  <>
+    <path d="M9 5.5 10 4h4l1 1.5H19a1 1 0 0 1 1 1V18a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6.5a1 1 0 0 1 1-1Z" />
+    <circle cx="12" cy="12.5" r="3.5" />
+  </>,
+)

@@ -30,7 +30,9 @@
   gap: 14px;
 }
 .metric .source {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   margin-top: 10px;
   font-size: 11px;
   font-weight: 600;
@@ -39,6 +41,7 @@
   padding: 3px 9px;
   border-radius: 999px;
 }
+.metric .source-ic { width: 11px; height: 11px; flex: 0 0 auto; }
 .metric {
   position: relative;
   background: var(--surface);
@@ -187,7 +190,8 @@
 /* Farm overview: customize columns control */
 .farm-sys-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; margin-bottom: 2px; }
 .farm-customize { position: relative; }
-.farm-cust-btn { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong, var(--line)); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.farm-cust-btn { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line-strong, var(--line)); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.farm-cust-ic { width: 14px; height: 14px; flex: 0 0 auto; }
 .farm-cust-btn:hover { border-color: var(--ink-faint); color: var(--ink); }
 .farm-cust-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; width: 220px; max-height: 340px; overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow, 0 12px 32px rgba(16,24,37,.14)); padding: 8px; }
 .farm-cust-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-faint); padding: 4px 8px 6px; }
