@@ -7,10 +7,25 @@ router.use(authenticateToken);
 
 const VALID = ['view', 'operator', 'collaborator', 'admin'];
 
-// Confirm the caller owns the farm (only owners manage sharing).
-async function ownsFarm(pool, farmId, userId) {
-    const [rows] = await pool.execute('SELECT id, name FROM farms WHERE id = ? AND owner_id = ?', [farmId, userId]);
-    return rows[0] || null;
+// Confirm the caller can manage this farm's sharing — the owner, or anyone
+// holding an accepted 'admin' share on it (admins can see/manage sharing too).
+async function canManageFarmSharing(pool, farmId, userId) {
+    const [farmRows] = await pool.execute('SELECT id, name, owner_id FROM farms WHERE id = ?', [farmId]);
+    const farm = farmRows[0];
+    if (!farm) return null;
+    if (farm.owner_id === userId) return farm;
+    const [shareRows] = await pool.execute(
+        "SELECT id FROM farm_shares WHERE farm_id = ? AND shared_with_id = ? AND status = 'accepted' AND permission_level = 'admin'",
+        [farmId, userId]
+    );
+    return shareRows[0] ? farm : null;
+}
+
+// Resolve the farm a share row belongs to, for permission/access routes that
+// only carry a share_id.
+async function farmIdForShare(pool, shareId) {
+    const [rows] = await pool.execute('SELECT farm_id FROM farm_shares WHERE id = ?', [shareId]);
+    return rows[0]?.farm_id || null;
 }
 
 // List the collaborators a farm is shared with.
@@ -19,7 +34,7 @@ router.get('/users', async (req, res) => {
     if (!farm_id) return res.status(400).json({ error: 'Farm ID is required' });
     try {
         const pool = getDatabase();
-        if (!(await ownsFarm(pool, farm_id, req.user.userId))) {
+        if (!(await canManageFarmSharing(pool, farm_id, req.user.userId))) {
             return res.status(403).json({ error: 'Not authorized to view this farm' });
         }
         const [shares] = await pool.execute(
@@ -45,7 +60,7 @@ router.get('/invitations', async (req, res) => {
     if (!farm_id) return res.status(400).json({ error: 'Farm ID is required' });
     try {
         const pool = getDatabase();
-        if (!(await ownsFarm(pool, farm_id, req.user.userId))) {
+        if (!(await canManageFarmSharing(pool, farm_id, req.user.userId))) {
             return res.status(403).json({ error: 'Not authorized to view this farm' });
         }
         const [invitations] = await pool.execute(
@@ -79,7 +94,7 @@ router.post('/invite', async (req, res) => {
     }
     try {
         const pool = getDatabase();
-        const farm = await ownsFarm(pool, farm_id, req.user.userId);
+        const farm = await canManageFarmSharing(pool, farm_id, req.user.userId);
         if (!farm) {
             return res.status(403).json({ error: 'Not authorized to share this farm' });
         }
@@ -137,11 +152,8 @@ router.put('/permission', async (req, res) => {
     }
     try {
         const pool = getDatabase();
-        const [rows] = await pool.execute(
-            `SELECT fs.id, f.owner_id FROM farm_shares fs JOIN farms f ON fs.farm_id = f.id WHERE fs.id = ?`,
-            [share_id]
-        );
-        if (!rows.length || rows[0].owner_id !== req.user.userId) {
+        const farmId = await farmIdForShare(pool, share_id);
+        if (!farmId || !(await canManageFarmSharing(pool, farmId, req.user.userId))) {
             return res.status(403).json({ error: 'Not authorized to modify this share' });
         }
         await pool.execute('UPDATE farm_shares SET permission_level = ? WHERE id = ?', [permission_level, share_id]);
@@ -156,11 +168,8 @@ router.put('/permission', async (req, res) => {
 router.delete('/access/:share_id', async (req, res) => {
     try {
         const pool = getDatabase();
-        const [rows] = await pool.execute(
-            `SELECT fs.id, f.owner_id FROM farm_shares fs JOIN farms f ON fs.farm_id = f.id WHERE fs.id = ?`,
-            [req.params.share_id]
-        );
-        if (!rows.length || rows[0].owner_id !== req.user.userId) {
+        const farmId = await farmIdForShare(pool, req.params.share_id);
+        if (!farmId || !(await canManageFarmSharing(pool, farmId, req.user.userId))) {
             return res.status(403).json({ error: 'Not authorized to remove this access' });
         }
         await pool.execute('DELETE FROM farm_shares WHERE id = ?', [req.params.share_id]);

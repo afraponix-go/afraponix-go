@@ -55,7 +55,7 @@ export function FarmsSettings() {
                 </div>
                 <span className="crop-card-actions">
                   {f.id !== activeFarmId && <button className="link-btn" onClick={() => setActiveFarmId(f.id)}>Switch to</button>}
-                  {!shared && <button className="link-btn" onClick={() => setSharing(f)}>Share</button>}
+                  {(!shared || f.permission === 'admin') && <button className="link-btn" onClick={() => setSharing(f)}>Share</button>}
                   {!shared && <button className="link-btn" onClick={() => setModal({ farm: f })}>Rename</button>}
                   {!shared && <button className="link-btn danger" onClick={() => setConfirmDel(f)}>Delete</button>}
                 </span>
