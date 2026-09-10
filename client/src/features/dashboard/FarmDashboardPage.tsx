@@ -8,6 +8,7 @@ import { fetchFarmSummary, updateFarm, createFarm } from '../systems/farmApi'
 import { Stat, fmt } from '../fish/fishShared'
 import { WATER_FIELDS } from '../water/api'
 import { bandState } from '../water/bands'
+import { SettingsIcon } from '../../app/icons'
 import './dashboard.css'
 
 // First-run: a user with no farm of their own creates one before anything else.
@@ -133,7 +134,7 @@ export function FarmDashboardPage() {
           <div className="farm-sys-head">
             <h2 className="section-title" style={{ margin: 0 }}>Systems</h2>
             <div className="farm-customize">
-              {own && <button type="button" className="farm-cust-btn" onClick={() => setCustomizing((v) => !v)} aria-expanded={customizing}>⚙ Columns</button>}
+              {own && <button type="button" className="farm-cust-btn" onClick={() => setCustomizing((v) => !v)} aria-expanded={customizing}><SettingsIcon className="farm-cust-ic" /> Columns</button>}
               {own && customizing && (
                 <>
                   <div className="popover-backdrop" onClick={() => setCustomizing(false)} />

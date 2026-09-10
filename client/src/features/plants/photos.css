@@ -1,5 +1,6 @@
 /* Batch photo capture + gallery (inside a modal). */
-.photo-add { width: 100%; margin-bottom: 10px; }
+.photo-add { width: 100%; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.photo-add-ic { width: 17px; height: 17px; flex: 0 0 auto; }
 .photo-fallback { display: block; text-align: center; margin: 0 0 16px; }
 
 /* In-app camera with a centering guide + closeness feedback. */

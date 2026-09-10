@@ -8,6 +8,7 @@ import {
 } from './photos'
 import { downscaleImage } from './imageDownscale'
 import { CameraCaptureModal } from './CameraCaptureModal'
+import { CameraIcon } from '../../app/icons'
 import './photos.css'
 
 const fmt = (d: string) => new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
@@ -68,7 +69,7 @@ export function BatchPhotoModal({ systemId, batchId, seedlingId, title, cropType
       {error && <div className="wq-error">{error}</div>}
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={onPick} />
       <button type="button" className="btn photo-add" disabled={preparing || upload.isPending} onClick={() => setCamera(true)}>
-        {preparing ? 'Preparing…' : upload.isPending ? 'Uploading…' : '📷 Take photo'}
+        {preparing ? 'Preparing…' : upload.isPending ? 'Uploading…' : <><CameraIcon className="photo-add-ic" /> Take photo</>}
       </button>
       <button type="button" className="link-btn photo-fallback" onClick={() => inputRef.current?.click()}>Upload a file instead</button>
 

@@ -23,6 +23,7 @@ import { fetchDosingCrops } from './cropData'
 import { fetchCropTargets, type Stage } from '../plants/cropTargets'
 import { SaveAsDosingProgrammeModal } from '../dosing/SaveAsDosingProgrammeModal'
 import { MAX_PH_STEP } from '../dosing/api'
+import { HourglassIcon, SaltIcon } from '../../app/icons'
 import '../dashboard/dashboard.css'
 import './calculator.css'
 
@@ -480,7 +481,7 @@ export function NutrientDosingCalculator() {
           ) : (
             <>
               <div className="nd-slow">
-                <span className="nd-slow-ic" aria-hidden>🐢</span>
+                <span className="nd-slow-ic" aria-hidden><HourglassIcon /></span>
                 <span>
                   <b>Add slowly.</b> Big corrections are split into safe steps so nothing shocks your fish or plants — {phStepShown ? <>pH by no more than <b>{MAX_PH_STEP}</b> per dose{phSteps > 1 ? ` (about ${phSteps} doses)` : ''}, then </> : ''}nutrients spread over <b>{weeks} week{weeks === 1 ? '' : 's'}</b>. Re-test between every dose; never dump the full amount at once.
                 </span>
@@ -543,7 +544,7 @@ export function NutrientDosingCalculator() {
 
               {saltPpt > 0 && (
                 <div className={`nd-salinity ${currentSalinity != null && currentSalinity + saltPpt > 2 ? 'high' : ''}`}>
-                  <span className="nd-salinity-ic" aria-hidden>🧂</span>
+                  <span className="nd-salinity-ic" aria-hidden><SaltIcon /></span>
                   <span>
                     These salts raise <b>salinity by about {saltPpt} ppt</b> once the full correction is in
                     {weeks > 1 ? <> (~{(saltPpt / weeks).toFixed(2)} ppt per weekly dose)</> : null}

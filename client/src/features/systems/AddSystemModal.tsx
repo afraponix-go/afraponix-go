@@ -5,6 +5,7 @@ import { ApiError } from '../../lib/apiClient'
 import { createSystem, createFishTank, saveGrowBedsBulk, createDemoSystem, fetchSystems } from './api'
 import { useSystems } from './SystemContext'
 import { BED_TYPES, bedShape, computeBed, type BedInputs } from '../plants/bedMath'
+import { FishIcon, PlantIcon } from '../../app/icons'
 import '../fish/fish.css'
 import '../water/water.css'
 import '../plants/plants.css'
@@ -195,7 +196,7 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
           <div className="wizard-cards">
             {tanks.map((t, i) => (
               <div className="wizard-card" key={i}>
-                <div className="wizard-card-head">🐟 Fish Tank {i + 1}</div>
+                <div className="wizard-card-head"><FishIcon className="wizard-card-ic" /> Fish Tank {i + 1}</div>
                 <div className="field-row">
                   <div className="field"><label>Tank name</label><input type="text" value={t.name} onChange={(e) => setTank(i, { name: e.target.value })} /></div>
                   <div className="field"><label>Volume <span className="unit-hint">(L)</span></label><input type="number" min="100" step="50" value={t.volume} onChange={(e) => setTank(i, { volume: e.target.value })} /></div>
@@ -221,7 +222,7 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
               const c = computeBed(b.type, bedToInputs(b))
               return (
                 <div className="wizard-card" key={i}>
-                  <div className="wizard-card-head">🌱 Grow Bed {i + 1}</div>
+                  <div className="wizard-card-head"><PlantIcon className="wizard-card-ic" /> Grow Bed {i + 1}</div>
                   <div className="field-row">
                     <div className="field"><label>Bed name</label><input type="text" value={b.name} onChange={(e) => setBed(i, { name: e.target.value })} /></div>
                     <div className="field"><label>Type</label>

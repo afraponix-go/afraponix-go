@@ -15,6 +15,7 @@ import {
 import { CATEGORY_LABEL, FishBadge } from './shared'
 import { RateInput, type Rate } from '../../components/RateInput'
 import { FertiliserCatalog } from '../dosing/FertiliserCatalog'
+import { FishIcon } from '../../app/icons'
 import './spray.css'
 
 const FISH_OPTS: FishSafety[] = ['safe', 'caution', 'toxic']
@@ -206,7 +207,7 @@ export function SprayCatalog() {
                       {p.resistance_group && <span>· {p.resistance_group}</span>}
                     </div>
                     {p.target && <div className="cat-item-target">Target: {p.target}</div>}
-                    {p.fish_note && <div className="cat-item-fishnote">🐟 {p.fish_note}</div>}
+                    {p.fish_note && <div className="cat-item-fishnote"><FishIcon className="cat-item-fishnote-ic" /> {p.fish_note}</div>}
                     {p.compatibility_notes && <div className="cat-item-notes">{p.compatibility_notes}</div>}
                   </div>
                 ))}
