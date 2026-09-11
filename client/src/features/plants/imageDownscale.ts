@@ -1,3 +1,20 @@
+const isHeic = (file: File) =>
+  file.type === 'image/heic' || file.type === 'image/heif' || /\.hei[cf]$/i.test(file.name)
+
+// Convert an iPhone/Mac HEIC/HEIF photo to JPEG. No browser can decode HEIC via
+// <img>/canvas except Safari (it has OS-level HEIC support) — Chrome and
+// Firefox silently fail, which is why an "upload from computer" HEIC photo
+// previously went up unconverted while the same photo worked fine from an
+// iPhone's Safari-based picker. heic2any (WASM libheif) is lazy-loaded so it
+// never costs anything on the far more common JPEG/PNG path.
+async function convertHeic(file: File): Promise<File> {
+  const heic2any = (await import('heic2any')).default
+  const result = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 })
+  const blob = Array.isArray(result) ? result[0] : result
+  const name = file.name.replace(/\.[^./\\]+$/, '') + '.jpg'
+  return new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() })
+}
+
 // Shrink a camera photo before upload so field uploads stay small (a 10 MB phone
 // photo becomes a few hundred KB). Runs entirely client-side. Any failure falls
 // back to the original file so a capture is never blocked.
@@ -5,7 +22,15 @@ export async function downscaleImage(
   file: File,
   { maxEdge = 1600, quality = 0.82 }: { maxEdge?: number; quality?: number } = {},
 ): Promise<File> {
-  if (!file.type.startsWith('image/')) return file
+  if (!file.type.startsWith('image/') && !isHeic(file)) return file
+
+  if (isHeic(file)) {
+    try {
+      file = await convertHeic(file)
+    } catch {
+      return file
+    }
+  }
 
   let src: ImageBitmap | HTMLImageElement | null = null
   let url: string | null = null
