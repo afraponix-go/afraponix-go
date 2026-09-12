@@ -43,6 +43,10 @@ export const customCropSchema = z.object({
   growth_days: numish,
   germination_days: numish,
   days_to_transplant: numish,
+  // Cut-and-come-again interval (spinach, herbs, etc.) — days until it can be
+  // harvested again after a 0-plants-removed ("cut") harvest. Null = not a
+  // repeat-harvest crop.
+  reharvest_days: numish,
   difficulty: z.string().nullable().optional(),
   season: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
@@ -64,6 +68,7 @@ export type CustomCropInput = {
   growthDays?: number
   germinationDays?: number
   daysToTransplant?: number
+  reharvestDays?: number
   ecMin?: number
   ecMax?: number
   targetN?: number

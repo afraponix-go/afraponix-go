@@ -310,7 +310,7 @@ router.put('/custom-crops/:id', async (req, res) => {
         cropName, cropCode, scientificName,
         targetN, targetP, targetK, targetCa, targetMg, targetFe, targetEc,
         ecMin, ecMax, category, plantSpacing, growthDays, difficulty, season, description,
-        germinationDays, daysToTransplant
+        germinationDays, daysToTransplant, reharvestDays
     } = req.body;
 
     if (!cropName) {
@@ -336,12 +336,12 @@ router.put('/custom-crops/:id', async (req, res) => {
             SET crop_name = ?, crop_code = ?, scientific_name = ?,
                 target_n = ?, target_p = ?, target_k = ?, target_ca = ?, target_mg = ?, target_fe = ?, target_ec = ?,
                 ec_min = ?, ec_max = ?, category = ?, plant_spacing = ?, growth_days = ?, difficulty = ?,
-                season = ?, description = ?, germination_days = ?, days_to_transplant = ?
+                season = ?, description = ?, germination_days = ?, days_to_transplant = ?, reharvest_days = ?
             WHERE id = ? AND user_id = ?
         `, [cropName, nn(cropCode), nn(scientificName),
             nn(targetN), nn(targetP), nn(targetK), nn(targetCa), nn(targetMg), nn(targetFe), nn(targetEc),
             nn(ecMin), nn(ecMax), nn(category), nn(plantSpacing), nn(growthDays), nn(difficulty),
-            nn(season), nn(description), nn(germinationDays), nn(daysToTransplant), req.params.id, req.user.userId]);
+            nn(season), nn(description), nn(germinationDays), nn(daysToTransplant), nn(reharvestDays), req.params.id, req.user.userId]);
 
         res.json({ success: true, message: 'Custom crop updated successfully' });
 
@@ -459,7 +459,7 @@ router.post('/custom-crops', async (req, res) => {
         cropName, cropCode, scientificName,
         targetN, targetP, targetK, targetCa, targetMg, targetFe, targetEc,
         ecMin, ecMax, category, plantSpacing, growthDays, difficulty, season, description,
-        germinationDays, daysToTransplant
+        germinationDays, daysToTransplant, reharvestDays
     } = req.body;
 
     if (!cropName) {
@@ -474,12 +474,12 @@ router.post('/custom-crops', async (req, res) => {
         const [result] = await pool.execute(`
             INSERT INTO custom_crops
             (user_id, crop_name, crop_code, scientific_name, target_n, target_p, target_k, target_ca, target_mg, target_fe, target_ec,
-             ec_min, ec_max, category, plant_spacing, growth_days, difficulty, season, description, germination_days, days_to_transplant)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ec_min, ec_max, category, plant_spacing, growth_days, difficulty, season, description, germination_days, days_to_transplant, reharvest_days)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [req.user.userId, cropName, code, nn(scientificName), nn(targetN), nn(targetP), nn(targetK), nn(targetCa),
             nn(targetMg), nn(targetFe), nn(targetEc), nn(ecMin), nn(ecMax), category || 'leafy_greens',
             plantSpacing || 15, growthDays || 30, difficulty || 'beginner',
-            season || 'year_round', description || '', nn(germinationDays), nn(daysToTransplant)]);
+            season || 'year_round', description || '', nn(germinationDays), nn(daysToTransplant), nn(reharvestDays)]);
 
         res.json({ success: true, id: result.insertId, message: 'Custom crop added successfully' });
 

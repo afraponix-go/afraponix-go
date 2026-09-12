@@ -20,6 +20,7 @@ export type SavedCrop = {
   growthDays?: number
   germinationDays?: number
   daysToTransplant?: number
+  reharvestDays?: number
 }
 
 export function CustomCropModal({ crop, onClose, onSaved }: { crop?: CustomCrop; onClose: () => void; onSaved?: (crop: SavedCrop) => void }) {
@@ -33,6 +34,7 @@ export function CustomCropModal({ crop, onClose, onSaved }: { crop?: CustomCrop;
   const [days, setDays] = useState(crop?.growth_days != null ? String(crop.growth_days) : '')
   const [germDays, setGermDays] = useState(crop?.germination_days != null ? String(crop.germination_days) : '')
   const [transplantDays, setTransplantDays] = useState(crop?.days_to_transplant != null ? String(crop.days_to_transplant) : '')
+  const [reharvestDays, setReharvestDays] = useState(crop?.reharvest_days != null ? String(crop.reharvest_days) : '')
   const [ecMin, setEcMin] = useState(crop?.ec_min != null ? String(crop.ec_min) : '')
   const [ecMax, setEcMax] = useState(crop?.ec_max != null ? String(crop.ec_max) : '')
   // Targets are edited per system in the Targets modal now; keep the crop's
@@ -61,6 +63,7 @@ export function CustomCropModal({ crop, onClose, onSaved }: { crop?: CustomCrop;
         growthDays: numOrU(days),
         germinationDays: numOrU(germDays),
         daysToTransplant: numOrU(transplantDays),
+        reharvestDays: numOrU(reharvestDays),
         ecMin: min,
         ecMax: max,
         targetEc: min != null && max != null ? Math.round(((min + max) / 2) * 100) / 100 : min ?? max,
@@ -85,6 +88,7 @@ export function CustomCropModal({ crop, onClose, onSaved }: { crop?: CustomCrop;
         growthDays: input.growthDays,
         germinationDays: input.germinationDays,
         daysToTransplant: input.daysToTransplant,
+        reharvestDays: input.reharvestDays,
       })
       onClose()
     },
@@ -155,6 +159,12 @@ export function CustomCropModal({ crop, onClose, onSaved }: { crop?: CustomCrop;
             <label htmlFor="cc-transplant">Days to transplant</label>
             <input id="cc-transplant" type="number" min="0" step="1" inputMode="numeric" value={transplantDays} onChange={(e) => setTransplantDays(e.target.value)} placeholder="21" />
           </div>
+        </div>
+
+        <div className="field">
+          <label htmlFor="cc-reharvest">Re-harvest interval <span className="unit-hint">(days) · optional</span></label>
+          <input id="cc-reharvest" type="number" min="0" step="1" inputMode="numeric" value={reharvestDays} onChange={(e) => setReharvestDays(e.target.value)} placeholder="e.g. 7" />
+          <p className="field-hint">For cut-and-come-again crops (spinach, herbs) that keep growing after a leaf harvest — how many days until it's ready to pick again. Leave blank for crops harvested once.</p>
         </div>
 
         {editing && (

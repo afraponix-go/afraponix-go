@@ -111,6 +111,11 @@ export function recordHarvest(
     harvest_weight_kg?: number
     quality?: string
     notes?: string
+    // A cut-and-come-again reset: the batch's days-to-harvest aggregates by
+    // MAX across its rows, so sending a larger value here (current age +
+    // the chosen re-harvest interval) pushes "ready" back out without
+    // touching the original planting date.
+    days_to_harvest?: number
   },
 ) {
   return api(`/data/plant-growth/${systemId}`, {
@@ -125,6 +130,7 @@ export function recordHarvest(
       growth_stage: 'harvest',
       notes: input.notes ?? null,
       batch_id: input.batch_id,
+      days_to_harvest: input.days_to_harvest ?? null,
     },
   })
 }
