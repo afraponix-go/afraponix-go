@@ -14,7 +14,7 @@ export function OperatorsSettings() {
   const add = useMutation({
     mutationFn: (n: string) => addOperator(n),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['spray-operators'] }); setName('') },
-    onError: (e) => setError(e instanceof ApiError ? e.message : 'Could not add operator.'),
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'Could not add applicator.'),
   })
   const del = useMutation({
     mutationFn: (o: Operator) => deleteOperator(o.id),
@@ -29,15 +29,15 @@ export function OperatorsSettings() {
 
   return (
     <div>
-      <h2 className="section-title" style={{ marginTop: 0 }}>Spray operators</h2>
+      <h2 className="section-title" style={{ marginTop: 0 }}>Spray applicators</h2>
       <p style={{ margin: '0 0 16px', color: 'var(--ink-faint)', fontSize: 13, maxWidth: '60ch' }}>
-        The people who apply sprays. They appear in the operator dropdown when recording a spray application.
+        The people who apply sprays. They appear in the applicator dropdown when recording a spray application.
       </p>
 
       <form className="mform" style={{ maxWidth: 420 }} onSubmit={submit}>
         {error && <div className="wq-error">{error}</div>}
         <div className="field">
-          <label htmlFor="op-name">Add operator</label>
+          <label htmlFor="op-name">Add applicator</label>
           <div className="op-add">
             <input id="op-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" />
             <button type="submit" className="btn" disabled={add.isPending || !name.trim()}>{add.isPending ? 'Adding…' : 'Add'}</button>
@@ -48,7 +48,7 @@ export function OperatorsSettings() {
       {isLoading ? (
         <div className="empty">Loading…</div>
       ) : operators.length === 0 ? (
-        <div className="empty" style={{ maxWidth: 420 }}>No operators yet — add one above.</div>
+        <div className="empty" style={{ maxWidth: 420 }}>No applicators yet — add one above.</div>
       ) : (
         <div className="op-list">
           {operators.map((o) => (

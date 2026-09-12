@@ -212,10 +212,10 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
         )}
 
         <div className="field">
-          <label htmlFor="rec-operator">Operator</label>
+          <label htmlFor="rec-operator">Applicator</label>
           {addingOp ? (
             <div className="spray-op-add">
-              <input type="text" value={newOp} onChange={(e) => setNewOp(e.target.value)} placeholder="New operator name" autoFocus
+              <input type="text" value={newOp} onChange={(e) => setNewOp(e.target.value)} placeholder="New applicator name" autoFocus
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (newOp.trim()) addOpMut.mutate(newOp.trim()) } }} />
               <button type="button" className="btn" disabled={addOpMut.isPending || !newOp.trim()} onClick={() => addOpMut.mutate(newOp.trim())}>{addOpMut.isPending ? 'Adding…' : 'Add'}</button>
               <button type="button" className="ghost" onClick={() => { setAddingOp(false); setNewOp('') }}>Cancel</button>
@@ -224,7 +224,7 @@ export function RecordModal({ systemId, prefill, onClose }: { systemId: string; 
             <select id="rec-operator" value={operator} onChange={(e) => { if (e.target.value === '__add__') setAddingOp(true); else setOperator(e.target.value) }}>
               <option value="">—</option>
               {operators.map((o) => <option key={o.id} value={o.name}>{o.name}</option>)}
-              <option value="__add__">＋ Add new operator…</option>
+              <option value="__add__">＋ Add new applicator…</option>
             </select>
           )}
         </div>

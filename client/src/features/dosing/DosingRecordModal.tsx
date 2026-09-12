@@ -131,7 +131,7 @@ export function DosingRecordModal({ systemId, programme, initialItemId, initialD
             <input id="dr-ph" type="number" step="any" inputMode="decimal" value={ph} onChange={(e) => setPh(e.target.value)} placeholder="optional" />
           </div>
           <div className="field">
-            <label htmlFor="dr-op">Operator</label>
+            <label htmlFor="dr-op">Applicator</label>
             <select id="dr-op" value={operator} onChange={(e) => setOperator(e.target.value)}>
               <option value="">—</option>
               {operators.map((o) => <option key={o.id} value={o.name}>{o.name}</option>)}

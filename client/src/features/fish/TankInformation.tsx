@@ -6,6 +6,7 @@ import { fetchFishInventory, tankMaxDensity, type FishTank } from './api'
 import { fmt } from './fishShared'
 import { tankScanUrl } from './tankQr'
 import { LabelPrintModal } from '../plants/LabelPrintModal'
+import { useScrollShadow } from '../../lib/useScrollShadow'
 import '../dashboard/dashboard.css'
 import '../water/water.css'
 import './fish.css'
@@ -13,6 +14,7 @@ import './fish.css'
 export function TankInformation() {
   const { activeId } = useSystems()
   const [labelFor, setLabelFor] = useState<FishTank | null>(null)
+  const scrollRef = useScrollShadow<HTMLDivElement>()
   const { data: tanks = [], isLoading, isError } = useQuery({
     queryKey: ['fish-inventory', activeId],
     queryFn: () => fetchFishInventory(activeId as string),
@@ -36,7 +38,7 @@ export function TankInformation() {
       {tanks.length === 0 ? (
         <div className="empty">No fish tanks configured yet.</div>
       ) : (
-        <div className="wq-table-wrap">
+        <div className="wq-table-wrap" ref={scrollRef}>
           <table className="wq-table op-table resp-cards">
             <thead>
               <tr>

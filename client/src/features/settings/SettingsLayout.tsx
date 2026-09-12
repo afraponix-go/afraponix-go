@@ -19,10 +19,10 @@ const SYSTEM_SCOPED = new Set(['/settings', '/settings/metrics'])
 function buildGroups(user: User | null): Group[] {
   const groups: Group[] = [
     { title: 'Account', items: [{ to: '/settings/account', label: 'Profile & account' }] },
-    { title: 'Farm', items: [{ to: '/settings/farms', label: 'Farms & sharing' }, { to: '/settings/operators', label: 'Operators' }] },
+    { title: 'Farm', items: [{ to: '/settings/farms', label: 'Farms & sharing' }, { to: '/settings/operators', label: 'Applicators' }] },
     { title: 'System', items: [{ to: '/settings', label: 'System details', end: true }, { to: '/settings/metrics', label: 'Tracked metrics' }] },
   ]
-  const advanced: Item[] = [{ to: '/settings/manage-farms', label: 'Manage farms' }]
+  const advanced: Item[] = [{ to: '/settings/manage-farms', label: 'Archived farms' }]
   if (user?.userRole === 'admin') advanced.push({ to: '/settings/admin', label: 'Admin' })
   groups.push({ title: 'Advanced', items: advanced })
   return groups

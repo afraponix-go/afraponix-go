@@ -72,7 +72,7 @@ export function FarmsSettings() {
           <p style={{ marginTop: 0, color: 'var(--ink-soft)' }}>
             Delete <b>{confirmDel.name}</b>
             {(confirmDel.system_count ?? 0) > 0 ? ` and its ${confirmDel.system_count} system${confirmDel.system_count === 1 ? '' : 's'}` : ''}?
-            It's <b>archived</b> (not erased) — you can restore it from <b>Settings → Manage farms</b>.
+            It's <b>archived</b> (not erased) — you can restore it from <b>Settings → Archived farms</b>.
           </p>
           <div className="mform-actions">
             <button type="button" className="ghost" onClick={() => setConfirmDel(null)}>Cancel</button>

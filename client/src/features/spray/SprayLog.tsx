@@ -7,6 +7,8 @@ import { RecordModal } from './RecordModal'
 import { fetchDosingLog, deleteDoseLog, nutrientShort, fetchDosingProgrammes, type DosingLogEntry } from '../dosing/api'
 import { RetestModal } from '../dosing/RetestModal'
 import { fetchOperatingLog, undoOperatingLog, fetchOperatingProgrammes, type OperatingLogRow } from '../operating/api'
+import { useScrollShadow } from '../../lib/useScrollShadow'
+import '../dashboard/dashboard.css'
 import '../dosing/dosing.css'
 import './spray.css'
 
@@ -15,6 +17,9 @@ export function SprayLog() {
   const qc = useQueryClient()
   const [record, setRecord] = useState(false)
   const [confirmDel, setConfirmDel] = useState<LogEntry | null>(null)
+  const sprayScrollRef = useScrollShadow<HTMLDivElement>()
+  const doseScrollRef = useScrollShadow<HTMLDivElement>()
+  const opScrollRef = useScrollShadow<HTMLDivElement>()
   const { data: log = [], isLoading } = useQuery({ queryKey: ['spray-log', activeId], queryFn: () => fetchLog(activeId as string), enabled: !!activeId })
   const del = useMutation({
     mutationFn: (l: LogEntry) => deleteLog(l.id),
@@ -58,9 +63,9 @@ export function SprayLog() {
       {isLoading ? <div className="empty">Loading…</div> : log.length === 0 ? (
         <div className="empty">No spray applications recorded yet.</div>
       ) : (
-        <div className="log-table-wrap">
+        <div className="log-table-wrap" ref={sprayScrollRef}>
           <table className="log-table">
-            <thead><tr><th>Date</th><th>Product</th><th>Applied to</th><th>Quantity</th><th>Dilution</th><th>Operator</th><th>Effectiveness</th><th></th></tr></thead>
+            <thead><tr><th>Date</th><th>Product</th><th>Applied to</th><th>Quantity</th><th>Dilution</th><th>Applicator</th><th>Effectiveness</th><th></th></tr></thead>
             <tbody>
               {log.map((l) => {
                 const qty = l.quantity != null && l.quantity !== '' ? `${Number(l.quantity)} ${l.quantity_unit ?? ''}`.trim() : '—'
@@ -102,7 +107,7 @@ export function SprayLog() {
           {doseLog.length === 0 ? (
             <div className="empty">No doses recorded yet.</div>
           ) : (
-          <div className="log-table-wrap">
+          <div className="log-table-wrap" ref={doseScrollRef}>
             <table className="log-table">
               <thead><tr><th>Date</th><th>Target</th><th>Fertiliser</th><th>Quantity</th><th>Before → After</th><th>Recovery</th><th></th></tr></thead>
               <tbody>
@@ -138,7 +143,7 @@ export function SprayLog() {
           {opLog.length === 0 ? (
             <div className="empty">No tasks logged yet.</div>
           ) : (
-          <div className="log-table-wrap">
+          <div className="log-table-wrap" ref={opScrollRef}>
             <table className="log-table">
               <thead><tr><th>Date</th><th>Task</th><th>Status</th><th>By</th><th></th></tr></thead>
               <tbody>

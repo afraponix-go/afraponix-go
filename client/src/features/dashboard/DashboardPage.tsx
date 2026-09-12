@@ -1,4 +1,5 @@
-import { useState, type KeyboardEvent } from 'react'
+import { useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
 import {
@@ -114,6 +115,15 @@ function NutrientTile({ label, reading, band, onOpen }: { label: string; reading
         <span className={`status band-${status}`} title={`Target ${band.target}${band.floor != null ? ` · floor ${band.floor}` : ''}`}>{statusText}</span>
       ) : (
         <span className="source" title={`${badge.label} reading`}><badge.Icon className="source-ic" /> {badge.label}</span>
+      )}
+      {status === 'low' && (
+        <Link
+          to="/calculator/nutrients"
+          className="nutrient-dose-cta"
+          onClick={(e: MouseEvent) => e.stopPropagation()}
+        >
+          Dose →
+        </Link>
       )}
     </div>
   )

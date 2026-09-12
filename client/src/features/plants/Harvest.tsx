@@ -8,6 +8,7 @@ import { fetchGrowBeds } from '../growbeds/api'
 import { prettyCrop } from './api'
 import { HarvestModal } from './HarvestModal'
 import { EditEntryModal } from './EditEntryModal'
+import { useScrollShadow } from '../../lib/useScrollShadow'
 import '../dashboard/dashboard.css'
 import '../fish/fish.css'
 import '../water/water.css'
@@ -28,6 +29,7 @@ export function Harvest() {
   const [editing, setEditing] = useState<PlantRow | null>(null)
   const [confirmDel, setConfirmDel] = useState<PlantRow | null>(null)
   const [visibleHistory, setVisibleHistory] = useState(10)
+  const scrollRef = useScrollShadow<HTMLDivElement>()
 
   const { data: batches = [] } = useQuery({ queryKey: ['plant-batches', activeId], queryFn: () => fetchBatches(activeId as string), enabled: !!activeId })
   const { data: rows = [], isLoading, isError } = useQuery({ queryKey: ['plant-growth', activeId], queryFn: () => fetchPlantGrowth(activeId as string), enabled: !!activeId })
@@ -113,7 +115,7 @@ export function Harvest() {
       {history.length === 0 ? (
         <div className="empty">No harvests recorded yet.</div>
       ) : (
-        <div className="wq-table-wrap">
+        <div className="wq-table-wrap" ref={scrollRef}>
           <table className="wq-table op-table resp-cards">
             <thead>
               <tr>
