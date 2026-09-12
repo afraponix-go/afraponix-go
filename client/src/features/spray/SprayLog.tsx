@@ -4,9 +4,9 @@ import { useSystems } from '../systems/SystemContext'
 import { Modal } from '../../components/Modal'
 import { fetchLog, deleteLog, rateLogEffectiveness, type LogEntry } from './api'
 import { RecordModal } from './RecordModal'
-import { fetchDosingLog, deleteDoseLog, nutrientShort, type DosingLogEntry } from '../dosing/api'
+import { fetchDosingLog, deleteDoseLog, nutrientShort, fetchDosingProgrammes, type DosingLogEntry } from '../dosing/api'
 import { RetestModal } from '../dosing/RetestModal'
-import { fetchOperatingLog, undoOperatingLog, type OperatingLogRow } from '../operating/api'
+import { fetchOperatingLog, undoOperatingLog, fetchOperatingProgrammes, type OperatingLogRow } from '../operating/api'
 import '../dosing/dosing.css'
 import './spray.css'
 
@@ -26,6 +26,9 @@ export function SprayLog() {
   })
 
   const { data: doseLog = [] } = useQuery({ queryKey: ['dosing-log', activeId], queryFn: () => fetchDosingLog(activeId as string), enabled: !!activeId })
+  // Only shown once a dosing programme exists — otherwise the section would
+  // just be permanent, irrelevant clutter for a spray-only farm.
+  const { data: dosingProgrammes = [] } = useQuery({ queryKey: ['dosing-programmes', activeId], queryFn: () => fetchDosingProgrammes(activeId as string), enabled: !!activeId })
   const [retest, setRetest] = useState<DosingLogEntry | null>(null)
   const [confirmDelDose, setConfirmDelDose] = useState<DosingLogEntry | null>(null)
   const delDose = useMutation({
@@ -35,6 +38,7 @@ export function SprayLog() {
   const recoveryClass = (pct: number | null) => (pct == null ? 'pending' : pct >= 80 ? 'good' : pct >= 50 ? 'mid' : 'low')
 
   const { data: opLog = [] } = useQuery({ queryKey: ['operating-log', activeId], queryFn: () => fetchOperatingLog(activeId as string), enabled: !!activeId })
+  const { data: operatingProgrammes = [] } = useQuery({ queryKey: ['operating-programmes', activeId], queryFn: () => fetchOperatingProgrammes(activeId as string), enabled: !!activeId })
   const [confirmUndoOp, setConfirmUndoOp] = useState<OperatingLogRow | null>(null)
   const undoOp = useMutation({
     mutationFn: (l: OperatingLogRow) => undoOperatingLog(l.id),
@@ -91,10 +95,13 @@ export function SprayLog() {
         </div>
       )}
 
-      {doseLog.length > 0 && (
+      {(doseLog.length > 0 || dosingProgrammes.length > 0) && (
         <div style={{ marginTop: 28 }}>
           <h2 className="section-title" style={{ margin: '0 0 4px', fontSize: 16 }}>Dosing log</h2>
           <p className="spray-lead">Every dose and its efficacy — the nutrient's before/after reading gives recovery %.</p>
+          {doseLog.length === 0 ? (
+            <div className="empty">No doses recorded yet.</div>
+          ) : (
           <div className="log-table-wrap">
             <table className="log-table">
               <thead><tr><th>Date</th><th>Target</th><th>Fertiliser</th><th>Quantity</th><th>Before → After</th><th>Recovery</th><th></th></tr></thead>
@@ -120,13 +127,17 @@ export function SprayLog() {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       )}
 
-      {opLog.length > 0 && (
+      {(opLog.length > 0 || operatingProgrammes.length > 0) && (
         <div style={{ marginTop: 28 }}>
           <h2 className="section-title" style={{ margin: '0 0 4px', fontSize: 16 }}>Operating log</h2>
           <p className="spray-lead">Tasks completed or skipped, and who did them.</p>
+          {opLog.length === 0 ? (
+            <div className="empty">No tasks logged yet.</div>
+          ) : (
           <div className="log-table-wrap">
             <table className="log-table">
               <thead><tr><th>Date</th><th>Task</th><th>Status</th><th>By</th><th></th></tr></thead>
@@ -143,6 +154,7 @@ export function SprayLog() {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       )}
 

@@ -476,8 +476,8 @@ router.post('/custom-crops', async (req, res) => {
             (user_id, crop_name, crop_code, scientific_name, target_n, target_p, target_k, target_ca, target_mg, target_fe, target_ec,
              ec_min, ec_max, category, plant_spacing, growth_days, difficulty, season, description, germination_days, days_to_transplant)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [req.user.userId, cropName, code, nn(scientificName), targetN || 0, targetP || 0, targetK || 0, targetCa || 0,
-            targetMg || 0, targetFe || 0, targetEc || 0, nn(ecMin), nn(ecMax), category || 'leafy_greens',
+        `, [req.user.userId, cropName, code, nn(scientificName), nn(targetN), nn(targetP), nn(targetK), nn(targetCa),
+            nn(targetMg), nn(targetFe), nn(targetEc), nn(ecMin), nn(ecMax), category || 'leafy_greens',
             plantSpacing || 15, growthDays || 30, difficulty || 'beginner',
             season || 'year_round', description || '', nn(germinationDays), nn(daysToTransplant)]);
 

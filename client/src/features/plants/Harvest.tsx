@@ -120,7 +120,6 @@ export function Harvest() {
                 <th>Date</th>
                 <th>Crop</th>
                 <th>Variety</th>
-                <th>Batch</th>
                 <th>Bed</th>
                 <th>Plants</th>
                 <th>Weight</th>
@@ -134,7 +133,6 @@ export function Harvest() {
                   <td data-label="Date">{r.date ? new Date(`${r.date.slice(0, 10)}T12:00:00`).toLocaleDateString() : '—'}</td>
                   <td className="op-text" data-label="Crop">{r.crop_type ? prettyCrop(r.crop_type) : '—'}</td>
                   <td className="op-text" data-label="Variety">{r.seed_variety ?? '—'}</td>
-                  <td data-label="Batch"><span className="batch-id-tag">{r.batch_id ?? '—'}</span></td>
                   <td className="op-text" data-label="Bed">{bedName(r.grow_bed_id)}</td>
                   <td data-label="Plants">{r.plants_harvested ?? 0}</td>
                   <td data-label="Weight">{r.harvest_weight != null && r.harvest_weight > 0 ? `${(r.harvest_weight / 1000).toFixed(2)} kg` : '—'}</td>

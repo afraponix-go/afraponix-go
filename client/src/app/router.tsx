@@ -8,6 +8,7 @@ import { TermsPage } from '../features/legal/TermsPage'
 import { PrivacyPage } from '../features/legal/PrivacyPage'
 import { LandingPage } from '../features/landing/LandingPage'
 import { ProtectedRoute } from './ProtectedRoute'
+import { NotFoundPage } from './NotFoundPage'
 import { AppShell } from './AppShell'
 import { SubTabLayout } from './SubTabLayout'
 import { FarmScoped, SystemOnly } from '../features/systems/FarmScoped'
@@ -34,7 +35,7 @@ import { FeedingCapture } from '../features/operator/capture/FeedingCapture'
 import { WaterCapture } from '../features/operator/capture/WaterCapture'
 import { PlantingCapture } from '../features/operator/capture/PlantingCapture'
 import { SeedlingCapture } from '../features/operator/capture/SeedlingCapture'
-import { useOperatorMode } from '../features/operator/operatorMode'
+import { useOperatorMode, OperatorModeProvider } from '../features/operator/operatorMode'
 import { HarvestView } from '../features/plants/HarvestView'
 import { BedsAllocation } from '../features/plants/BedsAllocation'
 import { Crops } from '../features/plants/CropsPage'
@@ -115,7 +116,7 @@ export const router = createBrowserRouter([
     element: <ProtectedRoute />,
     children: [
       {
-        element: <AppShell />,
+        element: <OperatorModeProvider><AppShell /></OperatorModeProvider>,
         children: [
           // Dashboard (Overview · Charts)
           {
@@ -225,4 +226,8 @@ export const router = createBrowserRouter([
       },
     ],
   },
+  // Any URL that doesn't match a route above — a typo, a stale bookmark, an
+  // old link to something that's moved. Top-level (outside ProtectedRoute) so
+  // it works whether the visitor is signed in or not.
+  { path: '*', element: <NotFoundPage /> },
 ])

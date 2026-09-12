@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { useSystems } from '../systems/SystemContext'
 import { isOwnedSystem, type System } from '../systems/api'
@@ -20,13 +20,31 @@ function hasManagementAccess(userRole: string | undefined, allSystems: System[])
   return allSystems.some((s) => isOwnedSystem(s) || (!!s.shared_permission && s.shared_permission !== 'view' && s.shared_permission !== 'operator'))
 }
 
+type OperatorModeState = {
+  isRealOperator: boolean
+  canToggle: boolean
+  viewAsOperator: boolean
+  setViewAsOperator: (on: boolean) => void
+  isOperatorView: boolean
+}
+
+const OperatorModeContext = createContext<OperatorModeState | null>(null)
+
 // Single source of truth for "is this session showing the restricted operator
 // UI right now" — either a real operator-level share on the active system, or
 // an owner/admin who's toggled "View as operator" to preview it. The toggle is
 // a client-only render mode: it never changes what the account can actually do
 // server-side, and it's unavailable to a real operator account (nothing to
 // escalate to, and the control itself isn't offered).
-export function useOperatorMode() {
+//
+// Lives in a Provider (mounted once, around AppShell) rather than being
+// recomputed by each caller — AppShell's nav chrome and the routed "/" page
+// (which picks Dashboard vs. OperatorHome) both need to react to the SAME
+// toggle instantly. Two independent hook instances, each seeding its own
+// useState from localStorage only at mount, previously meant flipping the
+// toggle updated the nav immediately but left an already-mounted page
+// showing the wrong content until an unrelated navigation remounted it.
+export function OperatorModeProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const { activeSystem, allSystems, isLoading } = useSystems()
   const [stored, setStored] = useState(() => {
@@ -52,5 +70,16 @@ export function useOperatorMode() {
   }, [stored, canToggle, isLoading])
 
   const viewAsOperator = canToggle && stored
-  return { isRealOperator, canToggle, viewAsOperator, setViewAsOperator, isOperatorView: isRealOperator || viewAsOperator }
+  const value = useMemo(
+    () => ({ isRealOperator, canToggle, viewAsOperator, setViewAsOperator, isOperatorView: isRealOperator || viewAsOperator }),
+    [isRealOperator, canToggle, viewAsOperator, setViewAsOperator],
+  )
+
+  return createElement(OperatorModeContext.Provider, { value }, children)
+}
+
+export function useOperatorMode(): OperatorModeState {
+  const ctx = useContext(OperatorModeContext)
+  if (!ctx) throw new Error('useOperatorMode must be used within OperatorModeProvider')
+  return ctx
 }
