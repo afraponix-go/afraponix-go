@@ -5,6 +5,7 @@ import { useSystems } from '../systems/SystemContext'
 import { fetchGrowBeds } from '../growbeds/api'
 import { fetchCropOptions, plantsPerM2FromSpacing, spacingFromPlantsPerM2, DEFAULT_PLANTS_PER_M2 } from './crops'
 import { fetchSeedVarieties, addSeedVariety } from './cropsAdmin'
+import { CustomCropModal, type SavedCrop } from './CustomCropModal'
 import { recordPlanting, batchLabel } from './plantGrowth'
 import { fetchBatches } from './batches'
 
@@ -15,6 +16,7 @@ const STAGES = [
   { value: 'vegetative', label: 'Vegetative growth' },
 ]
 const ADD_NEW = '__add__'
+const ADD_NEW_CROP = '__add_crop__'
 
 // The "record a planting" form — extracted from NewPlantingModal so it can be
 // embedded either in that modal (the admin Plantings page) or directly on a
@@ -41,6 +43,7 @@ export function PlantingForm({ initialBedId, onDone, onCancel }: { initialBedId?
   const [days, setDays] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [addingCrop, setAddingCrop] = useState(false)
 
   const cropDef = useMemo(() => crops.find((c) => c.value === crop), [crops, crop])
   const cropVarieties = useMemo(() => allVarieties.filter((v) => v.crop_type === crop), [allVarieties, crop])
@@ -61,6 +64,18 @@ export function PlantingForm({ initialBedId, onDone, onCancel }: { initialBedId?
     if (def?.days_to_harvest != null && !days) setDays(String(def.days_to_harvest))
     // Default the planting density from the crop's spacing (user can override).
     setDensity(String(plantsPerM2FromSpacing(def?.plant_spacing_cm) ?? DEFAULT_PLANTS_PER_M2))
+  }
+
+  // A crop just created via the inline "+ Add new crop…" modal: select it
+  // immediately using what the modal saved, without waiting on the
+  // crop-options query to refetch (mirrors the "+ Add new variety…" pattern).
+  function onCropSaved(c: SavedCrop) {
+    setAddingCrop(false)
+    setCrop(c.code)
+    setVariety('')
+    setNewVariety('')
+    if (c.growthDays != null && !days) setDays(String(c.growthDays))
+    setDensity(String(plantsPerM2FromSpacing(c.plantSpacing ?? null) ?? DEFAULT_PLANTS_PER_M2))
   }
 
   const mutation = useMutation({
@@ -112,13 +127,15 @@ export function PlantingForm({ initialBedId, onDone, onCancel }: { initialBedId?
 
       <div className="field">
         <label htmlFor="np-crop">Crop</label>
-        <select id="np-crop" value={crop} onChange={(e) => pickCrop(e.target.value)} autoFocus>
+        <select id="np-crop" value={crop} onChange={(e) => (e.target.value === ADD_NEW_CROP ? setAddingCrop(true) : pickCrop(e.target.value))} autoFocus>
           <option value="">Select a crop…</option>
           {crops.map((c) => (
             <option key={c.value} value={c.value}>{c.label}</option>
           ))}
+          <option value={ADD_NEW_CROP}>＋ Add new crop…</option>
         </select>
       </div>
+      {addingCrop && <CustomCropModal onClose={() => setAddingCrop(false)} onSaved={onCropSaved} />}
 
       <div className="field">
         <label htmlFor="np-variety">Seed variety <span className="unit-hint">· optional</span></label>

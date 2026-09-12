@@ -9,7 +9,20 @@ const label = (s: string) => s.split('_').map((w) => w.charAt(0).toUpperCase() +
 const numOrU = (s: string): number | undefined => (s.trim() === '' || isNaN(Number(s)) ? undefined : Number(s))
 const slug = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
 
-export function CustomCropModal({ crop, onClose }: { crop?: CustomCrop; onClose: () => void }) {
+// Reported to onSaved after a successful save — enough for a caller embedding
+// this as a "+ Add new crop…" quick-add (in a planting/sowing form) to select
+// the new crop immediately, before the crop-list query has refetched.
+export type SavedCrop = {
+  code: string
+  name: string
+  category?: string
+  plantSpacing?: number
+  growthDays?: number
+  germinationDays?: number
+  daysToTransplant?: number
+}
+
+export function CustomCropModal({ crop, onClose, onSaved }: { crop?: CustomCrop; onClose: () => void; onSaved?: (crop: SavedCrop) => void }) {
   const qc = useQueryClient()
   const editing = !!crop
 
@@ -35,12 +48,13 @@ export function CustomCropModal({ crop, onClose }: { crop?: CustomCrop; onClose:
   const [error, setError] = useState<string | null>(null)
 
   const mutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const min = numOrU(ecMin)
       const max = numOrU(ecMax)
+      const code = crop?.crop_code || slug(name)
       const input: CustomCropInput = {
         cropName: name.trim(),
-        cropCode: crop?.crop_code || slug(name),
+        cropCode: code,
         scientificName: sciName.trim() || undefined,
         category,
         plantSpacing: numOrU(spacing),
@@ -57,11 +71,21 @@ export function CustomCropModal({ crop, onClose }: { crop?: CustomCrop; onClose:
         targetMg: numOrU(nutrients.targetMg),
         targetFe: numOrU(nutrients.targetFe),
       }
-      return editing ? updateCustomCrop(crop.id, input) : saveCustomCrop(input)
+      await (editing ? updateCustomCrop(crop.id, input) : saveCustomCrop(input))
+      return { code, input }
     },
-    onSuccess: () => {
+    onSuccess: ({ code, input }) => {
       qc.invalidateQueries({ queryKey: ['custom-crops'] })
       qc.invalidateQueries({ queryKey: ['crop-options'] })
+      onSaved?.({
+        code,
+        name: input.cropName,
+        category: input.category,
+        plantSpacing: input.plantSpacing,
+        growthDays: input.growthDays,
+        germinationDays: input.germinationDays,
+        daysToTransplant: input.daysToTransplant,
+      })
       onClose()
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Something went wrong.'),
@@ -69,6 +93,12 @@ export function CustomCropModal({ crop, onClose }: { crop?: CustomCrop; onClose:
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
+    // Stop the submit from bubbling through React's synthetic event tree into
+    // an ancestor <form> (this modal is often opened *inside* another form's
+    // JSX as a "+ Add new crop…" quick-add, and createPortal only changes
+    // where it renders in the DOM — not its place in the React tree that
+    // event bubbling follows) and re-triggering that form's own submit.
+    e.stopPropagation()
     setError(null)
     if (!name.trim()) return setError('Enter a crop name.')
     mutation.mutate()

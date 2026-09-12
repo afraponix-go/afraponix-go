@@ -2,12 +2,14 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '../../lib/apiClient'
 import { fetchCustomCrops, fetchSeedVarieties, addSeedVariety } from '../plants/cropsAdmin'
+import { CustomCropModal, type SavedCrop } from '../plants/CustomCropModal'
 import { createSeedling, updateSeedling, type Seedling } from './api'
 import './seedlings.css'
 
 const numOrU = (s: string): number | undefined => (s.trim() === '' || isNaN(Number(s)) ? undefined : Number(s))
 const slug = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
+const ADD_NEW_CROP = '__add_crop__'
 
 // Fallback predicted days by crop category when the crop record has none set.
 const CAT_DEFAULTS: Record<string, { g: number; t: number }> = {
@@ -37,6 +39,7 @@ export function SeedlingSowForm({ farmId, systemId, seedling, onDone, onCancel }
   const [variety, setVariety] = useState(seedling?.seed_variety ?? '')
   const [addingVar, setAddingVar] = useState(false)
   const [newVar, setNewVar] = useState('')
+  const [addingCrop, setAddingCrop] = useState(false)
   const [sowDate, setSowDate] = useState(seedling?.sow_date ?? todayISO())
   const [rows, setRows] = useState<Row[]>(
     seedling?.tray_groups?.length
@@ -57,6 +60,18 @@ export function SeedlingSowForm({ farmId, systemId, seedling, onDone, onCancel }
     setVariety('')
     const c = cropOptions.find((x) => x.code === code)
     if (c) { const def = defaultDays(c.category); setGermDays(String(c.germ ?? def.g)); setTransplantDays(String(c.transplant ?? def.t)) }
+  }
+
+  // A crop just created via the inline "+ Add new crop…" modal: select it
+  // immediately using what the modal saved, without waiting on the
+  // crop-options query to refetch (mirrors the "+ Add new variety…" pattern).
+  function onCropSaved(c: SavedCrop) {
+    setAddingCrop(false)
+    setCropCode(c.code)
+    setVariety('')
+    const def = defaultDays(c.category)
+    setGermDays(String(c.germinationDays ?? def.g))
+    setTransplantDays(String(c.daysToTransplant ?? def.t))
   }
   const setRow = (i: number, key: keyof Row, v: string) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, [key]: v } : r)))
   const addRow = () => setRows((rs) => [...rs, { trays: '1', cells: '128' }])
@@ -102,9 +117,10 @@ export function SeedlingSowForm({ farmId, systemId, seedling, onDone, onCancel }
       <div className="field-row">
         <div className="field">
           <label htmlFor="sw-crop">Crop</label>
-          <select id="sw-crop" value={cropCode} onChange={(e) => onCrop(e.target.value)}>
+          <select id="sw-crop" value={cropCode} onChange={(e) => (e.target.value === ADD_NEW_CROP ? setAddingCrop(true) : onCrop(e.target.value))}>
             <option value="">Select a crop…</option>
             {cropOptions.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+            <option value={ADD_NEW_CROP}>＋ Add new crop…</option>
           </select>
         </div>
         <div className="field" style={addingVar ? { flexBasis: '100%' } : undefined}>
@@ -125,6 +141,7 @@ export function SeedlingSowForm({ farmId, systemId, seedling, onDone, onCancel }
           )}
         </div>
       </div>
+      {addingCrop && <CustomCropModal onClose={() => setAddingCrop(false)} onSaved={onCropSaved} />}
 
       <div className="field">
         <label htmlFor="sw-date">Sow date</label>
