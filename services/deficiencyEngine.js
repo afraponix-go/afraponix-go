@@ -11,6 +11,7 @@
 //   readings,                        // [{ type, value }] latest water/nutrient readings, or []
 // }
 // returns { engine, model?, deficiencies:[{nutrient,confidence,visible_signs,severity}],
+//           issues:[{kind:'pest'|'disease',name,confidence,severity,visible_signs,management:[]}],
 //           ruling_out:[], overall, suggested_checks:[] }
 
 const NUTRIENTS = [
@@ -47,18 +48,26 @@ async function claudeEngine(context) {
 
   const cropName = context.crop?.name || context.crop?.code || 'an aquaponics leafy crop';
   const system =
-    'You are an aquaponics crop-health advisor. From a leaf photo and the grower\'s own recent water/nutrient readings, ' +
-    'identify LIKELY nutrient deficiencies visible in the plant. Cross-check what you see against the readings: if leaves ' +
-    'look deficient in a nutrient that measures adequate, say so and suggest pH lock-out or root issues instead. Be advisory, ' +
-    'never definitive — deficiency symptoms overlap and photos can mislead. Respond with ONLY a JSON object, no prose, matching:\n' +
+    'You are an aquaponics crop-health advisor. From a leaf/plant photo and the grower\'s own recent water/nutrient readings, ' +
+    'identify what is LIKELY wrong with the plant, in three separate categories: (1) nutrient deficiencies, (2) PESTS ' +
+    '(insects, mites, slugs/snails, etc. — name the pest and what you can see: the insect itself, webbing, frass, honeydew, ' +
+    'chewing/mining/stippling damage), and (3) DISEASES (fungal, bacterial, viral or water-mould/root rot — name it, e.g. ' +
+    'powdery mildew, downy mildew, leaf spot, botrytis, pythium). Cross-check against the readings: if leaves look deficient in ' +
+    'a nutrient that measures adequate, say so and suggest pH lock-out or root issues instead. Actively distinguish look-alikes — ' +
+    'pest damage vs deficiency, fungal spotting vs nutrient burn, viral mosaic vs iron/magnesium chlorosis — and say which you ' +
+    'rule out and why. Be advisory, never definitive; photos can mislead. This is a fish-stocked system, so any management ' +
+    'step must be fish-safe: prefer cultural, mechanical and biological controls (removal, airflow, humidity, beneficial insects, ' +
+    'Bt, insecticidal soap, neem used with care) and explicitly warn off anything that must not reach the water. ' +
+    'Respond with ONLY a JSON object, no prose, matching:\n' +
     '{"deficiencies":[{"nutrient":"<name>","confidence":"low|medium|high","visible_signs":"<what in the photo>","severity":"mild|moderate|severe"}],' +
-    '"ruling_out":["<nutrient/cause and why>"],"overall":"<one sentence>","suggested_checks":["<action>","<action>"]}\n' +
+    '"issues":[{"kind":"pest|disease","name":"<specific pest or disease>","confidence":"low|medium|high","visible_signs":"<what in the photo>","severity":"mild|moderate|severe","management":["<fish-safe action>"]}],' +
+    '"ruling_out":["<nutrient/pest/disease and why>"],"overall":"<one sentence covering all findings>","suggested_checks":["<action>","<action>"]}\n' +
     'Use the exact nutrient names: Nitrogen (N), Phosphorus (P), Potassium (K), Calcium (Ca), Magnesium (Mg), Iron (Fe). ' +
-    'Empty deficiencies array if the plant looks healthy.';
+    'Use empty arrays for any category with nothing found; both empty means the plant looks healthy.';
 
   const userText =
     `Crop: ${cropName}.\nRecent readings (measured vs target):\n${readingsSummary(context.targets, context.readings)}\n\n` +
-    'Analyse the attached leaf photo.';
+    'Analyse the attached plant photo for deficiencies, pests and disease.';
 
   const resp = await client.messages.create({
     model,
@@ -80,10 +89,31 @@ async function claudeEngine(context) {
     engine: 'claude',
     model,
     deficiencies: Array.isArray(parsed.deficiencies) ? parsed.deficiencies : [],
+    issues: normaliseIssues(parsed.issues),
     ruling_out: Array.isArray(parsed.ruling_out) ? parsed.ruling_out : [],
     overall: typeof parsed.overall === 'string' ? parsed.overall : '',
     suggested_checks: Array.isArray(parsed.suggested_checks) ? parsed.suggested_checks : [],
   };
+}
+
+// Pest/disease findings: keep only well-formed entries so the UI can render
+// them without defensive checks, and coerce `kind` to the two values it knows.
+// If the model returns an unrecognised `kind`, decide from the name rather than
+// defaulting everything to "pest" (powdery mildew is not a pest).
+const DISEASE_WORDS = /mildew|blight|rot\b|mou?ld|spot|wilt|virus|mosaic|botrytis|pythium|rust|canker|scab|anthracnose|fusarium|damping/i;
+
+function normaliseIssues(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((i) => i && typeof i.name === 'string' && i.name.trim())
+    .map((i) => ({
+      kind: i.kind === 'disease' || i.kind === 'pest' ? i.kind : DISEASE_WORDS.test(i.name) ? 'disease' : 'pest',
+      name: i.name.trim(),
+      confidence: ['low', 'medium', 'high'].includes(i.confidence) ? i.confidence : 'low',
+      severity: ['mild', 'moderate', 'severe'].includes(i.severity) ? i.severity : undefined,
+      visible_signs: typeof i.visible_signs === 'string' ? i.visible_signs : '',
+      management: Array.isArray(i.management) ? i.management.filter((m) => typeof m === 'string' && m.trim()) : [],
+    }));
 }
 
 // The model is asked for pure JSON, but be tolerant of stray prose/fences.

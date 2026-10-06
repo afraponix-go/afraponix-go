@@ -12,7 +12,7 @@ import { CameraIcon } from '../../app/icons'
 import './photos.css'
 
 const fmt = (d: string) => new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-const NUTRIENTS = ['Nitrogen (N)', 'Phosphorus (P)', 'Potassium (K)', 'Calcium (Ca)', 'Magnesium (Mg)', 'Iron (Fe)', 'pH lock-out', 'Other']
+const NUTRIENTS = ['Nitrogen (N)', 'Phosphorus (P)', 'Potassium (K)', 'Calcium (Ca)', 'Magnesium (Mg)', 'Iron (Fe)', 'pH lock-out', 'Pest damage', 'Disease', 'Other']
 const shortN = (s: string) => (s.match(/\(([^)]+)\)/)?.[1] ?? s.split(' ')[0])
 const confClass = (c?: string) => (c === 'high' ? 'high' : c === 'medium' ? 'mid' : 'low')
 
@@ -90,6 +90,7 @@ export function BatchPhotoModal({ systemId, batchId, seedlingId, title, cropType
           <div className="photo-grid">
             {photos.map((p) => {
               const top = p.analysis?.deficiencies?.[0]
+              const topIssue = p.analysis?.issues?.[0]
               return (
                 <figure
                   className={`photo-cell${expandedId === p.id ? ' sel' : ''}`}
@@ -100,7 +101,7 @@ export function BatchPhotoModal({ systemId, batchId, seedlingId, title, cropType
                   <figcaption>
                     <span>{fmt(p.taken_at)}</span>
                     {p.analyzed_at && (
-                      <span className={`an-chip ${top ? 'warn' : 'ok'}`}>{top ? shortN(top.nutrient) : 'OK'}</span>
+                      <span className={`an-chip ${top || topIssue ? 'warn' : 'ok'}`}>{top ? shortN(top.nutrient) : topIssue ? topIssue.name : 'OK'}</span>
                     )}
                   </figcaption>
                 </figure>
@@ -152,19 +153,32 @@ function AnalysisPanel({ photo, onDone, onDeleted }: { photo: BatchPhoto; onDone
       {a && (
         <div className="an-result">
           {a.overall && <p className="an-overall">{a.overall}</p>}
-          {a.deficiencies.length > 0 ? (
-            a.deficiencies.map((d, i) => (
-              <div className="an-def" key={i}>
-                <div className="an-def-top">
-                  <b>{d.nutrient}</b>
-                  {d.confidence && <span className={`an-badge ${confClass(d.confidence)}`}>{d.confidence}</span>}
-                  {d.severity && <span className="an-sev">{d.severity}</span>}
-                </div>
-                {d.visible_signs && <div className="an-signs">{d.visible_signs}</div>}
+          {a.deficiencies.map((d, i) => (
+            <div className="an-def" key={`d${i}`}>
+              <div className="an-def-top">
+                <b>{d.nutrient}</b>
+                {d.confidence && <span className={`an-badge ${confClass(d.confidence)}`}>{d.confidence}</span>}
+                {d.severity && <span className="an-sev">{d.severity}</span>}
               </div>
-            ))
-          ) : (
-            <div className="an-ok">No deficiency detected — plant looks healthy.</div>
+              {d.visible_signs && <div className="an-signs">{d.visible_signs}</div>}
+            </div>
+          ))}
+          {(a.issues ?? []).map((it, i) => (
+            <div className="an-def" key={`i${i}`}>
+              <div className="an-def-top">
+                <span className={`an-kind ${it.kind}`}>{it.kind === 'disease' ? 'Disease' : 'Pest'}</span>
+                <b>{it.name}</b>
+                {it.confidence && <span className={`an-badge ${confClass(it.confidence)}`}>{it.confidence}</span>}
+                {it.severity && <span className="an-sev">{it.severity}</span>}
+              </div>
+              {it.visible_signs && <div className="an-signs">{it.visible_signs}</div>}
+              {it.management && it.management.length > 0 && (
+                <ul className="an-checks">{it.management.map((m, j) => <li key={j}>{m}</li>)}</ul>
+              )}
+            </div>
+          ))}
+          {a.deficiencies.length === 0 && (a.issues ?? []).length === 0 && (
+            <div className="an-ok">No deficiency, pest or disease detected — plant looks healthy.</div>
           )}
 
           {a.ruling_out && a.ruling_out.length > 0 && (

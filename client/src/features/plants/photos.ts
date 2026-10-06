@@ -2,10 +2,14 @@ import { api } from '../../lib/apiClient'
 import { getToken } from '../../lib/token'
 
 export type Deficiency = { nutrient: string; confidence?: string; visible_signs?: string; severity?: string }
+// A pest or disease finding. Older stored analyses predate this and have no
+// `issues`, so it's optional on PhotoAnalysis.
+export type PlantIssue = { kind: 'pest' | 'disease'; name: string; confidence?: string; severity?: string; visible_signs?: string; management?: string[] }
 export type PhotoAnalysis = {
   engine?: string
   model?: string
   deficiencies: Deficiency[]
+  issues?: PlantIssue[]
   ruling_out?: string[]
   overall?: string
   suggested_checks?: string[]

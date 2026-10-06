@@ -236,9 +236,19 @@ router.post('/:id/analyze', async (req, res) => {
         // Read the image off disk.
         const filePath = path.join('.', photo.file_path);
         if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Photo file missing' });
-        const imageBase64 = fs.readFileSync(filePath).toString('base64');
-        const ext = path.extname(filePath).toLowerCase();
-        const mediaType = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+        const buf = fs.readFileSync(filePath);
+        // Trust the bytes, not the extension: older uploads include HEIC photos
+        // and SVGs saved as .jpg, which the vision API rejects with an opaque
+        // "Could not process image".
+        const mediaType =
+            buf.length > 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff ? 'image/jpeg'
+            : buf.length > 8 && buf.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) ? 'image/png'
+            : buf.length > 12 && buf.slice(0, 4).toString('latin1') === 'RIFF' && buf.slice(8, 12).toString('latin1') === 'WEBP' ? 'image/webp'
+            : null;
+        if (!mediaType) {
+            return res.status(422).json({ error: "This photo is in a format the analysis can't read (e.g. HEIC). Take or upload a fresh photo — new uploads are converted to JPEG automatically." });
+        }
+        const imageBase64 = buf.toString('base64');
 
         const ctx = await analysisContext(pool, photo);
         const { analyzeBatchPhoto } = require('../services/deficiencyEngine');
