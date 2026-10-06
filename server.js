@@ -188,10 +188,24 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve the built React app first (hashed assets + its index.html at "/"),
 // then fall back to the legacy root for any assets it still references.
+// Never serve dotfiles/dot-directories (.git, .env, …) — belt-and-braces on top of
+// the allowlist below, in case a broader static mount is ever added back.
+app.use((req, res, next) => {
+    let p;
+    try { p = decodeURIComponent(req.path); } catch { return res.status(400).json({ error: 'Bad request' }); }
+    if (/(^|\/)\.(?!well-known(\/|$))/.test(p)) {
+        return res.status(404).json({ error: 'Endpoint not found' });
+    }
+    next();
+});
+
 if (SERVE_CLIENT) {
     app.use(express.static(CLIENT_DIST));
 }
-app.use(express.static(path.join(__dirname)));
+// Only the upload/reference-image directory is served from the repo root. This
+// used to be express.static(__dirname), which published the whole checkout —
+// .git history, server.js, SQL dumps, logs and docs — to anyone who asked.
+app.use('/images', express.static(path.join(__dirname, 'images')));
 
 // Routes
 app.use('/api/auth', authRoutes);
