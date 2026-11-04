@@ -1,7 +1,11 @@
 import { api } from '../../lib/apiClient'
 import { getToken } from '../../lib/token'
 
-export type Deficiency = { nutrient: string; confidence?: string; visible_signs?: string; severity?: string }
+// `reading` = how current the water reading for this nutrient was at analysis time.
+export type ReadingInfo = { status: 'fresh' | 'stale' | 'none'; days: number | null; value: number | null }
+export type Deficiency = { nutrient: string; confidence?: string; visible_signs?: string; severity?: string; reading?: ReadingInfo }
+// A nutrient with no reading from the last two weeks (so it couldn't be ruled in or out by the water).
+export type DataGap = { nutrient: string; status: 'stale' | 'none'; days: number | null }
 // A pest or disease finding. Older stored analyses predate this and have no
 // `issues`, so it's optional on PhotoAnalysis.
 export type PlantIssue = { kind: 'pest' | 'disease'; name: string; confidence?: string; severity?: string; visible_signs?: string; management?: string[] }
@@ -13,6 +17,7 @@ export type PhotoAnalysis = {
   ruling_out?: string[]
   overall?: string
   suggested_checks?: string[]
+  data_gaps?: DataGap[]
 }
 export type LabelStatus = 'confirmed' | 'corrected' | 'not_deficiency'
 

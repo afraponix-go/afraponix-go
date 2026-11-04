@@ -198,7 +198,10 @@ async function analysisContext(pool, photo) {
     for (const r of nr) {
         if (seen.has(r.nutrient_type)) continue;
         seen.add(r.nutrient_type);
-        readings.push({ type: r.nutrient_type, value: r.value });
+        // Age in whole days — the engine must not treat an old reading as current.
+        const t = new Date(r.reading_date).getTime();
+        const days = Number.isFinite(t) ? Math.max(0, Math.floor((Date.now() - t) / 86400000)) : null;
+        readings.push({ type: r.nutrient_type, value: r.value, days });
     }
     return { crop, targets, readings };
 }

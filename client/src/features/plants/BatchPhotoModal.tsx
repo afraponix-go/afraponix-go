@@ -161,6 +161,13 @@ function AnalysisPanel({ photo, onDone, onDeleted }: { photo: BatchPhoto; onDone
                 {d.severity && <span className="an-sev">{d.severity}</span>}
               </div>
               {d.visible_signs && <div className="an-signs">{d.visible_signs}</div>}
+              {d.reading && d.reading.status !== 'fresh' && (
+                <div className="an-unverified">
+                  {d.reading.status === 'none'
+                    ? 'Not confirmed by the water — this nutrient has never been measured. Test it to confirm.'
+                    : `Not confirmed by the water — last measured ${d.reading.days} days ago, so that reading is out of date. Re-test to confirm.`}
+                </div>
+              )}
             </div>
           ))}
           {(a.issues ?? []).map((it, i) => (
@@ -181,6 +188,12 @@ function AnalysisPanel({ photo, onDone, onDeleted }: { photo: BatchPhoto; onDone
             <div className="an-ok">No deficiency, pest or disease detected — plant looks healthy.</div>
           )}
 
+          {a.data_gaps && a.data_gaps.length > 0 && (
+            <div className="an-ruleout">
+              <b>No reading in the last 2 weeks (can't be ruled in or out):</b>{' '}
+              {a.data_gaps.map((g) => g.nutrient.replace(/^.*\((\w+)\)$/, '$1')).join(', ')}
+            </div>
+          )}
           {a.ruling_out && a.ruling_out.length > 0 && (
             <div className="an-ruleout"><b>Ruling out:</b> {a.ruling_out.join('; ')}</div>
           )}

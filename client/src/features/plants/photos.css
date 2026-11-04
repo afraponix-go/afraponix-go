@@ -71,3 +71,4 @@
 .an-kind { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 1px 7px; border-radius: 6px; }
 .an-kind.pest { background: var(--danger-wash, #fbe9e7); color: var(--danger, #b3261e); }
 .an-kind.disease { background: var(--accent-wash, #e6ecfb); color: var(--accent, #334e9d); }
+.an-unverified { font-size: 12.5px; color: var(--warn, #b26a00); background: var(--warn-wash, #fdf1dc); border-radius: 6px; padding: 5px 9px; margin-top: 6px; line-height: 1.4; }
