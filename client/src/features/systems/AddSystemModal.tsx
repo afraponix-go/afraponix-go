@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
+import { CountStepper } from '../../components/CountStepper'
 import { ApiError } from '../../lib/apiClient'
 import { createSystem, createFishTank, saveGrowBedsBulk, createDemoSystem, fetchSystems } from './api'
 import { useSystems } from './SystemContext'
@@ -38,16 +39,6 @@ const STEPS = ['Setup', 'Basics', 'Fish tanks', 'Grow beds']
 
 // `farmId` overrides which farm the new system lands in (used right after
 // creating a farm, before the farm list has refetched into context).
-// Update a count box: allow it to be empty while typing, only commit real
-// numbers (clamped to 1..max) to the count that drives the tank/bed lists.
-function onCount(raw: string, max: number, setText: (v: string) => void, setCount: (n: number) => void) {
-  const digits = raw.replace(/\D/g, '')
-  if (digits === '') { setText(''); return }
-  const n = Math.max(1, Math.min(max, parseInt(digits, 10)))
-  setText(String(n))
-  setCount(n)
-}
-
 export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmId?: string }) {
   const qc = useQueryClient()
   const { setActiveId, activeFarm, activeFarmId } = useSystems()
@@ -56,11 +47,6 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
   const [name, setName] = useState('')
   const [tankCount, setTankCount] = useState(1)
   const [bedCount, setBedCount] = useState(2)
-  // What's typed in the count boxes. Kept separate from the clamped number so a
-  // field can be emptied mid-edit (backspace the "1", then type "3") instead of
-  // snapping straight back to 1; it's tidied to the real value on blur.
-  const [tankText, setTankText] = useState('1')
-  const [bedText, setBedText] = useState('2')
   const [tanks, setTanks] = useState<Tank[]>([newTank(1)])
   const [beds, setBeds] = useState<Bed[]>([newBed(1), newBed(2)])
   const [error, setError] = useState<string | null>(null)
@@ -195,11 +181,11 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
               <div className="field-row">
                 <div className="field">
                   <label htmlFor="sw-tanks">Number of fish tanks</label>
-                  <input id="sw-tanks" type="number" min="1" max="20" step="1" inputMode="numeric" value={tankText} onChange={(e) => onCount(e.target.value, 20, setTankText, setTankCount)} onBlur={() => setTankText(String(tankCount))} />
+                  <CountStepper id="sw-tanks" value={tankCount} max={20} onChange={setTankCount} />
                 </div>
                 <div className="field">
                   <label htmlFor="sw-beds">Number of grow beds</label>
-                  <input id="sw-beds" type="number" min="1" max="30" step="1" inputMode="numeric" value={bedText} onChange={(e) => onCount(e.target.value, 30, setBedText, setBedCount)} onBlur={() => setBedText(String(bedCount))} />
+                  <CountStepper id="sw-beds" value={bedCount} max={30} onChange={setBedCount} />
                 </div>
               </div>
             )}
