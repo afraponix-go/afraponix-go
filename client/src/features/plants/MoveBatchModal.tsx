@@ -8,6 +8,7 @@ import { fetchGrowBeds } from '../growbeds/api'
 import { moveBatch, transferBatch } from './plantGrowth'
 import { prettyCrop } from './api'
 import type { Batch } from './batches'
+import { NumberStepper } from '../../components/CountStepper'
 
 export function MoveBatchModal({ batch, onClose }: { batch: Batch; onClose: () => void }) {
   const { activeId, allSystems } = useSystems()
@@ -92,7 +93,7 @@ export function MoveBatchModal({ batch, onClose }: { batch: Batch; onClose: () =
         {crossSystem && (
           <div className="field">
             <label htmlFor="mb-count">How many plants <span className="unit-hint">(up to {batch.remaining})</span></label>
-            <input id="mb-count" type="number" min="1" max={batch.remaining} step="1" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} />
+            <NumberStepper id="mb-count" min={1} max={batch.remaining} value={count} onChange={(v) => setCount(v)} />
           </div>
         )}
 

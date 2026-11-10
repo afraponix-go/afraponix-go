@@ -7,6 +7,7 @@ import { recordHarvest } from './plantGrowth'
 import { prettyCrop } from './api'
 import { fetchCustomCrops } from './cropsAdmin'
 import type { Batch } from './batches'
+import { NumberStepper } from '../../components/CountStepper'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const QUALITIES = ['excellent', 'good', 'fair', 'poor']
@@ -89,7 +90,7 @@ export function HarvestModal({ batch, onClose }: { batch: Batch; onClose: () => 
         <div className="field-row">
           <div className="field">
             <label htmlFor="hv-plants">Plants harvested</label>
-            <input id="hv-plants" type="number" min="0" step="1" inputMode="numeric" autoFocus value={plants} onChange={(e) => setPlants(e.target.value)} placeholder={`0–${batch.remaining}`} />
+            <NumberStepper id="hv-plants" min={0} max={batch.remaining} autoFocus placeholder={`0–${batch.remaining}`} value={plants} onChange={(v) => setPlants(v)} />
           </div>
           <div className="field">
             <label htmlFor="hv-weight">Weight <span className="unit-hint">(kg) · optional</span></label>
@@ -108,7 +109,7 @@ export function HarvestModal({ batch, onClose }: { batch: Batch; onClose: () => 
               <button type="button" className={reharvest === 'custom' ? 'on' : ''} onClick={() => setReharvest('custom')}>Custom</button>
             </div>
             {reharvest === 'custom' && (
-              <input type="number" min="1" step="1" inputMode="numeric" style={{ marginTop: 8, maxWidth: 140 }} value={reharvestCustom} onChange={(e) => setReharvestCustom(e.target.value)} placeholder="Days" autoFocus />
+              <NumberStepper min={1} style={{ marginTop: 8 }} placeholder="Days" autoFocus value={reharvestCustom} onChange={(v) => setReharvestCustom(v)} />
             )}
             <p className="field-hint">
               {reharvest === 'none'

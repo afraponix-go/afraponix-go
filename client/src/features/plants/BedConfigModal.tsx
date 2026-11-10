@@ -5,6 +5,7 @@ import { ApiError } from '../../lib/apiClient'
 import { useSystems } from '../systems/SystemContext'
 import { saveBedConfig, type BedConfigPayload, type GrowBedConfig } from '../growbeds/api'
 import { BED_TYPES, bedShape, computeBed, normalizeBedType } from './bedMath'
+import { NumberStepper } from '../../components/CountStepper'
 
 const numOrNull = (s: string): number | null => (s.trim() === '' || isNaN(Number(s)) ? null : Number(s))
 
@@ -132,11 +133,11 @@ export function BedConfigModal({
           <div className="field-row">
             <div className="field">
               <label htmlFor="bc-vc">Towers</label>
-              <input id="bc-vc" type="number" min="1" step="1" inputMode="numeric" value={verticals} onChange={(e) => setVerticals(e.target.value)} placeholder="e.g. 10" />
+              <NumberStepper id="bc-vc" min={1} placeholder="e.g. 10" value={verticals} onChange={(v) => setVerticals(v)} />
             </div>
             <div className="field">
               <label htmlFor="bc-ppv">Plants per tower</label>
-              <input id="bc-ppv" type="number" min="1" step="1" inputMode="numeric" value={perVertical} onChange={(e) => setPerVertical(e.target.value)} placeholder="e.g. 20" />
+              <NumberStepper id="bc-ppv" min={1} placeholder="e.g. 20" value={perVertical} onChange={(v) => setPerVertical(v)} />
             </div>
           </div>
         )}
@@ -150,7 +151,7 @@ export function BedConfigModal({
               </div>
               <div className="field">
                 <label htmlFor="bc-tc">Channels</label>
-                <input id="bc-tc" type="number" min="1" step="1" inputMode="numeric" value={troughCount} onChange={(e) => setTroughCount(e.target.value)} placeholder="e.g. 6" />
+                <NumberStepper id="bc-tc" min={1} placeholder="e.g. 6" value={troughCount} onChange={(v) => setTroughCount(v)} />
               </div>
             </div>
             <div className="field-row">

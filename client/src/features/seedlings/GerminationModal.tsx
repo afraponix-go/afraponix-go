@@ -4,6 +4,7 @@ import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
 import { updateSeedling, germPct, type Seedling } from './api'
 import './seedlings.css'
+import { NumberStepper } from '../../components/CountStepper'
 
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 
@@ -40,7 +41,7 @@ export function GerminationModal({ seedling, onClose }: { seedling: Seedling; on
           </div>
           <div className="field">
             <label htmlFor="g-count">Germinated count</label>
-            <input id="g-count" type="number" min="0" step="1" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} placeholder={String(seedling.total_sown)} />
+            <NumberStepper id="g-count" min={0} max={seedling.total_sown} placeholder={String(seedling.total_sown)} value={count} onChange={(v) => setCount(v)} />
           </div>
         </div>
         {pct != null && <p className="seedling-hint">Germination: <b>{pct}%</b>{seedling.predicted_germ_days != null ? ` · ${Math.max(0, Math.round((new Date(date).getTime() - new Date(seedling.sow_date).getTime()) / 86400000))} days actual vs ${seedling.predicted_germ_days} predicted` : ''}</p>}

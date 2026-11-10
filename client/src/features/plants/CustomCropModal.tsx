@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
 import { saveCustomCrop, updateCustomCrop, type CustomCrop, type CustomCropInput } from './cropsAdmin'
+import { NumberStepper } from '../../components/CountStepper'
 
 const CATEGORIES = ['leafy_greens', 'fruiting_vegetables', 'herbs', 'root_vegetables', 'legumes', 'other']
 const label = (s: string) => s.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
@@ -138,7 +139,7 @@ export function CustomCropModal({ crop, onClose, onSaved }: { crop?: CustomCrop;
           </div>
           <div className="field">
             <label htmlFor="cc-days">Days to harvest</label>
-            <input id="cc-days" type="number" min="0" step="1" inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value)} placeholder="30" />
+            <NumberStepper id="cc-days" min={0} placeholder="30" value={days} onChange={(v) => setDays(v)} />
           </div>
           <div className="field">
             <label htmlFor="cc-ecmin">EC min</label>
@@ -153,17 +154,17 @@ export function CustomCropModal({ crop, onClose, onSaved }: { crop?: CustomCrop;
         <div className="field-row">
           <div className="field">
             <label htmlFor="cc-germ">Days to germinate</label>
-            <input id="cc-germ" type="number" min="0" step="1" inputMode="numeric" value={germDays} onChange={(e) => setGermDays(e.target.value)} placeholder="3" />
+            <NumberStepper id="cc-germ" min={0} placeholder="3" value={germDays} onChange={(v) => setGermDays(v)} />
           </div>
           <div className="field">
             <label htmlFor="cc-transplant">Days to transplant</label>
-            <input id="cc-transplant" type="number" min="0" step="1" inputMode="numeric" value={transplantDays} onChange={(e) => setTransplantDays(e.target.value)} placeholder="21" />
+            <NumberStepper id="cc-transplant" min={0} placeholder="21" value={transplantDays} onChange={(v) => setTransplantDays(v)} />
           </div>
         </div>
 
         <div className="field">
           <label htmlFor="cc-reharvest">Re-harvest interval <span className="unit-hint">(days) · optional</span></label>
-          <input id="cc-reharvest" type="number" min="0" step="1" inputMode="numeric" value={reharvestDays} onChange={(e) => setReharvestDays(e.target.value)} placeholder="e.g. 7" />
+          <NumberStepper id="cc-reharvest" min={0} placeholder="e.g. 7" value={reharvestDays} onChange={(v) => setReharvestDays(v)} />
           <p className="field-hint">For cut-and-come-again crops (spinach, herbs) that keep growing after a leaf harvest — how many days until it's ready to pick again. Leave blank for crops harvested once.</p>
         </div>
 

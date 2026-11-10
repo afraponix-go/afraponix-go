@@ -5,6 +5,7 @@ import { fetchCustomCrops, fetchSeedVarieties, addSeedVariety } from '../plants/
 import { CustomCropModal, type SavedCrop } from '../plants/CustomCropModal'
 import { createSeedling, updateSeedling, type Seedling } from './api'
 import './seedlings.css'
+import { NumberStepper } from '../../components/CountStepper'
 
 const numOrU = (s: string): number | undefined => (s.trim() === '' || isNaN(Number(s)) ? undefined : Number(s))
 const slug = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
@@ -153,7 +154,7 @@ export function SeedlingSowForm({ farmId, systemId, seedling, onDone, onCancel }
         <div className="tray-head"><span>Trays</span><span>Cells / tray</span><span></span></div>
         {rows.map((r, i) => (
           <div className="tray-row" key={i}>
-            <input type="number" min="1" step="1" inputMode="numeric" value={r.trays} onChange={(e) => setRow(i, 'trays', e.target.value)} placeholder="1" />
+            <NumberStepper min={1} placeholder="1" value={r.trays} onChange={(v) => setRow(i, 'trays', v)} />
             <input type="number" min="1" step="1" inputMode="numeric" value={r.cells} onChange={(e) => setRow(i, 'cells', e.target.value)} placeholder="128" />
             <button type="button" className="tray-x" onClick={() => removeRow(i)} disabled={rows.length === 1} aria-label="Remove">×</button>
           </div>
@@ -167,11 +168,11 @@ export function SeedlingSowForm({ farmId, systemId, seedling, onDone, onCancel }
       <div className="field-row">
         <div className="field">
           <label htmlFor="sw-germ">Predicted germ. days</label>
-          <input id="sw-germ" type="number" min="0" step="1" inputMode="numeric" value={germDays} onChange={(e) => setGermDays(e.target.value)} placeholder="from crop" />
+          <NumberStepper id="sw-germ" min={0} placeholder="from crop" value={germDays} onChange={(v) => setGermDays(v)} />
         </div>
         <div className="field">
           <label htmlFor="sw-transplant">Predicted days to transplant</label>
-          <input id="sw-transplant" type="number" min="0" step="1" inputMode="numeric" value={transplantDays} onChange={(e) => setTransplantDays(e.target.value)} placeholder="from crop" />
+          <NumberStepper id="sw-transplant" min={0} placeholder="from crop" value={transplantDays} onChange={(v) => setTransplantDays(v)} />
         </div>
       </div>
 

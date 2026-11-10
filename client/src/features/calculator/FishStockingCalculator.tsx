@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { SPECIES, calcStocking, type SpeciesKey } from './fishStocking'
 import '../dashboard/dashboard.css'
 import './calculator.css'
+import { NumberStepper } from '../../components/CountStepper'
 
 function num(v: string): number | undefined {
   if (v === '' || v == null) return undefined
@@ -69,7 +70,7 @@ export function FishStockingCalculator() {
           <div className="calc-sub">Current stock (optional)</div>
           <div className="field">
             <label htmlFor="count">Fish count</label>
-            <input id="count" type="number" min="0" step="1" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} placeholder="e.g. 180" />
+            <NumberStepper id="count" min={0} placeholder="e.g. 180" value={count} onChange={(v) => setCount(v)} />
           </div>
           <div className="field">
             <label htmlFor="weight">Average weight <span className="hint">(grams)</span></label>

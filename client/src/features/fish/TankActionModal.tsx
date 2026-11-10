@@ -6,6 +6,7 @@ import { addFish, recordMortality, updateWeight, moveFish, harvestFish, MORTALIT
 import { fetchFishInventory, type FishTank } from './api'
 import { useSystems } from '../systems/SystemContext'
 import { canWriteSystem, isOwnedSystem } from '../systems/api'
+import { NumberStepper } from '../../components/CountStepper'
 
 export type TankAction = 'add' | 'mortality' | 'weight' | 'move' | 'harvest'
 
@@ -92,7 +93,7 @@ export function TankActionModal({
             <label htmlFor="count">
               Number of fish{action === 'mortality' ? ' lost' : action === 'move' ? ' to move' : action === 'harvest' ? ' harvested' : ''}
             </label>
-            <input id="count" type="number" min="1" step="1" inputMode="numeric" autoFocus value={count} onChange={(e) => setCount(e.target.value)} placeholder={removes ? `up to ${available}` : 'e.g. 100'} />
+            <NumberStepper id="count" min={1} max={removes ? available : undefined} autoFocus placeholder={removes ? `up to ${available}` : 'e.g. 100'} value={count} onChange={(v) => setCount(v)} />
           </div>
         )}
 

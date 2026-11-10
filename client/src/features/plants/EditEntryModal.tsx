@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
 import { updatePlantEntry, isHarvestRow, type PlantRow } from './plantGrowth'
+import { NumberStepper } from '../../components/CountStepper'
 
 const QUALITIES = ['excellent', 'good', 'fair', 'poor']
 
@@ -60,7 +61,7 @@ export function EditEntryModal({ row, onClose }: { row: PlantRow; onClose: () =>
           </div>
           <div className="field">
             <label htmlFor="ee-plants">{harvest ? 'Plants harvested' : 'Plants'}</label>
-            <input id="ee-plants" type="number" min="0" step="1" inputMode="numeric" value={plants} onChange={(e) => setPlants(e.target.value)} />
+            <NumberStepper id="ee-plants" min={0} value={plants} onChange={(v) => setPlants(v)} />
           </div>
         </div>
 

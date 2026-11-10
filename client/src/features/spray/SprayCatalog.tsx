@@ -17,6 +17,7 @@ import { RateInput, type Rate } from '../../components/RateInput'
 import { FertiliserCatalog } from '../dosing/FertiliserCatalog'
 import { FishIcon } from '../../app/icons'
 import './spray.css'
+import { NumberStepper } from '../../components/CountStepper'
 
 const FISH_OPTS: FishSafety[] = ['safe', 'caution', 'toxic']
 
@@ -106,13 +107,13 @@ function ProductModal({ product, onClose }: { product?: SprayProduct; onClose: (
           </div>
           <div className="field">
             <label htmlFor="pr-int">Interval (days)</label>
-            <input id="pr-int" type="number" min="1" value={f.interval_days} onChange={(e) => set('interval_days', e.target.value)} />
+            <NumberStepper id="pr-int" min={1} value={f.interval_days} onChange={(v) => set('interval_days', v)} />
           </div>
         </div>
         <div className="field-row">
           <div className="field">
             <label htmlFor="pr-phi">PHI <span className="unit-hint">(pre-harvest, days)</span></label>
-            <input id="pr-phi" type="number" min="0" value={f.phi_days} onChange={(e) => set('phi_days', e.target.value)} placeholder="0" />
+            <NumberStepper id="pr-phi" min={0} placeholder="0" value={f.phi_days} onChange={(v) => set('phi_days', v)} />
           </div>
           <div className="field">
             <label htmlFor="pr-group">Resistance group</label>

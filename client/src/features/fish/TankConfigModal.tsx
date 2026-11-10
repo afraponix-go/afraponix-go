@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
 import { saveFishTank, FISH_SPECIES, type FishTank } from './api'
+import { NumberStepper } from '../../components/CountStepper'
 
 // Add or edit a single fish tank. On add the next free tank number is
 // pre-filled; on edit the number is fixed (it keys the record server-side).
@@ -57,7 +58,7 @@ export function TankConfigModal({
         <div className="field-row">
           <div className="field">
             <label htmlFor="tk-num">Tank number</label>
-            <input id="tk-num" type="number" min="1" step="1" inputMode="numeric" value={num} onChange={(e) => setNum(e.target.value)} disabled={editing} />
+            <NumberStepper id="tk-num" min={1} disabled={editing} value={num} onChange={(v) => setNum(v)} />
           </div>
           <div className="field">
             <label htmlFor="tk-sp">Species</label>

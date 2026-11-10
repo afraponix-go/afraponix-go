@@ -7,6 +7,7 @@ import { fetchCropOptions, plantsPerM2FromSpacing, spacingFromPlantsPerM2, DEFAU
 import { isOwnedSystem, type System } from '../systems/api'
 import { transplantSeedling, type Seedling } from './api'
 import './seedlings.css'
+import { NumberStepper } from '../../components/CountStepper'
 
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 const bedLabel = (b: { bed_name?: string | null; id: number }) => b.bed_name || `Bed ${b.id}`
@@ -112,7 +113,7 @@ export function TransplantModal({ systems, seedling, onClose }: { systems: Syste
           </div>
           <div className="field">
             <label htmlFor="t-count">Plants transplanted</label>
-            <input id="t-count" type="number" min="1" max={remaining} step="1" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} />
+            <NumberStepper id="t-count" min={1} max={remaining} value={count} onChange={(v) => setCount(v)} />
           </div>
         </div>
 

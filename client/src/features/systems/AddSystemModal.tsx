@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
-import { CountStepper } from '../../components/CountStepper'
+import { CountStepper, NumberStepper } from '../../components/CountStepper'
 import { ApiError } from '../../lib/apiClient'
 import { createSystem, createFishTank, saveGrowBedsBulk, createDemoSystem, fetchSystems } from './api'
 import { useSystems } from './SystemContext'
@@ -208,7 +208,7 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
                       {FISH_TYPES.map((f) => <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>)}
                     </select>
                   </div>
-                  <div className="field"><label>Stocking <span className="unit-hint">(fish/m³)</span></label><input type="number" min="1" step="1" value={t.stocking} onChange={(e) => setTank(i, { stocking: e.target.value })} /></div>
+                  <div className="field"><label>Stocking <span className="unit-hint">(fish/m³)</span></label><NumberStepper min={1} value={t.stocking} onChange={(v) => setTank(i, { stocking: v })} /></div>
                   <div className="field"><label>Harvest wt <span className="unit-hint">(g)</span></label><input type="number" min="50" step="50" value={t.harvest} onChange={(e) => setTank(i, { harvest: e.target.value })} /></div>
                 </div>
               </div>
@@ -241,14 +241,14 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
                   )}
                   {shape === 'vertical' && (
                     <div className="field-row">
-                      <div className="field"><label>Towers</label><input type="number" min="1" step="1" value={b.verticals} onChange={(e) => setBed(i, { verticals: e.target.value })} /></div>
-                      <div className="field"><label>Plants per tower</label><input type="number" min="1" step="1" value={b.perVertical} onChange={(e) => setBed(i, { perVertical: e.target.value })} /></div>
+                      <div className="field"><label>Towers</label><NumberStepper min={1} value={b.verticals} onChange={(v) => setBed(i, { verticals: v })} /></div>
+                      <div className="field"><label>Plants per tower</label><NumberStepper min={1} value={b.perVertical} onChange={(v) => setBed(i, { perVertical: v })} /></div>
                     </div>
                   )}
                   {shape === 'nft' && (
                     <div className="field-row">
                       <div className="field"><label>Channel length <span className="unit-hint">(m)</span></label><input type="number" min="0" step="any" value={b.troughLength} onChange={(e) => setBed(i, { troughLength: e.target.value })} /></div>
-                      <div className="field"><label>Channels</label><input type="number" min="1" step="1" value={b.troughCount} onChange={(e) => setBed(i, { troughCount: e.target.value })} /></div>
+                      <div className="field"><label>Channels</label><NumberStepper min={1} value={b.troughCount} onChange={(v) => setBed(i, { troughCount: v })} /></div>
                       <div className="field"><label>Spacing <span className="unit-hint">(cm)</span></label><input type="number" min="1" step="any" value={b.spacing} onChange={(e) => setBed(i, { spacing: e.target.value })} /></div>
                       <div className="field"><label>Reservoir <span className="unit-hint">(L)</span></label><input type="number" min="0" step="any" value={b.reservoir} onChange={(e) => setBed(i, { reservoir: e.target.value })} /></div>
                     </div>

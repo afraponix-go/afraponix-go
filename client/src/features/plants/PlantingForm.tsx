@@ -8,6 +8,7 @@ import { fetchSeedVarieties, addSeedVariety } from './cropsAdmin'
 import { CustomCropModal, type SavedCrop } from './CustomCropModal'
 import { recordPlanting, batchLabel } from './plantGrowth'
 import { fetchBatches } from './batches'
+import { NumberStepper } from '../../components/CountStepper'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const STAGES = [
@@ -174,7 +175,7 @@ export function PlantingForm({ initialBedId, onDone, onCancel }: { initialBedId?
       <div className="field-row">
         <div className="field">
           <label htmlFor="np-count">Number planted</label>
-          <input id="np-count" type="number" min="1" step="1" inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} placeholder="e.g. 24" />
+          <NumberStepper id="np-count" min={1} placeholder="e.g. 24" value={count} onChange={(v) => setCount(v)} />
         </div>
         <div className="field">
           <label htmlFor="np-density">Plants per m² <span className="unit-hint">· from crop, editable</span></label>
@@ -203,7 +204,7 @@ export function PlantingForm({ initialBedId, onDone, onCancel }: { initialBedId?
         </div>
         <div className="field">
           <label htmlFor="np-days">Days to harvest <span className="unit-hint">· optional</span></label>
-          <input id="np-days" type="number" min="1" step="1" inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value)} placeholder={cropDef?.days_to_harvest ? String(cropDef.days_to_harvest) : 'e.g. 45'} />
+          <NumberStepper id="np-days" min={1} placeholder={cropDef?.days_to_harvest ? String(cropDef.days_to_harvest) : 'e.g. 45'} value={days} onChange={(v) => setDays(v)} />
         </div>
       </div>
 
