@@ -153,6 +153,7 @@ export const plantRowSchema = z.object({
   seed_variety: z.string().nullable().optional(),
   days_to_harvest: numish,
   pest_control: z.string().nullable().optional(),
+  batch_created_date: z.string().nullable().optional(),
 })
 export type PlantRow = z.infer<typeof plantRowSchema>
 
@@ -182,6 +183,10 @@ export function updatePlantEntry(
     health: string | null
     growth_stage: string | null
     notes: string | null
+    // Planting edits only — omit to leave these columns untouched.
+    seed_variety?: string | null
+    days_to_harvest?: number | null
+    batch_created_date?: string | null
   },
 ) {
   return api(`/data/plant-growth/${entryId}`, { method: 'PUT', body: row })

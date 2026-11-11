@@ -6,6 +6,7 @@ import { fetchBatches, type Batch, type BatchStatus } from './batches'
 import { prettyCrop } from './api'
 import { NewPlantingModal } from './NewPlantingModal'
 import { MoveBatchModal } from './MoveBatchModal'
+import { BatchHistoryModal } from './BatchHistoryModal'
 import { HarvestModal } from './HarvestModal'
 import { BatchPhotoModal } from './BatchPhotoModal'
 import { ViewToggle, useViewMode } from '../../components/ViewToggle'
@@ -48,6 +49,7 @@ export function Plantings() {
   const [showAll, setShowAll] = useState(false)
   const [showNew, setShowNew] = useState(false)
   const [moving, setMoving] = useState<Batch | null>(null)
+  const [historyFor, setHistoryFor] = useState<Batch | null>(null)
   const [harvesting, setHarvesting] = useState<Batch | null>(null)
   const [photoFor, setPhotoFor] = useState<Batch | null>(null)
   const { data: batches = [], isLoading, isError } = useQuery({
@@ -115,6 +117,7 @@ export function Plantings() {
                       <button className="link-btn" onClick={() => setHarvesting(b)} disabled={b.remaining <= 0}>Harvest</button>
                       <button className="link-btn" onClick={() => setMoving(b)} disabled={b.remaining <= 0}>Move</button>
                       <button className="link-btn" onClick={() => setPhotoFor(b)}>Photo</button>
+                      <button className="link-btn" onClick={() => setHistoryFor(b)}>History</button>
                     </td>
                   </tr>
                 )
@@ -160,6 +163,7 @@ export function Plantings() {
                       <button className="tank-action-btn" onClick={() => setHarvesting(b)} disabled={b.remaining <= 0}>Harvest</button>
                       <button className="tank-action-btn" onClick={() => setMoving(b)} disabled={b.remaining <= 0}>Move</button>
                       <button className="tank-action-btn" onClick={() => setPhotoFor(b)}>Photo</button>
+                      <button className="tank-action-btn" onClick={() => setHistoryFor(b)}>History</button>
                     </div>
                   </div>
                 )
@@ -171,6 +175,7 @@ export function Plantings() {
 
       {showNew && <NewPlantingModal onClose={() => setShowNew(false)} />}
       {moving && <MoveBatchModal batch={moving} onClose={() => setMoving(null)} />}
+      {historyFor && <BatchHistoryModal batch={historyFor} onClose={() => setHistoryFor(null)} />}
       {harvesting && <HarvestModal batch={harvesting} onClose={() => setHarvesting(null)} />}
       {photoFor && activeId && (
         <BatchPhotoModal

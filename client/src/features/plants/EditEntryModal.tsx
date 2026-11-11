@@ -15,6 +15,9 @@ export function EditEntryModal({ row, onClose }: { row: PlantRow; onClose: () =>
   const [weight, setWeight] = useState(row.harvest_weight != null ? String(row.harvest_weight / 1000) : '')
   const [quality, setQuality] = useState(row.health ?? 'good')
   const [notes, setNotes] = useState(row.notes ?? '')
+  // Planting rows only: variety + days to harvest (harvest rows leave these alone).
+  const [variety, setVariety] = useState(row.seed_variety ?? '')
+  const [daysToHarvest, setDaysToHarvest] = useState(row.days_to_harvest != null ? String(row.days_to_harvest) : '')
   const [error, setError] = useState<string | null>(null)
 
   const mutation = useMutation({
@@ -25,7 +28,8 @@ export function EditEntryModal({ row, onClose }: { row: PlantRow; onClose: () =>
         date: date || row.date || null,
         grow_bed_id: row.grow_bed_id ?? null,
         crop_type: row.crop_type ?? null,
-        count: row.count ?? null,
+        // A planting stores its size in both columns; keep them in step.
+        count: harvest ? (row.count ?? null) : n,
         harvest_weight: harvest ? (w > 0 ? Math.round(w * 1000) : null) : (row.harvest_weight ?? null),
         plants_harvested: harvest ? n : (row.plants_harvested ?? null),
         new_seedlings: harvest ? (row.new_seedlings ?? null) : n,
@@ -33,6 +37,13 @@ export function EditEntryModal({ row, onClose }: { row: PlantRow; onClose: () =>
         health: harvest ? quality : (row.health ?? null),
         growth_stage: row.growth_stage ?? null,
         notes: notes.trim() || null,
+        // A planting's date also starts the batch's age/harvest-due clock
+        // (batch_created_date), so move it with the date.
+        ...(harvest ? {} : {
+          seed_variety: variety.trim() || null,
+          days_to_harvest: Number(daysToHarvest) > 0 ? Number(daysToHarvest) : null,
+          batch_created_date: row.batch_created_date ? (date || row.batch_created_date) : undefined,
+        }),
       })
     },
     onSuccess: () => {
@@ -46,6 +57,7 @@ export function EditEntryModal({ row, onClose }: { row: PlantRow; onClose: () =>
   function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    if (!harvest && !(Number(plants) >= 1)) return setError('A planting needs at least 1 plant.')
     mutation.mutate()
   }
 
@@ -64,6 +76,19 @@ export function EditEntryModal({ row, onClose }: { row: PlantRow; onClose: () =>
             <NumberStepper id="ee-plants" min={0} value={plants} onChange={(v) => setPlants(v)} />
           </div>
         </div>
+
+        {!harvest && (
+          <div className="field-row">
+            <div className="field">
+              <label htmlFor="ee-variety">Variety <span className="unit-hint">· optional</span></label>
+              <input id="ee-variety" type="text" value={variety} onChange={(e) => setVariety(e.target.value)} placeholder="e.g. Butter" />
+            </div>
+            <div className="field">
+              <label htmlFor="ee-days">Days to harvest <span className="unit-hint">· optional</span></label>
+              <NumberStepper id="ee-days" min={1} value={daysToHarvest} onChange={(v) => setDaysToHarvest(v)} />
+            </div>
+          </div>
+        )}
 
         {harvest && (
           <div className="field-row">

@@ -467,14 +467,26 @@ router.put('/plant-growth/:entryId', async (req, res) => {
             return res.status(403).json({ error: 'Access denied to this system' });
         }
 
+        // Optional columns, only touched when the caller sends them (planting
+        // edits send variety / days-to-harvest / batch start date; harvest edits
+        // and older callers don't, so those columns stay as they were).
+        const extraSet = [];
+        const extraVals = [];
+        for (const col of ['seed_variety', 'days_to_harvest', 'batch_created_date']) {
+            if (req.body[col] !== undefined) {
+                extraSet.push(`${col} = ?`);
+                extraVals.push(req.body[col] === '' ? null : req.body[col]);
+            }
+        }
+
         // Update the record
         const [result] = await pool.execute(`UPDATE plant_growth SET 
             date = ?, grow_bed_id = ?, crop_type = ?, count = ?, harvest_weight = ?, 
             plants_harvested = ?, new_seedlings = ?, pest_control = ?, health = ?, 
-            growth_stage = ?, notes = ?
+            growth_stage = ?, notes = ?${extraSet.length ? ', ' + extraSet.join(', ') : ''}
             WHERE id = ?`, 
             [date, grow_bed_id, crop_type, count || null, harvest_weight || null, plants_harvested || null, 
-             new_seedlings || null, pest_control || null, health || null, growth_stage || null, notes || null, entryId]);        
+             new_seedlings || null, pest_control || null, health || null, growth_stage || null, notes || null, ...extraVals, entryId]);        
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Plant growth record not found' });
         }

@@ -589,3 +589,17 @@
   font: inherit; font-size: 12.5px; font-weight: 600; padding: 5px 12px; border-radius: 999px; cursor: pointer;
 }
 .hv-reharvest-chips button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+/* Batch history (every entry recorded against one batch) */
+.bh-sub { margin: 0 0 10px; font-size: 12px; color: var(--ink-faint); word-break: break-all; }
+.bh-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.bh-row { border: 1px solid var(--line); border-radius: var(--radius, 10px); padding: 10px 12px; background: var(--surface); }
+.bh-main { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.bh-kind { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 1px 8px; border-radius: 6px; background: var(--accent-wash, #e6ecfb); color: var(--accent, #334e9d); }
+.bh-kind.harvest { background: var(--warn-wash, #fdf1dc); color: var(--warn, #b26a00); }
+.bh-kind.transfer_in, .bh-kind.transfer_out { background: var(--surface-2, #f1f3f8); color: var(--ink-soft); }
+.bh-date { font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.bh-sum { margin-top: 6px; font-size: 14px; color: var(--ink); }
+.bh-notes { margin-top: 3px; font-size: 12.5px; color: var(--ink-faint); }
+.bh-actions { display: flex; gap: 14px; margin-top: 8px; }
+.bh-note-ro { margin-top: 6px; font-size: 12px; color: var(--ink-faint); }
