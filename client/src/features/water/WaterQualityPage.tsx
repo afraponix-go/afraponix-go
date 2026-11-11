@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSystems } from '../systems/SystemContext'
 import { ApiError } from '../../lib/apiClient'
+import { useFishTypes } from '../fish/useFishTypes'
+import { temperatureTarget, rangeText } from './bands'
 import { createWaterQualityReading, deleteWaterQualityDay, fetchWaterQualityHistory, WATER_FIELDS, parseTrackedMetrics, type WaterFieldKey, type WaterQualityInput } from './api'
 import { Modal } from '../../components/Modal'
 import '../dashboard/dashboard.css'
@@ -12,6 +14,7 @@ const today = () => new Date().toISOString().slice(0, 10)
 
 export function WaterQualityPage() {
   const { activeId, activeSystem } = useSystems()
+  const fishTypes = useFishTypes()
   // Only capture the metrics this system tracks.
   const tracked = parseTrackedMetrics(activeSystem?.tracked_metrics)
   const fields = WATER_FIELDS.filter((f) => tracked.has(f.key))
@@ -118,7 +121,7 @@ export function WaterQualityPage() {
                 inputMode="decimal"
                 value={values[f.key] ?? ''}
                 onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
-                placeholder={f.range ?? '—'}
+                placeholder={f.key === 'temperature' ? rangeText(temperatureTarget(fishTypes)) : f.range ?? '—'}
               />
             </div>
           ))}

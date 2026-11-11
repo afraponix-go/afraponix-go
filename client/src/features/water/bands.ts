@@ -29,8 +29,32 @@ export const BANDS: Record<string, Band> = {
   magnesium: { min: 6, lo: 12, hi: 18, max: 30 },
 }
 
-export function bandState(key: string, value: number | null | undefined): BandState {
-  const b = BANDS[key]
+// Water temperature depends on the fish. Cold-water trout tolerate only
+// 7–22 °C (above 22 or below 7 is dangerous), far below the tilapia-tuned
+// default. A system with any trout tank uses the trout band — the cold-water
+// species is the one at risk. Everything else keeps the default band.
+export type FishTypes = ReadonlyArray<string | null | undefined> | string | null | undefined
+const TROUT_TEMP: Band = { min: 7, lo: 9, hi: 20, max: 22 }
+export function hasTrout(fishTypes: FishTypes): boolean {
+  const list = typeof fishTypes === 'string' ? [fishTypes] : fishTypes ?? []
+  return list.some((t) => typeof t === 'string' && /trout/i.test(t))
+}
+
+export function bandFor(key: string, fishTypes?: FishTypes): Band | undefined {
+  if (key === 'temperature' && hasTrout(fishTypes)) return TROUT_TEMP
+  return BANDS[key]
+}
+
+// The simple "in range" window for water temperature (dashboard tile, chart
+// target band, entry-form hint). Default 18–30 °C; trout 7–22 °C.
+export function temperatureTarget(fishTypes?: FishTypes): { min: number; max: number } {
+  return hasTrout(fishTypes) ? { min: TROUT_TEMP.min as number, max: TROUT_TEMP.max as number } : { min: 18, max: 30 }
+}
+
+export const rangeText = (r: { min: number; max: number }) => `${r.min} - ${r.max}`
+
+export function bandState(key: string, value: number | null | undefined, fishTypes?: FishTypes): BandState {
+  const b = bandFor(key, fishTypes)
   if (value == null || !b) return 'none'
   if (b.min != null && value < b.min) return 'danger'
   if (b.max != null && value > b.max) return 'danger'

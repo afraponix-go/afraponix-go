@@ -12,6 +12,7 @@ import {
   type LatestNutrients,
   type NutrientReading,
 } from './api'
+import { temperatureTarget, type FishTypes } from '../water/bands'
 import { fetchFishInventory, fetchDensityHistory, tankMaxDensity } from '../fish/api'
 import { sum, fmt, Stat } from '../fish/fishShared'
 import { CHARTABLE, fetchSeries, type SeriesPoint } from '../charts/api'
@@ -29,13 +30,13 @@ type MetricDef = {
   label: string
   unit?: string
   digits?: number
-  status?: (v: number) => Status
+  status?: (v: number, fishTypes?: FishTypes) => Status
 }
 
 // Water-quality parameters (all now live in nutrient_readings). Aquaponics-typical
 // healthy ranges give a good/warn pill for the ones that have one.
 const WATER: MetricDef[] = [
-  { key: 'temperature', label: 'Water Temp', unit: '°C', digits: 1, status: (v) => (v >= 18 && v <= 30 ? 'good' : 'warn') },
+  { key: 'temperature', label: 'Water Temp', unit: '°C', digits: 1, status: (v, fish) => { const t = temperatureTarget(fish); return v >= t.min && v <= t.max ? 'good' : 'warn' } },
   { key: 'ph', label: 'pH', digits: 2, status: (v) => (v >= 6 && v <= 7.6 ? 'good' : 'warn') },
   { key: 'kh', label: 'KH', unit: 'dKH', digits: 1, status: (v) => (v >= 4 && v <= 8 ? 'good' : 'warn') },
   { key: 'dissolved_oxygen', label: 'Dissolved O₂', unit: 'mg/L', digits: 1, status: (v) => (v >= 5 ? 'good' : 'warn') },
@@ -80,10 +81,10 @@ function clickProps(onOpen?: () => void) {
     : { className: 'metric' }
 }
 
-function WaterCard({ def, reading, onOpen }: { def: MetricDef; reading?: NutrientReading; onOpen?: () => void }) {
+function WaterCard({ def, reading, onOpen, fishTypes }: { def: MetricDef; reading?: NutrientReading; onOpen?: () => void; fishTypes?: FishTypes }) {
   const v = reading?.value
   const has = v != null && Number.isFinite(v)
-  const status: Status = has && def.status ? def.status(v as number) : 'none'
+  const status: Status = has && def.status ? def.status(v as number, fishTypes) : 'none'
   return (
     <div {...clickProps(onOpen)}>
       <div className="label">{def.label}</div>
@@ -281,7 +282,7 @@ export function DashboardPage() {
           <h2 className="section-title">Water quality</h2>
           <div className="metric-grid">
             {waterShown.map((def) => (
-              <WaterCard key={def.key} def={def} reading={nutrients[def.key]} onOpen={() => openParam(def.key, def.label, def.unit)} />
+              <WaterCard key={def.key} def={def} reading={nutrients[def.key]} fishTypes={tanks.map((t) => t.tank_fish_type)} onOpen={() => openParam(def.key, def.label, def.unit)} />
             ))}
           </div>
         </>

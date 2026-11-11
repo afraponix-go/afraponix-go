@@ -58,6 +58,7 @@ export type FarmSystemRow = {
   biomass_kg: number
   plants_growing: number
   plants_ready: number
+  fish_types?: string[] // species stocked (for species-specific limits)
   // Per selected metric key: a number (latest reading), null (tracked but no
   // reading yet), or absent (the system doesn't track that metric).
   metrics: Record<string, number | null>

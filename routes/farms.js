@@ -113,7 +113,7 @@ router.get('/:id/summary', async (req, res) => {
             const tracked = parseTracked(s.tracked_metrics);
             const metrics = {};
             for (const k of displayMetrics) if (tracked === null || tracked.has(k)) metrics[k] = null;
-            return { id: s.id, system_name: s.system_name, fish_count: 0, biomass_kg: 0, plants_growing: 0, plants_ready: 0, metrics };
+            return { id: s.id, system_name: s.system_name, fish_count: 0, biomass_kg: 0, plants_growing: 0, plants_ready: 0, fish_types: [], metrics };
         });
         const byId = Object.fromEntries(systems.map((s) => [s.id, s]));
         const ids = sysRows.map((s) => s.id);
@@ -130,6 +130,9 @@ router.get('/:id/summary', async (req, res) => {
                            WHERE fe.system_id = ft.system_id AND fe.fish_tank_id = ft.id AND fe.weight IS NOT NULL
                            ORDER BY (fe.event_type = 'weight_update') DESC, fe.event_date DESC LIMIT 1), 50) / 1000.0) AS biomass_kg
                 FROM fish_tanks ft WHERE ft.system_id IN (${ph}) GROUP BY ft.system_id`, ids);
+            // Species per system (drives species-specific limits, e.g. trout temperature).
+            const [types] = await pool.execute(`SELECT DISTINCT system_id, fish_type FROM fish_tanks WHERE system_id IN (${ph}) AND fish_type IS NOT NULL AND fish_type <> ''`, ids);
+            for (const r of types) if (byId[r.system_id]) byId[r.system_id].fish_types.push(r.fish_type);
             for (const r of fish) if (byId[r.system_id]) { byId[r.system_id].fish_count = Number(r.fish_count) || 0; byId[r.system_id].biomass_kg = Math.round((Number(r.biomass_kg) || 0) * 10) / 10; }
 
             // Plants: remaining (growing) and remaining that has reached days-to-harvest (ready).

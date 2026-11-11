@@ -10,6 +10,8 @@ import {
   Tooltip,
 } from 'recharts'
 import { useSystems } from '../systems/SystemContext'
+import { useFishTypes } from '../fish/useFishTypes'
+import { temperatureTarget } from '../water/bands'
 import { CHARTABLE, fetchSeries, rangeDays, type Chartable, type ChartRangeKey, type SeriesPoint } from './api'
 import { MetricChart } from './MetricChart'
 import { RangeSelector } from './RangeSelector'
@@ -21,6 +23,7 @@ const PALETTE = ['#1462a8', '#4f9d3a', '#e0803a', '#8e5bd0', '#c0392b', '#1aa5a5
 
 export function ChartsPage() {
   const { activeId, activeSystem } = useSystems()
+  const fishTypes = useFishTypes()
   const [selected, setSelected] = useState<string[]>(['temperature'])
   const [normalize, setNormalize] = useState(false)
   const [range, setRange] = useState<ChartRangeKey>('90d')
@@ -37,7 +40,11 @@ export function ChartsPage() {
 
   if (!activeId) return <div className="empty">Select a system to see charts.</div>
 
-  const defOf = (key: string) => CHARTABLE.find((c) => c.key === key) as Chartable
+  // Temperature's target band depends on the fish (trout 7–22 °C, else 18–30).
+  const defOf = (key: string) => {
+    const d = CHARTABLE.find((c) => c.key === key) as Chartable
+    return key === 'temperature' ? { ...d, ...temperatureTarget(fishTypes) } : d
+  }
   function toggle(key: string) {
     setSelected((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]))
   }

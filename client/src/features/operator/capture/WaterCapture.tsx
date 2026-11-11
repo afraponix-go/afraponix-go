@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '../../../lib/apiClient'
+import { useFishTypes } from '../../fish/useFishTypes'
+import { temperatureTarget, rangeText } from '../../water/bands'
 import { createWaterQualityReading, WATER_FIELDS, parseTrackedMetrics, type WaterFieldKey } from '../../water/api'
 import { useCaptureSystem } from '../useCaptureSystem'
 import { CaptureSystemSwitch } from '../CaptureSystemSwitch'
@@ -15,6 +17,7 @@ const today = () => new Date().toISOString().slice(0, 10)
 export function WaterCapture() {
   const navigate = useNavigate()
   const { systems, systemId, system, setActiveId } = useCaptureSystem()
+  const fishTypes = useFishTypes(systemId)
   const qc = useQueryClient()
   const tracked = parseTrackedMetrics(system?.tracked_metrics)
   const fields = WATER_FIELDS.filter((f) => tracked.has(f.key))
@@ -98,7 +101,7 @@ export function WaterCapture() {
                   inputMode="decimal"
                   value={values[f.key] ?? ''}
                   onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
-                  placeholder={f.range ?? '—'}
+                  placeholder={f.key === 'temperature' ? rangeText(temperatureTarget(fishTypes)) : f.range ?? '—'}
                 />
               </div>
             ))}

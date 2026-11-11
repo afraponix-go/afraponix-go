@@ -100,11 +100,11 @@ export function FarmDashboardPage() {
   const selected = new Set(cols)
   // A metric only counts (band / attention) when the system actually tracks it —
   // i.e. the key is present in its metrics map. Amber or red both draw attention.
-  const isFlagged = (k: string, v: number | null | undefined) => {
-    const st = bandState(k, v)
+  const isFlagged = (k: string, v: number | null | undefined, fish?: string[]) => {
+    const st = bandState(k, v, fish)
     return st === 'warn' || st === 'danger'
   }
-  const attentionCount = (data?.systems ?? []).filter((s) => cols.some((k) => k in s.metrics && isFlagged(k, s.metrics[k]))).length
+  const attentionCount = (data?.systems ?? []).filter((s) => cols.some((k) => k in s.metrics && isFlagged(k, s.metrics[k], s.fish_types))).length
   const openSystem = (id: string) => { setActiveId(id); navigate('/overview') }
   const toggle = (key: string) => {
     const next = selected.has(key) ? cols.filter((k) => k !== key) : [...cols, key]
@@ -166,7 +166,7 @@ export function FarmDashboardPage() {
               </thead>
               <tbody>
                 {(data?.systems ?? []).map((s) => {
-                  const attn = cols.some((k) => k in s.metrics && isFlagged(k, s.metrics[k]))
+                  const attn = cols.some((k) => k in s.metrics && isFlagged(k, s.metrics[k], s.fish_types))
                   return (
                     <tr key={s.id} className="farm-row" onClick={() => openSystem(s.id)} tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') openSystem(s.id) }}>
                       <td className="farm-td-sys">
@@ -180,7 +180,7 @@ export function FarmDashboardPage() {
                       {cols.map((k) => {
                         const tracked = k in s.metrics
                         const v = s.metrics[k]
-                        const state = tracked ? bandState(k, v) : 'none'
+                        const state = tracked ? bandState(k, v, s.fish_types) : 'none'
                         return (
                           <td key={k} className="r" data-label={METRIC_META[k]?.label ?? k}>
                             {!tracked ? <span className="metric-off" title="Not tracked by this system">off</span>
