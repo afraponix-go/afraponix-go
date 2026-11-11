@@ -40,44 +40,6 @@
   background: color-mix(in srgb, var(--brand-green) 20%, transparent);
   color: var(--brand-green);
 }
-.wizard-step.skip {
-  opacity: 0.4;
-}
-
-/* Setup method choices */
-.setup-choices {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.setup-choice {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 12px;
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-.setup-choice.sel {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 6%, transparent);
-}
-.setup-choice input {
-  grid-row: span 2;
-  align-self: center;
-}
-.setup-title {
-  font-weight: 650;
-  font-size: 15px;
-}
-.setup-sub {
-  grid-column: 2;
-  font-size: 13px;
-  color: var(--ink-faint);
-}
-
 /* Per-tank / per-bed config cards */
 .wizard-cards {
   display: flex;

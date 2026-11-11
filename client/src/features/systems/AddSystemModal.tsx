@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { CountStepper, NumberStepper } from '../../components/CountStepper'
 import { ApiError } from '../../lib/apiClient'
-import { createSystem, createFishTank, saveGrowBedsBulk, createDemoSystem, fetchSystems } from './api'
+import { createSystem, createFishTank, saveGrowBedsBulk } from './api'
 import { useSystems } from './SystemContext'
 import { BED_TYPES, bedShape, computeBed, type BedInputs } from '../plants/bedMath'
 import { FishIcon, PlantIcon } from '../../app/icons'
@@ -35,7 +35,7 @@ function bedToInputs(b: Bed): BedInputs {
   }
 }
 
-const STEPS = ['Setup', 'Basics', 'Fish tanks', 'Grow beds']
+const STEPS = ['Basics', 'Fish tanks', 'Grow beds']
 
 // `farmId` overrides which farm the new system lands in (used right after
 // creating a farm, before the farm list has refetched into context).
@@ -43,7 +43,6 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
   const qc = useQueryClient()
   const { setActiveId, activeFarm, activeFarmId } = useSystems()
   const [step, setStep] = useState(1)
-  const [method, setMethod] = useState<'custom' | 'demo'>('custom')
   const [name, setName] = useState('')
   const [tankCount, setTankCount] = useState(1)
   const [bedCount, setBedCount] = useState(2)
@@ -66,11 +65,6 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
 
   const mutation = useMutation({
     mutationFn: async () => {
-      if (method === 'demo') {
-        await createDemoSystem(name)
-        const list = await fetchSystems()
-        return list.slice().sort((a, b) => b.id.localeCompare(a.id))[0]?.id ?? null
-      }
       // The backend generates the id; the tanks and beds below are attached to
       // whatever it returns.
       const id = await createSystem({
@@ -111,30 +105,27 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Something went wrong.'),
   })
 
-  const lastStep = method === 'demo' ? 2 : 4
+  const lastStep = 3
   function next() {
     setError(null)
-    if (step === 1) return setStep(2)
-    if (step === 2) {
+    if (step === 1) {
       if (!name.trim()) return setError('Enter a system name.')
-      if (method === 'demo') return submit()
-      return setStep(3)
+      return setStep(2)
     }
-    if (step === 3) return setStep(4)
+    if (step === 2) return setStep(3)
   }
   function submit() {
     setError(null)
     if (!name.trim()) return setError('Enter a system name.')
-    if (method === 'custom') {
-      for (const b of beds) {
-        if (computeBed(b.type, bedToInputs(b)).equivalent_m2 <= 0) return setError(`Enter dimensions for ${b.name}.`)
-        // Depth drives water volume for area/vertical beds; 0 is not valid.
-        const shape = bedShape(b.type)
-        if ((shape === 'area' || shape === 'vertical') && num(b.height) <= 0) {
-          return setError(`${shape === 'vertical' ? 'Base height' : 'Depth'} must be greater than 0 for ${b.name}.`)
-        }
+    for (const b of beds) {
+      if (computeBed(b.type, bedToInputs(b)).equivalent_m2 <= 0) return setError(`Enter dimensions for ${b.name}.`)
+      // Depth drives water volume for area/vertical beds; 0 is not valid.
+      const shape = bedShape(b.type)
+      if ((shape === 'area' || shape === 'vertical') && num(b.height) <= 0) {
+        return setError(`${shape === 'vertical' ? 'Base height' : 'Depth'} must be greater than 0 for ${b.name}.`)
       }
     }
+  
     mutation.mutate()
   }
   function onSubmit(e: FormEvent) {
@@ -147,7 +138,7 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
     <Modal title="Add system" onClose={onClose} wide>
       <div className="wizard-steps">
         {STEPS.map((s, i) => (
-          <span key={s} className={`wizard-step ${step === i + 1 ? 'active' : step > i + 1 ? 'done' : ''} ${method === 'demo' && i > 1 ? 'skip' : ''}`}>
+          <span key={s} className={`wizard-step ${step === i + 1 ? 'active' : step > i + 1 ? 'done' : ''} `}>
             <b>{i + 1}</b> {s}
           </span>
         ))}
@@ -157,43 +148,25 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
         {error && <div className="wq-error">{error}</div>}
 
         {step === 1 && (
-          <div className="setup-choices">
-            <label className={`setup-choice ${method === 'custom' ? 'sel' : ''}`}>
-              <input type="radio" name="setup" checked={method === 'custom'} onChange={() => setMethod('custom')} />
-              <span className="setup-title">Start fresh</span>
-              <span className="setup-sub">Configure your fish tanks and grow beds.</span>
-            </label>
-            <label className={`setup-choice ${method === 'demo' ? 'sel' : ''}`}>
-              <input type="radio" name="setup" checked={method === 'demo'} onChange={() => setMethod('demo')} />
-              <span className="setup-title">Import demo system</span>
-              <span className="setup-sub">A ready-made system with sample data to explore.</span>
-            </label>
-          </div>
-        )}
-
-        {step === 2 && (
           <>
             <div className="field">
               <label htmlFor="sw-name">System name</label>
               <input id="sw-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Backyard Aquaponics" autoFocus />
             </div>
-            {method === 'custom' && (
-              <div className="field-row">
-                <div className="field">
-                  <label htmlFor="sw-tanks">Number of fish tanks</label>
-                  <CountStepper id="sw-tanks" value={tankCount} max={20} onChange={setTankCount} />
-                </div>
-                <div className="field">
-                  <label htmlFor="sw-beds">Number of grow beds</label>
-                  <CountStepper id="sw-beds" value={bedCount} max={30} onChange={setBedCount} />
-                </div>
+            <div className="field-row">
+              <div className="field">
+                <label htmlFor="sw-tanks">Number of fish tanks</label>
+                <CountStepper id="sw-tanks" value={tankCount} max={20} onChange={setTankCount} />
               </div>
-            )}
-            {method === 'demo' && <p style={{ color: 'var(--ink-faint)', fontSize: 13, margin: 0 }}>We'll create a fully populated demo system with this name.</p>}
+              <div className="field">
+                <label htmlFor="sw-beds">Number of grow beds</label>
+                <CountStepper id="sw-beds" value={bedCount} max={30} onChange={setBedCount} />
+              </div>
+            </div>
           </>
         )}
 
-        {step === 3 && (
+        {step === 2 && (
           <div className="wizard-cards">
             {tanks.map((t, i) => (
               <div className="wizard-card" key={i}>
@@ -216,7 +189,7 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
           </div>
         )}
 
-        {step === 4 && (
+        {step === 3 && (
           <div className="wizard-cards">
             {beds.map((b, i) => {
               const shape = bedShape(b.type)
@@ -263,7 +236,7 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
         <div className="mform-actions">
           {step > 1 && <button type="button" className="ghost" onClick={() => setStep(step - 1)}>Back</button>}
           <button type="submit" className="btn" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Creating…' : step === lastStep ? (method === 'demo' ? 'Create demo system' : 'Create system') : 'Next'}
+            {mutation.isPending ? 'Creating…' : step === lastStep ? 'Create system' : 'Next'}
           </button>
         </div>
       </form>
