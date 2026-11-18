@@ -9,6 +9,7 @@ import { CustomCropModal, type SavedCrop } from './CustomCropModal'
 import { recordPlanting, batchLabel } from './plantGrowth'
 import { fetchBatches } from './batches'
 import { NumberStepper } from '../../components/CountStepper'
+import { bedTypeTag } from './bedMath'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const STAGES = [
@@ -159,7 +160,7 @@ export function PlantingForm({ initialBedId, onDone, onCancel }: { initialBedId?
           {beds.map((b) => (
             <option key={b.id} value={b.id} title={b.equivalent_m2 != null ? `${b.equivalent_m2} m² growing area` : undefined}>
               {b.bed_name ?? `Bed ${b.id}`}
-              {b.bed_type ? ` · ${b.bed_type}` : ''}
+              {b.bed_type ? ` · ${bedTypeTag(b.bed_type)}` : ''}
               {b.equivalent_m2 != null && b.equivalent_m2 > 0 ? ` · ${b.equivalent_m2} m²` : ''}
             </option>
           ))}

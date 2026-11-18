@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { api } from '../../lib/apiClient'
+import { normalizeBedType } from './bedMath'
 
 const numish = z.union([z.string(), z.number()]).nullable().optional().transform((v) => (v == null || v === '' ? null : Number(v)))
 
@@ -54,15 +55,20 @@ export function deleteAllocation(id: number) {
 }
 
 // Canonical estimate of how many plants a % allocation of a bed holds.
-// Vertical beds scale by vertical count; area beds use a square spacing grid.
+// Vertical and Dutch-bucket beds scale by unit count; area beds use a square spacing grid.
 export function plantsForAllocation(
   bed: { bed_type?: string | null; equivalent_m2?: number | null; vertical_count?: number | null; plants_per_vertical?: number | null },
   percentage: number,
   spacingCm: number,
 ): number {
   const pct = Math.max(0, percentage) / 100
-  if ((bed.bed_type ?? '').toLowerCase() === 'vertical' && bed.vertical_count && bed.plants_per_vertical) {
+  const kind = normalizeBedType(bed.bed_type)
+  if (kind === 'vertical' && bed.vertical_count && bed.plants_per_vertical) {
     return Math.floor(pct * bed.vertical_count * bed.plants_per_vertical)
+  }
+  // Dutch buckets: capacity is buckets × plants per bucket (default 1), not area.
+  if (kind === 'dutch_bucket' && bed.vertical_count) {
+    return Math.floor(pct * bed.vertical_count * (bed.plants_per_vertical || 1))
   }
   const areaM2 = pct * (bed.equivalent_m2 ?? 0)
   const spacing = spacingCm > 0 ? spacingCm : 30

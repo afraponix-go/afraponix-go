@@ -82,12 +82,13 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
       }
       const growBeds = beds.map((b, i) => {
         const c = computeBed(b.type, bedToInputs(b))
-        const nft = bedShape(b.type) === 'nft'
+        const shape = bedShape(b.type)
+        const nft = shape === 'nft' || shape === 'bucket' // stated water volume, not derived
         return {
           bed_number: i + 1, bed_type: b.type, bed_name: b.name.trim() || `Bed ${i + 1}`,
           volume_liters: Math.round(c.volume_liters) || 0, area_m2: c.area_m2 || null, equivalent_m2: c.equivalent_m2 || null,
           length_meters: numOrNull(b.length), width_meters: numOrNull(b.width), height_meters: numOrNull(b.height),
-          plant_capacity: c.plant_capacity, vertical_count: numOrNull(b.verticals), plants_per_vertical: numOrNull(b.perVertical),
+          plant_capacity: c.plant_capacity, vertical_count: numOrNull(b.verticals), plants_per_vertical: shape === 'bucket' ? (numOrNull(b.perVertical) ?? 1) : numOrNull(b.perVertical),
           reservoir_volume: nft ? numOrNull(b.reservoir) : Math.round(c.volume_liters) || null,
           trough_length: numOrNull(b.troughLength), trough_count: numOrNull(b.troughCount), plant_spacing: numOrNull(b.spacing),
           reservoir_volume_liters: nft ? numOrNull(b.reservoir) : null,
@@ -118,7 +119,7 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
     setError(null)
     if (!name.trim()) return setError('Enter a system name.')
     for (const b of beds) {
-      if (computeBed(b.type, bedToInputs(b)).equivalent_m2 <= 0) return setError(`Enter dimensions for ${b.name}.`)
+      if (computeBed(b.type, bedToInputs(b)).equivalent_m2 <= 0) return setError(bedShape(b.type) === 'bucket' ? `Enter the number of buckets for ${b.name}.` : `Enter dimensions for ${b.name}.`)
       // Depth drives water volume for area/vertical beds; 0 is not valid.
       const shape = bedShape(b.type)
       if ((shape === 'area' || shape === 'vertical') && num(b.height) <= 0) {
@@ -216,6 +217,13 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
                     <div className="field-row">
                       <div className="field"><label>Towers</label><NumberStepper min={1} value={b.verticals} onChange={(v) => setBed(i, { verticals: v })} /></div>
                       <div className="field"><label>Plants per tower</label><NumberStepper min={1} value={b.perVertical} onChange={(v) => setBed(i, { perVertical: v })} /></div>
+                    </div>
+                  )}
+                  {shape === 'bucket' && (
+                    <div className="field-row">
+                      <div className="field"><label>Buckets</label><NumberStepper min={1} value={b.verticals} onChange={(v) => setBed(i, { verticals: v })} /></div>
+                      <div className="field"><label>Plants per bucket</label><NumberStepper min={1} placeholder="1" value={b.perVertical} onChange={(v) => setBed(i, { perVertical: v })} /></div>
+                      <div className="field"><label>Water volume <span className="unit-hint">(L)</span></label><input type="number" min="0" step="any" value={b.reservoir} onChange={(e) => setBed(i, { reservoir: e.target.value })} /></div>
                     </div>
                   )}
                   {shape === 'nft' && (

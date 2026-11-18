@@ -9,6 +9,7 @@ import { moveBatch, transferBatch } from './plantGrowth'
 import { prettyCrop } from './api'
 import type { Batch } from './batches'
 import { NumberStepper } from '../../components/CountStepper'
+import { bedTypeTag } from './bedMath'
 
 export function MoveBatchModal({ batch, onClose }: { batch: Batch; onClose: () => void }) {
   const { activeId, allSystems } = useSystems()
@@ -84,7 +85,7 @@ export function MoveBatchModal({ batch, onClose }: { batch: Batch; onClose: () =
             <option value="">Select a bed…</option>
             {bedOptions.map((b) => (
               <option key={b.id} value={b.id}>
-                {b.bed_name ?? `Bed ${b.id}`}{b.bed_type ? ` · ${b.bed_type}` : ''}
+                {b.bed_name ?? `Bed ${b.id}`}{b.bed_type ? ` · ${bedTypeTag(b.bed_type)}` : ''}
               </option>
             ))}
           </select>

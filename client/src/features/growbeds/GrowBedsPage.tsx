@@ -4,6 +4,7 @@ import { fetchGrowBeds } from './api'
 import '../dashboard/dashboard.css'
 import '../fish/fish.css'
 import './growbeds.css'
+import { bedTypeTag } from '../plants/bedMath'
 
 function Stat({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
@@ -59,7 +60,7 @@ export function GrowBedsPage() {
               <div className="tank-card" key={b.id}>
                 <div className="tank-head">
                   <span className="tank-name">{b.bed_name ?? `Bed ${b.id}`}</span>
-                  {b.bed_type && <span className="tank-type">{b.bed_type}</span>}
+                  {b.bed_type && <span className="tank-type">{bedTypeTag(b.bed_type)}</span>}
                 </div>
                 <div className="bed-area">{(b.equivalent_m2 ?? 0).toFixed(1)} m² grow area</div>
                 <div className="util">

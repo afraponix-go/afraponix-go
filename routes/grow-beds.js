@@ -114,6 +114,13 @@ router.post('/system/:systemId', async (req, res) => {
                         }
                         break;
 
+                    case 'dutch_bucket':
+                        // Buckets reuse vertical_count / plants_per_vertical (default 1 plant each).
+                        if (verticalCount > 0) {
+                            cleanBed.equivalent_m2 = (verticalCount * (plantsPerVertical || 1)) / 25;
+                        }
+                        break;
+
                     case 'nft':
                         if (troughLength > 0 && plantSpacing > 0 && troughCount > 0) {
                             const plantsPerTrough = Math.floor(troughLength / (plantSpacing / 100));
@@ -231,6 +238,13 @@ router.put('/bed/:systemId/:bedNumber', async (req, res) => {
                     if (verticalCount > 0 && plantsPerVertical > 0) {
                         const totalPlants = verticalCount * plantsPerVertical;
                         bedConfig.equivalent_m2 = totalPlants / 25;
+                    }
+                    break;
+
+                case 'dutch_bucket':
+                    // Buckets reuse vertical_count / plants_per_vertical (default 1 plant each).
+                    if (verticalCount > 0) {
+                        bedConfig.equivalent_m2 = (verticalCount * (plantsPerVertical || 1)) / 25;
                     }
                     break;
 

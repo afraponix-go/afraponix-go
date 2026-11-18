@@ -6,6 +6,7 @@ import { useSystems } from '../systems/SystemContext'
 import { fetchCropOptions } from './crops'
 import { saveAllocation, updateAllocation, plantsForAllocation, type Allocation } from './api'
 import type { GrowBedConfig } from '../growbeds/api'
+import { normalizeBedType } from './bedMath'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -23,7 +24,8 @@ export function AllocationModal({
   const { activeId } = useSystems()
   const qc = useQueryClient()
   const editing = !!allocation
-  const isVertical = (bed.bed_type ?? '').toLowerCase() === 'vertical'
+  const unitKind = normalizeBedType(bed.bed_type)
+  const isVertical = unitKind === 'vertical' || unitKind === 'dutch_bucket' // sized by unit count, not spacing
   const availableMax = Math.max(0, Math.round((100 - usedByOthers) * 10) / 10)
 
   const { data: crops = [] } = useQuery({ queryKey: ['crop-options', activeId], queryFn: () => fetchCropOptions(activeId as string), enabled: !!activeId })
@@ -104,7 +106,7 @@ export function AllocationModal({
 
         <div className="unit-hint" style={{ marginTop: -4 }}>
           ≈ <b style={{ color: 'var(--ink)' }}>{estimate.toLocaleString()}</b> plants
-          {isVertical ? ' (scaled by tower count)' : ` at ${Number(spacing) || 30} cm spacing`}
+          {isVertical ? (unitKind === 'dutch_bucket' ? ' (scaled by bucket count)' : ' (scaled by tower count)') : ` at ${Number(spacing) || 30} cm spacing`}
         </div>
 
         {!editing && (

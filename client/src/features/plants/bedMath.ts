@@ -3,13 +3,14 @@
 // app. equivalent_m2 is the "effective growing area" the allocation math uses:
 // footprint (L×W) for area beds, or plant-sites ÷ 25 for NFT/vertical.
 
-export type BedShape = 'area' | 'nft' | 'vertical'
+export type BedShape = 'area' | 'nft' | 'vertical' | 'bucket'
 export type BedTypeDef = { value: string; label: string; shape: BedShape }
 
 export const BED_TYPES: BedTypeDef[] = [
   { value: 'dwc', label: 'Deep Water Culture (DWC)', shape: 'area' },
   { value: 'media', label: 'Media Bed', shape: 'area' },
   { value: 'nft', label: 'NFT Channels', shape: 'nft' },
+  { value: 'dutch_bucket', label: 'Dutch Buckets', shape: 'bucket' },
   { value: 'vertical', label: 'Vertical Tower', shape: 'vertical' },
 ]
 
@@ -28,6 +29,12 @@ const ALIASES: Record<string, string> = {
   media_flow: 'media',
   raft: 'dwc',
   tower: 'vertical',
+  'dutch-bucket': 'dutch_bucket',
+  dutch_buckets: 'dutch_bucket',
+  dutchbucket: 'dutch_bucket',
+  bato: 'dutch_bucket',
+  bato_bucket: 'dutch_bucket',
+  'bato-bucket': 'dutch_bucket',
 }
 export function normalizeBedType(type?: string | null): string {
   const t = (type ?? '').toLowerCase().trim()
@@ -39,10 +46,18 @@ export function bedTypeDef(type?: string | null): BedTypeDef | undefined {
 export function bedTypeLabel(type?: string | null): string {
   return bedTypeDef(type)?.label ?? (type ?? 'Bed')
 }
+// Short tag for chips/option lists. Existing types print as stored (the chip CSS
+// capitalises them); only the underscore in "dutch_bucket" needs tidying.
+export function bedTypeTag(type?: string | null): string {
+  return normalizeBedType(type) === 'dutch_bucket' ? 'Dutch buckets' : type ?? ''
+}
 export function bedShape(type?: string | null): BedShape {
   return bedTypeDef(type)?.shape ?? 'area'
 }
 
+// Dutch buckets reuse the tower columns (no schema change): vertical_count =
+// number of buckets, plants_per_vertical = plants per bucket (default 1), and
+// reservoir_volume_liters = the water the bed holds (sump + bucket reserves).
 export type BedInputs = {
   length_meters?: number | null
   width_meters?: number | null
@@ -73,6 +88,16 @@ export function computeBed(type: string, i: BedInputs): BedComputed {
       area_m2: n(i.length_meters) * n(i.width_meters),
       equivalent_m2: cap / DENSITY,
       volume_liters: n(i.length_meters) * n(i.width_meters) * n(i.height_meters) * 1000,
+      plant_capacity: cap,
+    }
+  }
+
+  if (shape === 'bucket') {
+    const cap = n(i.vertical_count) * (n(i.plants_per_vertical) || 1)
+    return {
+      area_m2: cap / DENSITY,
+      equivalent_m2: cap / DENSITY,
+      volume_liters: n(i.reservoir_volume_liters),
       plant_capacity: cap,
     }
   }
@@ -117,10 +142,15 @@ export function bedFill(
   const spaceLeft = capacity - plants
 
   const t = (bed.bed_type ?? '').toLowerCase()
+  const isBuckets = normalizeBedType(bed.bed_type) === 'dutch_bucket'
   const isVerticalDisplay = t.includes('vertical') || t.includes('tower') || t.includes('nft')
 
   let usage: string
-  if (isVerticalDisplay) {
+  if (isBuckets) {
+    const perBucket = n(bed.plants_per_vertical) || 1
+    const totalBuckets = n(bed.vertical_count) || (capacity > 0 ? Math.ceil(capacity / perBucket) : 0)
+    usage = `${Math.ceil(plants / perBucket)}/${totalBuckets} buckets`
+  } else if (isVerticalDisplay) {
     const perUnit = n(bed.plants_per_vertical) || 6
     let totalUnits = n(bed.vertical_count) || 0
     if (!totalUnits && capacity > 0) totalUnits = Math.ceil(capacity / perUnit)

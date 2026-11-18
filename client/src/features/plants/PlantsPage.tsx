@@ -4,6 +4,7 @@ import { fetchAllocations, prettyCrop, type Allocation } from './api'
 import '../dashboard/dashboard.css'
 import '../fish/fish.css'
 import './plants.css'
+import { bedTypeTag } from './bedMath'
 
 function Stat({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
@@ -66,7 +67,7 @@ export function PlantsPage() {
           <div className="tank-card" key={g.bedName}>
             <div className="tank-head">
               <span className="tank-name">{g.bedName}</span>
-              {g.bedType && <span className="tank-type">{g.bedType}</span>}
+              {g.bedType && <span className="tank-type">{bedTypeTag(g.bedType)}</span>}
             </div>
             <div className="crop-list">
               {g.items

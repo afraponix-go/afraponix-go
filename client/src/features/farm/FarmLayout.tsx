@@ -4,7 +4,7 @@ import { useSystems } from '../systems/SystemContext'
 import { fetchFishInventory, type FishTank } from '../fish/api'
 import { fetchGrowBedConfigs, type GrowBedConfig } from '../growbeds/api'
 import { fetchBatches, type Batch } from '../plants/batches'
-import { normalizeBedType, BED_TYPES } from '../plants/bedMath'
+import { normalizeBedType, bedTypeTag, BED_TYPES } from '../plants/bedMath'
 import { fetchCropOptions, plantsPerM2FromSpacing, DEFAULT_PLANTS_PER_M2 } from '../plants/crops'
 import { TankActionModal, type TankAction } from '../fish/TankActionModal'
 import { NewPlantingModal } from '../plants/NewPlantingModal'
@@ -91,10 +91,13 @@ export function buildBedViews(beds: GrowBedConfig[], batches: Batch[], densityBy
       const areaM2 = bedArea(bed)
       const bedBatches = batches.filter((b) => Number(b.grow_bed_id) === bed.id && b.remaining > 0)
       const planted = bedBatches.reduce((n, b) => n + b.remaining, 0)
+      // Bucket beds are sized by bucket count (equivalent area = sites ÷ 25), so a
+      // plant takes 1/25 m² of it; other beds use the batch's own plant spacing.
+      const perM2 = (batch: Batch) => (normalizeBedType(bed.bed_type) === 'dutch_bucket' ? 25 : batchDensity(batch, densityByCrop))
       const segments: BedSegment[] = bedBatches.map((batch, i) => ({
         batch,
         color: CROP_COLORS[i % CROP_COLORS.length],
-        area: batch.remaining / batchDensity(batch, densityByCrop),
+        area: batch.remaining / perM2(batch),
       }))
       const usedM2 = segments.reduce((a, s) => a + s.area, 0)
       const pct = areaM2 > 0 ? Math.min(100, Math.round((usedM2 / areaM2) * 100)) : 0
@@ -324,8 +327,10 @@ function DetailModal({
   return (
     <Modal title={b.bed_name || `Bed ${b.bed_number}`} onClose={onClose}>
       <dl className="farm-dl">
-        <div><dt>Type</dt><dd>{b.bed_type ?? '—'}</dd></div>
-        <div><dt>Dimensions</dt><dd>{b.length_meters ?? '?'} × {b.width_meters ?? '?'} m</dd></div>
+        <div><dt>Type</dt><dd>{b.bed_type ? bedTypeTag(b.bed_type) : '—'}</dd></div>
+        {normalizeBedType(b.bed_type) === 'dutch_bucket'
+          ? <div><dt>Buckets</dt><dd>{b.vertical_count ?? '?'} × {b.plants_per_vertical ?? 1} plant{(b.plants_per_vertical ?? 1) === 1 ? '' : 's'}</dd></div>
+          : <div><dt>Dimensions</dt><dd>{b.length_meters ?? '?'} × {b.width_meters ?? '?'} m</dd></div>}
         <div><dt>Growing area</dt><dd>{node.areaM2.toFixed(1)} m²</dd></div>
         <div><dt>Planted</dt><dd>{node.planted} plants · {node.usedM2.toFixed(1)} m² · {node.pct}% full</dd></div>
       </dl>

@@ -8,7 +8,7 @@ import { prettyCrop } from './api'
 import { BedConfigModal } from './BedConfigModal'
 import { NewPlantingModal } from './NewPlantingModal'
 import { HarvestModal } from './HarvestModal'
-import { normalizeBedType, bedFill } from './bedMath'
+import { normalizeBedType, bedFill, bedTypeTag } from './bedMath'
 import '../dashboard/dashboard.css'
 import '../fish/fish.css'
 import '../growbeds/growbeds.css'
@@ -67,7 +67,7 @@ export function BedsAllocation() {
               <div className="tank-card bed-fill-card" key={bed.id}>
                 <div className="tank-head">
                   <span className="tank-name">{bed.bed_name ?? `Bed ${bed.bed_number ?? bed.id}`}</span>
-                  {bed.bed_type && <span className="tank-type">{normalizeBedType(bed.bed_type)}</span>}
+                  {bed.bed_type && <span className="tank-type">{bedTypeTag(normalizeBedType(bed.bed_type))}</span>}
                 </div>
 
                 <div className="bed-stats">
