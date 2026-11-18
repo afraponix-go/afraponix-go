@@ -102,6 +102,8 @@ router.post('/system/:systemId', async (req, res) => {
                     case 'deep_water_culture':
                     case 'ebb_flow':
                     case 'flood_drain':
+                case 'wicking':
+                    case 'wicking':
                         if (length > 0 && width > 0) {
                             cleanBed.equivalent_m2 = length * width;
                         }

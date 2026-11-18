@@ -4,7 +4,7 @@ import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
 import { useSystems } from '../systems/SystemContext'
 import { saveBedConfig, type BedConfigPayload, type GrowBedConfig } from '../growbeds/api'
-import { BED_TYPES, bedShape, computeBed, normalizeBedType } from './bedMath'
+import { BED_TYPES, bedShape, bedDepthLabel, computeBed, countsTowardSystemVolume, normalizeBedType } from './bedMath'
 import { NumberStepper } from '../../components/CountStepper'
 
 const numOrNull = (s: string): number | null => (s.trim() === '' || isNaN(Number(s)) ? null : Number(s))
@@ -126,7 +126,7 @@ export function BedConfigModal({
               <input id="bc-wid" type="number" min="0" step="any" inputMode="decimal" value={width} onChange={(e) => setWidth(e.target.value)} placeholder="e.g. 1" />
             </div>
             <div className="field">
-              <label htmlFor="bc-hgt">{shape === 'vertical' ? 'Base height' : 'Depth'} <span className="unit-hint">(m)</span></label>
+              <label htmlFor="bc-hgt">{bedDepthLabel(type)} <span className="unit-hint">(m)</span></label>
               <input id="bc-hgt" type="number" min="0" step="any" inputMode="decimal" value={height} onChange={(e) => setHeight(e.target.value)} placeholder="e.g. 0.3" />
             </div>
           </div>
@@ -187,6 +187,10 @@ export function BedConfigModal({
               </div>
             </div>
           </>
+        )}
+
+        {!countsTowardSystemVolume(type) && (
+          <p className="field-hint">Wicking beds hold their own water, so this volume is not added to the system's water volume.</p>
         )}
 
         <div className="bed-calc">

@@ -5,7 +5,7 @@ import { CountStepper, NumberStepper } from '../../components/CountStepper'
 import { ApiError } from '../../lib/apiClient'
 import { createSystem, createFishTank, saveGrowBedsBulk } from './api'
 import { useSystems } from './SystemContext'
-import { BED_TYPES, bedShape, computeBed, type BedInputs } from '../plants/bedMath'
+import { BED_TYPES, bedShape, bedDepthLabel, computeBed, countsTowardSystemVolume, type BedInputs } from '../plants/bedMath'
 import { FishIcon, PlantIcon } from '../../app/icons'
 import '../fish/fish.css'
 import '../water/water.css'
@@ -123,7 +123,7 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
       // Depth drives water volume for area/vertical beds; 0 is not valid.
       const shape = bedShape(b.type)
       if ((shape === 'area' || shape === 'vertical') && num(b.height) <= 0) {
-        return setError(`${shape === 'vertical' ? 'Base height' : 'Depth'} must be greater than 0 for ${b.name}.`)
+        return setError(`${bedDepthLabel(b.type)} must be greater than 0 for ${b.name}.`)
       }
     }
   
@@ -210,7 +210,7 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
                     <div className="field-row">
                       <div className="field"><label>Length <span className="unit-hint">(m)</span></label><input type="number" min="0" step="any" value={b.length} onChange={(e) => setBed(i, { length: e.target.value })} /></div>
                       <div className="field"><label>Width <span className="unit-hint">(m)</span></label><input type="number" min="0" step="any" value={b.width} onChange={(e) => setBed(i, { width: e.target.value })} /></div>
-                      <div className="field"><label>{shape === 'vertical' ? 'Base height' : 'Depth'} <span className="unit-hint">(m)</span></label><input type="number" min="0" step="any" value={b.height} onChange={(e) => setBed(i, { height: e.target.value })} /></div>
+                      <div className="field"><label>{bedDepthLabel(b.type)} <span className="unit-hint">(m)</span></label><input type="number" min="0" step="any" value={b.height} onChange={(e) => setBed(i, { height: e.target.value })} /></div>
                     </div>
                   )}
                   {shape === 'vertical' && (
@@ -234,6 +234,7 @@ export function AddSystemModal({ onClose, farmId }: { onClose: () => void; farmI
                       <div className="field"><label>Reservoir <span className="unit-hint">(L)</span></label><input type="number" min="0" step="any" value={b.reservoir} onChange={(e) => setBed(i, { reservoir: e.target.value })} /></div>
                     </div>
                   )}
+                  {!countsTowardSystemVolume(b.type) && <p className="field-hint">Wicking beds hold their own water — this volume is not added to the system's water volume.</p>}
                   <div className="bed-calc"><span><b>{c.equivalent_m2.toFixed(1)}</b> m² grow area</span><span><b>{Math.round(c.volume_liters).toLocaleString()}</b> L</span>{c.plant_capacity != null && <span><b>{c.plant_capacity.toLocaleString()}</b> plant sites</span>}</div>
                 </div>
               )

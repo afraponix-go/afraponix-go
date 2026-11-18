@@ -21,6 +21,7 @@ import {
 import { AddFertiliserModal } from './AddFertiliserModal'
 import '../spray/spray.css'
 import './dosing.css'
+import { countsTowardSystemVolume } from '../plants/bedMath'
 
 type Row = { nutrient: NutrientKey; target_value: string; product: string; unit: string }
 const DOSE_UNITS = ['g', 'kg', 'ml', 'L']
@@ -40,7 +41,8 @@ export function DosingProgrammeModal({ systemId, programme, onClose }: { systemI
   const byName = useMemo(() => new Map(productList.map((p) => [p.name, p])), [productList])
   const volumeL = useMemo(() => {
     const tankL = tanks.reduce((s, t) => s + (t.size_m3 && t.size_m3 > 0 ? t.size_m3 * 1000 : t.volume_liters ?? 0), 0)
-    const bedL = beds.reduce((s, b) => s + (b.volume_liters ?? 0), 0)
+    // Wicking beds hold their own water — not part of the system volume.
+    const bedL = beds.filter((b) => countsTowardSystemVolume(b.bed_type)).reduce((s, b) => s + (b.volume_liters ?? 0), 0)
     return Math.round(tankL + bedL)
   }, [tanks, beds])
 

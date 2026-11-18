@@ -26,6 +26,7 @@ import { MAX_PH_STEP } from '../dosing/api'
 import { HourglassIcon, SaltIcon } from '../../app/icons'
 import '../dashboard/dashboard.css'
 import './calculator.css'
+import { countsTowardSystemVolume } from '../plants/bedMath'
 
 const numOr0 = (v: string) => (v === '' ? 0 : Number(v) || 0)
 const fmt = (n: number, d = 1) => (n >= 100 ? Math.round(n).toLocaleString() : n.toFixed(d))
@@ -136,7 +137,8 @@ export function NutrientDosingCalculator() {
   // Reservoir volume from tanks + grow beds, until edited.
   const systemVolume = useMemo(() => {
     const tankL = (tanksQ.data ?? []).reduce((s, t) => s + (t.size_m3 && t.size_m3 > 0 ? t.size_m3 * 1000 : t.volume_liters ?? 0), 0)
-    const bedL = (bedsQ.data ?? []).reduce((s, b) => s + (b.volume_liters ?? 0), 0)
+    // Wicking beds hold their own water — not part of the system volume.
+    const bedL = (bedsQ.data ?? []).filter((b) => countsTowardSystemVolume(b.bed_type)).reduce((s, b) => s + (b.volume_liters ?? 0), 0)
     return Math.round(tankL + bedL)
   }, [tanksQ.data, bedsQ.data])
   const [volumeTouched, setVolumeTouched] = useState(false)

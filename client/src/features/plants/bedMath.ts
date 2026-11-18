@@ -4,11 +4,14 @@
 // footprint (L×W) for area beds, or plant-sites ÷ 25 for NFT/vertical.
 
 export type BedShape = 'area' | 'nft' | 'vertical' | 'bucket'
-export type BedTypeDef = { value: string; label: string; shape: BedShape }
+// inSystemVolume: false for beds with their own sealed water (wicking), whose
+// volume must NOT be added to the system's water volume.
+export type BedTypeDef = { value: string; label: string; shape: BedShape; inSystemVolume?: boolean }
 
 export const BED_TYPES: BedTypeDef[] = [
   { value: 'dwc', label: 'Deep Water Culture (DWC)', shape: 'area' },
   { value: 'media', label: 'Media Bed', shape: 'area' },
+  { value: 'wicking', label: 'Wicking Bed', shape: 'area', inSystemVolume: false },
   { value: 'nft', label: 'NFT Channels', shape: 'nft' },
   { value: 'dutch_bucket', label: 'Dutch Buckets', shape: 'bucket' },
   { value: 'vertical', label: 'Vertical Tower', shape: 'vertical' },
@@ -29,6 +32,8 @@ const ALIASES: Record<string, string> = {
   media_flow: 'media',
   raft: 'dwc',
   tower: 'vertical',
+  'wicking-bed': 'wicking',
+  wicking_bed: 'wicking',
   'dutch-bucket': 'dutch_bucket',
   dutch_buckets: 'dutch_bucket',
   dutchbucket: 'dutch_bucket',
@@ -50,6 +55,16 @@ export function bedTypeLabel(type?: string | null): string {
 // capitalises them); only the underscore in "dutch_bucket" needs tidying.
 export function bedTypeTag(type?: string | null): string {
   return normalizeBedType(type) === 'dutch_bucket' ? 'Dutch buckets' : type ?? ''
+}
+// Does this bed's water count towards the system's total water volume? Wicking
+// beds hold their own separate reservoir, so no.
+export function countsTowardSystemVolume(type?: string | null): boolean {
+  return bedTypeDef(type)?.inSystemVolume !== false
+}
+// Label for the bed's depth field.
+export function bedDepthLabel(type?: string | null): string {
+  const t = normalizeBedType(type)
+  return t === 'vertical' ? 'Base height' : t === 'wicking' ? 'Reservoir depth' : 'Depth'
 }
 export function bedShape(type?: string | null): BedShape {
   return bedTypeDef(type)?.shape ?? 'area'
