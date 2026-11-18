@@ -32,12 +32,12 @@ export function BedConfigModal({
   const [troughLen, setTroughLen] = useState(bed?.trough_length != null ? String(bed.trough_length) : '')
   const [troughCount, setTroughCount] = useState(bed?.trough_count != null ? String(bed.trough_count) : '')
   const [spacing, setSpacing] = useState(bed?.plant_spacing != null ? String(bed.plant_spacing) : '')
-  const [reservoir, setReservoir] = useState(bed?.volume_liters != null && ['nft', 'bucket'].includes(bedShape(bed?.bed_type)) ? String(bed.volume_liters) : '')
+  const [reservoir, setReservoir] = useState(bed?.volume_liters != null && bedShape(bed?.bed_type) === 'nft' ? String(bed.volume_liters)
+      // Dutch buckets store the bed's total; the form edits water per bucket.
+      : bed?.volume_liters != null && bed.vertical_count && bedShape(bed?.bed_type) === 'bucket' ? String(Math.round((bed.volume_liters / bed.vertical_count) * 100) / 100) : '')
   const [error, setError] = useState<string | null>(null)
 
   const shape = bedShape(type)
-  // NFT and Dutch-bucket beds hold a stated water volume rather than one derived from dimensions.
-  const usesReservoir = shape === 'nft' || shape === 'bucket'
 
   // Fields inferred as number|null (not the optional BedInputs shape) so they
   // satisfy the non-optional BedConfigPayload below; still assignable to BedInputs.
@@ -71,11 +71,12 @@ export function BedConfigModal({
         vertical_count: inputs.vertical_count,
         // Dutch buckets: each bucket holds at least one plant.
         plants_per_vertical: shape === 'bucket' ? (inputs.plants_per_vertical ?? 1) : inputs.plants_per_vertical,
-        reservoir_volume: usesReservoir ? inputs.reservoir_volume_liters : computed.volume_liters || null,
+        // NFT stores the typed reservoir; buckets store the computed total.
+        reservoir_volume: shape === 'nft' ? inputs.reservoir_volume_liters : computed.volume_liters || null,
         trough_length: inputs.trough_length,
         trough_count: inputs.trough_count,
         plant_spacing: inputs.plant_spacing,
-        reservoir_volume_liters: usesReservoir ? inputs.reservoir_volume_liters : null,
+        reservoir_volume_liters: shape === 'nft' ? inputs.reservoir_volume_liters : shape === 'bucket' ? computed.volume_liters || null : null,
       }
       return saveBedConfig(activeId as string, bedNumber, payload)
     },
@@ -158,8 +159,8 @@ export function BedConfigModal({
               </div>
             </div>
             <div className="field">
-              <label htmlFor="bc-rv">Water volume <span className="unit-hint">(L) · sump + buckets</span></label>
-              <input id="bc-rv" type="number" min="0" step="any" inputMode="decimal" value={reservoir} onChange={(e) => setReservoir(e.target.value)} placeholder="e.g. 300" />
+              <label htmlFor="bc-rv">Water per bucket <span className="unit-hint">(L)</span></label>
+              <input id="bc-rv" type="number" min="0" step="any" inputMode="decimal" value={reservoir} onChange={(e) => setReservoir(e.target.value)} placeholder="e.g. 12" />
             </div>
           </>
         )}

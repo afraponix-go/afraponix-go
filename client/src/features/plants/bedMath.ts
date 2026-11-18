@@ -71,8 +71,9 @@ export function bedShape(type?: string | null): BedShape {
 }
 
 // Dutch buckets reuse the tower columns (no schema change): vertical_count =
-// number of buckets, plants_per_vertical = plants per bucket (default 1), and
-// reservoir_volume_liters = the water the bed holds (sump + bucket reserves).
+// number of buckets, plants_per_vertical = plants per bucket (default 1). For
+// the *input*, reservoir_volume_liters means water PER BUCKET; the bed's total
+// (buckets × per-bucket) is what gets stored in volume_liters / reservoir_volume(_liters).
 export type BedInputs = {
   length_meters?: number | null
   width_meters?: number | null
@@ -112,7 +113,8 @@ export function computeBed(type: string, i: BedInputs): BedComputed {
     return {
       area_m2: cap / DENSITY,
       equivalent_m2: cap / DENSITY,
-      volume_liters: n(i.reservoir_volume_liters),
+      // total water = buckets × water per bucket (2 d.p. — the column's precision)
+      volume_liters: Math.round(n(i.vertical_count) * n(i.reservoir_volume_liters) * 100) / 100,
       plant_capacity: cap,
     }
   }
