@@ -4,7 +4,7 @@ import { useSystems } from '../systems/SystemContext'
 import { fetchFishInventory, type FishTank } from '../fish/api'
 import { fetchGrowBedConfigs, type GrowBedConfig } from '../growbeds/api'
 import { fetchBatches, type Batch } from '../plants/batches'
-import { normalizeBedType, bedTypeTag, BED_TYPES } from '../plants/bedMath'
+import { normalizeBedType, bedTypeTag, bedFill, BED_TYPES } from '../plants/bedMath'
 import { fetchCropOptions, plantsPerM2FromSpacing, DEFAULT_PLANTS_PER_M2 } from '../plants/crops'
 import { TankActionModal, type TankAction } from '../fish/TankActionModal'
 import { NewPlantingModal } from '../plants/NewPlantingModal'
@@ -91,15 +91,29 @@ export function buildBedViews(beds: GrowBedConfig[], batches: Batch[], densityBy
       const areaM2 = bedArea(bed)
       const bedBatches = batches.filter((b) => Number(b.grow_bed_id) === bed.id && b.remaining > 0)
       const planted = bedBatches.reduce((n, b) => n + b.remaining, 0)
-      // Bucket beds are sized by bucket count (equivalent area = sites ÷ 25), so a
-      // plant takes 1/25 m² of it; other beds use the batch's own plant spacing.
-      const perM2 = (batch: Batch) => (normalizeBedType(bed.bed_type) === 'dutch_bucket' ? 25 : batchDensity(batch, densityByCrop))
-      const segments: BedSegment[] = bedBatches.map((batch, i) => ({
-        batch,
-        color: CROP_COLORS[i % CROP_COLORS.length],
-        area: batch.remaining / perM2(batch),
-      }))
-      const usedM2 = segments.reduce((a, s) => a + s.area, 0)
+      // Fullness follows the same model as the bed cards (bedFill): plants ÷ the
+      // bed's plant capacity (its stored capacity, else 25 sites/m²). That keeps
+      // the map and the cards agreeing for every bed type — DWC, media, NFT,
+      // towers and buckets alike. Each batch's slice of the bar is its share of
+      // the plants. Only a bed with no usable capacity falls back to plant spacing.
+      const capacity = bedFill(bed, planted).capacity
+      let segments: BedSegment[]
+      let usedM2: number
+      if (capacity > 0) {
+        usedM2 = areaM2 * Math.min(1, planted / capacity)
+        segments = bedBatches.map((batch, i) => ({
+          batch,
+          color: CROP_COLORS[i % CROP_COLORS.length],
+          area: planted > 0 ? usedM2 * (batch.remaining / planted) : 0,
+        }))
+      } else {
+        segments = bedBatches.map((batch, i) => ({
+          batch,
+          color: CROP_COLORS[i % CROP_COLORS.length],
+          area: batch.remaining / batchDensity(batch, densityByCrop),
+        }))
+        usedM2 = segments.reduce((a, s) => a + s.area, 0)
+      }
       const pct = areaM2 > 0 ? Math.min(100, Math.round((usedM2 / areaM2) * 100)) : 0
       return { kind: 'bed', bed, areaM2, usedM2, planted, pct, segments }
     })
