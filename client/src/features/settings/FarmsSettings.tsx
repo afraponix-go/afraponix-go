@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Modal } from '../../components/Modal'
 import { ApiError } from '../../lib/apiClient'
-import { fetchFarms, createFarm, updateFarm, deleteFarm, fetchFarmShares, fetchFarmInvitations, inviteToFarm, updateFarmSharePermission, removeFarmShare, type Farm } from '../systems/farmApi'
+import { fetchFarms, createFarm, updateFarm, deleteFarm, fetchFarmShares, fetchFarmInvitations, inviteToFarm, updateFarmSharePermission, fetchShareableSystems, updateFarmShareSystems, removeFarmShare, type Farm } from '../systems/farmApi'
 import { useSystems } from '../systems/SystemContext'
 import '../fish/fish.css'
 import '../plants/plants.css'
+import { SystemPicker, selectionLabel } from '../access/SystemPicker'
 
 export function FarmsSettings() {
   const qc = useQueryClient()
@@ -95,8 +96,14 @@ function FarmShareModal({ farm, onClose }: { farm: Farm; onClose: () => void }) 
   const qc = useQueryClient()
   const [email, setEmail] = useState('')
   const [level, setLevel] = useState('collaborator')
+  // null = every system in the farm (the default); otherwise only these.
+  const [systemIds, setSystemIds] = useState<string[] | null>(null)
+  const [editing, setEditing] = useState<number | null>(null)
+  const [editIds, setEditIds] = useState<string[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const { data: shareable } = useQuery({ queryKey: ['farm-shareable-systems', farm.id], queryFn: () => fetchShareableSystems(farm.id) })
+  const sysList = shareable?.systems ?? []
   const { data: shares = [], isLoading } = useQuery({ queryKey: ['farm-shares', farm.id], queryFn: () => fetchFarmShares(farm.id) })
   const { data: pending = [] } = useQuery({ queryKey: ['farm-shares', 'pending', farm.id], queryFn: () => fetchFarmInvitations(farm.id) })
   const invalidate = () => {
@@ -105,10 +112,11 @@ function FarmShareModal({ farm, onClose }: { farm: Farm; onClose: () => void }) 
   }
 
   const invite = useMutation({
-    mutationFn: () => inviteToFarm(farm.id, email, level),
+    mutationFn: () => inviteToFarm(farm.id, email, level, systemIds),
     onSuccess: (res) => {
       setNotice(res?.message || `Invitation sent to ${email.trim()}.`)
       setEmail('')
+      setSystemIds(shareable?.can_share_all === false ? [] : null)
       invalidate()
       setTimeout(() => setNotice(null), 3000)
     },
@@ -116,12 +124,17 @@ function FarmShareModal({ farm, onClose }: { farm: Farm; onClose: () => void }) 
   })
   const changeLevel = useMutation({ mutationFn: ({ id, lvl }: { id: number; lvl: string }) => updateFarmSharePermission(id, lvl), onSuccess: invalidate })
   const remove = useMutation({ mutationFn: (id: number) => removeFarmShare(id), onSuccess: invalidate })
+  const saveSystems = useMutation({
+    mutationFn: ({ id, ids }: { id: number; ids: string[] | null }) => updateFarmShareSystems(id, ids),
+    onSuccess: () => { setEditing(null); invalidate() },
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'Could not update the systems.'),
+  })
 
   return (
     <Modal title={`Share ${farm.name}`} onClose={onClose}>
       <p style={{ marginTop: 0, color: 'var(--ink-faint)', fontSize: 13 }}>
-        Everyone you add gets access to <b>every system in this farm</b> — including any you add later. If they don’t have an
-        Afraponix Go account yet, they’ll get an email inviting them to create one, and the farm will be waiting when they sign in.
+        You’re sharing the <b>farm</b>. Choose which of its systems they can use — by default, all of them (including any you add later).
+        If they don’t have an Afraponix Go account yet, they’ll get an email inviting them to create one, and it will be waiting when they sign in.
       </p>
       <form className="mform" onSubmit={(e) => { e.preventDefault(); setError(null); setNotice(null); if (!email.trim()) return setError('Enter an email address.'); invite.mutate() }}>
         {error && <div className="wq-error">{error}</div>}
@@ -136,8 +149,14 @@ function FarmShareModal({ farm, onClose }: { farm: Farm; onClose: () => void }) 
             {LEVELS.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
           </select>
         </div>
+        {sysList.length > 0 && (
+          <div className="field">
+            <label>Systems they can use</label>
+            <SystemPicker systems={sysList} canShareAll={shareable?.can_share_all !== false} value={shareable?.can_share_all === false && systemIds === null ? [] : systemIds} onChange={setSystemIds} />
+          </div>
+        )}
         <div className="mform-actions">
-          <button type="submit" className="btn" disabled={invite.isPending}>{invite.isPending ? 'Sharing…' : 'Share farm'}</button>
+          <button type="submit" className="btn" disabled={invite.isPending || (systemIds !== null && systemIds.length === 0)}>{invite.isPending ? 'Sharing…' : 'Share farm'}</button>
         </div>
       </form>
 
@@ -153,6 +172,7 @@ function FarmShareModal({ farm, onClose }: { farm: Farm; onClose: () => void }) 
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{s.first_name || s.username || s.email}</div>
                 <div style={{ fontSize: 12.5, color: 'var(--ink-faint)' }}>{s.email}</div>
+                <div className="sp-chip">{selectionLabel(s.all_systems, s.system_ids, sysList.length)}{sysList.length > 0 && <> · <button className="link-btn" onClick={() => { setError(null); setEditing(editing === s.id ? null : s.id); setEditIds(s.all_systems === false ? (s.system_ids ?? []) : null) }}>Change systems</button></>}</div>
               </div>
               <span className="crop-card-actions">
                 <select value={s.permission_level} onChange={(e) => changeLevel.mutate({ id: s.id, lvl: e.target.value })}>
@@ -160,6 +180,15 @@ function FarmShareModal({ farm, onClose }: { farm: Farm; onClose: () => void }) 
                 </select>
                 <button className="link-btn danger" onClick={() => remove.mutate(s.id)}>Remove</button>
               </span>
+              {editing === s.id && (
+                <div style={{ flexBasis: '100%', marginTop: 8 }}>
+                  <SystemPicker systems={sysList} canShareAll={shareable?.can_share_all !== false} value={editIds} onChange={setEditIds} />
+                  <div className="mform-actions" style={{ marginTop: 8 }}>
+                    <button type="button" className="ghost" onClick={() => setEditing(null)}>Cancel</button>
+                    <button type="button" className="btn" disabled={saveSystems.isPending || (editIds !== null && editIds.length === 0)} onClick={() => saveSystems.mutate({ id: s.id, ids: editIds })}>Save systems</button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -173,7 +202,7 @@ function FarmShareModal({ farm, onClose }: { farm: Farm; onClose: () => void }) 
               <div key={s.id} className="op-item">
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{s.first_name || s.username || s.email}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--ink-faint)' }}>{s.email} · {s.permission_level}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--ink-faint)' }}>{s.email} · {s.permission_level} · {selectionLabel(s.all_systems, s.system_ids, sysList.length)}</div>
                 </div>
                 <span className="crop-card-actions">
                   <span style={{ fontSize: 12, color: 'var(--ink-faint)' }}>{s.awaiting_signup ? 'Awaiting sign-up' : 'Pending'}</span>

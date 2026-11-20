@@ -6,6 +6,7 @@ import { ApiError } from '../../lib/apiClient'
 import { Brand } from '../../components/Brand'
 import { GoogleSignInButton } from './GoogleSignInButton'
 import './auth.css'
+import { takeReturnTo } from '../../lib/returnTo'
 
 export function LoginPage() {
   const { signIn } = useAuth()
@@ -23,7 +24,7 @@ export function LoginPage() {
       const res = await login(email, password)
       if (!res.token) throw new Error('Login did not return a session token.')
       await signIn(res.token, res.user)
-      navigate('/', { replace: true })
+      navigate(takeReturnTo() ?? '/', { replace: true })
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not sign in. Check your details and try again.')
     } finally {

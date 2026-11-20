@@ -6,6 +6,7 @@ import { ApiError } from '../../lib/apiClient'
 import { Brand } from '../../components/Brand'
 import { GoogleSignInButton } from './GoogleSignInButton'
 import './auth.css'
+import { takeReturnTo } from '../../lib/returnTo'
 
 // Same rules the old app enforced on the registration form.
 const RULES = [
@@ -57,7 +58,7 @@ export function RegisterPage() {
       if (res.token && res.user) {
         // SMTP not configured — the backend auto-verifies and returns a token.
         await signIn(res.token, res.user)
-        navigate('/', { replace: true })
+        navigate(takeReturnTo() ?? '/', { replace: true })
         return
       }
       setStep('verify')
@@ -77,7 +78,7 @@ export function RegisterPage() {
       const res = await verifyCode(form.email, code)
       if (res.token && res.user) {
         await signIn(res.token, res.user)
-        navigate('/', { replace: true })
+        navigate(takeReturnTo() ?? '/', { replace: true })
       } else {
         setNotice(res.message ?? 'Email verified. You can now sign in.')
       }

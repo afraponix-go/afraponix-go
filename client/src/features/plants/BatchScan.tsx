@@ -11,6 +11,7 @@ import { BatchPhotoModal } from './BatchPhotoModal'
 import { GerminationModal } from '../seedlings/GerminationModal'
 import { TransplantModal } from '../seedlings/TransplantModal'
 import { batchScanUrl } from './batchQr'
+import { ScanNotInAccount } from '../access/ScanNotInAccount'
 import './plants.css'
 import './scan.css'
 
@@ -22,17 +23,29 @@ export function BatchScan() {
   const b = params.get('b')
   const f = params.get('f')
   const sb = params.get('sb')
-  const { setActiveId, setActiveFarmId } = useSystems()
+  const { setActiveId, setActiveFarmId, allSystems, farms, isLoading } = useSystems()
+  const isBed = !!(s && b)
+  const isSeedling = !isBed && !!(f && sb && Number.isFinite(Number(sb)))
+
+  // Is the scanned system/farm one this account can actually see? Switching to
+  // one it can't just gets reset by the context, which left the page "loading"
+  // forever — so decide up front and explain instead.
+  const known = isLoading ? null : isBed ? allSystems.some((x) => x.id === s) : isSeedling ? farms.some((x) => x.id === f) : true
 
   // Point the app context at whatever was scanned, so the action modals write to
   // the right system/farm.
   useEffect(() => {
+    if (known !== true) return
     if (s) setActiveId(s)
     if (f) setActiveFarmId(f)
-  }, [s, f, setActiveId, setActiveFarmId])
+  }, [known, s, f, setActiveId, setActiveFarmId])
 
-  if (s && b) return <BedBatchScan systemId={s} batchId={b} />
-  if (f && sb && Number.isFinite(Number(sb))) return <SeedlingScan farmId={f} seedlingId={Number(sb)} />
+  if (known === null) return <ScanShell><div className="empty">Loading…</div></ScanShell>
+  if (known === false) {
+    return <ScanShell><ScanNotInAccount what="batch" systemId={isBed ? (s as string) : undefined} farmId={isSeedling ? (f as string) : undefined} /></ScanShell>
+  }
+  if (isBed) return <BedBatchScan systemId={s as string} batchId={b as string} />
+  if (isSeedling) return <SeedlingScan farmId={f as string} seedlingId={Number(sb)} />
   return <ScanShell><div className="empty">This isn’t a valid batch label.</div></ScanShell>
 }
 

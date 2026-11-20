@@ -6,6 +6,7 @@ import { ApiError } from '../../lib/apiClient'
 import { GoogleSignInButton } from './GoogleSignInButton'
 import './auth.css'
 import './authDrawer.css'
+import { takeReturnTo } from '../../lib/returnTo'
 
 type Mode = 'signin' | 'register'
 
@@ -50,7 +51,7 @@ export function AuthDrawer({ open, initialMode = 'signin', onClose }: { open: bo
 
   function done() {
     onClose()
-    navigate('/', { replace: true })
+    navigate(takeReturnTo() ?? '/', { replace: true })
   }
 
   async function onSignIn(e: FormEvent) {

@@ -22,11 +22,23 @@ async function getFarmAccess(farmId, userId, pool = getDatabase()) {
     const [owned] = await pool.execute('SELECT 1 FROM farms WHERE id = ? AND owner_id = ?', [farmId, userId]);
     if (owned.length) return { level: 'owner' };
     const [shared] = await pool.execute(
-        "SELECT permission_level FROM farm_shares WHERE farm_id = ? AND shared_with_id = ? AND status = 'accepted' LIMIT 1",
+        "SELECT id, permission_level, all_systems FROM farm_shares WHERE farm_id = ? AND shared_with_id = ? AND status = 'accepted' LIMIT 1",
         [farmId, userId]
     );
-    if (shared.length) return { level: shared[0].permission_level };
+    // shareId/allSystems let callers that LIST a farm's systems apply the
+    // share's system selection (see accessibleSystemIds).
+    if (shared.length) return { level: shared[0].permission_level, shareId: shared[0].id, allSystems: !!shared[0].all_systems };
     return null;
+}
+
+// Which of a farm's systems can this user see? null = all of them (owner, or a
+// share that covers every system); otherwise the explicit list of system ids.
+async function accessibleSystemIds(farmId, userId, pool = getDatabase()) {
+    const access = await getFarmAccess(farmId, userId, pool);
+    if (!access) return [];
+    if (access.level === 'owner' || access.allSystems !== false) return null;
+    const [rows] = await pool.execute('SELECT system_id FROM farm_share_systems WHERE share_id = ?', [access.shareId]);
+    return rows.map((r) => r.system_id);
 }
 
 // Resolve a user's access to a system.
@@ -47,10 +59,15 @@ async function getSystemAccess(systemId, userId, pool = getDatabase()) {
     const farmId = rows[0].farm_id;
 
     // Farm-level share (grants access to every system in the farm) …
+    // A farm share may be limited to chosen systems (all_systems = 0 + rows in
+    // farm_share_systems); only count it if it covers THIS system.
     const [fshare] = farmId
         ? await pool.execute(
-              "SELECT permission_level FROM farm_shares WHERE farm_id = ? AND shared_with_id = ? AND status = 'accepted' LIMIT 1",
-              [farmId, userId]
+              `SELECT fs.permission_level FROM farm_shares fs
+               WHERE fs.farm_id = ? AND fs.shared_with_id = ? AND fs.status = 'accepted'
+                 AND (fs.all_systems = 1 OR EXISTS (SELECT 1 FROM farm_share_systems x WHERE x.share_id = fs.id AND x.system_id = ?))
+               LIMIT 1`,
+              [farmId, userId, systemId]
           )
         : [[]];
     // … and any legacy per-system share (still honoured).
@@ -112,6 +129,6 @@ function isOwnEntryToday(recordedBy, userId, dateStr) {
 }
 
 module.exports = {
-    getSystemAccess, getFarmAccess, canReadSystem, canWriteSystem, canCaptureSystem,
+    getSystemAccess, getFarmAccess, accessibleSystemIds, canReadSystem, canWriteSystem, canCaptureSystem,
     canWriteFarm, canCaptureFarm, canAccessSystem, isOwnEntryToday, WRITE_LEVELS, CAPTURE_LEVELS,
 };

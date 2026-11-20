@@ -5,6 +5,7 @@ import { useSystems } from '../systems/SystemContext'
 import { fetchFishInventory, tankMaxDensity } from './api'
 import { fmt } from './fishShared'
 import { TankActionModal, type TankAction } from './TankActionModal'
+import { ScanNotInAccount } from '../access/ScanNotInAccount'
 import '../plants/plants.css'
 import '../plants/scan.css'
 
@@ -15,12 +16,21 @@ export function TankScan() {
   const s = params.get('s')
   const tankParam = params.get('tank')
   const tankId = tankParam != null && Number.isFinite(Number(tankParam)) ? Number(tankParam) : null
-  const { setActiveId } = useSystems()
+  const { setActiveId, allSystems, isLoading } = useSystems()
+  // Only switch to a system this account can see (see BatchScan) — otherwise
+  // explain, and offer to ask for access.
+  const known = !s ? true : isLoading ? null : allSystems.some((x) => x.id === s)
 
   useEffect(() => {
-    if (s) setActiveId(s)
-  }, [s, setActiveId])
+    if (s && known === true) setActiveId(s)
+  }, [known, s, setActiveId])
 
+  if (s && known === null) {
+    return <div className="scan-wrap"><div className="scan-topline"><Link to="/scan" className="link-btn">‹ Scan another</Link></div><div className="empty">Loading…</div></div>
+  }
+  if (s && known === false) {
+    return <div className="scan-wrap"><div className="scan-topline"><Link to="/scan" className="link-btn">‹ Scan another</Link></div><ScanNotInAccount what="tank" systemId={s} /></div>
+  }
   if (!s || tankId == null) {
     return (
       <div className="scan-wrap">

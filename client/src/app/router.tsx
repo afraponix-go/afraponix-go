@@ -57,6 +57,7 @@ import { OperatorsSettings } from '../features/settings/OperatorsSettings'
 import { SharingSettings } from '../features/settings/SharingSettings'
 import { AdminSettings } from '../features/settings/AdminSettings'
 import { ManageFarms } from '../features/settings/ManageFarms'
+import { AccessRequestPage } from '../features/access/AccessRequestPage'
 
 const DASHBOARD_TABS = [
   { to: '/', label: 'Overview', end: true },
@@ -191,6 +192,7 @@ export const router = createBrowserRouter([
           },
           // Batch QR: camera scanner + scanned-label resolver (action sheet).
           { path: 'scan', element: <ScanPage /> },
+          { path: 'access-request/:token', element: <AccessRequestPage /> },
           { path: 'pick', element: <BatchTankPicker /> },
           { path: 'b', element: <BatchScan /> },
           { path: 't', element: <TankScan /> },

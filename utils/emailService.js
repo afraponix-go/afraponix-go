@@ -304,9 +304,94 @@ Sign up with this exact email so the shared ${noun} is waiting for you when you 
     }
 };
 
+// ---- Access requests (scanned a QR label for a farm you can't see) ---------
+// Sent to the farm's owner and admins. The button opens an in-app review page —
+// it deliberately does NOT approve on click, so mail scanners that pre-fetch
+// links can't grant access, and approval always requires a signed-in admin.
+const sendAccessRequestEmail = async (to, { requesterName, requesterEmail, farmName, systemName, message, reviewUrl }) => {
+    try {
+        let config;
+        try {
+            config = loadSmtpConfig();
+        } catch (configError) {
+            console.error('SMTP configuration not available:', configError.message);
+            return { success: false, error: 'Email service not configured.' };
+        }
+        const transporter = createTransporter();
+        const who = escapeHtml(requesterName || requesterEmail || 'Someone');
+        const email = escapeHtml(requesterEmail || '');
+        const farm = escapeHtml(farmName || 'your farm');
+        const what = systemName ? `the <b>${escapeHtml(systemName)}</b> system in <b>${farm}</b>` : `<b>${farm}</b>`;
+        const msgBlock = message
+            ? `<p style="margin:0 0 18px;padding:12px 14px;background:#f1f5fb;border-left:3px solid #334E9D;border-radius:6px;font-family:${EMAIL_FONT};font-size:14px;line-height:1.55;color:#334155;">“${escapeHtml(message)}”</p>`
+            : '';
+        const htmlContent = renderBrandEmail({
+            preheader: `${requesterName || requesterEmail || 'Someone'} scanned a label and is asking for access to ${farmName || 'your farm'}.`,
+            heading: 'Someone is asking for access',
+            intro: `<b>${who}</b>${email ? ` (${email})` : ''} scanned a QR label for ${what} and asked to be given access.`,
+            contentHtml: msgBlock,
+            buttonLabel: 'Review & approve',
+            buttonUrl: reviewUrl,
+            altLabel: 'Or paste this link into your browser:',
+            altUrl: reviewUrl,
+            note: 'You’ll be asked to sign in, then you can approve (choosing how much access to give) or decline. Nothing is shared until you approve. If you don’t recognise this person, decline or ignore this email.',
+        });
+        const result = await transporter.sendMail({
+            from: `"${config.from.name}" <${config.from.address}>`,
+            to,
+            subject: `${requesterName || 'Someone'} is asking for access to ${farmName || 'your farm'} — Afraponix Go`,
+            html: htmlContent,
+        });
+        return { success: true, messageId: result.messageId };
+    } catch (error) {
+        console.error('Failed to send access request email:', error);
+        return { success: false, error: error.message };
+    }
+};
+
+// Tell the requester how it went.
+const sendAccessDecisionEmail = async (to, { approved, farmName, level, appUrl }) => {
+    try {
+        let config;
+        try {
+            config = loadSmtpConfig();
+        } catch (configError) {
+            console.error('SMTP configuration not available:', configError.message);
+            return { success: false, error: 'Email service not configured.' };
+        }
+        const transporter = createTransporter();
+        const farm = escapeHtml(farmName || 'the farm');
+        const htmlContent = approved
+            ? renderBrandEmail({
+                preheader: `You now have access to ${farmName || 'the farm'}.`,
+                heading: 'You’ve been given access',
+                intro: `Your request was approved — you now have <b>${escapeHtml(level || 'view')}</b> access to <b>${farm}</b>. Scan the label again to pick up where you left off.`,
+                buttonLabel: 'Open Afraponix Go',
+                buttonUrl: appUrl,
+            })
+            : renderBrandEmail({
+                preheader: `Your request for ${farmName || 'the farm'} wasn’t approved.`,
+                heading: 'Your request wasn’t approved',
+                intro: `The admins of <b>${farm}</b> didn’t approve your access request. If you think that’s a mistake, contact them directly.`,
+            });
+        const result = await transporter.sendMail({
+            from: `"${config.from.name}" <${config.from.address}>`,
+            to,
+            subject: approved ? `You now have access to ${farmName || 'the farm'} — Afraponix Go` : `Your access request — Afraponix Go`,
+            html: htmlContent,
+        });
+        return { success: true, messageId: result.messageId };
+    } catch (error) {
+        console.error('Failed to send access decision email:', error);
+        return { success: false, error: error.message };
+    }
+};
+
 module.exports = {
     sendPasswordResetEmail,
     sendVerificationEmail,
     sendSystemShareInvite,
+    sendAccessRequestEmail,
+    sendAccessDecisionEmail,
     loadSmtpConfig
 };

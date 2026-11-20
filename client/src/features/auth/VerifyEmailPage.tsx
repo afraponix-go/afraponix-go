@@ -5,6 +5,7 @@ import { useAuth } from './AuthContext'
 import { ApiError } from '../../lib/apiClient'
 import { Brand } from '../../components/Brand'
 import './auth.css'
+import { takeReturnTo } from '../../lib/returnTo'
 
 // Landing page for the verification email's link (/verify-email?token=…).
 // It consumes the token via the API, then signs the user straight in.
@@ -31,7 +32,7 @@ export function VerifyEmailPage() {
       .then(async (res) => {
         if (res.token && res.user) {
           await signIn(res.token, res.user)
-          navigate('/', { replace: true })
+          navigate(takeReturnTo() ?? '/', { replace: true })
         } else {
           // Verified but no session returned — send them to sign in.
           navigate('/login', { replace: true })

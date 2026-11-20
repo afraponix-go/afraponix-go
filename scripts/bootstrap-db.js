@@ -127,6 +127,8 @@ const STEPS = [
   { type: 'sql', file: 'database/migrations/2026-09-operator-access.sql', label: 'Operator access Phase 0: recorded_by attribution columns' },
   { type: 'sql', file: 'database/migrations/2026-09-farm-share-invite-by-email.sql', label: 'Farm shares: invite by email (no account yet)' },
   { type: 'sql', file: 'database/migrations/2026-09-crop-reharvest-days.sql', label: 'Crops: re-harvest interval (cut-and-come-again)' },
+  { type: 'sql', file: 'database/migrations/2026-11-access-requests.sql', label: 'Access requests (scan a foreign QR → ask the farm admins for access)' },
+  { type: 'sql', file: 'database/migrations/2026-11-farm-share-systems.sql', label: 'Farm shares: limit a share to chosen systems' },
 ];
 
 function dbConfig() {

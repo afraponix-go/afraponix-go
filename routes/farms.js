@@ -3,7 +3,7 @@ const router = express.Router();
 const { getDatabase } = require('../database/init-mariadb');
 const { authenticateToken } = require('../middleware/auth');
 const { generateFarmId } = require('../utils/farms');
-const { getFarmAccess } = require('../utils/systemAccess');
+const { getFarmAccess, accessibleSystemIds } = require('../utils/systemAccess');
 const { deleteSystemData } = require('../utils/systemCleanup');
 
 router.use(authenticateToken);
@@ -43,7 +43,8 @@ router.get('/', async (req, res) => {
              FROM farms f WHERE f.owner_id = ? AND f.archived_at IS NULL
              UNION
              SELECT f.id, f.name, f.location, f.created_at,
-                    (SELECT COUNT(*) FROM systems s WHERE s.farm_id = f.id) AS system_count,
+                    (SELECT COUNT(*) FROM systems s WHERE s.farm_id = f.id
+                       AND (fs.all_systems = 1 OR EXISTS (SELECT 1 FROM farm_share_systems x WHERE x.share_id = fs.id AND x.system_id = s.id))) AS system_count,
                     'shared' AS kind, fs.permission_level AS permission
              FROM farms f
              JOIN farm_shares fs ON fs.farm_id = f.id
@@ -105,7 +106,10 @@ router.get('/:id/summary', async (req, res) => {
         if (!own.length) return res.status(404).json({ error: 'Farm not found or access denied' });
         const displayMetrics = parseMetrics(own[0].display_metrics);
 
-        const [sysRows] = await pool.execute('SELECT id, system_name, tracked_metrics FROM systems WHERE farm_id = ? ORDER BY created_at ASC', [req.params.id]);
+        let [sysRows] = await pool.execute('SELECT id, system_name, tracked_metrics FROM systems WHERE farm_id = ? ORDER BY created_at ASC', [req.params.id]);
+        // A share limited to chosen systems only sees those in the rollup.
+        const allowedSystems = await accessibleSystemIds(req.params.id, req.user.userId, pool);
+        if (allowedSystems) sysRows = sysRows.filter((s) => allowedSystems.includes(s.id));
         const systems = sysRows.map((s) => {
             // Seed only the display metrics this system actually tracks (value null
             // until a reading fills it). Untracked metrics are omitted entirely, so

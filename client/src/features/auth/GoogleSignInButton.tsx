@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { loginWithGoogle } from './api'
 import { useAuth } from './AuthContext'
 import { ApiError } from '../../lib/apiClient'
+import { takeReturnTo } from '../../lib/returnTo'
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
 const GSI_SRC = 'https://accounts.google.com/gsi/client'
@@ -49,7 +50,7 @@ export function GoogleSignInButton({ onError }: { onError?: (msg: string) => voi
               const res = await loginWithGoogle(resp.credential)
               if (!res.token) throw new Error('Google sign-in did not return a session.')
               await signIn(res.token, res.user)
-              navigate('/', { replace: true })
+              navigate(takeReturnTo() ?? '/', { replace: true })
             } catch (err) {
               onError?.(err instanceof ApiError ? err.message : 'Google sign-in failed. Please try again.')
             }

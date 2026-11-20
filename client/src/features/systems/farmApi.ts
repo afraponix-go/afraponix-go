@@ -86,6 +86,9 @@ export type FarmShare = {
   // Present only on /invitations rows — 1 for an email invite whose
   // recipient hasn't signed up yet.
   awaiting_signup?: boolean
+  // Which systems the share covers: all (incl. future) or only system_ids.
+  all_systems?: boolean
+  system_ids?: string[]
 }
 export async function fetchFarmShares(farmId: string): Promise<FarmShare[]> {
   const data = await api<{ shares: FarmShare[] }>(`/farm-sharing/users?farm_id=${encodeURIComponent(farmId)}`)
@@ -95,14 +98,21 @@ export async function fetchFarmInvitations(farmId: string): Promise<FarmShare[]>
   const data = await api<{ invitations: FarmShare[] }>(`/farm-sharing/invitations?farm_id=${encodeURIComponent(farmId)}`)
   return (data.invitations ?? []).map((s) => ({ ...s, awaiting_signup: !!Number(s.awaiting_signup) }))
 }
-export function inviteToFarm(farmId: string, email: string, permission_level: string) {
+export function inviteToFarm(farmId: string, email: string, permission_level: string, systemIds: string[] | null = null) {
   return api<{ success?: boolean; invited?: boolean; message?: string }>('/farm-sharing/invite', {
     method: 'POST',
-    body: { farm_id: farmId, email: email.trim(), permission_level },
+    body: { farm_id: farmId, email: email.trim(), permission_level, system_ids: systemIds },
   })
 }
 export function updateFarmSharePermission(shareId: number, permission_level: string) {
   return api('/farm-sharing/permission', { method: 'PUT', body: { share_id: shareId, permission_level } })
+}
+// The systems the caller can choose from when sharing this farm.
+export async function fetchShareableSystems(farmId: string): Promise<{ systems: { id: string; name: string }[]; can_share_all: boolean }> {
+  return api(`/farm-sharing/systems?farm_id=${encodeURIComponent(farmId)}`)
+}
+export function updateFarmShareSystems(shareId: number, systemIds: string[] | null) {
+  return api('/farm-sharing/systems', { method: 'PUT', body: { share_id: shareId, system_ids: systemIds } })
 }
 export function removeFarmShare(shareId: number) {
   return api(`/farm-sharing/access/${shareId}`, { method: 'DELETE' })
